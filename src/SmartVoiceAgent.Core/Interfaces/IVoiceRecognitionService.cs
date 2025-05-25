@@ -9,10 +9,10 @@ public interface IVoiceRecognitionService
     /// Starts listening for voice input asynchronously.
     /// </summary>
     /// <returns>The recognized text.</returns>
-    Task<string> ListenAsync();
+    Task<string> ListenAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Stops the voice recognition service.
     /// </summary>
-    void Stop();
+    Task StopAsync();
 }

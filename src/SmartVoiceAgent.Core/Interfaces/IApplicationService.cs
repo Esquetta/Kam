@@ -1,4 +1,6 @@
-﻿namespace SmartVoiceAgent.Core.Interfaces;
+﻿using SmartVoiceAgent.Core.Dtos;
+
+namespace SmartVoiceAgent.Core.Interfaces;
 
 /// <summary>
 /// Service interface for managing applications (open, close, status).
@@ -17,4 +19,8 @@ public interface IApplicationService
     /// <param name="appName">The application name.</param>
     /// <returns>The application status.</returns>
     Task<Enums.AppStatus> GetApplicationStatusAsync(string appName);
+
+    Task CloseApplicationAsync(string appName);
+    Task<IEnumerable<AppInfoDTO>> ListApplicationsAsync();
+
 }

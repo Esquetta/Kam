@@ -1,4 +1,6 @@
-﻿namespace SmartVoiceAgent.Core.Interfaces;
+﻿using SmartVoiceAgent.Core.Entities;
+
+namespace SmartVoiceAgent.Core.Interfaces;
 
 /// <summary>
 /// Service interface for learning new commands dynamically.
@@ -10,5 +12,6 @@ public interface ICommandLearningService
     /// </summary>
     /// <param name="command">The command to learn.</param>
     /// <returns>True if learning was successful; otherwise false.</returns>
-    Task<bool> LearnCommandAsync(string command);
+    Task<bool> LearnCommandAsync(LearnedCommand learnedCommand);
+
 }
