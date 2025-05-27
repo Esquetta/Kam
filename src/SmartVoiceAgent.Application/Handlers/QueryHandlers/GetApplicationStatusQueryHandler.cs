@@ -8,12 +8,12 @@ namespace SmartVoiceAgent.Application.Handlers.Queries;
 /// Handles the query to get application status.
 /// </summary>
 public sealed class GetApplicationStatusQueryHandler(IApplicationService appService)
-    : IQueryHandler<GetAppStatusQuery, AppStatus>
+    : IQueryHandler<GetApplicationStatusQuery, AppStatus>
 {
     private readonly IApplicationService _appService = appService;
 
-    public async Task<AppStatus> HandleAsync(GetAppStatusQuery query)
+    public async Task<AppStatus> HandleAsync(GetApplicationStatusQuery query)
     {
-        return await _appService.GetApplicationStatusAsync(query.AppName);
+        return await _appService.GetApplicationStatusAsync(query.ApplicationName);
     }
 }

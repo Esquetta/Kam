@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using SmartVoiceAgent.Application.Commands;
+using SmartVoiceAgent.Application.Handlers;
 using SmartVoiceAgent.Application.Handlers.Commands;
 using SmartVoiceAgent.Application.Handlers.Queries;
 using SmartVoiceAgent.Application.Queries;
@@ -23,8 +25,12 @@ public static class ServiceRegistration
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
         services.AddScoped<ICommandHandler<OpenApplicationCommand, CommandResultDTO>, OpenApplicationCommandHandler>();
+        services.AddScoped<ICommandHandler<ControlDeviceCommand, CommandResultDTO>, ControlDeviceCommandHandler>();
+        services.AddScoped<ICommandHandler<PlayMusicCommand, CommandResultDTO>, PlayMusicCommandHandler>();
+        services.AddScoped<ICommandHandler<SearchWebCommand, CommandResultDTO>, SearchWebCommandHandler>();
+        services.AddScoped<ICommandHandler<SendMessageCommand, CommandResultDTO>, SendMessageCommandHandler>();
 
-        services.AddScoped<IQueryHandler<GetAppStatusQuery, AppStatus>, GetApplicationStatusQueryHandler>();
+        services.AddScoped<IQueryHandler<GetApplicationStatusQuery, AppStatus>, GetApplicationStatusQueryHandler>();
 
 
         return services;
