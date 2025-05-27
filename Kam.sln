@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36109.1 d17.14
+VisualStudioVersion = 17.14.36109.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartVoiceAgent.Core", "src\SmartVoiceAgent.Core\SmartVoiceAgent.Core.csproj", "{3402791A-509D-4B2F-BDDB-1C99E191DA9A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartVoiceAgent.Application", "src\SmartVoiceAgent.Application\SmartVoiceAgent.Application.csproj", "{9131267B-EBBD-47C6-A205-1862AAF9F30F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,12 +19,17 @@ Global
 		{3402791A-509D-4B2F-BDDB-1C99E191DA9A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3402791A-509D-4B2F-BDDB-1C99E191DA9A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3402791A-509D-4B2F-BDDB-1C99E191DA9A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9131267B-EBBD-47C6-A205-1862AAF9F30F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9131267B-EBBD-47C6-A205-1862AAF9F30F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9131267B-EBBD-47C6-A205-1862AAF9F30F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9131267B-EBBD-47C6-A205-1862AAF9F30F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{3402791A-509D-4B2F-BDDB-1C99E191DA9A} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{9131267B-EBBD-47C6-A205-1862AAF9F30F} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {39FCBD97-557D-4E1C-A908-83AE30DA4C4D}
