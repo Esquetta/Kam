@@ -1,12 +1,11 @@
 ﻿using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Interfaces;
-
 namespace SmartVoiceAgent.Application.Handlers;
 
 /// <summary>
 /// Handles the ControlDeviceCommand by performing the specified action on a device.
 /// </summary>
-public class ControlDeviceCommandHandler : ICommandHandler<ControlDeviceCommand>
+public class ControlDeviceCommandHandler : ICommandHandler<ControlDeviceCommand, CommandResultDTO>
 {
     public async Task<CommandResultDTO> HandleAsync(ControlDeviceCommand command)
     {

@@ -6,7 +6,7 @@ namespace SmartVoiceAgent.Application.Handlers;
 /// <summary>
 /// Handles the SearchWebCommand by performing a web search.
 /// </summary>
-public class SearchWebCommandHandler : ICommandHandler<SearchWebCommand>
+public class SearchWebCommandHandler : ICommandHandler<SearchWebCommand, CommandResultDTO>
 {
     public async Task<CommandResultDTO> HandleAsync(SearchWebCommand command)
     {

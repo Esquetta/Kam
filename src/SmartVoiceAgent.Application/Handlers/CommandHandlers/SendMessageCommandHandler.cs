@@ -6,7 +6,7 @@ namespace SmartVoiceAgent.Application.Handlers;
 /// <summary>
 /// Handles the SendMessageCommand by sending a message to the specified recipient.
 /// </summary>
-public class SendMessageCommandHandler : ICommandHandler<SendMessageCommand>
+public class SendMessageCommandHandler : ICommandHandler<SendMessageCommand, CommandResultDTO>
 {
     public async Task<CommandResultDTO> HandleAsync(SendMessageCommand command)
     {
