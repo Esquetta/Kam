@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using FluentValidation;
+using Microsoft.Extensions.DependencyInjection;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Application.Handlers;
 using SmartVoiceAgent.Application.Handlers.Commands;
@@ -7,6 +8,7 @@ using SmartVoiceAgent.Application.Queries;
 using SmartVoiceAgent.Core.Commands;
 using SmartVoiceAgent.Core.Enums;
 using SmartVoiceAgent.Core.Interfaces;
+using System.Reflection;
 
 namespace SmartVoiceAgent.Application.DependencyInjection;
 
@@ -31,6 +33,7 @@ public static class ServiceRegistration
         services.AddScoped<ICommandHandler<SendMessageCommand, CommandResultDTO>, SendMessageCommandHandler>();
 
         services.AddScoped<IQueryHandler<GetApplicationStatusQuery, AppStatus>, GetApplicationStatusQueryHandler>();
+        services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
 
 
         return services;
