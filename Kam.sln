@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartVoiceAgent.Core", "src
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartVoiceAgent.Application", "src\SmartVoiceAgent.Application\SmartVoiceAgent.Application.csproj", "{9131267B-EBBD-47C6-A205-1862AAF9F30F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartVoiceAgent.Infrastructure", "src\SmartVoiceAgent.Infrastructure\SmartVoiceAgent.Infrastructure.csproj", "{2F3C2EEE-F88A-4BA8-9C0B-849EC10EF70D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,6 +25,10 @@ Global
 		{9131267B-EBBD-47C6-A205-1862AAF9F30F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9131267B-EBBD-47C6-A205-1862AAF9F30F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9131267B-EBBD-47C6-A205-1862AAF9F30F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2F3C2EEE-F88A-4BA8-9C0B-849EC10EF70D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2F3C2EEE-F88A-4BA8-9C0B-849EC10EF70D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2F3C2EEE-F88A-4BA8-9C0B-849EC10EF70D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2F3C2EEE-F88A-4BA8-9C0B-849EC10EF70D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -30,6 +36,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{3402791A-509D-4B2F-BDDB-1C99E191DA9A} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{9131267B-EBBD-47C6-A205-1862AAF9F30F} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{2F3C2EEE-F88A-4BA8-9C0B-849EC10EF70D} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {39FCBD97-557D-4E1C-A908-83AE30DA4C4D}
