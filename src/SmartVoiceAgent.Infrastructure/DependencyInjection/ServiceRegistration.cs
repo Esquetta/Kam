@@ -12,6 +12,9 @@ public static class ServiceRegistration
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
     {
         services.AddScoped<IApplicationService, ApplicationService>();
+        services.AddScoped<IApplicationScanner, ApplicationScannerService>();
+        services.AddScoped<IIntentDetector, IntentDetectorService>();
+        services.AddScoped<ICommandLearningService, CommandLearningService>();
         services.AddScoped<IVoiceRecognitionService, VoiceRecognitionService>();
 
         return services;
