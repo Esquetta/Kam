@@ -9,8 +9,9 @@ public class VoiceRecognitionService : IVoiceRecognitionService
 {
     public Task<string> ListenAsync()
     {
-        // TODO: Implement platform-specific voice recognition logic.
-        return Task.FromResult("Sample recognized voice input.");
+        // TODO: Burada gerçek ses tanıma altyapısı entegre edilecek.
+        // Örn: Whisper, Azure Speech, System.Speech vb.
+        return Task.FromResult("dummy recognized command");
     }
 
     public Task<string> ListenAsync(CancellationToken cancellationToken = default)
