@@ -17,6 +17,8 @@ public static class ServiceRegistration
         services.AddScoped<ICommandLearningService, CommandLearningService>();
         services.AddScoped<IVoiceRecognitionService, VoiceRecognitionService>();
 
+        services.AddHostedService<AgentHostedService>();
+
         return services;
     }
 }
