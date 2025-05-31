@@ -16,6 +16,8 @@ public static class ServiceRegistration
         services.AddScoped<IIntentDetector, IntentDetectorService>();
         services.AddScoped<ICommandLearningService, CommandLearningService>();
         services.AddScoped<IVoiceRecognitionService, VoiceRecognitionService>();
+        services.AddScoped<ICommandBus, CommandBus>();
+        services.AddScoped<IQueryBus, QueryBus>();
 
         services.AddHostedService<AgentHostedService>();
 
