@@ -1,5 +1,9 @@
-﻿using FluentValidation;
+﻿using Core.CrossCuttingConcerns.Logging.Serilog;
+using Core.CrossCuttingConcerns.Logging.Serilog.Logger;
+using FluentValidation;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
+using SmartVoiceAgent.Application.Behaviors.Logging;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Application.Handlers;
 using SmartVoiceAgent.Application.Handlers.Commands;
@@ -26,6 +30,13 @@ public static class ServiceRegistration
 
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
+
+        services.AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
+            cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
+        });
+
         services.AddScoped<ICommandHandler<OpenApplicationCommand, CommandResultDTO>, OpenApplicationCommandHandler>();
         services.AddScoped<ICommandHandler<ControlDeviceCommand, CommandResultDTO>, ControlDeviceCommandHandler>();
         services.AddScoped<ICommandHandler<PlayMusicCommand, CommandResultDTO>, PlayMusicCommandHandler>();
@@ -34,8 +45,9 @@ public static class ServiceRegistration
 
         services.AddScoped<IQueryHandler<GetApplicationStatusQuery, AppStatus>, GetApplicationStatusQueryHandler>();
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
-
-
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(ServiceRegistration).Assembly));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+        services.AddSingleton<LoggerServiceBase, MongoDbLogger>();
         return services;
     }
 }
