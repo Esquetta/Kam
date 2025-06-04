@@ -1,12 +1,17 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using SmartVoiceAgent.Application.Behaviors;
 using SmartVoiceAgent.Application.DependencyInjection;
 using SmartVoiceAgent.Infrastructure.DependencyInjection;
+using System.Reflection;
 
-var builder = Host.CreateDefaultBuilder(args).ConfigureServices((hostContext, services) =>
-{
-    services.AddApplicationServices();
-    services.AddInfrastructureServices();
-});
 
-var host = builder.Build();
+var host = Host.CreateDefaultBuilder(args)
+    .ConfigureServices((context, services) =>
+    {
+        services.AddApplicationServices();
+        services.AddInfrastructureServices();
+    })
+    .Build();
+
 await host.RunAsync();

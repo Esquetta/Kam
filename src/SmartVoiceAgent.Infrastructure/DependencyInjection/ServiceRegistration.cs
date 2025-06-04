@@ -19,7 +19,6 @@ public static class ServiceRegistration
         services.AddScoped<ICommandBus, CommandBus>();
         services.AddScoped<IQueryBus, QueryBus>();
         services.AddScoped<IMusicService, MusicService>();
-
         services.AddHostedService<AgentHostedService>();
 
         return services;
