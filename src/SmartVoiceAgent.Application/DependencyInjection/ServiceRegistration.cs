@@ -4,6 +4,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using SmartVoiceAgent.Application.Behaviors.Logging;
+using SmartVoiceAgent.Application.Behaviors.Validation;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Application.Handlers;
 using SmartVoiceAgent.Application.Handlers.Commands;
@@ -34,6 +35,7 @@ public static class ServiceRegistration
         services.AddMediatR(cfg =>
         {
             cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
+            cfg.AddOpenBehavior(typeof(RequestValidationBehavior<,>));
             cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
         });
 
