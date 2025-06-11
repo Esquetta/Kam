@@ -9,6 +9,8 @@ using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Application.Handlers;
 using SmartVoiceAgent.Application.Handlers.Commands;
 using SmartVoiceAgent.Application.Handlers.Queries;
+using SmartVoiceAgent.Application.Pipelines.Caching;
+using SmartVoiceAgent.Application.Pipelines.Performance;
 using SmartVoiceAgent.Application.Queries;
 using SmartVoiceAgent.Core.Commands;
 using SmartVoiceAgent.Core.Enums;
@@ -37,6 +39,10 @@ public static class ServiceRegistration
             cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
             cfg.AddOpenBehavior(typeof(RequestValidationBehavior<,>));
             cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
+            cfg.AddOpenBehavior(typeof(PerformanceBehavior<,>));
+            cfg.AddOpenBehavior(typeof(CachingBehavior<,>));
+            cfg.AddOpenBehavior(typeof(CacheRemovingBehavior<,>));
+
         });
 
         services.AddScoped<ICommandHandler<OpenApplicationCommand, CommandResultDTO>, OpenApplicationCommandHandler>();
