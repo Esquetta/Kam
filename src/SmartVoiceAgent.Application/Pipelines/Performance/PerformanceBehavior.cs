@@ -1,43 +1,41 @@
-﻿using MediatR;
-using Microsoft.Extensions.Logging;
+﻿using Core.CrossCuttingConcerns.Logging.Serilog;
+using MediatR;
 using System.Diagnostics;
 
-namespace SmartVoiceAgent.Application.Pipelines.Performance
+namespace SmartVoiceAgent.Application.Behaviors.Performance
 {
-    public class PerformanceBehavior<TRequest,TResponse>:IPipelineBehavior<TRequest,TResponse>
-        where TRequest:IRequest<TResponse>,IIntervalRequest
+    public class PerformanceBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+        where TRequest : IRequest<TResponse>
     {
-        private readonly ILogger<PerformanceBehavior<TRequest, TResponse>> _logger;
         private readonly Stopwatch _stopwatch;
+        private readonly LoggerServiceBase _loggerService;
 
-        public PerformanceBehavior(ILogger<PerformanceBehavior<TRequest, TResponse>> logger, Stopwatch stopwatch)
+        public PerformanceBehavior(LoggerServiceBase loggerService)
         {
-            _logger = logger;
-            _stopwatch = stopwatch;
+            _stopwatch = new Stopwatch();
+            _loggerService = loggerService;
         }
 
         public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
         {
-            string requestName = request.GetType().Name;
+            _stopwatch.Start();
 
-            TResponse response;
+            var response = await next();
 
-            try
+            _stopwatch.Stop();
+
+            var elapsedTime = _stopwatch.ElapsedMilliseconds;
+
+            // Burada threshold tanımlayıp loglama yapılabilir
+            if (elapsedTime > 500) // ms cinsinden, threshold configurable yapılabilir.
             {
-                _stopwatch.Start();
-                response = await next();
+                _loggerService.Warn(
+                    $"Performance Alert: {typeof(TRequest).Name} took {elapsedTime} ms.");
             }
-            finally
+            else
             {
-                if (_stopwatch.Elapsed.TotalSeconds > request.Interval)
-                {
-                    string message = $"Performance -> {requestName} {_stopwatch.Elapsed.TotalSeconds} s";
-
-                    Debug.WriteLine(message);
-                    _logger.LogInformation(message);
-                }
-
-                _stopwatch.Restart();
+                _loggerService.Info(
+                    $"Performance: {typeof(TRequest).Name} took {elapsedTime} ms.");
             }
 
             return response;

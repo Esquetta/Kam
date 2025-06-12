@@ -1,52 +1,69 @@
 ﻿using Core.CrossCuttingConcerns.Logging;
 using Core.CrossCuttingConcerns.Logging.Serilog;
 using MediatR;
+using SmartVoiceAgent.Application.Pipelines.Caching;
 using System.Text.Json;
 
-namespace SmartVoiceAgent.Application.Behaviors.Logging;
-
-/// <summary>
-/// Logs request and response information for commands and queries in the pipeline.
-/// </summary>
-/// <typeparam name="TRequest">The type of request.</typeparam>
-/// <typeparam name="TResponse">The type of response.</typeparam>
-public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-    where TRequest : IRequest<TResponse>
+namespace SmartVoiceAgent.Application.Behaviors.Logging
 {
-    private readonly LoggerServiceBase _loggerServiceBase;
-
-    public LoggingBehavior(LoggerServiceBase loggerServiceBase)
+    /// <summary>
+    /// Logs request and response information for commands and queries in the pipeline.
+    /// </summary>
+    /// <typeparam name="TRequest">The type of request.</typeparam>
+    /// <typeparam name="TResponse">The type of response.</typeparam>
+    public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+        where TRequest : IRequest<TResponse>
     {
-        _loggerServiceBase = loggerServiceBase;
-    }
+        private readonly LoggerServiceBase _loggerService;
 
-    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
-    {
-        var logParameters = new List<LogParameter>
+        public LoggingBehavior(LoggerServiceBase loggerService)
         {
-            new LogParameter { Type = request.GetType().Name, Value = request }
-        };
-
-        var logDetail = new LogDetail
-        {
-            MethodName = typeof(TRequest).Name,
-            Parameters = logParameters
-        };
-
-        _loggerServiceBase.Info("Handling request: \n" + JsonSerializer.Serialize(logDetail));
-
-        try
-        {
-            var response = await next();
-
-            _loggerServiceBase.Info("Handled request successfully: \n" + JsonSerializer.Serialize(logDetail));
-
-            return response;
+            _loggerService = loggerService;
         }
-        catch (Exception ex)
+
+        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
         {
-            _loggerServiceBase.Error($"Exception occurred while handling request: {ex.Message}\n" + JsonSerializer.Serialize(logDetail));
-            throw;
+            var logParameters = new List<LogParameter>
+            {
+                new LogParameter { Type = request.GetType().Name, Value = request }
+            };
+
+            var logDetail = new LogDetail
+            {
+                MethodName = next.Method.Name,
+                Parameters = logParameters
+            };
+
+            try
+            {
+                _loggerService.Info($"Handling Request: \n{JsonSerializer.Serialize(logDetail)}");
+
+                
+                if (request is ICachableRequest cachableRequest)
+                {
+                    _loggerService.Info($"Cache Info -> CacheKey: {cachableRequest.CacheKey}, BypassCache: {cachableRequest.BypassCache}, GroupKey: {cachableRequest.CacheGroupKey}");
+                }
+
+                var response = await next();
+
+                var responseLog = new LogDetail
+                {
+                    MethodName = next.Method.Name,
+                    Parameters = new List<LogParameter>
+                    {
+                        new LogParameter { Type = typeof(TResponse).Name, Value = response }
+                    }
+                };
+
+                _loggerService.Info($"Request Handled: \n{JsonSerializer.Serialize(responseLog)}");
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Error($"Exception occurred: {ex.Message}\n{JsonSerializer.Serialize(logDetail)}");
+                throw;
+            }
         }
     }
 }
