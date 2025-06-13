@@ -33,7 +33,6 @@ public static class ServiceRegistration
 
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-
         services.AddMediatR(cfg =>
         {
             cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
@@ -42,7 +41,6 @@ public static class ServiceRegistration
             cfg.AddOpenBehavior(typeof(PerformanceBehavior<,>));
             cfg.AddOpenBehavior(typeof(CachingBehavior<,>));
             cfg.AddOpenBehavior(typeof(CacheRemovingBehavior<,>));
-
         });
 
         services.AddScoped<ICommandHandler<OpenApplicationCommand, CommandResultDTO>, OpenApplicationCommandHandler>();
@@ -52,10 +50,11 @@ public static class ServiceRegistration
         services.AddScoped<ICommandHandler<SendMessageCommand, CommandResultDTO>, SendMessageCommandHandler>();
 
         services.AddScoped<IQueryHandler<GetApplicationStatusQuery, AppStatus>, GetApplicationStatusQueryHandler>();
+
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(ServiceRegistration).Assembly));
-        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+
         services.AddSingleton<LoggerServiceBase, MongoDbLogger>();
+
         return services;
     }
 }
