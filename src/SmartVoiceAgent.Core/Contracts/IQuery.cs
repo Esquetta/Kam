@@ -1,6 +1,8 @@
-﻿namespace SmartVoiceAgent.Core.Contracts
+﻿using Mediator;
+
+namespace SmartVoiceAgent.Core.Contracts
 {
-    public interface IQuery<TResult>
+    public interface IQuery<TResult>: IRequest<TResult>
     {
     }
 }
