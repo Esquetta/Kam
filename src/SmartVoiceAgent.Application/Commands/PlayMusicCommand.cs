@@ -1,4 +1,20 @@
-﻿using SmartVoiceAgent.Core.Contracts;
+﻿using SmartVoiceAgent.Application.Pipelines.Caching;
+using SmartVoiceAgent.Application.Pipelines.Performance;
+using SmartVoiceAgent.Core.Contracts;
 
-public record PlayMusicCommand(string TrackName) : ICommand<CommandResultDTO>;
+public record PlayMusicCommand(string TrackName)
+    : ICommand<CommandResultDTO>, ICachableRequest, IIntervalRequest
+{
+    // Caching
+    public string CacheKey => $"PlayMusic-{TrackName}";
+    public string? CacheGroupKey => "MusicCommands";
+    public bool BypassCache => false;
+    public TimeSpan? SlidingExpiration => TimeSpan.FromMinutes(10);
+
+    // Performance
+    public bool EnablePerformanceLogging => true;
+
+    public int Interval => 3;
+}
+
 
