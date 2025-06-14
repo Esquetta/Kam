@@ -42,6 +42,7 @@ public static class ServiceRegistration
             cfg.AddOpenBehavior(typeof(CachingBehavior<,>));
             cfg.AddOpenBehavior(typeof(CacheRemovingBehavior<,>));
         });
+        services.AddDistributedMemoryCache();
 
 
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
