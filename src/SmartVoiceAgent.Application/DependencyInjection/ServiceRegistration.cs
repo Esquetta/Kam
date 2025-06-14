@@ -43,13 +43,6 @@ public static class ServiceRegistration
             cfg.AddOpenBehavior(typeof(CacheRemovingBehavior<,>));
         });
 
-        services.AddScoped<ICommandHandler<OpenApplicationCommand, CommandResultDTO>, OpenApplicationCommandHandler>();
-        services.AddScoped<ICommandHandler<ControlDeviceCommand, CommandResultDTO>, ControlDeviceCommandHandler>();
-        services.AddScoped<ICommandHandler<PlayMusicCommand, CommandResultDTO>, PlayMusicCommandHandler>();
-        services.AddScoped<ICommandHandler<SearchWebCommand, CommandResultDTO>, SearchWebCommandHandler>();
-        services.AddScoped<ICommandHandler<SendMessageCommand, CommandResultDTO>, SendMessageCommandHandler>();
-
-        services.AddScoped<IQueryHandler<GetApplicationStatusQuery, AppStatus>, GetApplicationStatusQueryHandler>();
 
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
 

@@ -1,6 +1,6 @@
-﻿using SmartVoiceAgent.Application.Pipelines.Caching;
+﻿using MediatR;
+using SmartVoiceAgent.Application.Pipelines.Caching;
 using SmartVoiceAgent.Application.Pipelines.Performance;
-using SmartVoiceAgent.Core.Contracts;
 
 namespace SmartVoiceAgent.Core.Commands;
 
@@ -9,7 +9,7 @@ namespace SmartVoiceAgent.Core.Commands;
 /// </summary>
 /// <param name="ApplicationName">The name of the application to open.</param>
 public record OpenApplicationCommand(string ApplicationName)
-    : ICommand<CommandResultDTO>, ICachableRequest, IIntervalRequest
+    : IRequest<CommandResultDTO>, ICachableRequest, IIntervalRequest
 {
     // Caching
     public string CacheKey => $"OpenApplication-{ApplicationName}";

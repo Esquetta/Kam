@@ -1,6 +1,6 @@
-﻿using SmartVoiceAgent.Application.Pipelines.Caching;
+﻿using MediatR;
+using SmartVoiceAgent.Application.Pipelines.Caching;
 using SmartVoiceAgent.Application.Pipelines.Performance;
-using SmartVoiceAgent.Core.Contracts;
 using SmartVoiceAgent.Core.Enums;
 
 namespace SmartVoiceAgent.Application.Queries;
@@ -9,7 +9,7 @@ namespace SmartVoiceAgent.Application.Queries;
 /// Query for getting the status of an application.
 /// </summary>
 public record GetApplicationStatusQuery(string ApplicationName)
-    : IQuery<AppStatus>, ICachableRequest, IIntervalRequest
+    : IRequest<AppStatus>, ICachableRequest, IIntervalRequest
 {
     // Caching
     public string CacheKey => $"ApplicationStatus-{ApplicationName}";

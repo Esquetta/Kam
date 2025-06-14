@@ -1,12 +1,11 @@
-﻿using Microsoft.Identity.Client;
+﻿using MediatR;
 using SmartVoiceAgent.Application.Pipelines.Caching;
 using SmartVoiceAgent.Application.Pipelines.Performance;
-using SmartVoiceAgent.Core.Contracts;
 
 namespace SmartVoiceAgent.Application.Commands;
 
 public record SendMessageCommand(string Recipient, string Message)
-    : ICommand<CommandResultDTO>, ICachableRequest, IIntervalRequest
+    : IRequest<CommandResultDTO>, ICachableRequest, IIntervalRequest
 {
     // Caching
     public string CacheKey => $"SendMessage-{Recipient}";

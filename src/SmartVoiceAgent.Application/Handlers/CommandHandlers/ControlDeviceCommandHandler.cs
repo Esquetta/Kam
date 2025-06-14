@@ -1,16 +1,17 @@
-﻿using SmartVoiceAgent.Application.Commands;
-using SmartVoiceAgent.Core.Interfaces;
+﻿using MediatR;
+using SmartVoiceAgent.Application.Commands;
+
 namespace SmartVoiceAgent.Application.Handlers;
 
 /// <summary>
 /// Handles the ControlDeviceCommand by performing the specified action on a device.
 /// </summary>
-public class ControlDeviceCommandHandler : ICommandHandler<ControlDeviceCommand, CommandResultDTO>
+public class ControlDeviceCommandHandler : IRequestHandler<ControlDeviceCommand, CommandResultDTO>
 {
-    public async Task<CommandResultDTO> HandleAsync(ControlDeviceCommand command)
+    public async Task<CommandResultDTO> Handle(ControlDeviceCommand request, CancellationToken cancellationToken)
     {
         // TODO: Implement device control logic.
         await Task.CompletedTask;
-        return new CommandResultDTO(true, $"{command.Action} performed on {command.DeviceName}.");
+        return new CommandResultDTO(true, $"{request.Action} performed on {request.DeviceName}.");
     }
 }
