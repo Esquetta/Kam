@@ -1,9 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using SmartVoiceAgent.Application.Behaviors;
+﻿using Microsoft.Extensions.Hosting;
 using SmartVoiceAgent.Application.DependencyInjection;
 using SmartVoiceAgent.Infrastructure.DependencyInjection;
-using System.Reflection;
 
 
 var host = Host.CreateDefaultBuilder(args)
