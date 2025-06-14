@@ -16,7 +16,8 @@ namespace SmartVoiceAgent.Application.Pipelines.Caching
         public CachingBehavior(IDistributedCache cache, CacheSettings cacheSettings, ILogger<CachingBehavior<TRequest, TResponse>> logger)
         {
             _cache = cache;
-            _cacheSettings = cacheSettings;
+            //Todo: update after appsettings
+            _cacheSettings = new CacheSettings { SlidingExpiration=1};
             _logger = logger;
         }
 
