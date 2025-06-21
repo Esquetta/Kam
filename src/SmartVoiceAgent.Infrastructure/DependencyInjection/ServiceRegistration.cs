@@ -20,6 +20,8 @@ public static class ServiceRegistration
         services.AddScoped<IQueryBus, QueryBus>();
         services.AddScoped<IMusicService, MusicService>();
         services.AddHostedService<AgentHostedService>();
+        services.AddSingleton<IApplicationService>(provider => ApplicationServiceFactory.Create());
+
 
         return services;
     }
