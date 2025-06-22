@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using Core.CrossCuttingConcerns.Logging.Serilog;
+using MediatR;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using System.Text;
@@ -11,9 +12,9 @@ namespace SmartVoiceAgent.Application.Pipelines.Caching
     {
         private readonly IDistributedCache _cache;
         private readonly CacheSettings _cacheSettings;
-        private readonly ILogger<CachingBehavior<TRequest, TResponse>> _logger;
+        private readonly LoggerServiceBase _logger;
 
-        public CachingBehavior(IDistributedCache cache, CacheSettings cacheSettings, ILogger<CachingBehavior<TRequest, TResponse>> logger)
+        public CachingBehavior(IDistributedCache cache, CacheSettings cacheSettings, LoggerServiceBase logger)
         {
             _cache = cache;
             //Todo: update after appsettings
@@ -33,7 +34,7 @@ namespace SmartVoiceAgent.Application.Pipelines.Caching
             if (cachedResponse != null)
             {
                 response = JsonSerializer.Deserialize<TResponse>(Encoding.Default.GetString(cachedResponse))!;
-                _logger.LogInformation($"Fetched from Cache -> {request.CacheKey}");
+                _logger.Info($"Fetched from Cache -> {request.CacheKey}");
             }
             else
             {
@@ -56,7 +57,7 @@ namespace SmartVoiceAgent.Application.Pipelines.Caching
 
             byte[] serializeData = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(response));
             await _cache.SetAsync(request.CacheKey, serializeData, cacheOptions, cancellationToken);
-            _logger.LogInformation($"Added to Cache -> {request.CacheKey}");
+            _logger.Info($"Added to Cache -> {request.CacheKey}");
 
             if (request.CacheGroupKey != null)
                 await addCacheKeyToGroup(request, slidingExpiration, cancellationToken);
@@ -93,7 +94,7 @@ namespace SmartVoiceAgent.Application.Pipelines.Caching
                 new() { SlidingExpiration = TimeSpan.FromSeconds(Convert.ToDouble(cacheGroupCacheSlidingExpirationValue)) };
 
             await _cache.SetAsync(key: request.CacheGroupKey!, newCacheGroupCache, cacheOptions, cancellationToken);
-            _logger.LogInformation($"Added to Cache -> {request.CacheGroupKey}");
+            _logger.Info($"Added to Cache -> {request.CacheGroupKey}");
 
             await _cache.SetAsync(
                 key: $"{request.CacheGroupKey}SlidingExpiration",
@@ -101,7 +102,7 @@ namespace SmartVoiceAgent.Application.Pipelines.Caching
                 cacheOptions,
                 cancellationToken
             );
-            _logger.LogInformation($"Added to Cache -> {request.CacheGroupKey}SlidingExpiration");
+            _logger.Info($"Added to Cache -> {request.CacheGroupKey}SlidingExpiration");
         }
     }
 }

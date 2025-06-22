@@ -1,6 +1,6 @@
-﻿using MediatR;
+﻿using Core.CrossCuttingConcerns.Logging.Serilog;
+using MediatR;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Logging;
 using System.Text;
 using System.Text.Json;
 
@@ -10,9 +10,9 @@ namespace SmartVoiceAgent.Application.Pipelines.Caching
     where TRequest : IRequest<TResponse>, ICacheRemoverRequest
     {
         private readonly IDistributedCache _cache;
-        private readonly ILogger<CacheRemovingBehavior<TRequest, TResponse>> _logger;
+        private readonly LoggerServiceBase _logger;
 
-        public CacheRemovingBehavior(IDistributedCache cache, ILogger<CacheRemovingBehavior<TRequest, TResponse>> logger)
+        public CacheRemovingBehavior(IDistributedCache cache, LoggerServiceBase logger)
         {
             _cache = cache;
             _logger = logger;
@@ -33,20 +33,20 @@ namespace SmartVoiceAgent.Application.Pipelines.Caching
                     foreach (string key in keysInGroup)
                     {
                         await _cache.RemoveAsync(key, cancellationToken);
-                        _logger.LogInformation($"Removed Cache -> {key}");
+                        _logger.Info($"Removed Cache -> {key}");
                     }
 
                     await _cache.RemoveAsync(request.CacheGroupKey, cancellationToken);
-                    _logger.LogInformation($"Removed Cache -> {request.CacheGroupKey}");
+                    _logger.Info($"Removed Cache -> {request.CacheGroupKey}");
                     await _cache.RemoveAsync(key: $"{request.CacheGroupKey}SlidingExpiration", cancellationToken);
-                    _logger.LogInformation($"Removed Cache -> {request.CacheGroupKey}SlidingExpiration");
+                    _logger.Info($"Removed Cache -> {request.CacheGroupKey}SlidingExpiration");
                 }
             }
 
             if (request.CacheKey != null)
             {
                 await _cache.RemoveAsync(request.CacheKey, cancellationToken);
-                _logger.LogInformation($"Removed Cache -> {request.CacheKey}");
+                _logger.Info($"Removed Cache -> {request.CacheKey}");
             }
 
             return response;
