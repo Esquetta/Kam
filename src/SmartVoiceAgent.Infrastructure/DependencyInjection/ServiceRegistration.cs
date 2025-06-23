@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Infrastructure.Services;
+using SmartVoiceAgent.Infrastructure.Services.Application;
 
 namespace SmartVoiceAgent.Infrastructure.DependencyInjection;
 
@@ -20,7 +21,10 @@ public static class ServiceRegistration
         services.AddScoped<IQueryBus, QueryBus>();
         services.AddScoped<IMusicService, MusicService>();
         services.AddHostedService<AgentHostedService>();
-        services.AddSingleton<IApplicationService>(provider => ApplicationServiceFactory.Create());
+        services.AddScoped<WindowsApplicationService>();
+        services.AddScoped<LinuxApplicationService>();
+        services.AddScoped<ApplicationServiceFactory>();
+
 
 
         return services;
