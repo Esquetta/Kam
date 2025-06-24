@@ -34,7 +34,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
 
         public Task OpenApplicationAsync(string appName)
         {
-            Process.Start(new ProcessStartInfo(appName) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(appName) { UseShellExecute = true});
             return Task.CompletedTask;
         }
         private string GetProcessInfo(Process process)
