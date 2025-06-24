@@ -1,23 +1,15 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using SmartVoiceAgent.Core.Interfaces;
+﻿using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Infrastructure.Services.Application;
 
-public class ApplicationServiceFactory
+public class ApplicationServiceFactory : IApplicationServiceFactory
 {
-    private readonly IServiceProvider _serviceProvider;
-
-    public ApplicationServiceFactory(IServiceProvider serviceProvider)
-    {
-        _serviceProvider = serviceProvider;
-    }
-
     public IApplicationService Create()
     {
         if (OperatingSystem.IsWindows())
-            return _serviceProvider.GetRequiredService<WindowsApplicationService>();
+            return new WindowsApplicationService();
         if (OperatingSystem.IsLinux())
-            return _serviceProvider.GetRequiredService<LinuxApplicationService>();
+            return new LinuxApplicationService();
 
-        throw new PlatformNotSupportedException("Unsupported OS platform.");
+        throw new PlatformNotSupportedException();
     }
 }
