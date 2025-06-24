@@ -1,7 +1,7 @@
 ﻿using Core.CrossCuttingConcerns.Logging.Serilog;
 using MediatR;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using System.Text;
 using System.Text.Json;
 
@@ -13,13 +13,13 @@ namespace SmartVoiceAgent.Application.Pipelines.Caching
         private readonly IDistributedCache _cache;
         private readonly CacheSettings _cacheSettings;
         private readonly LoggerServiceBase _logger;
+        private readonly IConfiguration configuration;
 
-        public CachingBehavior(IDistributedCache cache, CacheSettings cacheSettings, LoggerServiceBase logger)
+        public CachingBehavior(IDistributedCache cache, LoggerServiceBase logger, IConfiguration configuration)
         {
             _cache = cache;
-            //Todo: update after appsettings
-            _cacheSettings = new CacheSettings { SlidingExpiration=1};
             _logger = logger;
+            _cacheSettings = configuration.GetSection("CacheSettings").Get<CacheSettings>() ?? throw new InvalidOperationException();
         }
 
 
