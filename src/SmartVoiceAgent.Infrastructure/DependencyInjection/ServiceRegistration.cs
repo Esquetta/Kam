@@ -12,7 +12,6 @@ public static class ServiceRegistration
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
     {
-        services.AddScoped<IApplicationService, ApplicationService>();
         services.AddScoped<IApplicationScanner, ApplicationScannerService>();
         services.AddScoped<IIntentDetector, IntentDetectorService>();
         services.AddScoped<ICommandLearningService, CommandLearningService>();
@@ -23,8 +22,7 @@ public static class ServiceRegistration
         services.AddHostedService<AgentHostedService>();
         services.AddScoped<WindowsApplicationService>();
         services.AddScoped<LinuxApplicationService>();
-        services.AddScoped<ApplicationServiceFactory>();
-
+        services.AddSingleton<IApplicationServiceFactory, ApplicationServiceFactory>();
 
 
         return services;
