@@ -3,11 +3,28 @@
 /// <summary>
 /// Service interface for music operations.
 /// </summary>
+/// <summary>
+/// Service for controlling music playback.
+/// </summary>
 public interface IMusicService
 {
     /// <summary>
-    /// Plays a music track asynchronously.
+    /// Plays a specific music track.
     /// </summary>
-    /// <param name="trackName">The name of the track to play.</param>
     Task PlayMusicAsync(string trackName);
+
+    /// <summary>
+    /// Stops the current music.
+    /// </summary>
+    Task StopMusicAsync();
+
+    /// <summary>
+    /// Pauses the current music.
+    /// </summary>
+    Task PauseMusicAsync();
+
+    /// <summary>
+    /// Resumes paused music.
+    /// </summary>
+    Task ResumeMusicAsync();
 }
