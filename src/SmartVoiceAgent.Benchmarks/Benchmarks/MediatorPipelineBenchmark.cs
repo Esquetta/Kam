@@ -61,4 +61,6 @@ public class MediatorPipelineBenchmark
 public class FakeMusicService : IMusicService
 {
     public Task PlayMusicAsync(string song) => Task.CompletedTask;
+
+    public Task StopMusicAsync() => Task.CompletedTask;
 }
