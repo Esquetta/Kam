@@ -18,13 +18,4 @@ public interface IMusicService
     /// </summary>
     Task StopMusicAsync();
 
-    /// <summary>
-    /// Pauses the current music.
-    /// </summary>
-    Task PauseMusicAsync();
-
-    /// <summary>
-    /// Resumes paused music.
-    /// </summary>
-    Task ResumeMusicAsync();
 }
