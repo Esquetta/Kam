@@ -12,4 +12,10 @@ public class MusicService : IMusicService
         // TODO: Müzik çalma entegrasyonu yapılacak.
         return Task.CompletedTask;
     }
+
+    public Task StopMusicAsync()
+    {
+        // TODO: Müzik çalma entegrasyonu yapılacak.
+        return Task.CompletedTask;
+    }
 }
