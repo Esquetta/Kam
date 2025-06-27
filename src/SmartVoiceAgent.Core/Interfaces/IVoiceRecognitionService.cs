@@ -5,14 +5,9 @@
 /// </summary>
 public interface IVoiceRecognitionService
 {
-    /// <summary>
-    /// Starts listening for voice input asynchronously.
-    /// </summary>
-    /// <returns>The recognized text.</returns>
-    Task<string> ListenAsync(CancellationToken cancellationToken = default);
+    void StartRecording();
+    void StopRecording();
 
-    /// <summary>
-    /// Stops the voice recognition service.
-    /// </summary>
-    Task StopAsync();
+    event EventHandler<byte[]> OnVoiceCaptured;
 }
+
