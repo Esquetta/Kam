@@ -1,6 +1,6 @@
 ﻿namespace SmartVoiceAgent.Core.Interfaces
 {
-     public interface IMusicServiceFactory
+    public interface IMusicServiceFactory
     {
         IMusicService Create();
     }
