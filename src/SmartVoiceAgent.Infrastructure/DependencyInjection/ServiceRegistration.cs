@@ -22,6 +22,7 @@ public static class ServiceRegistration
         services.AddHostedService<AgentHostedService>();
         services.AddSingleton<IApplicationServiceFactory, ApplicationServiceFactory>();
         services.AddSingleton<IMusicServiceFactory,MusicServiceFactory>();
+        services.AddSingleton<IVoiceRecognitionFactory, VoiceRecognitionServiceFactory>();
 
 
 
