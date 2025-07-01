@@ -2,7 +2,7 @@
 
 namespace SmartVoiceAgent.Infrastructure.Services.Music
 {
-    public class MusicService : IMusicService, IDisposable
+    public class WindowsMusicService : IMusicService, IDisposable
     {
         private IWavePlayer? _waveOut;
         private AudioFileReader? _audioFileReader;
