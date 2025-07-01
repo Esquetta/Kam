@@ -28,7 +28,7 @@ namespace SmartVoiceAgent.Infrastructure.Services
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("AgentHostedService started.");
-            await mediator.Send(new OpenApplicationCommand("Spotify"));
+            await mediator.Send(new OpenApplicationCommand("Pycharm"));
 
             //while (!stoppingToken.IsCancellationRequested)
             //{
