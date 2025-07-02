@@ -22,6 +22,7 @@ public static class ServiceRegistration
         services.AddSingleton<IApplicationServiceFactory, ApplicationServiceFactory>();
         services.AddSingleton<IVoiceRecognitionFactory, VoiceRecognitionServiceFactory>();
         services.AddSingleton<IMusicServiceFactory, MusicServiceFactory>();
+        services.AddSingleton<IIntentDetectionService, IntentDetectorService>();
 
 
 
