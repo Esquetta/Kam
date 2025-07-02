@@ -1,4 +1,5 @@
 ﻿using SmartVoiceAgent.Core.Entities;
+using SmartVoiceAgent.Core.Models;
 
 namespace SmartVoiceAgent.Core.EventArgs;
 

@@ -1,6 +1,6 @@
 ﻿using SmartVoiceAgent.Core.Enums;
 
-namespace SmartVoiceAgent.Core.Config;
+namespace SmartVoiceAgent.Core.Entities;
 
 public class IntentPattern
 {

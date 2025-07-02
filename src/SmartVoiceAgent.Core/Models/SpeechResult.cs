@@ -1,4 +1,4 @@
-﻿namespace SmartVoiceAgent.Core.Entities;
+﻿namespace SmartVoiceAgent.Core.Models;
 
 public class SpeechResult
 {
