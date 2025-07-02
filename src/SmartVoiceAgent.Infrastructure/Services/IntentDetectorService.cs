@@ -1,4 +1,5 @@
 ﻿using Core.CrossCuttingConcerns.Logging.Serilog;
+using Microsoft.Extensions.Configuration;
 using SmartVoiceAgent.Core.Config;
 using SmartVoiceAgent.Core.Entities;
 using SmartVoiceAgent.Core.Enums;
@@ -16,10 +17,10 @@ public class IntentDetectorService : IIntentDetectionService
     private readonly Dictionary<string, List<IntentPattern>> _intentPatterns;
     private readonly Dictionary<string, Regex> _entityRegexes;
 
-    public IntentDetectorService(LoggerServiceBase logger, IntentConfig config)
+    public IntentDetectorService(LoggerServiceBase logger, IConfiguration configuration)
     {
         _logger = logger;
-        _config = config;
+        _config = configuration.GetSection("Intent").Get<IntentConfig>() ?? throw new NullReferenceException($"Intent section cannot found in configuration."); ;
         _intentPatterns = LoadIntentPatterns();
         _entityRegexes = LoadEntityRegexes();
     }
