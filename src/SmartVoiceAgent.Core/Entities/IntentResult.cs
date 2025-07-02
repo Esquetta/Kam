@@ -1,4 +1,6 @@
-﻿using System.Data;
+﻿
+
+using SmartVoiceAgent.Core.Enums;
 
 namespace SmartVoiceAgent.Core.Entities;
 
