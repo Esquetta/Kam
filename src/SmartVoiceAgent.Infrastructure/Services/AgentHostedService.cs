@@ -13,11 +13,11 @@ namespace SmartVoiceAgent.Infrastructure.Services
     public class AgentHostedService: BackgroundService
     {
         private readonly IVoiceRecognitionService _voiceRecognition;
-        private readonly IIntentDetector _intentDetector;
+        private readonly IIntentDetectionService _intentDetector;
         private readonly IMediator mediator;
         private readonly ILogger<AgentHostedService> _logger;
 
-        public AgentHostedService(IVoiceRecognitionService voiceRecognition, IIntentDetector intentDetector, ICommandBus commandBus, IQueryBus queryBus, ILogger<AgentHostedService> logger, IMediator mediator)
+        public AgentHostedService(IVoiceRecognitionService voiceRecognition, IIntentDetectionService intentDetector, ICommandBus commandBus, IQueryBus queryBus, ILogger<AgentHostedService> logger, IMediator mediator)
         {
             _voiceRecognition = voiceRecognition;
             _intentDetector = intentDetector;
@@ -28,7 +28,45 @@ namespace SmartVoiceAgent.Infrastructure.Services
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("AgentHostedService started.");
-            await mediator.Send(new OpenApplicationCommand("Pycharm"));
+            //await mediator.Send(new OpenApplicationCommand("Pycharm"));
+
+
+            Console.WriteLine("Ses kaydı başlatılıyor...");
+
+            var voiceService = new WindowsVoiceRecognitionService();
+
+            voiceService.OnVoiceCaptured += (sender, data) =>
+            {
+                Console.WriteLine($"Ses kaydı alındı. Byte uzunluğu: {data.Length}");
+            };
+
+            voiceService.OnRecordingStarted += (s, e) =>
+            {
+                Console.WriteLine("Kayıt başladı.");
+            };
+
+            voiceService.OnRecordingStopped += (s, e) =>
+            {
+                Console.WriteLine("Kayıt durdu.");
+            };
+
+            voiceService.OnError += (s, ex) =>
+            {
+                Console.WriteLine($"Hata oluştu: {ex.Message}");
+            };
+
+            // 5 saniyelik kayıt al
+            var audioData = await voiceService.RecordForDurationAsync(TimeSpan.FromSeconds(5));
+
+            Console.WriteLine($"Toplam kaydedilen veri: {audioData.Length} byte");
+
+            // Uygulama kapanmadan beklet
+            Console.WriteLine("Çıkmak için bir tuşa bas...");
+            Console.ReadKey();
+
+            // Temizlik
+            voiceService.Dispose();
+
 
             //while (!stoppingToken.IsCancellationRequested)
             //{
