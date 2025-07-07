@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Enums;
 using SmartVoiceAgent.Core.Interfaces;
 
@@ -8,12 +7,10 @@ namespace SmartVoiceAgent.Infrastructure.Services.Stt
     public class STTServiceFactory : ISTTServiceFactory
     {
         private readonly IServiceProvider _serviceProvider;
-        private readonly ILogger<STTServiceFactory> _logger;
 
-        public STTServiceFactory(IServiceProvider serviceProvider, ILogger<STTServiceFactory> logger)
+        public STTServiceFactory(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
-            _logger = logger;
         }
 
         public ISpeechToTextService CreateService(STTProvider provider)

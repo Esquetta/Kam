@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Core.CrossCuttingConcerns.Logging.Serilog;
+using Microsoft.Extensions.Configuration;
 using SmartVoiceAgent.Core.Config;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
@@ -7,27 +8,30 @@ using System.Text.Json;
 
 public class HuggingFaceSTTService : ISpeechToTextService
 {
-    private readonly ILogger<HuggingFaceSTTService> _logger;
+    private readonly LoggerServiceBase logger;
     private readonly HuggingFaceConfig _config;
     private readonly SemaphoreSlim _semaphore;
     private readonly HttpClient _httpClient;
 
+
     public HuggingFaceSTTService(
-        ILogger<HuggingFaceSTTService> logger,
-        HuggingFaceConfig config,
-        HttpClient httpClient)
+        LoggerServiceBase logger,
+        HttpClient httpClient,
+        IConfiguration configuration)
     {
-        _logger = logger;
-        _config = config;
-        _semaphore = new SemaphoreSlim(config.MaxConcurrentRequests, config.MaxConcurrentRequests);
+        this.logger = logger;
+        _config = configuration.GetSection("HuggingFaceConfig").Get<HuggingFaceConfig>()
+            ?? throw new NullReferenceException($"\" HuggingFaceConfig section cannot found in configuration."); ;
+        _semaphore = new SemaphoreSlim(_config.MaxConcurrentRequests, _config.MaxConcurrentRequests);
         _httpClient = httpClient;
 
         // Set Hugging Face API key
-        if (!string.IsNullOrEmpty(config.ApiKey))
+        if (!string.IsNullOrEmpty(_config.ApiKey))
         {
             _httpClient.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", config.ApiKey);
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _config.ApiKey);
         }
+
     }
 
     public async Task<SpeechResult> ConvertToTextAsync(byte[] audioData, CancellationToken cancellationToken = default)
@@ -56,19 +60,18 @@ public class HuggingFaceSTTService : ISpeechToTextService
                 ProcessingTime = stopwatch.Elapsed
             };
 
-            _logger.LogDebug("Hugging Face STT completed in {Time}ms: {Text}",
-                stopwatch.ElapsedMilliseconds, text);
+            logger.Debug($"Hugging Face STT completed in {stopwatch.ElapsedMilliseconds}ms: {text}");
 
             return result;
         }
         catch (OperationCanceledException)
         {
-            _logger.LogWarning("Hugging Face STT operation cancelled");
+            logger.Warn("Hugging Face STT operation cancelled");
             return new SpeechResult { ErrorMessage = "Operation cancelled" };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Hugging Face STT processing failed");
+            logger.Error(ex.Message);
             return new SpeechResult { ErrorMessage = ex.Message };
         }
         finally
@@ -98,8 +101,7 @@ public class HuggingFaceSTTService : ISpeechToTextService
                 if (errorResponse?.Error?.Contains("loading") == true)
                 {
                     // Model yükleniyor, bekle ve tekrar dene
-                    _logger.LogInformation("Model loading, waiting {Seconds} seconds...",
-                        errorResponse.EstimatedTime ?? 20);
+                    logger.Info($"Model loading, waiting Seconds seconds...{errorResponse.EstimatedTime ?? 20}");
 
                     await Task.Delay(TimeSpan.FromSeconds(errorResponse.EstimatedTime ?? 20), cancellationToken);
                     return await ProcessWithHuggingFaceAsync(audioData, cancellationToken);
