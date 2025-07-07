@@ -1,7 +1,9 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Infrastructure.Factories;
+using SmartVoiceAgent.Infrastructure.Helpers;
 using SmartVoiceAgent.Infrastructure.Services;
+using SmartVoiceAgent.Infrastructure.Services.Stt;
 
 namespace SmartVoiceAgent.Infrastructure.DependencyInjection;
 
@@ -23,6 +25,15 @@ public static class ServiceRegistration
         services.AddSingleton<IVoiceRecognitionFactory, VoiceRecognitionServiceFactory>();
         services.AddSingleton<IMusicServiceFactory, MusicServiceFactory>();
         services.AddSingleton<IIntentDetectionService, IntentDetectorService>();
+        services.AddSingleton<AudioProcessingService>();
+        services.AddHttpClient<HuggingFaceSTTService>(client =>
+        {
+            client.Timeout = TimeSpan.FromMinutes(10);
+            client.DefaultRequestHeaders.Add("User-Agent", "SmartVoiceAgent/1.0");
+        });
+        services.AddTransient<HuggingFaceSTTService>();
+        services.AddSingleton<ISTTServiceFactory, STTServiceFactory>();
+
 
 
 
