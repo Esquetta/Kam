@@ -3,6 +3,7 @@ using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Infrastructure.Factories;
 using SmartVoiceAgent.Infrastructure.Helpers;
 using SmartVoiceAgent.Infrastructure.Services;
+using SmartVoiceAgent.Infrastructure.Services.Language;
 using SmartVoiceAgent.Infrastructure.Services.Stt;
 
 namespace SmartVoiceAgent.Infrastructure.DependencyInjection;
@@ -33,6 +34,7 @@ public static class ServiceRegistration
         });
         services.AddTransient<HuggingFaceSTTService>();
         services.AddSingleton<ISTTServiceFactory, STTServiceFactory>();
+        services.AddScoped<ILanguageDetectionService, HuggingFaceLanguageDetectionService>();
 
 
 
