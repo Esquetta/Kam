@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Commands;
 using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Infrastructure.Helpers;
 
 namespace SmartVoiceAgent.Infrastructure.Services
 {
@@ -15,14 +16,16 @@ namespace SmartVoiceAgent.Infrastructure.Services
         private readonly IVoiceRecognitionService _voiceRecognition;
         private readonly IIntentDetectionService _intentDetector;
         private readonly IMediator mediator;
+        private readonly AudioProcessingService audioProcessingService;
         private readonly ILogger<AgentHostedService> _logger;
 
-        public AgentHostedService(IVoiceRecognitionService voiceRecognition, IIntentDetectionService intentDetector, ICommandBus commandBus, IQueryBus queryBus, ILogger<AgentHostedService> logger, IMediator mediator)
+        public AgentHostedService(IVoiceRecognitionService voiceRecognition, IIntentDetectionService intentDetector, ICommandBus commandBus, IQueryBus queryBus, ILogger<AgentHostedService> logger, IMediator mediator, AudioProcessingService audioProcessingService)
         {
             _voiceRecognition = voiceRecognition;
             _intentDetector = intentDetector;
             _logger = logger;
             this.mediator = mediator;
+            this.audioProcessingService = audioProcessingService;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -56,17 +59,25 @@ namespace SmartVoiceAgent.Infrastructure.Services
             };
 
             // 5 saniyelik kayıt al
-            var audioData = await voiceService.RecordForDurationAsync(TimeSpan.FromSeconds(5));
+            var audioData = await voiceService.RecordForDurationAsync(TimeSpan.FromSeconds(10));
 
             Console.WriteLine($"Toplam kaydedilen veri: {audioData.Length} byte");
 
-            // Uygulama kapanmadan beklet
-            Console.WriteLine("Çıkmak için bir tuşa bas...");
-            Console.ReadKey();
+            
 
             // Temizlik
             voiceService.Dispose();
 
+            var result=await audioProcessingService.ProcessAudioFromRecording(audioData, stoppingToken);
+
+            Console.WriteLine($"Converted stt Result:{result.Text}");
+
+
+
+
+            // Uygulama kapanmadan beklet
+            Console.WriteLine("Çıkmak için bir tuşa bas...");
+            Console.ReadKey();
 
             //while (!stoppingToken.IsCancellationRequested)
             //{
