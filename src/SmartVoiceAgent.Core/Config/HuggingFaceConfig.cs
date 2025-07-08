@@ -8,6 +8,7 @@
         public int MaxAudioSizeBytes { get; set; } = 25 * 1024 * 1024; // 25MB
         public TimeSpan ProcessingTimeout { get; set; } = TimeSpan.FromMinutes(5);
 
+
         // Alternatif modeller
         public static readonly string[] RecommendedModels = {
         "openai/whisper-large-v3",        // En yüksek kalite
@@ -17,6 +18,7 @@
         "facebook/wav2vec2-base-960h",    // Hızlı alternatif
         "microsoft/speecht5_asr",         // Microsoft'un modeli
         "jonatasgrosman/wav2vec2-large-xlsr-53-turkish", // Türkçe için
+        "facebook/fasttext-language-identification", // Dil tanımlama için
     };
 
     }
