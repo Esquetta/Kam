@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using SmartVoiceAgent.Core.Config;
 using SmartVoiceAgent.Core.Entities;
 using SmartVoiceAgent.Core.Enums;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace SmartVoiceAgent.Infrastructure.Services;
@@ -117,7 +118,35 @@ public class IntentDetectorService : IIntentDetectionService
 
     private string NormalizeText(string text)
     {
-        return text.ToLowerInvariant().Trim();
+        if (string.IsNullOrWhiteSpace(text))
+            return string.Empty;
+
+        
+        var normalizedText = Regex.Replace(text, @"[^\w\s\u00C0-\u017F]", " ");
+
+        
+        normalizedText = Regex.Replace(normalizedText, @"\s+", " ");
+
+        
+        //normalizedText = NormalizeTurkishChars(normalizedText);
+
+        return normalizedText.ToLowerInvariant().Trim();
+    }
+    private string NormalizeTurkishChars(string text)
+    {
+        
+        var turkishChars = new Dictionary<char, char>
+        {
+            {'ç', 'c'}, {'ğ', 'g'}, {'ı', 'i'}, {'ö', 'o'}, {'ş', 's'}, {'ü', 'u'},
+            {'Ç', 'C'}, {'Ğ', 'G'}, {'İ', 'I'}, {'Ö', 'O'}, {'Ş', 'S'}, {'Ü', 'U'}
+        };
+
+        var sb = new StringBuilder();
+        foreach (char c in text)
+        {
+            sb.Append(turkishChars.ContainsKey(c) ? turkishChars[c] : c);
+        }
+        return sb.ToString();
     }
 
     private List<IntentPattern> GetPatternsForLanguage(string language)
