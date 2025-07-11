@@ -3,9 +3,9 @@ using SmartVoiceAgent.Infrastructure.Services.Music;
 
 namespace SmartVoiceAgent.Infrastructure.Factories
 {
-    public class MusicServiceFactory: IMusicServiceFactory
+    public static class MusicServiceFactory
     {
-        public IMusicService Create()
+        public static IMusicService Create()
         {
             if (OperatingSystem.IsWindows())
                 return new WindowsMusicService();
