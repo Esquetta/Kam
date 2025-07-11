@@ -3,6 +3,7 @@ using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Infrastructure.Factories;
 using SmartVoiceAgent.Infrastructure.Helpers;
 using SmartVoiceAgent.Infrastructure.Services;
+using SmartVoiceAgent.Infrastructure.Services.ApplicationScanner;
 using SmartVoiceAgent.Infrastructure.Services.Language;
 using SmartVoiceAgent.Infrastructure.Services.Stt;
 
@@ -15,16 +16,11 @@ public static class ServiceRegistration
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
     {
-        services.AddScoped<IApplicationScanner, ApplicationScannerService>();
         services.AddScoped<IIntentDetectionService, IntentDetectorService>();
         services.AddScoped<ICommandLearningService, CommandLearningService>();
-        services.AddScoped<IVoiceRecognitionService, VoiceRecognitionService>();
         services.AddScoped<ICommandBus, CommandBus>();
         services.AddScoped<IQueryBus, QueryBus>();
         services.AddHostedService<AgentHostedService>();
-        services.AddSingleton<IApplicationServiceFactory, ApplicationServiceFactory>();
-        services.AddSingleton<IVoiceRecognitionFactory, VoiceRecognitionServiceFactory>();
-        services.AddSingleton<IMusicServiceFactory, MusicServiceFactory>();
         services.AddSingleton<IIntentDetectionService, IntentDetectorService>();
         services.AddSingleton<AudioProcessingService>();
         services.AddHttpClient<HuggingFaceSTTService>(client =>
@@ -35,6 +31,10 @@ public static class ServiceRegistration
         services.AddTransient<HuggingFaceSTTService>();
         services.AddSingleton<ISTTServiceFactory, STTServiceFactory>();
         services.AddScoped<ILanguageDetectionService, HuggingFaceLanguageDetectionService>();
+        services.AddSingleton<IApplicationScanner>(provider => ApplicationScannerFactory.Create());
+        services.AddSingleton<IApplicationService>(provider => ApplicationServiceFactory.Create());
+        services.AddSingleton<IVoiceRecognitionService>(proivder => VoiceRecognitionServiceFactory.Create());
+        services.AddSingleton<IMusicService>(proivder => MusicServiceFactory.Create());
 
 
 
