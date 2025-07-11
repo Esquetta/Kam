@@ -1,8 +1,8 @@
 ﻿using SmartVoiceAgent.Core.Interfaces;
 
-public class VoiceRecognitionServiceFactory: IVoiceRecognitionFactory
+public static class VoiceRecognitionServiceFactory
 {
-    public IVoiceRecognitionService Create()
+    public static IVoiceRecognitionService Create()
     {
         if (OperatingSystem.IsWindows())
             return new WindowsVoiceRecognitionService();

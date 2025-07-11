@@ -1,24 +1,16 @@
-﻿using SmartVoiceAgent.Core.Interfaces;
+﻿using SmartVoiceAgent.Infrastructure.Services.Voice;
 using System.Diagnostics;
 
-public class LinuxVoiceRecognitionService : IVoiceRecognitionService, IDisposable
+public class LinuxVoiceRecognitionService : VoiceRecognitionServiceBase
 {
     private Process _recordProcess;
-    private MemoryStream _memoryStream;
-    private bool _isRecording;
-    private bool _disposed;
+    private Task _streamCopyTask;
+    private CancellationTokenSource _cancellationTokenSource;
 
-    public event EventHandler<byte[]> OnVoiceCaptured;
-    public event EventHandler<Exception> OnError;
-    public event EventHandler OnRecordingStarted;
-    public event EventHandler OnRecordingStopped;
-
-    public void StartRecording()
+    protected override void StartRecordingInternal()
     {
-        if (_isRecording)
-            throw new InvalidOperationException("Kayıt zaten devam ediyor.");
+        _cancellationTokenSource = new CancellationTokenSource();
 
-        _memoryStream = new MemoryStream();
         _recordProcess = new Process
         {
             StartInfo = new ProcessStartInfo
@@ -32,45 +24,59 @@ public class LinuxVoiceRecognitionService : IVoiceRecognitionService, IDisposabl
         };
 
         _recordProcess.Start();
-        _recordProcess.StandardOutput.BaseStream.CopyToAsync(_memoryStream);
 
-        _isRecording = true;
-        OnRecordingStarted?.Invoke(this, EventArgs.Empty);
-    }
-
-    public void StopRecording()
-    {
-        if (!_isRecording)
-            return;
-
-        _recordProcess?.Kill();
-        _recordProcess?.WaitForExit();
-        _recordProcess?.Dispose();
-
-        var audioData = _memoryStream.ToArray();
-        OnVoiceCaptured?.Invoke(this, audioData);
-
-        OnRecordingStopped?.Invoke(this, EventArgs.Empty);
-        CleanupResources();
-    }
-
-    private void CleanupResources()
-    {
-        _memoryStream?.Dispose();
-        _recordProcess = null;
-        _memoryStream = null;
-        _isRecording = false;
-    }
-
-    public void Dispose()
-    {
-        if (!_disposed)
+        // Async olarak stream'i kopyala
+        _streamCopyTask = Task.Run(async () =>
         {
-            if (_isRecording)
-                StopRecording();
+            try
+            {
+                await _recordProcess.StandardOutput.BaseStream.CopyToAsync(_memoryStream, _cancellationTokenSource.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // Normal durma işlemi
+            }
+            catch (Exception ex)
+            {
+                InvokeOnError(ex);
+            }
+        });
+    }
 
-            CleanupResources();
-            _disposed = true;
+    protected override void StopRecordingInternal()
+    {
+        try
+        {
+            _cancellationTokenSource?.Cancel();
+
+            if (_recordProcess != null && !_recordProcess.HasExited)
+            {
+                _recordProcess.Kill();
+                _recordProcess.WaitForExit(1000); // 1 saniye bekle
+            }
+
+            _streamCopyTask?.Wait(1000); // Stream kopyalama işleminin bitmesini bekle
+
+            byte[] audioData = null;
+            if (_memoryStream != null && _memoryStream.Length > 0)
+            {
+                audioData = _memoryStream.ToArray();
+            }
+
+            OnRecordingComplete(audioData);
         }
+        catch (Exception ex)
+        {
+            InvokeOnError(ex);
+        }
+    }
+
+    protected override void CleanupPlatformResources()
+    {
+        _cancellationTokenSource?.Dispose();
+        _recordProcess?.Dispose();
+        _recordProcess = null;
+        _cancellationTokenSource = null;
+        _streamCopyTask = null;
     }
 }
