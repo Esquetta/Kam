@@ -5,9 +5,9 @@ namespace SmartVoiceAgent.Infrastructure.Services.ApplicationScanner;
 /// <summary>
 /// Factory for creating appropriate application scanner based on the current operating system.
 /// </summary>
-public static class ApplicationScannerFactory
+public  class ApplicationScannerFactory:IApplicationScannerServiceFactory
 {
-    public static IApplicationScanner Create()
+    public  IApplicationScanner Create()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {

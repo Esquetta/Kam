@@ -31,10 +31,10 @@ public static class ServiceRegistration
         services.AddTransient<HuggingFaceSTTService>();
         services.AddSingleton<ISTTServiceFactory, STTServiceFactory>();
         services.AddScoped<ILanguageDetectionService, HuggingFaceLanguageDetectionService>();
-        services.AddSingleton<IApplicationScanner>(provider => ApplicationScannerFactory.Create());
-        services.AddSingleton<IApplicationService>(provider => ApplicationServiceFactory.Create());
-        services.AddSingleton<IVoiceRecognitionService>(proivder => VoiceRecognitionServiceFactory.Create());
-        services.AddSingleton<IMusicService>(proivder => MusicServiceFactory.Create());
+        services.AddSingleton<IApplicationScannerServiceFactory,ApplicationScannerFactory>();
+        services.AddSingleton<IApplicationServiceFactory,ApplicationServiceFactory>();
+        services.AddSingleton<IVoiceRecognitionFactory,VoiceRecognitionServiceFactory>();
+        services.AddSingleton<IMusicServiceFactory,MusicServiceFactory>();
 
 
 

@@ -13,3 +13,8 @@ public interface IApplicationScanner
     /// <returns>List of application information.</returns>
     Task<IEnumerable<AppInfoDTO>> GetInstalledApplicationsAsync();
 }
+
+public interface IApplicationScannerServiceFactory
+{
+    IApplicationScanner Create();
+}

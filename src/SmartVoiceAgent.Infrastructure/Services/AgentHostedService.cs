@@ -1,9 +1,9 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using SmartVoiceAgent.Core.Commands;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Infrastructure.Helpers;
+using SmartVoiceAgent.Infrastructure.Services.ApplicationScanner;
 
 namespace SmartVoiceAgent.Infrastructure.Services
 {
@@ -11,21 +11,25 @@ namespace SmartVoiceAgent.Infrastructure.Services
     ///  A hosted background service that continuously listens for voice commands,
     ///  detects intents and dispatches them to the appropriate command handlers.
     /// </summary>
-    public class AgentHostedService: BackgroundService
+    public class AgentHostedService : BackgroundService
     {
-        private readonly IVoiceRecognitionService _voiceRecognition;
         private readonly IIntentDetectionService _intentDetector;
         private readonly IMediator mediator;
         private readonly AudioProcessingService audioProcessingService;
+        private readonly ILanguageDetectionService languageDetectionService;
         private readonly ILogger<AgentHostedService> _logger;
+        private readonly IApplicationScannerServiceFactory  applicationScannerServiceFactory;
+        private readonly IVoiceRecognitionFactory voiceRecognitionFactory;
 
-        public AgentHostedService(IVoiceRecognitionService voiceRecognition, IIntentDetectionService intentDetector, ICommandBus commandBus, IQueryBus queryBus, ILogger<AgentHostedService> logger, IMediator mediator, AudioProcessingService audioProcessingService)
+        public AgentHostedService(IIntentDetectionService intentDetector, ICommandBus commandBus, IQueryBus queryBus, ILogger<AgentHostedService> logger, IMediator mediator, AudioProcessingService audioProcessingService, ILanguageDetectionService languageDetectionService, IApplicationScannerServiceFactory applicationScannerServiceFactory, IVoiceRecognitionFactory voiceRecognitionFactory)
         {
-            _voiceRecognition = voiceRecognition;
             _intentDetector = intentDetector;
             _logger = logger;
             this.mediator = mediator;
             this.audioProcessingService = audioProcessingService;
+            this.languageDetectionService = languageDetectionService;
+            this.applicationScannerServiceFactory = applicationScannerServiceFactory;
+            this.voiceRecognitionFactory = voiceRecognitionFactory;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -36,7 +40,12 @@ namespace SmartVoiceAgent.Infrastructure.Services
 
             Console.WriteLine("Ses kaydı başlatılıyor...");
 
-            var voiceService = new WindowsVoiceRecognitionService();
+            var scanner = applicationScannerServiceFactory.Create();
+
+
+            var voiceService = voiceRecognitionFactory.Create();
+
+
 
             voiceService.OnVoiceCaptured += (sender, data) =>
             {
@@ -59,19 +68,24 @@ namespace SmartVoiceAgent.Infrastructure.Services
             };
 
             // 5 saniyelik kayıt al
-            var audioData = await voiceService.RecordForDurationAsync(TimeSpan.FromSeconds(10));
+            var audioData = await voiceService.RecordForDurationAsync(TimeSpan.FromSeconds(6));
 
             Console.WriteLine($"Toplam kaydedilen veri: {audioData.Length} byte");
 
-            
+
 
             // Temizlik
             voiceService.Dispose();
 
-            var result=await audioProcessingService.ProcessAudioFromRecording(audioData, stoppingToken);
+            var result = await audioProcessingService.ProcessAudioFromRecording(audioData, stoppingToken);
 
             Console.WriteLine($"Converted stt Result:{result.Text}");
+            var languageResult = await languageDetectionService.DetectLanguageAsync(result.Text, stoppingToken);
+            Console.WriteLine($"Detected language: {languageResult.Language} with confidence {languageResult.Confidence}");
 
+            var intent = await _intentDetector.DetectIntentAsync(result.Text, languageResult.Language, stoppingToken);
+
+            Console.WriteLine($"Detected intent: {intent.Intent}, Confidance: {intent.Confidence}");
 
 
 

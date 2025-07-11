@@ -9,6 +9,8 @@ public class ApplicationServiceFactory : IApplicationServiceFactory
             return new WindowsApplicationService();
         if (OperatingSystem.IsLinux())
             return new LinuxApplicationService();
+        if (OperatingSystem.IsMacOS())
+            return new MacOSApplicationService();
 
         throw new PlatformNotSupportedException();
     }
