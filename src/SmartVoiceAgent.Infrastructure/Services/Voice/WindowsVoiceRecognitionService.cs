@@ -1,12 +1,11 @@
 ﻿using NAudio.Wave;
 using SmartVoiceAgent.Infrastructure.Services.Voice;
 
-
 public class WindowsVoiceRecognitionService : VoiceRecognitionServiceBase
 {
     private WaveInEvent _waveIn;
 
-    protected override void StartRecordingInternal()
+    protected override void StartListeningInternal()
     {
         _waveIn = new WaveInEvent
         {
@@ -19,7 +18,7 @@ public class WindowsVoiceRecognitionService : VoiceRecognitionServiceBase
         _waveIn.StartRecording();
     }
 
-    protected override void StopRecordingInternal()
+    protected override void StopListeningInternal()
     {
         _waveIn?.StopRecording();
     }
@@ -39,12 +38,11 @@ public class WindowsVoiceRecognitionService : VoiceRecognitionServiceBase
     {
         try
         {
-            lock (_lock)
+            if (e.BytesRecorded > 0)
             {
-                if (_memoryStream != null && e.BytesRecorded > 0)
-                {
-                    _memoryStream.Write(e.Buffer, 0, e.BytesRecorded);
-                }
+                var buffer = new byte[e.BytesRecorded];
+                Array.Copy(e.Buffer, buffer, e.BytesRecorded);
+                AddAudioData(buffer);
             }
         }
         catch (Exception ex)
@@ -55,28 +53,20 @@ public class WindowsVoiceRecognitionService : VoiceRecognitionServiceBase
 
     private void OnRecordingStoppedHandler(object sender, StoppedEventArgs e)
     {
-        lock (_lock)
+        try
         {
-            try
+            if (e.Exception != null)
             {
-                if (e.Exception != null)
-                {
-                    InvokeOnError(e.Exception);
-                    return;
-                }
-
-                byte[] audioData = null;
-                if (_memoryStream != null && _memoryStream.Length > 0)
-                {
-                    audioData = _memoryStream.ToArray();
-                }
-
-                OnRecordingComplete(audioData);
+                InvokeOnError(e.Exception);
+                return;
             }
-            catch (Exception ex)
-            {
-                InvokeOnError(ex);
-            }
+
+            var audioData = GetAndClearAudioData();
+            OnListeningComplete(audioData);
+        }
+        catch (Exception ex)
+        {
+            InvokeOnError(ex);
         }
     }
 }

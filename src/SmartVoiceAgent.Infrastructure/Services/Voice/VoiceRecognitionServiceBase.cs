@@ -1,18 +1,34 @@
 ﻿using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Infrastructure.Helpers;
 
 namespace SmartVoiceAgent.Infrastructure.Services.Voice;
+
 public abstract class VoiceRecognitionServiceBase : IVoiceRecognitionService
 {
-    protected MemoryStream _memoryStream;
-    protected bool _isRecording;
+    protected CircularAudioBuffer _audioBuffer;
+    protected bool _isListening;
     protected bool _disposed;
     protected readonly object _lock = new object();
+    protected Timer _memoryCleanupTimer;
 
-    // Events - explicit implementation to avoid CS0070
+    // Configuration
+    protected readonly int _bufferCapacitySeconds = 30; // 30 saniye buffer
+    protected readonly long _maxMemoryThreshold = 50 * 1024 * 1024; // 50MB
+
+    protected VoiceRecognitionServiceBase()
+    {
+        _audioBuffer = new CircularAudioBuffer(_bufferCapacitySeconds);
+
+        // Hafıza temizleme timer'ı - her 5 dakikada bir
+        _memoryCleanupTimer = new Timer(CleanupMemory, null,
+            TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+    }
+
+    // Events
     private event EventHandler<byte[]> _onVoiceCaptured;
     private event EventHandler<Exception> _onError;
-    private event EventHandler _onRecordingStarted;
-    private event EventHandler _onRecordingStopped;
+    private event EventHandler _onListeningStarted;
+    private event EventHandler _onListeningStopped;
 
     public event EventHandler<byte[]> OnVoiceCaptured
     {
@@ -26,58 +42,59 @@ public abstract class VoiceRecognitionServiceBase : IVoiceRecognitionService
         remove { _onError -= value; }
     }
 
-    public event EventHandler OnRecordingStarted
+    public event EventHandler OnListeningStarted
     {
-        add { _onRecordingStarted += value; }
-        remove { _onRecordingStarted -= value; }
+        add { _onListeningStarted += value; }
+        remove { _onListeningStarted -= value; }
     }
 
-    public event EventHandler OnRecordingStopped
+    public event EventHandler OnListeningStopped
     {
-        add { _onRecordingStopped += value; }
-        remove { _onRecordingStopped -= value; }
+        add { _onListeningStopped += value; }
+        remove { _onListeningStopped -= value; }
     }
 
-    // Protected helper methods for invoking events
+    // Event invoker helpers
     protected virtual void InvokeOnVoiceCaptured(byte[] data) => _onVoiceCaptured?.Invoke(this, data);
     protected virtual void InvokeOnError(Exception ex) => _onError?.Invoke(this, ex);
-    protected virtual void InvokeOnRecordingStarted() => _onRecordingStarted?.Invoke(this, EventArgs.Empty);
-    protected virtual void InvokeOnRecordingStopped() => _onRecordingStopped?.Invoke(this, EventArgs.Empty);
+    protected virtual void InvokeOnListeningStarted() => _onListeningStarted?.Invoke(this, EventArgs.Empty);
+    protected virtual void InvokeOnListeningStopped() => _onListeningStopped?.Invoke(this, EventArgs.Empty);
 
     // Properties
-    public bool IsRecording
+    public bool IsListening
     {
         get
         {
             lock (_lock)
             {
-                return _isRecording;
+                return _isListening;
             }
         }
     }
 
-    // Abstract methods that must be implemented by derived classes
-    protected abstract void StartRecordingInternal();
-    protected abstract void StopRecordingInternal();
+    // Abstract methods
+    protected abstract void StartListeningInternal();
+    protected abstract void StopListeningInternal();
     protected abstract void CleanupPlatformResources();
 
     // Common public methods
-    public virtual void StartRecording()
+    public virtual void StartListening()
     {
         lock (_lock)
         {
             try
             {
-                if (_isRecording)
-                    throw new InvalidOperationException("Kayıt zaten devam ediyor.");
+                if (_isListening)
+                    throw new InvalidOperationException("Dinleme zaten devam ediyor.");
 
                 if (_disposed)
                     throw new ObjectDisposedException(GetType().Name);
 
-                _memoryStream = new MemoryStream();
-                StartRecordingInternal();
-                _isRecording = true;
-                InvokeOnRecordingStarted();
+                _audioBuffer.Clear();
+                StartListeningInternal();
+                _isListening = true;
+
+                InvokeOnListeningStarted();
             }
             catch (Exception ex)
             {
@@ -87,16 +104,16 @@ public abstract class VoiceRecognitionServiceBase : IVoiceRecognitionService
         }
     }
 
-    public virtual void StopRecording()
+    public virtual void StopListening()
     {
         lock (_lock)
         {
             try
             {
-                if (!_isRecording)
+                if (!_isListening)
                     return;
 
-                StopRecordingInternal();
+                StopListeningInternal();
             }
             catch (Exception ex)
             {
@@ -109,11 +126,7 @@ public abstract class VoiceRecognitionServiceBase : IVoiceRecognitionService
     {
         lock (_lock)
         {
-            if (_memoryStream != null)
-            {
-                _memoryStream.SetLength(0);
-                _memoryStream.Position = 0;
-            }
+            _audioBuffer?.Clear();
         }
     }
 
@@ -121,7 +134,107 @@ public abstract class VoiceRecognitionServiceBase : IVoiceRecognitionService
     {
         lock (_lock)
         {
-            return _memoryStream?.Length ?? 0;
+            return _audioBuffer?.Count ?? 0;
+        }
+    }
+
+    // Memory cleanup
+    private void CleanupMemory(object state)
+    {
+        try
+        {
+            var currentMemory = GC.GetTotalMemory(false);
+
+            if (currentMemory > _maxMemoryThreshold)
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+            }
+        }
+        catch (Exception ex)
+        {
+            InvokeOnError(ex);
+        }
+    }
+
+    // Ses verisi buffer'dan alınması
+    public virtual byte[] GetAudioData()
+    {
+        lock (_lock)
+        {
+            return _audioBuffer.ReadAll();
+        }
+    }
+
+    public virtual byte[] GetAndClearAudioData()
+    {
+        lock (_lock)
+        {
+            var data = _audioBuffer.ReadAll();
+            _audioBuffer.Clear();
+            return data;
+        }
+    }
+
+    protected virtual void AddAudioData(byte[] data)
+    {
+        if (data != null && data.Length > 0)
+        {
+            lock (_lock)
+            {
+                _audioBuffer.Write(data);
+            }
+        }
+    }
+
+    protected virtual void OnListeningComplete(byte[] audioData)
+    {
+        try
+        {
+            _isListening = false;
+
+            if (audioData != null && audioData.Length > 0)
+            {
+                InvokeOnVoiceCaptured(audioData);
+            }
+
+            InvokeOnListeningStopped();
+        }
+        catch (Exception ex)
+        {
+            InvokeOnError(ex);
+        }
+        finally
+        {
+            CleanupResources();
+        }
+    }
+
+    protected virtual void CleanupResources()
+    {
+        try
+        {
+            _audioBuffer?.Clear();
+            CleanupPlatformResources();
+            _isListening = false;
+        }
+        catch
+        {
+            // ignore
+        }
+    }
+
+    public virtual void Dispose()
+    {
+        if (!_disposed)
+        {
+            if (_isListening)
+                StopListening();
+
+            _memoryCleanupTimer?.Dispose();
+            CleanupResources();
+            _disposed = true;
         }
     }
 
@@ -149,61 +262,10 @@ public abstract class VoiceRecognitionServiceBase : IVoiceRecognitionService
         OnVoiceCaptured += captureHandler;
         OnError += errorHandler;
 
-        StartRecording();
+        StartListening();
 
-        // Belirtilen süre sonra kaydı durdur
-        _ = Task.Delay(duration).ContinueWith(_ => StopRecording());
+        _ = Task.Delay(duration).ContinueWith(_ => StopListening());
 
         return await tcs.Task;
-    }
-
-    protected virtual void OnRecordingComplete(byte[] audioData)
-    {
-        try
-        {
-            _isRecording = false;
-
-            if (audioData != null && audioData.Length > 0)
-            {
-                InvokeOnVoiceCaptured(audioData);
-            }
-
-            InvokeOnRecordingStopped();
-        }
-        catch (Exception ex)
-        {
-            InvokeOnError(ex);
-        }
-        finally
-        {
-            CleanupResources();
-        }
-    }
-
-    protected virtual void CleanupResources()
-    {
-        try
-        {
-            _memoryStream?.Dispose();
-            _memoryStream = null;
-            CleanupPlatformResources();
-            _isRecording = false;
-        }
-        catch
-        {
-            // Cleanup sırasında hata olsa bile devam et
-        }
-    }
-
-    public virtual void Dispose()
-    {
-        if (!_disposed)
-        {
-            if (_isRecording)
-                StopRecording();
-
-            CleanupResources();
-            _disposed = true;
-        }
     }
 }

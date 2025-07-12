@@ -4,10 +4,10 @@ using System.Diagnostics;
 public class LinuxVoiceRecognitionService : VoiceRecognitionServiceBase
 {
     private Process _recordProcess;
-    private Task _streamCopyTask;
+    private Task _readTask;
     private CancellationTokenSource _cancellationTokenSource;
 
-    protected override void StartRecordingInternal()
+    protected override void StartListeningInternal()
     {
         _cancellationTokenSource = new CancellationTokenSource();
 
@@ -25,25 +25,38 @@ public class LinuxVoiceRecognitionService : VoiceRecognitionServiceBase
 
         _recordProcess.Start();
 
-        // Async olarak stream'i kopyala
-        _streamCopyTask = Task.Run(async () =>
+        _readTask = Task.Run(async () =>
         {
             try
             {
-                await _recordProcess.StandardOutput.BaseStream.CopyToAsync(_memoryStream, _cancellationTokenSource.Token);
+                var buffer = new byte[4096];
+                while (!_cancellationTokenSource.Token.IsCancellationRequested)
+                {
+                    int bytesRead = await _recordProcess.StandardOutput.BaseStream.ReadAsync(buffer, 0, buffer.Length, _cancellationTokenSource.Token);
+                    if (bytesRead > 0)
+                    {
+                        var actualData = new byte[bytesRead];
+                        Array.Copy(buffer, actualData, bytesRead);
+                        AddAudioData(actualData);
+                    }
+                    else
+                    {
+                        await Task.Delay(50);
+                    }
+                }
             }
             catch (OperationCanceledException)
             {
-                // Normal durma işlemi
+                // normal durma
             }
             catch (Exception ex)
             {
                 InvokeOnError(ex);
             }
-        });
+        }, _cancellationTokenSource.Token);
     }
 
-    protected override void StopRecordingInternal()
+    protected override void StopListeningInternal()
     {
         try
         {
@@ -52,18 +65,13 @@ public class LinuxVoiceRecognitionService : VoiceRecognitionServiceBase
             if (_recordProcess != null && !_recordProcess.HasExited)
             {
                 _recordProcess.Kill();
-                _recordProcess.WaitForExit(1000); // 1 saniye bekle
+                _recordProcess.WaitForExit(1000);
             }
 
-            _streamCopyTask?.Wait(1000); // Stream kopyalama işleminin bitmesini bekle
+            _readTask?.Wait(1000);
 
-            byte[] audioData = null;
-            if (_memoryStream != null && _memoryStream.Length > 0)
-            {
-                audioData = _memoryStream.ToArray();
-            }
-
-            OnRecordingComplete(audioData);
+            var audioData = GetAndClearAudioData();
+            OnListeningComplete(audioData);
         }
         catch (Exception ex)
         {
@@ -77,6 +85,6 @@ public class LinuxVoiceRecognitionService : VoiceRecognitionServiceBase
         _recordProcess?.Dispose();
         _recordProcess = null;
         _cancellationTokenSource = null;
-        _streamCopyTask = null;
+        _readTask = null;
     }
 }
