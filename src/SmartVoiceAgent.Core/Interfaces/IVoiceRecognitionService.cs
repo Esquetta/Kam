@@ -5,19 +5,20 @@
 /// </summary>
 public interface IVoiceRecognitionService : IDisposable
 {
-    void StartRecording();
-    void StopRecording();
+    void StartListening(); // continuous
+    void StopListening();
     void ClearBuffer();
     long GetCurrentBufferSize();
-    Task<byte[]> RecordForDurationAsync(TimeSpan duration);
+    Task<byte[]> RecordForDurationAsync(TimeSpan duration); // istek bazlı 
 
     // Properties
-    bool IsRecording { get; }
+    bool IsListening { get; }
 
     // Events
     event EventHandler<byte[]> OnVoiceCaptured;
     event EventHandler<Exception> OnError;
-    event EventHandler OnRecordingStarted;
-    event EventHandler OnRecordingStopped;
+    event EventHandler OnListeningStarted;
+    event EventHandler OnListeningStopped;
 }
+
 
