@@ -24,6 +24,9 @@ public abstract class VoiceRecognitionServiceBase : IVoiceRecognitionService
             TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
     }
 
+    // Event for external audio data consumption
+    public event EventHandler<byte[]> OnAudioDataReady;
+
     // Events
     private event EventHandler<byte[]> _onVoiceCaptured;
     private event EventHandler<Exception> _onError;
@@ -184,6 +187,9 @@ public abstract class VoiceRecognitionServiceBase : IVoiceRecognitionService
             lock (_lock)
             {
                 _audioBuffer.Write(data);
+
+                // Dış sistemlere ses verisi hazır olduğunu bildir
+                OnAudioDataReady?.Invoke(this, data);
             }
         }
     }
