@@ -8,62 +8,36 @@ public abstract class VoiceRecognitionServiceBase : IVoiceRecognitionService
     protected CircularAudioBuffer _audioBuffer;
     protected bool _isListening;
     protected bool _disposed;
-    protected readonly object _lock = new object();
+    protected readonly object _lock = new();
     protected Timer _memoryCleanupTimer;
 
-    // Configuration
-    protected readonly int _bufferCapacitySeconds = 30; // 30 saniye buffer
-    protected readonly long _maxMemoryThreshold = 50 * 1024 * 1024; // 50MB
+    protected readonly int _bufferCapacitySeconds = 30;
+    protected readonly long _maxMemoryThreshold = 50 * 1024 * 1024;
+
+    protected readonly double _voiceThreshold = 0.02; // RMS threshold
+    protected readonly int _silenceTimeoutMs = 800;
+
+    private DateTime _lastVoiceDetectedTime;
+    private MemoryStream _currentSpeechStream;
 
     protected VoiceRecognitionServiceBase()
     {
         _audioBuffer = new CircularAudioBuffer(_bufferCapacitySeconds);
-
-        // Hafıza temizleme timer'ı - her 5 dakikada bir
-        _memoryCleanupTimer = new Timer(CleanupMemory, null,
-            TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+        _memoryCleanupTimer = new Timer(CleanupMemory, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
     }
 
-    // Event for external audio data consumption
-    public event EventHandler<byte[]> OnAudioDataReady;
+    // Interface Events
+    public event EventHandler<byte[]> OnVoiceCaptured;
+    public event EventHandler<Exception> OnError;
+    public event EventHandler OnListeningStarted;
+    public event EventHandler OnListeningStopped;
 
-    // Events
-    private event EventHandler<byte[]> _onVoiceCaptured;
-    private event EventHandler<Exception> _onError;
-    private event EventHandler _onListeningStarted;
-    private event EventHandler _onListeningStopped;
+    // Protected event invokers
+    protected virtual void InvokeOnVoiceCaptured(byte[] data) => OnVoiceCaptured?.Invoke(this, data);
+    protected virtual void InvokeOnError(Exception ex) => OnError?.Invoke(this, ex);
+    protected virtual void InvokeOnListeningStarted() => OnListeningStarted?.Invoke(this, EventArgs.Empty);
+    protected virtual void InvokeOnListeningStopped() => OnListeningStopped?.Invoke(this, EventArgs.Empty);
 
-    public event EventHandler<byte[]> OnVoiceCaptured
-    {
-        add { _onVoiceCaptured += value; }
-        remove { _onVoiceCaptured -= value; }
-    }
-
-    public event EventHandler<Exception> OnError
-    {
-        add { _onError += value; }
-        remove { _onError -= value; }
-    }
-
-    public event EventHandler OnListeningStarted
-    {
-        add { _onListeningStarted += value; }
-        remove { _onListeningStarted -= value; }
-    }
-
-    public event EventHandler OnListeningStopped
-    {
-        add { _onListeningStopped += value; }
-        remove { _onListeningStopped -= value; }
-    }
-
-    // Event invoker helpers
-    protected virtual void InvokeOnVoiceCaptured(byte[] data) => _onVoiceCaptured?.Invoke(this, data);
-    protected virtual void InvokeOnError(Exception ex) => _onError?.Invoke(this, ex);
-    protected virtual void InvokeOnListeningStarted() => _onListeningStarted?.Invoke(this, EventArgs.Empty);
-    protected virtual void InvokeOnListeningStopped() => _onListeningStopped?.Invoke(this, EventArgs.Empty);
-
-    // Properties
     public bool IsListening
     {
         get
@@ -75,57 +49,40 @@ public abstract class VoiceRecognitionServiceBase : IVoiceRecognitionService
         }
     }
 
-    // Abstract methods
     protected abstract void StartListeningInternal();
     protected abstract void StopListeningInternal();
     protected abstract void CleanupPlatformResources();
 
-    // Common public methods
-    public virtual void StartListening()
+    public void StartListening()
     {
         lock (_lock)
         {
-            try
-            {
-                if (_isListening)
-                    throw new InvalidOperationException("Dinleme zaten devam ediyor.");
+            if (_isListening)
+                throw new InvalidOperationException("Listening is already running.");
 
-                if (_disposed)
-                    throw new ObjectDisposedException(GetType().Name);
+            if (_disposed)
+                throw new ObjectDisposedException(GetType().Name);
 
-                _audioBuffer.Clear();
-                StartListeningInternal();
-                _isListening = true;
-
-                InvokeOnListeningStarted();
-            }
-            catch (Exception ex)
-            {
-                InvokeOnError(ex);
-                CleanupResources();
-            }
+            _audioBuffer.Clear();
+            _currentSpeechStream = new MemoryStream();
+            StartListeningInternal();
+            _isListening = true;
+            OnListeningStarted?.Invoke(this, EventArgs.Empty);
         }
     }
 
-    public virtual void StopListening()
+    public void StopListening()
     {
         lock (_lock)
         {
-            try
-            {
-                if (!_isListening)
-                    return;
+            if (!_isListening)
+                return;
 
-                StopListeningInternal();
-            }
-            catch (Exception ex)
-            {
-                InvokeOnError(ex);
-            }
+            StopListeningInternal();
         }
     }
 
-    public virtual void ClearBuffer()
+    public void ClearBuffer()
     {
         lock (_lock)
         {
@@ -133,7 +90,7 @@ public abstract class VoiceRecognitionServiceBase : IVoiceRecognitionService
         }
     }
 
-    public virtual long GetCurrentBufferSize()
+    public long GetCurrentBufferSize()
     {
         lock (_lock)
         {
@@ -141,13 +98,55 @@ public abstract class VoiceRecognitionServiceBase : IVoiceRecognitionService
         }
     }
 
-    // Memory cleanup
+    protected virtual void AddAudioData(byte[] data)
+    {
+        if (data == null || data.Length == 0) return;
+
+        lock (_lock)
+        {
+            _audioBuffer.Write(data);
+
+            var rms = CalculateRms(data);
+            if (rms >= _voiceThreshold)
+            {
+                _currentSpeechStream.Write(data, 0, data.Length);
+                _lastVoiceDetectedTime = DateTime.Now;
+            }
+            else if (_currentSpeechStream.Length > 0)
+            {
+                var silenceDuration = (DateTime.Now - _lastVoiceDetectedTime).TotalMilliseconds;
+                if (silenceDuration > _silenceTimeoutMs)
+                {
+                    var voiceData = _currentSpeechStream.ToArray();
+                    _currentSpeechStream.Dispose();
+                    _currentSpeechStream = new MemoryStream();
+                    OnVoiceCaptured?.Invoke(this, voiceData);
+                }
+            }
+        }
+    }
+
+    private double CalculateRms(byte[] buffer)
+    {
+        if (buffer.Length == 0) return 0;
+
+        double sumSquares = 0;
+        for (int i = 0; i < buffer.Length; i += 2)
+        {
+            if (i + 1 >= buffer.Length) break;
+            short sample = BitConverter.ToInt16(buffer, i);
+            double sample32 = sample / 32768.0;
+            sumSquares += sample32 * sample32;
+        }
+
+        return Math.Sqrt(sumSquares / (buffer.Length / 2));
+    }
+
     private void CleanupMemory(object state)
     {
         try
         {
             var currentMemory = GC.GetTotalMemory(false);
-
             if (currentMemory > _maxMemoryThreshold)
             {
                 GC.Collect();
@@ -157,63 +156,7 @@ public abstract class VoiceRecognitionServiceBase : IVoiceRecognitionService
         }
         catch (Exception ex)
         {
-            InvokeOnError(ex);
-        }
-    }
-
-    // Ses verisi buffer'dan alınması
-    public virtual byte[] GetAudioData()
-    {
-        lock (_lock)
-        {
-            return _audioBuffer.ReadAll();
-        }
-    }
-
-    public virtual byte[] GetAndClearAudioData()
-    {
-        lock (_lock)
-        {
-            var data = _audioBuffer.ReadAll();
-            _audioBuffer.Clear();
-            return data;
-        }
-    }
-
-    protected virtual void AddAudioData(byte[] data)
-    {
-        if (data != null && data.Length > 0)
-        {
-            lock (_lock)
-            {
-                _audioBuffer.Write(data);
-
-                // Dış sistemlere ses verisi hazır olduğunu bildir
-                OnAudioDataReady?.Invoke(this, data);
-            }
-        }
-    }
-
-    protected virtual void OnListeningComplete(byte[] audioData)
-    {
-        try
-        {
-            _isListening = false;
-
-            if (audioData != null && audioData.Length > 0)
-            {
-                InvokeOnVoiceCaptured(audioData);
-            }
-
-            InvokeOnListeningStopped();
-        }
-        catch (Exception ex)
-        {
-            InvokeOnError(ex);
-        }
-        finally
-        {
-            CleanupResources();
+            OnError?.Invoke(this, ex);
         }
     }
 
@@ -222,16 +165,14 @@ public abstract class VoiceRecognitionServiceBase : IVoiceRecognitionService
         try
         {
             _audioBuffer?.Clear();
+            _currentSpeechStream?.Dispose();
             CleanupPlatformResources();
             _isListening = false;
         }
-        catch
-        {
-            // ignore
-        }
+        catch { }
     }
 
-    public virtual void Dispose()
+    public void Dispose()
     {
         if (!_disposed)
         {
@@ -244,7 +185,7 @@ public abstract class VoiceRecognitionServiceBase : IVoiceRecognitionService
         }
     }
 
-    public virtual async Task<byte[]> RecordForDurationAsync(TimeSpan duration)
+    public async Task<byte[]> RecordForDurationAsync(TimeSpan duration)
     {
         var tcs = new TaskCompletionSource<byte[]>();
 
@@ -273,5 +214,39 @@ public abstract class VoiceRecognitionServiceBase : IVoiceRecognitionService
         _ = Task.Delay(duration).ContinueWith(_ => StopListening());
 
         return await tcs.Task;
+    }
+    // Ses verisini buffer'dan çekip temizleyen yardımcı metot
+    protected virtual byte[] GetAndClearAudioData()
+    {
+        lock (_lock)
+        {
+            var data = _audioBuffer.ReadAll();
+            _audioBuffer.Clear();
+            return data;
+        }
+    }
+
+    // Dinleme tamamlandığında çağrılan helper
+    protected virtual void OnListeningComplete(byte[] audioData)
+    {
+        try
+        {
+            _isListening = false;
+
+            if (audioData != null && audioData.Length > 0)
+            {
+                InvokeOnVoiceCaptured(audioData);
+            }
+
+            InvokeOnListeningStopped();
+        }
+        catch (Exception ex)
+        {
+            InvokeOnError(ex);
+        }
+        finally
+        {
+            CleanupResources();
+        }
     }
 }

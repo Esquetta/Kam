@@ -1,4 +1,5 @@
 ﻿using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Infrastructure.Services.Voice;
 
 public  class VoiceRecognitionServiceFactory: IVoiceRecognitionFactory
 {

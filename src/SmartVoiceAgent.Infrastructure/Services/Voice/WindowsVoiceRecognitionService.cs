@@ -1,5 +1,6 @@
 ﻿using NAudio.Wave;
-using SmartVoiceAgent.Infrastructure.Services.Voice;
+
+namespace SmartVoiceAgent.Infrastructure.Services.Voice;
 
 public class WindowsVoiceRecognitionService : VoiceRecognitionServiceBase
 {
@@ -9,7 +10,7 @@ public class WindowsVoiceRecognitionService : VoiceRecognitionServiceBase
     {
         _waveIn = new WaveInEvent
         {
-            WaveFormat = new WaveFormat(16000, 16, 1), // 16-bit, mono, 16kHz
+            WaveFormat = new WaveFormat(16000, 16, 1),
             BufferMilliseconds = 100
         };
 
@@ -61,8 +62,7 @@ public class WindowsVoiceRecognitionService : VoiceRecognitionServiceBase
                 return;
             }
 
-            var audioData = GetAndClearAudioData();
-            OnListeningComplete(audioData);
+            StopListeningInternal();
         }
         catch (Exception ex)
         {
