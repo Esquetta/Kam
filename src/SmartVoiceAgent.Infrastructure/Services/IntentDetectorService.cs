@@ -159,8 +159,27 @@ public class IntentDetectorService : IIntentDetectionService
     private float CalculateScore(string text, IntentPattern pattern)
     {
         var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var matchCount = pattern.Keywords.Count(keyword => words.Contains(keyword));
+        int matchCount = 0;
+
+        foreach (var keyword in pattern.Keywords)
+        {
+            if (words.Any(word => IsLikeMatch(word, keyword)))
+            {
+                matchCount++;
+            }
+        }
+
         return (float)matchCount / pattern.Keywords.Length * pattern.Weight;
+    }
+    private bool IsLikeMatch(string word, string keyword)
+    {
+        word = StripTurkishSuffixes(word);
+
+        return word.StartsWith(keyword, StringComparison.OrdinalIgnoreCase);
+    }
+    private string StripTurkishSuffixes(string word)
+    {
+        return Regex.Replace(word, "(misin|mısın|mışsın|mişsin|sana|sene|abilir|ebilir|lütfen)$", "", RegexOptions.IgnoreCase);
     }
 
     private async Task<Dictionary<string, object>> ExtractEntitiesAsync(string text, CommandType intent, string language)
