@@ -6,9 +6,15 @@
     <Nullable>enable</Nullable>
     <UserSecretsId>c596b7d6-7516-451c-b4fc-598ea1e7ddc6</UserSecretsId>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AutoGen" Version="0.2.3" />
+    <PackageReference Include="AutoGen.Core" Version="0.2.3" />
+    <PackageReference Include="AutoGen.DotnetInteractive" Version="0.2.3" />
+    <PackageReference Include="AutoGen.OpenAI" Version="0.2.3" />
+    <PackageReference Include="AutoGen.SourceGenerator" Version="0.2.3" />
     <PackageReference Include="FluentValidation" Version="12.0.0" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.0.0" />
     <PackageReference Include="MediatR" Version="12.5.0" />
