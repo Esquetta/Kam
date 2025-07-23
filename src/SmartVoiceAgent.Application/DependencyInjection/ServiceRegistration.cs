@@ -2,6 +2,7 @@
 using Core.CrossCuttingConcerns.Logging.Serilog.Logger;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using SmartVoiceAgent.Application.Agent.Functions;
 using SmartVoiceAgent.Application.Behaviors.Logging;
 using SmartVoiceAgent.Application.Behaviors.Performance;
 using SmartVoiceAgent.Application.Behaviors.Validation;
@@ -34,7 +35,7 @@ public static class ServiceRegistration
             cfg.AddOpenBehavior(typeof(CacheRemovingBehavior<,>));
         });
         services.AddDistributedMemoryCache();
-
+        services.AddScoped<Functions>();
 
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
 
