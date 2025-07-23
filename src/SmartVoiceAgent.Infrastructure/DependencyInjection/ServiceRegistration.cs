@@ -6,6 +6,7 @@ using SmartVoiceAgent.Infrastructure.Services;
 using SmartVoiceAgent.Infrastructure.Services.ApplicationScanner;
 using SmartVoiceAgent.Infrastructure.Services.Language;
 using SmartVoiceAgent.Infrastructure.Services.Stt;
+using SmartVoiceAgent.Infrastructure.Services.WebResearch;
 
 namespace SmartVoiceAgent.Infrastructure.DependencyInjection;
 
@@ -36,7 +37,7 @@ public static class ServiceRegistration
         services.AddSingleton<IVoiceRecognitionFactory,VoiceRecognitionServiceFactory>();
         services.AddSingleton<IMusicServiceFactory,MusicServiceFactory>();
         services.AddSingleton<ICommandLearningService,CommandLearningService>();
-
+        services.AddScoped<IWebResearchService, WebResearchService>();
 
 
 
