@@ -1,10 +1,10 @@
 ﻿using Core.CrossCuttingConcerns.Logging.Serilog;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
 using System.Diagnostics;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace SmartVoiceAgent.Infrastructure.Services.WebResearch;
 public class WebResearchService : IWebResearchService
@@ -15,12 +15,14 @@ public class WebResearchService : IWebResearchService
     private readonly string _searchEngineId;
 
     public WebResearchService(HttpClient httpClient, LoggerServiceBase logger,
-        string searchApiKey = null, string searchEngineId = null)
+        IConfiguration configuration)
     {
         _httpClient = httpClient;
         _logger = logger;
-        _searchApiKey = searchApiKey;
-        _searchEngineId = searchEngineId;
+        _searchApiKey = configuration.GetSection("WebResearch:SearchApiKey").Get<string>()
+            ?? throw new NullReferenceException($" SearchApiKey section cannot found in configuration.");
+        _searchEngineId = configuration.GetSection("WebResearch:SearchEngineId").Get<string>()
+            ?? throw new NullReferenceException($" SearchEngineId section cannot found in configuration.");
     }
 
     public async Task<List<WebResearchResult>> SearchAsync(WebResearchRequest request)
@@ -29,14 +31,7 @@ public class WebResearchService : IWebResearchService
         {
             _logger.Info($"'{request.Query}' konusu için web araştırması başlatılıyor...");
 
-            // Google Custom Search API kullanıyoruz (alternatif olarak Bing Search API de kullanılabilir)
-            var results = await PerformGoogleSearchAsync(request);
-
-            if (!results.Any())
-            {
-                // Alternatif arama yöntemi: DuckDuckGo Instant Answer API
-                results = await PerformDuckDuckGoSearchAsync(request);
-            }
+            var results = await PerformGoogleSearchAsync(request);           
 
             _logger.Info($"{results.Count} adet sonuç bulundu.");
             return results;
@@ -150,54 +145,6 @@ public class WebResearchService : IWebResearchService
         return results;
     }
 
-    private async Task<List<WebResearchResult>> PerformDuckDuckGoSearchAsync(WebResearchRequest request)
-    {
-        var results = new List<WebResearchResult>();
-
-        try
-        {
-            // DuckDuckGo için basit HTML scraping (gerçek projede daha gelişmiş bir yöntem kullanın)
-            var encodedQuery = Uri.EscapeDataString(request.Query);
-            var url = $"https://duckduckgo.com/html/?q={encodedQuery}";
-
-            _httpClient.DefaultRequestHeaders.Clear();
-            _httpClient.DefaultRequestHeaders.Add("User-Agent",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-
-            var html = await _httpClient.GetStringAsync(url);
-
-            // Basit regex ile link çıkarma (gerçek projede HTML parser kullanın)
-            var linkPattern = @"<a[^>]+href=""([^""]+)""[^>]*>([^<]+)</a>";
-            var matches = Regex.Matches(html, linkPattern, RegexOptions.IgnoreCase);
-
-            var foundCount = 0;
-            foreach (Match match in matches)
-            {
-                if (foundCount >= request.MaxResults) break;
-
-                var link = match.Groups[1].Value;
-                var title = match.Groups[2].Value;
-
-                if (IsValidUrl(link) && !link.Contains("duckduckgo.com"))
-                {
-                    results.Add(new WebResearchResult
-                    {
-                        Title = System.Net.WebUtility.HtmlDecode(title),
-                        Url = link,
-                        Description = "",
-                        SearchDate = DateTime.Now
-                    });
-                    foundCount++;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.Error($"DuckDuckGo ile arama yapılırken hata oluştu. {ex.Message}");
-        }
-
-        return results;
-    }
 
     private async Task OpenUrlInBrowserAsync(string url, bool newTab = false)
     {
