@@ -3,7 +3,7 @@ using SmartVoiceAgent.Application.Pipelines.Caching;
 using SmartVoiceAgent.Application.Pipelines.Performance;
 
 namespace SmartVoiceAgent.Application.Commands;
-public record SearchWebCommand(string Query)
+public record SearchWebCommand(string Query,string lang,int results)
     : IRequest<CommandResultDTO>, ICachableRequest, IIntervalRequest
 {
     // Caching
