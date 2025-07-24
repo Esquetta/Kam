@@ -1,5 +1,6 @@
 ﻿using AutoGen.Core;
 using MediatR;
+using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Commands;
 using SmartVoiceAgent.Core.Entities;
 using System.Text.Json;
@@ -54,7 +55,24 @@ public partial class Functions
             WriteIndented = true
         });
     }
-
+    /// <summary>
+    /// Searches the web for the given query and open results on users default browser.
+    /// </summary>
+    /// <param name="query">Search Query string</param>
+    /// <param name="lang">Search Language (Based on users stt language)</param>
+    /// <param name="results">Results count  (default: 5)</param>
+    /// <returns>Returns command result as json.</returns>
+    [Function]
+    public async Task<string> SearchWebAsync(string query, string lang = "tr", int results = 5)
+    {
+        var command = new SearchWebCommand(query, lang, results);
+        var result = await _mediator.Send(command);
+        return JsonSerializer.Serialize(result, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true
+        });
+    }
 
 
 }
