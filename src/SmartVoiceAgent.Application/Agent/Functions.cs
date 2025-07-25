@@ -27,6 +27,7 @@ public partial class Functions
     [Function]
     public async Task<string> OpenApplicationAsync(string applicationName)
     {
+        Console.WriteLine("Open application çalıştı.");
         var result = await _mediator.Send(new OpenApplicationCommand(applicationName));
 
         return JsonSerializer.Serialize(result);

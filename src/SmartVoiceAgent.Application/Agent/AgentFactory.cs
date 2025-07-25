@@ -30,6 +30,7 @@ public static class AgentFactory
 3. PlayMusic - Müzik çalabilirsin
 4. ControlDevice - Cihazları kontrol edebilirsin
 5. Search Web - Web araması yapabilirsin
+6. Detect Intent - Kullanıcının niyetini anlayabilirsin
 
 === STT VE HATA YÖNETİMİ ===
 - Kullanıcıdan gelen ses kayıtları STT (Speech-to-Text) ile metne çevrilmiş olarak sana gelir
@@ -73,7 +74,9 @@ DOTNET KODLAMA KURALLARI:
    - Eksik bilgi varsa mantıklı varsayımlar yap
    - Kullanıcının amacını anlamaya çalış
    - Proaktif önerilerde bulun
-
+   - Işlemi tamamlamak için gereken adımları at
+   - Eğer kullanıcıdan ek bilgi gerekiyorsa, bunu açıkça belirt.
+   - Her zaman niyet belirle ve ona göre hareket et , kullanıcıyı anlamanda fayda sağlayacaktır.
 Her zaman yardımsever, anlayışlı ve proaktif ol. Hem ses komutlarını hem de kodlama isteklerini mükemmel şekilde işle!";
 
         var agent = new OpenAIChatAgent(
@@ -88,11 +91,12 @@ Her zaman yardımsever, anlayışlı ve proaktif ol. Hem ses komutlarını hem d
             systemMessage: systemMessage)
             .RegisterMessageConnector()
             .RegisterMiddleware(new FunctionCallMiddleware(
-                functions: [functions.OpenApplicationAsyncFunctionContract],
+                functions: [functions.OpenApplicationAsyncFunctionContract,functions.SearchWebAsyncFunctionContract,functions.DetectIntentAsyncFunctionContract,functions.DetectIntentAsyncFunctionContract],
                 functionMap: new Dictionary<string, Func<string, Task<string>>>()
           {
               { nameof(Functions.OpenApplicationAsyncFunctionContract), functions.OpenApplicationAsyncWrapper},
               { nameof(Functions.DetectIntentAsyncFunctionContract), functions.DetectIntentAsyncWrapper},
+              { nameof(Functions.SearchWebAsyncFunctionContract), functions.SearchWebAsyncWrapper},
 
           }))
             .RegisterPrintMessage();
