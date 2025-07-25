@@ -94,9 +94,9 @@ Her zaman yardımsever, anlayışlı ve proaktif ol. Hem ses komutlarını hem d
                 functions: [functions.OpenApplicationAsyncFunctionContract,functions.SearchWebAsyncFunctionContract,functions.DetectIntentAsyncFunctionContract,functions.DetectIntentAsyncFunctionContract],
                 functionMap: new Dictionary<string, Func<string, Task<string>>>()
           {
-              { nameof(Functions.OpenApplicationAsyncFunctionContract), functions.OpenApplicationAsyncWrapper},
-              { nameof(Functions.DetectIntentAsyncFunctionContract), functions.DetectIntentAsyncWrapper},
-              { nameof(Functions.SearchWebAsyncFunctionContract), functions.SearchWebAsyncWrapper},
+              { nameof(Functions.OpenApplicationAsync), functions.OpenApplicationAsyncWrapper},
+              { nameof(Functions.DetectIntentAsync), functions.DetectIntentAsyncWrapper},
+              { nameof(Functions.SearchWebAsync), functions.SearchWebAsyncWrapper},
 
           }))
             .RegisterPrintMessage();
