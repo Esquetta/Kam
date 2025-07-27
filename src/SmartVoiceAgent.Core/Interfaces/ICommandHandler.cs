@@ -1,16 +1,8 @@
 ﻿namespace SmartVoiceAgent.Core.Interfaces;
 
-/// <summary>
-/// Represents a handler for a command of type <typeparamref name="TCommand"/>.
-/// </summary>
-/// <typeparam name="TCommand">The type of command to handle.</typeparam>
-/// <typeparam name="TResult">The type of result returned by the command.</typeparam>
-public interface ICommandHandler<TCommand, TResult>
+
+public interface ICommandHandlerService
 {
-    /// <summary>
-    /// Handles the specified command asynchronously.
-    /// </summary>
-    /// <param name="command">The command instance to handle.</param>
-    /// <returns>The result of command execution.</returns>
-    Task<TResult> HandleAsync(TCommand command);
+    Task<CommandResult> ExecuteCommandAsync(DynamicCommandRequest request);
+    Task<List<AvailableCommand>> GetAvailableCommandsAsync(string language, string category = null);
 }
