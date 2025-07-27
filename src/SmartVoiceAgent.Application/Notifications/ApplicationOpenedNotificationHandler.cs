@@ -18,4 +18,19 @@ namespace SmartVoiceAgent.Application.NotificationHandlers
             return Task.CompletedTask;
         }
     }
+    public class ApplicationClosedNotificationHandler : INotificationHandler<ApplicationClosedNotification>
+    {
+        private readonly LoggerServiceBase _logger;
+
+        public ApplicationClosedNotificationHandler(LoggerServiceBase logger)
+        {
+            _logger = logger;
+        }
+
+        public Task Handle(ApplicationClosedNotification notification, CancellationToken cancellationToken)
+        {
+            _logger.Info($"📱 Application closed: {notification.ApplicationName}");
+            return Task.CompletedTask;
+        }
+    }
 }
