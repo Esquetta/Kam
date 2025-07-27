@@ -1,4 +1,6 @@
-﻿namespace SmartVoiceAgent.Core.Interfaces;
+﻿using SmartVoiceAgent.Core.Entities;
+
+namespace SmartVoiceAgent.Core.Interfaces;
 
 
 public interface ICommandHandlerService
