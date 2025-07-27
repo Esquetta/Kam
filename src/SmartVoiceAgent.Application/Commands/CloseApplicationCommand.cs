@@ -22,4 +22,4 @@ namespace SmartVoiceAgent.Application.Commands
         public int Interval => 2;
     }
 }
-}
+
