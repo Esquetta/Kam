@@ -3,7 +3,6 @@ using AutoGen.OpenAI;
 using AutoGen.OpenAI.Extension;
 using OpenAI;
 using OpenAI.Chat;
-using SmartVoiceAgent.Application.Agent.Functions;
 using System.ClientModel;
 
 /// <summary>

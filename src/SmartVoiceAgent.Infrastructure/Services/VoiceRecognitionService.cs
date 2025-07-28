@@ -11,10 +11,14 @@ public class VoiceRecognitionService : IVoiceRecognitionService
 
     public bool IsRecording => throw new NotImplementedException();
 
+    public bool IsListening => throw new NotImplementedException();
+
     public event EventHandler<byte[]> OnVoiceCaptured;
     public event EventHandler<Exception> OnError;
     public event EventHandler OnRecordingStarted;
     public event EventHandler OnRecordingStopped;
+    public event EventHandler OnListeningStarted;
+    public event EventHandler OnListeningStopped;
 
     public void ClearBuffer()
     {
@@ -33,22 +37,6 @@ public class VoiceRecognitionService : IVoiceRecognitionService
     }
 
     public Task<byte[]> RecordForDurationAsync(TimeSpan duration)
-    {
-        throw new NotImplementedException();
-    }
-
-    public void StartRecording()
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task StopAsync()
-    {
-        // TODO: Mikrofon dinleme işlemini durdur.
-        return Task.CompletedTask;
-    }
-
-    public void StopRecording()
     {
         throw new NotImplementedException();
     }
@@ -80,5 +68,15 @@ public class VoiceRecognitionService : IVoiceRecognitionService
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
+    }
+
+    public void StartListening()
+    {
+        throw new NotImplementedException();
+    }
+
+    public void StopListening()
+    {
+        throw new NotImplementedException();
     }
 }

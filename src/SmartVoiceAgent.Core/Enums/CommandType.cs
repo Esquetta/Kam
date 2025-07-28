@@ -10,5 +10,6 @@ public enum CommandType
     PlayMusic,
     SearchWeb,
     ControlDevice,
+    CloseApplication,
     Unknown
 }

@@ -19,7 +19,7 @@ namespace SmartVoiceAgent.Tests.Infrastructure.Services
         [InlineData("ışıkları kapat", CommandType.ControlDevice)]
         public async Task DetectIntentAsync_Returns_CorrectCommandType(string input, CommandType expected)
         {
-            var result = await intentDetectorService.DetectIntentAsync(input);
+            var result = await intentDetectorService.DetectIntentAsync(input,"tr");
 
             result.Should().Be(expected);
         }

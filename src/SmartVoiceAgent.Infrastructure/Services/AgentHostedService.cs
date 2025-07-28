@@ -1,4 +1,6 @@
-﻿using MediatR;
+﻿using AutoGen.Core;
+using MediatR;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Interfaces;
@@ -22,8 +24,16 @@ namespace SmartVoiceAgent.Infrastructure.Services
 
         private readonly IVoiceRecognitionService _voiceRecognitionService = null;
         private readonly IApplicationScanner applicationScanner;
+        private readonly IConfiguration configuration;
 
-        public AgentHostedService(IIntentDetectionService intentDetector, ICommandBus commandBus, IQueryBus queryBus, ILogger<AgentHostedService> logger, IMediator mediator, AudioProcessingService audioProcessingService, ILanguageDetectionService languageDetectionService, IApplicationScannerServiceFactory applicationScannerServiceFactory, IVoiceRecognitionFactory voiceRecognitionFactory)
+        private readonly IWebResearchService webResearchService;
+
+        private IAgent agent;
+        private readonly Functions functions;
+        private readonly IServiceProvider serviceProvider;
+
+
+        public AgentHostedService(IIntentDetectionService intentDetector,ILogger<AgentHostedService> logger, IMediator mediator, AudioProcessingService audioProcessingService, ILanguageDetectionService languageDetectionService, IApplicationScannerServiceFactory applicationScannerServiceFactory, IVoiceRecognitionFactory voiceRecognitionFactory, IConfiguration configuration, Functions functions, IWebResearchService webResearchService, IServiceProvider serviceProvider)
         {
             _intentDetector = intentDetector;
             _logger = logger;
@@ -34,13 +44,17 @@ namespace SmartVoiceAgent.Infrastructure.Services
             this.voiceRecognitionFactory = voiceRecognitionFactory;
             this._voiceRecognitionService = voiceRecognitionFactory.Create();
             this.applicationScanner = applicationScannerServiceFactory.Create();
+            this.configuration = configuration;
+            this.functions = functions;
+            this.webResearchService = webResearchService;
+
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("AgentHostedService started.");
-            Console.WriteLine("Ses kaydı başlatılıyor...");
+            this.agent = await AgentFactory.CreateAdminAgentAsync(configuration.GetSection("AiAgent:Apikey").Get<string>(), configuration.GetSection("AiAgent:Model").Get<string>(), configuration.GetSection("AiAgent:EndPoint").Get<string>(), functions);
 
-            // Voice captured event
+
+            //    // Voice captured event
             _voiceRecognitionService.OnVoiceCaptured += async (sender, audioData) =>
             {
                 try
@@ -57,6 +71,10 @@ namespace SmartVoiceAgent.Infrastructure.Services
                     var intent = await _intentDetector.DetectIntentAsync(sttResult.Text, language.Language, stoppingToken);
 
                     Console.WriteLine($"İntent:{intent.Intent}, Language:{language.Language}.");
+
+                    await this.agent.SendAsync(sttResult.Text);
+
+
                 }
                 catch (Exception ex)
                 {

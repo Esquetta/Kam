@@ -19,8 +19,6 @@ public static class ServiceRegistration
     {
         services.AddScoped<IIntentDetectionService, IntentDetectorService>();
         services.AddScoped<ICommandLearningService, CommandLearningService>();
-        services.AddScoped<ICommandBus, CommandBus>();
-        services.AddScoped<IQueryBus, QueryBus>();
         services.AddHostedService<AgentHostedService>();
         services.AddSingleton<IIntentDetectionService, IntentDetectorService>();
         services.AddSingleton<AudioProcessingService>();
@@ -32,12 +30,13 @@ public static class ServiceRegistration
         services.AddTransient<HuggingFaceSTTService>();
         services.AddSingleton<ISTTServiceFactory, STTServiceFactory>();
         services.AddScoped<ILanguageDetectionService, HuggingFaceLanguageDetectionService>();
-        services.AddSingleton<IApplicationScannerServiceFactory,ApplicationScannerFactory>();
-        services.AddSingleton<IApplicationServiceFactory,ApplicationServiceFactory>();
-        services.AddSingleton<IVoiceRecognitionFactory,VoiceRecognitionServiceFactory>();
-        services.AddSingleton<IMusicServiceFactory,MusicServiceFactory>();
-        services.AddSingleton<ICommandLearningService,CommandLearningService>();
+        services.AddSingleton<IApplicationScannerServiceFactory, ApplicationScannerFactory>();
+        services.AddSingleton<IApplicationServiceFactory, ApplicationServiceFactory>();
+        services.AddSingleton<IVoiceRecognitionFactory, VoiceRecognitionServiceFactory>();
+        services.AddSingleton<IMusicServiceFactory, MusicServiceFactory>();
+        services.AddSingleton<ICommandLearningService, CommandLearningService>();
         services.AddScoped<IWebResearchService, WebResearchService>();
+        services.AddScoped<ICommandHandlerService, CommandHandlerService>();
 
 
 
