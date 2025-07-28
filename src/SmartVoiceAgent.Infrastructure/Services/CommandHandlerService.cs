@@ -105,6 +105,11 @@ public class CommandHandlerService : ICommandHandlerService
             [CommandType.ControlDevice] = async (req) => new ControlDeviceCommand(
                 ExtractEntity(req.Entities, "deviceName") ?? ExtractDeviceFromText(req.OriginalText),
                 ExtractEntity(req.Entities, "action") ?? ExtractActionFromText(req.OriginalText)
+            ),
+            [CommandType.CloseApplication]=async (req) => new CloseApplicationCommand(
+                ExtractEntity(req.Entities, "applicationName") ??
+                ExtractEntity(req.Entities, "app_name") ??
+                ExtractAppNameFromText(req.OriginalText)
             )
         };
     }
