@@ -5,6 +5,7 @@
         HuggingFace,
         OpenAI,
         Azure,
-        Google
+        Google,
+        Ollama
     }
 }
