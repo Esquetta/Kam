@@ -21,14 +21,8 @@ public static class ServiceRegistration
         services.AddScoped<ICommandLearningService, CommandLearningService>();
         services.AddHostedService<AgentHostedService>();
         services.AddSingleton<IIntentDetectionService, IntentDetectorService>();
-        services.AddSingleton<AudioProcessingService>();
-        services.AddHttpClient<HuggingFaceSTTService>(client =>
-        {
-            client.Timeout = TimeSpan.FromMinutes(10);
-            client.DefaultRequestHeaders.Add("User-Agent", "SmartVoiceAgent/1.0");
-        });
-        services.AddTransient<HuggingFaceSTTService>();
         services.AddSingleton<ISTTServiceFactory, STTServiceFactory>();
+        services.AddSingleton<AudioProcessingService>();
         services.AddScoped<ILanguageDetectionService, HuggingFaceLanguageDetectionService>();
         services.AddSingleton<IApplicationScannerServiceFactory, ApplicationScannerFactory>();
         services.AddSingleton<IApplicationServiceFactory, ApplicationServiceFactory>();
@@ -37,6 +31,8 @@ public static class ServiceRegistration
         services.AddSingleton<ICommandLearningService, CommandLearningService>();
         services.AddScoped<IWebResearchService, WebResearchService>();
         services.AddScoped<ICommandHandlerService, CommandHandlerService>();
+        services.AddHttpClient();
+        services.AddSingleton<OllamaSTTService>();
 
 
 
