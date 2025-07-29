@@ -1,20 +1,25 @@
 ﻿using Core.CrossCuttingConcerns.Logging.Serilog;
 using NAudio.Wave;
+using SmartVoiceAgent.Core.Enums;
+using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
+using SmartVoiceAgent.Infrastructure.Services.Stt;
 
 namespace SmartVoiceAgent.Infrastructure.Helpers
 {
     public class AudioProcessingService : IDisposable
     {
         private readonly LoggerServiceBase _logger;
-        private readonly HuggingFaceSTTService _sttService;
+        private readonly ISTTServiceFactory sTTServiceFactory;
+        private readonly ISpeechToTextService _sttService;
 
         public AudioProcessingService(
             LoggerServiceBase logger,
-            HuggingFaceSTTService sttService)
+           ISTTServiceFactory sTTServiceFactory)
         {
             _logger = logger;
-            _sttService = sttService;
+            this._sttService = sTTServiceFactory.CreateService(STTProvider.Ollama);
+
         }
 
         public async Task<SpeechResult> ProcessAudioFromRecording(byte[] rawAudioData, CancellationToken cancellationToken = default)
