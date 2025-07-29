@@ -18,7 +18,8 @@ namespace SmartVoiceAgent.Infrastructure.Services.Stt
             return provider switch
             {
                 STTProvider.HuggingFace => _serviceProvider.GetRequiredService<HuggingFaceSTTService>(),
-                //STTProvider.OpenAI => _serviceProvider.GetRequiredService<OpenAIWhisperService>(),
+                STTProvider.OpenAI => _serviceProvider.GetRequiredService<WhisperSTTService>(),
+                STTProvider.Ollama => _serviceProvider.GetRequiredService<OllamaSTTService>(),
                 //STTProvider.Azure => _serviceProvider.GetRequiredService<AzureSTTService>(),
                 //STTProvider.Google => _serviceProvider.GetRequiredService<GoogleSTTService>(),
                 _ => throw new NotSupportedException($"STT provider {provider} is not supported")
