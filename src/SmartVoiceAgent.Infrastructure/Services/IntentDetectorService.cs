@@ -99,7 +99,7 @@ public class IntentDetectorService : IIntentDetectionService
                 new IntentPattern(CommandType.PlayMusic, new[] { "music", "song", "play" }),
                 new IntentPattern(CommandType.SendMessage, new[] { "message", "send", "sms" }),
                 new IntentPattern(CommandType.SearchWeb, new[] { "search", "google", "find" }),
-                new IntentPattern(CommandType.SearchWeb, new[] { "close", "stop", "kill" }),
+                new IntentPattern(CommandType.CloseApplication, new[] { "close", "stop", "kill" }),
             },
             ["tr"] = new List<IntentPattern>
             {
@@ -107,7 +107,7 @@ public class IntentDetectorService : IIntentDetectionService
                 new IntentPattern(CommandType.PlayMusic, new[] { "müzik", "şarkı", "çal" }),
                 new IntentPattern(CommandType.SendMessage, new[] { "mesaj", "gönder" }),
                 new IntentPattern(CommandType.SearchWeb, new[] { "ara", "bul", "google" }),
-                new IntentPattern(CommandType.SearchWeb, new[] { "kapat", "durdur", "sonlandır" }),
+                new IntentPattern(CommandType.CloseApplication, new[] { "kapat", "durdur", "sonlandır" }),
             }
         };
     }
