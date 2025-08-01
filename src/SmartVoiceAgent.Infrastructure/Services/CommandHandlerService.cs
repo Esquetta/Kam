@@ -217,6 +217,11 @@ public class CommandHandlerService : ICommandHandlerService
             {
                 ["tr"] = "Mesaj gönderir",
                 ["en"] = "Sends message"
+            },
+            [CommandType.CloseApplication] = new()
+            {
+                ["tr"] = "Uygulama kapar",
+                ["en"] = "Closes application."
             }
         };
 
@@ -251,6 +256,7 @@ public class CommandHandlerService : ICommandHandlerService
             CommandType.SearchWeb => "web",
             CommandType.ControlDevice => "system",
             CommandType.SendMessage => "communication",
+            CommandType.CloseApplication => "app_control",
             _ => "general"
         };
     }

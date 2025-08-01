@@ -33,7 +33,7 @@ namespace SmartVoiceAgent.Infrastructure.Services
         private readonly IServiceProvider serviceProvider;
 
 
-        public AgentHostedService(IIntentDetectionService intentDetector,ILogger<AgentHostedService> logger, IMediator mediator, AudioProcessingService audioProcessingService, ILanguageDetectionService languageDetectionService, IApplicationScannerServiceFactory applicationScannerServiceFactory, IVoiceRecognitionFactory voiceRecognitionFactory, IConfiguration configuration, Functions functions, IWebResearchService webResearchService, IServiceProvider serviceProvider)
+        public AgentHostedService(IIntentDetectionService intentDetector, ILogger<AgentHostedService> logger, IMediator mediator, AudioProcessingService audioProcessingService, ILanguageDetectionService languageDetectionService, IApplicationScannerServiceFactory applicationScannerServiceFactory, IVoiceRecognitionFactory voiceRecognitionFactory, IConfiguration configuration, Functions functions, IWebResearchService webResearchService, IServiceProvider serviceProvider)
         {
             _intentDetector = intentDetector;
             _logger = logger;
@@ -51,61 +51,63 @@ namespace SmartVoiceAgent.Infrastructure.Services
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            this.agent = await AgentFactory.CreateAdminAgentAsync(configuration.GetSection("AiAgent:Apikey").Get<string>(), configuration.GetSection("AiAgent:Model").Get<string>(), configuration.GetSection("AiAgent:EndPoint").Get<string>(), functions);
+            this.agent = await AgentFactory.CreateAdminAgentAsync(apikey: configuration.GetSection("AiAgent:Apikey").Get<string>(), model: configuration.GetSection("AiAgent:Model").Get<string>(), endpoint: configuration.GetSection("AiAgent:EndPoint").Get<string>(), functions: functions);
 
+            var intent = await _intentDetector.DetectIntentAsync("Spotify kapat", "tr", stoppingToken);
+            await this.agent.SendAsync("Spotify kapat");
 
             //    // Voice captured event
-            _voiceRecognitionService.OnVoiceCaptured += async (sender, audioData) =>
-            {
-                try
-                {
-                    Console.WriteLine($"Voice data captured. Length: {audioData.Length}");
+            //    _voiceRecognitionService.OnVoiceCaptured += async (sender, audioData) =>
+            //    {
+            //        try
+            //        {
+            //            Console.WriteLine($"Voice data captured. Length: {audioData.Length}");
 
-                    var sttResult = await audioProcessingService.ProcessAudioFromRecording(audioData, stoppingToken);
+            //            var sttResult = await audioProcessingService.ProcessAudioFromRecording(audioData, stoppingToken);
 
-                    if (sttResult.IsSuccess)
-                        Console.WriteLine($"Recognized Text: {sttResult.Text}");
-                    else
-                        Console.WriteLine($"Speech-to-Text Error: {sttResult.ErrorMessage}");
-                    var language = await languageDetectionService.DetectLanguageAsync(sttResult.Text, stoppingToken);
-                    var intent = await _intentDetector.DetectIntentAsync(sttResult.Text, language.Language, stoppingToken);
+            //            if (sttResult.IsSuccess)
+            //                Console.WriteLine($"Recognized Text: {sttResult.Text}");
+            //            else
+            //                Console.WriteLine($"Speech-to-Text Error: {sttResult.ErrorMessage}");
+            //            var language = await languageDetectionService.DetectLanguageAsync(sttResult.Text, stoppingToken);
+            //            var intent = await _intentDetector.DetectIntentAsync(sttResult.Text, language.Language, stoppingToken);
 
-                    Console.WriteLine($"İntent:{intent.Intent}, Language:{language.Language}.");
+            //            Console.WriteLine($"İntent:{intent.Intent}, Language:{language.Language}.");
 
-                    await this.agent.SendAsync(sttResult.Text);
-
-
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error while processing captured voice data: {ex.Message}");
-                }
-            };
-
-            _voiceRecognitionService.OnError += (sender, ex) =>
-            {
-                Console.WriteLine($"Voice recognition error: {ex.Message}");
-            };
-
-            _voiceRecognitionService.OnListeningStarted += (sender, args) =>
-            {
-                Console.WriteLine("Listening started.");
-            };
-
-            _voiceRecognitionService.OnListeningStopped += (sender, args) =>
-            {
-                Console.WriteLine("Listening stopped.");
-            };
+            //            await this.agent.SendAsync(sttResult.Text);
 
 
-            _voiceRecognitionService.StartListening();
+            //        }
+            //        catch (Exception ex)
+            //        {
+            //            Console.WriteLine($"Error while processing captured voice data: {ex.Message}");
+            //        }
+            //    };
 
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                await Task.Delay(1000, stoppingToken);
-            }
+            //_voiceRecognitionService.OnError += (sender, ex) =>
+            //{
+            //    Console.WriteLine($"Voice recognition error: {ex.Message}");
+            //};
 
-            _logger.LogInformation("AgentHostedService stopping.");
+            //_voiceRecognitionService.OnListeningStarted += (sender, args) =>
+            //{
+            //    Console.WriteLine("Listening started.");
+            //};
+
+            //_voiceRecognitionService.OnListeningStopped += (sender, args) =>
+            //{
+            //    Console.WriteLine("Listening stopped.");
+            //};
+
+
+            //_voiceRecognitionService.StartListening();
+
+            //while (!stoppingToken.IsCancellationRequested)
+            //{
+            //    await Task.Delay(1000, stoppingToken);
+            //}
+
+            //_logger.LogInformation("AgentHostedService stopping.");
         }
 
         public override Task StopAsync(CancellationToken cancellationToken)

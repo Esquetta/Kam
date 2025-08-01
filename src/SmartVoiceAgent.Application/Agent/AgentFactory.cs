@@ -96,6 +96,7 @@ Her zaman yardımsever, anlayışlı ve proaktif ol. Hem ses komutlarını hem d
               { nameof(Functions.OpenApplicationAsync), functions.OpenApplicationAsyncWrapper},
               { nameof(Functions.DetectIntentAsync), functions.DetectIntentAsyncWrapper},
               { nameof(Functions.SearchWebAsync), functions.SearchWebAsyncWrapper},
+              { nameof(Functions.CloseApplicationAsync), functions.CloseApplicationAsyncWrapper},
 
           }))
             .RegisterPrintMessage();

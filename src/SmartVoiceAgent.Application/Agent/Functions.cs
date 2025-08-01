@@ -111,7 +111,7 @@ public partial class Functions
     }
 
     /// <summary>
-    /// Closes a desktop application based on the given name.
+    /// Closes a opened desktop application based on the given name.
     /// </summary>
     /// <param name="applicationName">The name of the application to close</param>
     /// <returns>A result string about the operation status</returns>
