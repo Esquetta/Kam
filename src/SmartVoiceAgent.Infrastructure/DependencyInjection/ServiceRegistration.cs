@@ -33,6 +33,8 @@ public static class ServiceRegistration
         services.AddScoped<ICommandHandlerService, CommandHandlerService>();
         services.AddHttpClient();
         services.AddSingleton<OllamaSTTService>();
+        services.AddSingleton<WhisperSTTService>();
+        services.AddSingleton<HuggingFaceSTTService>();
 
 
 
