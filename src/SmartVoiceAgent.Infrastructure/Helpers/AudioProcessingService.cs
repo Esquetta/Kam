@@ -18,7 +18,7 @@ namespace SmartVoiceAgent.Infrastructure.Helpers
            ISTTServiceFactory sTTServiceFactory)
         {
             _logger = logger;
-            this._sttService = sTTServiceFactory.CreateService(STTProvider.Ollama);
+            this._sttService = sTTServiceFactory.CreateService(STTProvider.HuggingFace);
 
         }
 
