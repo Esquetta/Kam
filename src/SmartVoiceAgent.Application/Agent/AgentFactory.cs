@@ -21,62 +21,161 @@ public static class AgentFactory
     /// <returns>Configured <see cref="IAgent"/></returns>
     public static async Task<IAgent> CreateAdminAgentAsync(string apikey, string model, string endpoint, Functions functions)
     {
-        var systemMessage = @"Sen akıllı bir kişisel asistansın ve aynı zamanda yetenekli bir .NET (dotnet) coder'sın. İki ana rolün var:
+        Console.WriteLine("[DEBUG] Creating agent with improved function selection...");
 
-=== KİŞİSEL ASİSTAN YETENEKLERİN ===
-1. Open Application - Uygulamaları açabilirsin
-2. ApplicationScan - Sistem uygulamalarını tarayabilirsin  
-3. PlayMusic - Müzik çalabilirsin
-4. ControlDevice - Cihazları kontrol edebilirsin
-5. Search Web - Web araması yapabilirsin
-6. Detect Intent - Kullanıcının niyetini anlayabilirsin
+        var systemMessage = @"Sen akıllı bir sesli asistansın. 
 
-=== STT VE HATA YÖNETİMİ ===
-- Kullanıcıdan gelen ses kayıtları STT (Speech-to-Text) ile metne çevrilmiş olarak sana gelir
-- STT hatalarının farkındasın ve bunları yorumlayabilirsin
-- Belirsiz ya da hatalı komutlarda inisiyatif alır, en mantıklı yorumu yaparsın
-- Zamanla kullanıcının komut kalıplarını öğrenirsin ve gelişirsin
-- Bağlamı anlayarak akıllıca karar verirsin
+=== ÇOK ÖNEMLİ: FUNCTION KULLANIM KURALLARI ===
 
-=== KODLAMA YETENEKLERİN ===
-Gelen task'taki problemi çözmek için dotnet'te C# kodu yazıyorsun.
-Kod yazmayı bitirdiğinde runner'dan kodu senin için çalıştırmasını isteyeceksin.
+1. **HER ZAMAN ProcessVoiceCommandAsync İLE BAŞLA**
+   - Bu ana fonksiyondur ve TÜM komutları işleyebilir
+   - Kullanıcı ne derse desin, İLK ÖNCE ProcessVoiceCommandAsync'i çağır
+   - Diğer fonksiyonları sadece ProcessVoiceCommandAsync başarısız olursa kullan
 
-DOTNET KODLAMA KURALLARI:
-- Disposable olan nesneleri oluştururken 'using' keyword'ünü kullanma!
-- Değişken türlerinde 'var' kullan.
-- Local variable'ların default değerini her zaman ata!
-- Harici kütüphane kullanmaktan kaçın. Mümkün mertebe .NET Core kütüphanesi kullan.
-- Kod yazmak için 'top level statement' kullan.
-- Sonucu her zaman console'a yazdır.
-- Eğer NuGet paketi yüklenmesi gerekiyorsa, ilgili paketi aşağıdaki biçimde yerleştir:
-  ```nuget
-  nuget_package_name
-  ```
-- Kod yanlışsa runner sana hata mesajını verecektir. Hatayı düzelt ve kodu tekrar gönder.
+2. **ÖRNEK KULLANIM**
+   - Kullanıcı: ""Spotify'ı kapat""
+   - Sen: ProcessVoiceCommandAsync(""Spotify'ı kapat"", ""tr"")
+   
+   - Kullanıcı: ""Chrome aç""  
+   - Sen: ProcessVoiceCommandAsync(""Chrome aç"", ""tr"")
 
-=== DAVRANIŞ KURALLARI ===
-1. STT HATALARI: Gelen metinde yazım hataları, yanlış kelimeler olabilir. Bunları düzelt ve anlamını çıkar.
-2. BELİRSİZLİK YÖNETİMİ: Belirsiz komutlarda:
-   - Bağlamdan en mantıklı anlamı çıkar
-   - Gerekirse kullanıcıya soru sor
-   - Varsayımlarını açıkla
-3. ÖĞRENME: Her etkileşimde:
-   - Kullanıcının tercihlerini kaydet
-   - Komut kalıplarını analiz et  
-   - Gelecek tahminlerde bu bilgileri kullan
-4. YANIT FORMATI: 
-   - Önce ne anladığını kısaca açıkla
-   - Hangi işlemi yapacağını belirt (kod yazma veya sistem komutu)
-   - Sonucu bildir
-5. İNISIYATIF ALMA:
-   - Eksik bilgi varsa mantıklı varsayımlar yap
-   - Kullanıcının amacını anlamaya çalış
-   - Proaktif önerilerde bulun
-   - Işlemi tamamlamak için gereken adımları at
-   - Eğer kullanıcıdan ek bilgi gerekiyorsa, bunu açıkça belirt.
-   - Her zaman niyet belirle ve ona göre hareket et , kullanıcıyı anlamanda fayda sağlayacaktır.
-Her zaman yardımsever, anlayışlı ve proaktif ol. Hem ses komutlarını hem de kodlama isteklerini mükemmel şekilde işle!";
+3. **FALLBACK KURALLAR** (ProcessVoiceCommandAsync başarısız olursa)
+   - ""kapat"", ""close"" → CloseApplicationAsync
+   - ""aç"", ""open"" → OpenApplicationAsync
+   - ""çal"", ""play"" → PlayMusicAsync
+   - ""ara"", ""search"" → SearchWebAsync
+
+4. **YANIT FORMATI**
+   - Önce ne yapacağını söyle: ""Spotify'ı kapatıyorum...""
+   - Sonra uygun fonksiyonu çağır
+   - Sonucu kullanıcıya açıkla
+
+UNUTMA: ProcessVoiceCommandAsync universal bir fonksiyondur. HER ZAMAN İLK ÖNCE ONU KULLAN!";
+
+
+        var functionMap = new Dictionary<string, Func<string, Task<string>>>
+        {
+            ["ProcessVoiceCommandAsync"] = async (args) =>
+            {
+                Console.WriteLine($"[MAIN FUNCTION] ProcessVoiceCommandAsync called with: {args}");
+                try
+                {
+                    var jsonArgs = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(args);
+                    var userInput = jsonArgs["userInput"]?.ToString() ?? "";
+                    var language = jsonArgs.ContainsKey("language") ? jsonArgs["language"]?.ToString() : "tr";
+                    var context = jsonArgs.ContainsKey("context") ? jsonArgs["context"]?.ToString() : null;
+
+                    Console.WriteLine($"[MAIN FUNCTION] Calling ProcessVoiceCommandAsync: '{userInput}', lang: {language}");
+                    var result = await functions.ProcessVoiceCommandAsync(userInput, language, context);
+                    Console.WriteLine($"[MAIN FUNCTION] ProcessVoiceCommandAsync result: {result}");
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[MAIN FUNCTION] ProcessVoiceCommandAsync error: {ex.Message}");
+                    return $"Error: {ex.Message}";
+                }
+            },
+
+            ["OpenApplicationAsync"] = async (args) =>
+            {
+                Console.WriteLine($"[SPECIFIC] OpenApplicationAsync called with: {args}");
+                try
+                {
+                    var jsonArgs = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(args);
+                    var appName = jsonArgs["applicationName"]?.ToString() ?? "";
+                    Console.WriteLine($"[SPECIFIC] Opening application: {appName}");
+                    var result = await functions.OpenApplicationAsync(appName);
+                    Console.WriteLine($"[SPECIFIC] OpenApplicationAsync result: {result}");
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[SPECIFIC] OpenApplicationAsync error: {ex.Message}");
+                    return $"Error: {ex.Message}";
+                }
+            },
+
+            ["CloseApplicationAsync"] = async (args) =>
+            {
+                Console.WriteLine($"[SPECIFIC] CloseApplicationAsync called with: {args}");
+                try
+                {
+                    var jsonArgs = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(args);
+                    var appName = jsonArgs["applicationName"]?.ToString() ?? "";
+                    Console.WriteLine($"[SPECIFIC] Closing application: {appName}");
+                    var result = await functions.CloseApplicationAsync(appName);
+                    Console.WriteLine($"[SPECIFIC] CloseApplicationAsync result: {result}");
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[SPECIFIC] CloseApplicationAsync error: {ex.Message}");
+                    return $"Error: {ex.Message}";
+                }
+            },
+
+            ["PlayMusicAsync"] = async (args) =>
+            {
+                Console.WriteLine($"[SPECIFIC] PlayMusicAsync called with: {args}");
+                try
+                {
+                    var jsonArgs = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(args);
+                    var trackName = jsonArgs["trackName"]?.ToString() ?? "";
+                    Console.WriteLine($"[SPECIFIC] Playing music: {trackName}");
+                    var result = await functions.PlayMusicAsync(trackName);
+                    Console.WriteLine($"[SPECIFIC] PlayMusicAsync result: {result}");
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[SPECIFIC] PlayMusicAsync error: {ex.Message}");
+                    return $"Error: {ex.Message}";
+                }
+            },
+
+            ["SearchWebAsync"] = async (args) =>
+            {
+                Console.WriteLine($"[SPECIFIC] SearchWebAsync called with: {args}");
+                try
+                {
+                    var jsonArgs = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(args);
+                    var query = jsonArgs["query"]?.ToString() ?? "";
+                    var lang = jsonArgs.ContainsKey("lang") ? jsonArgs["lang"]?.ToString() : "tr";
+                    var results = jsonArgs.ContainsKey("results") ? Convert.ToInt32(jsonArgs["results"]) : 5;
+
+                    Console.WriteLine($"[SPECIFIC] Searching web: {query}");
+                    var result = await functions.SearchWebAsync(query, lang, results);
+                    Console.WriteLine($"[SPECIFIC] SearchWebAsync result: {result}");
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[SPECIFIC] SearchWebAsync error: {ex.Message}");
+                    return $"Error: {ex.Message}";
+                }
+            },
+
+            ["ControlDeviceAsync"] = async (args) =>
+            {
+                Console.WriteLine($"[SPECIFIC] ControlDeviceAsync called with: {args}");
+                try
+                {
+                    var jsonArgs = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(args);
+                    var deviceName = jsonArgs["deviceName"]?.ToString() ?? "";
+                    var action = jsonArgs["action"]?.ToString() ?? "";
+                    Console.WriteLine($"[SPECIFIC] Controlling device: {deviceName}, action: {action}");
+                    var result = await functions.ControlDeviceAsync(deviceName, action);
+                    Console.WriteLine($"[SPECIFIC] ControlDeviceAsync result: {result}");
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[SPECIFIC] ControlDeviceAsync error: {ex.Message}");
+                    return $"Error: {ex.Message}";
+                }
+            }
+        };
 
         var agent = new OpenAIChatAgent(
             chatClient: new ChatClient(
@@ -90,15 +189,8 @@ Her zaman yardımsever, anlayışlı ve proaktif ol. Hem ses komutlarını hem d
             systemMessage: systemMessage)
             .RegisterMessageConnector()
             .RegisterMiddleware(new FunctionCallMiddleware(
-                functions: [functions.OpenApplicationAsyncFunctionContract,functions.SearchWebAsyncFunctionContract,functions.DetectIntentAsyncFunctionContract,functions.DetectIntentAsyncFunctionContract],
-                functionMap: new Dictionary<string, Func<string, Task<string>>>()
-          {
-              { nameof(Functions.OpenApplicationAsync), functions.OpenApplicationAsyncWrapper},
-              { nameof(Functions.DetectIntentAsync), functions.DetectIntentAsyncWrapper},
-              { nameof(Functions.SearchWebAsync), functions.SearchWebAsyncWrapper},
-              { nameof(Functions.CloseApplicationAsync), functions.CloseApplicationAsyncWrapper},
-
-          }))
+                functions: [functions.ProcessVoiceCommandAsyncFunctionContract, functions.CloseApplicationAsyncFunctionContract, functions.OpenApplicationAsyncFunctionContract, functions.SearchWebAsyncFunctionContract, functions.DetectIntentAsyncFunctionContract, functions.DetectIntentAsyncFunctionContract],
+                functionMap: functionMap))
             .RegisterPrintMessage();
 
         return agent;
