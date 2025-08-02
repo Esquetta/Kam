@@ -247,6 +247,7 @@ public class CommandHandlerService : ICommandHandlerService
         return commandType switch
         {
             CommandType.OpenApplication => "app_control",
+            CommandType.CloseApplication => "app_control",
             CommandType.PlayMusic => "media",
             CommandType.SearchWeb => "web",
             CommandType.ControlDevice => "system",
