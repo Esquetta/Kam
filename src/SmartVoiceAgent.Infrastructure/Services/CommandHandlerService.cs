@@ -8,11 +8,21 @@ using SmartVoiceAgent.Core.Interfaces;
 public class CommandHandlerService : ICommandHandlerService
 {
     private readonly IMediator _mediator;
+    private readonly DynamicAppExtractionService _appExtractionService;
     private readonly Dictionary<CommandType, Func<DynamicCommandRequest, Task<object>>> _commandMappings;
 
-    public CommandHandlerService(IMediator mediator)
+    public CommandHandlerService(IMediator mediator, IApplicationServiceFactory applicationServiceFactory)
     {
         _mediator = mediator;
+        _appExtractionService = new DynamicAppExtractionService(applicationServiceFactory);
+        _commandMappings = InitializeCommandMappings();
+    }
+
+    // Constructor with dependency injection for the app extraction service
+    public CommandHandlerService(IMediator mediator, DynamicAppExtractionService appExtractionService)
+    {
+        _mediator = mediator;
+        _appExtractionService = appExtractionService;
         _commandMappings = InitializeCommandMappings();
     }
 
@@ -80,12 +90,20 @@ public class CommandHandlerService : ICommandHandlerService
             [CommandType.OpenApplication] = async (req) => new OpenApplicationCommand(
                 ExtractEntity(req.Entities, "applicationName") ??
                 ExtractEntity(req.Entities, "app_name") ??
-                ExtractAppNameFromText(req.OriginalText)
+                await ExtractAppNameFromTextAsync(req.OriginalText)
+            ),
+
+            [CommandType.CloseApplication] = async (req) => new CloseApplicationCommand(
+                ExtractEntity(req.Entities, "applicationName") ??
+                ExtractEntity(req.Entities, "app_name") ??
+                await ExtractAppNameFromTextAsync(req.OriginalText)
             ),
 
             [CommandType.SendMessage] = async (req) => new SendMessageCommand(
-                ExtractEntity(req.Entities, "recipient") ?? "Unknown",
-                ExtractEntity(req.Entities, "message") ?? req.OriginalText
+                ExtractEntity(req.Entities, "recipient") ??
+                ExtractRecipientFromText(req.OriginalText) ?? "Unknown",
+                ExtractEntity(req.Entities, "message") ??
+                ExtractMessageFromText(req.OriginalText) ?? req.OriginalText
             ),
 
             [CommandType.PlayMusic] = async (req) => new PlayMusicCommand(
@@ -105,17 +123,15 @@ public class CommandHandlerService : ICommandHandlerService
             [CommandType.ControlDevice] = async (req) => new ControlDeviceCommand(
                 ExtractEntity(req.Entities, "deviceName") ?? ExtractDeviceFromText(req.OriginalText),
                 ExtractEntity(req.Entities, "action") ?? ExtractActionFromText(req.OriginalText)
-            ),
-            [CommandType.CloseApplication]=async (req) => new CloseApplicationCommand(
-                ExtractEntity(req.Entities, "applicationName") ??
-                ExtractEntity(req.Entities, "app_name") ??
-                ExtractAppNameFromText(req.OriginalText)
             )
         };
     }
 
     private async Task<CommandResult> HandleUnknownIntent(DynamicCommandRequest request)
     {
+        // Try to suggest similar commands or provide helpful information
+        var suggestions = await GetSuggestionsForUnknownIntent(request);
+
         return new CommandResult
         {
             Success = false,
@@ -124,71 +140,198 @@ public class CommandHandlerService : ICommandHandlerService
             {
                 suggestion = "GetAvailableCommandsAsync fonksiyonunu kullanarak desteklenen komutları görebilirsiniz.",
                 detectedIntent = request.Intent,
-                entities = request.Entities
+                entities = request.Entities,
+                possibleCommands = suggestions
             },
             OriginalInput = request.OriginalText
         };
     }
 
-    // Entity extraction helpers
+    // Enhanced entity extraction helpers
     private string ExtractEntity(Dictionary<string, object> entities, string key)
     {
         return entities?.TryGetValue(key, out var value) == true ? value?.ToString() : null;
     }
 
-    private string ExtractAppNameFromText(string text)
+    // Updated application name extraction using the enhanced service
+    private async Task<string> ExtractAppNameFromTextAsync(string text)
     {
-        var lower = text.ToLowerInvariant();
-        if (lower.Contains("chrome")) return "chrome";
-        if (lower.Contains("notepad") || lower.Contains("not defteri")) return "notepad";
-        if (lower.Contains("calculator") || lower.Contains("hesap makinesi")) return "calculator";
-        if (lower.Contains("word")) return "winword";
-        if (lower.Contains("excel")) return "excel";
-        return "chrome"; // Default fallback
+        return await _appExtractionService.ExtractApplicationNameAsync(text);
     }
 
     private string ExtractMusicFromText(string text)
     {
-        // Basit music extraction - gerçek implementasyonda daha sofistike olabilir
-        return text.Contains("müzik") ? "default_music" : text;
+        var lower = text.ToLowerInvariant();
+
+        // Extract song/artist name patterns
+        var patterns = new[]
+        {
+            @"çal\s+(.+?)(?:\s+şarkısını|\s+müziğini|$)",
+            @"play\s+(.+?)(?:\s+song|\s+music|$)",
+            @"(.+?)\s+çal",
+            @"(.+?)\s+play"
+        };
+
+        foreach (var pattern in patterns)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(lower, pattern);
+            if (match.Success && match.Groups[1].Value.Trim().Length > 0)
+            {
+                return match.Groups[1].Value.Trim();
+            }
+        }
+
+        // If no specific pattern matches, return the original text (cleaned)
+        return text.Contains("müzik") || text.Contains("music") ? "default_music" : text;
     }
 
     private string ExtractQueryFromText(string text)
     {
         var lower = text.ToLowerInvariant();
-        // Remove common command words
-        var cleanedText = lower
-            .Replace("ara", "")
-            .Replace("aratır", "")
-            .Replace("search", "")
-            .Replace("google", "")
-            .Replace("web", "")
-            .Trim();
 
+        // Remove common search command words
+        var stopWords = new[] { "ara", "aratır", "search", "google", "web", "internet", "bul", "find" };
+
+        string cleanedText = lower;
+        foreach (var stopWord in stopWords)
+        {
+            cleanedText = System.Text.RegularExpressions.Regex.Replace(
+                cleanedText,
+                $@"\b{System.Text.RegularExpressions.Regex.Escape(stopWord)}\b",
+                "",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase
+            );
+        }
+
+        cleanedText = System.Text.RegularExpressions.Regex.Replace(cleanedText, @"\s+", " ").Trim();
         return string.IsNullOrEmpty(cleanedText) ? text : cleanedText;
     }
 
     private string ExtractDeviceFromText(string text)
     {
         var lower = text.ToLowerInvariant();
-        if (lower.Contains("bluetooth")) return "bluetooth";
-        if (lower.Contains("wifi") || lower.Contains("wi-fi")) return "wifi";
-        if (lower.Contains("ekran") || lower.Contains("screen")) return "screen";
-        if (lower.Contains("ses") || lower.Contains("volume")) return "volume";
+
+        var deviceMappings = new Dictionary<string, string[]>
+        {
+            ["bluetooth"] = new[] { "bluetooth", "bt" },
+            ["wifi"] = new[] { "wifi", "wi-fi", "internet", "ağ" },
+            ["screen"] = new[] { "ekran", "screen", "monitor", "display" },
+            ["volume"] = new[] { "ses", "volume", "sesli", "hoparlör", "speaker" },
+            ["microphone"] = new[] { "mikrofon", "microphone", "mic" },
+            ["camera"] = new[] { "kamera", "camera", "webcam" },
+            ["keyboard"] = new[] { "klavye", "keyboard" },
+            ["mouse"] = new[] { "fare", "mouse" }
+        };
+
+        foreach (var device in deviceMappings)
+        {
+            if (device.Value.Any(keyword => lower.Contains(keyword)))
+            {
+                return device.Key;
+            }
+        }
+
         return "unknown_device";
     }
 
     private string ExtractActionFromText(string text)
     {
         var lower = text.ToLowerInvariant();
-        if (lower.Contains("aç") || lower.Contains("open") || lower.Contains("başlat")) return "open";
-        if (lower.Contains("kapat") || lower.Contains("close") || lower.Contains("durdur")) return "close";
-        if (lower.Contains("artır") || lower.Contains("yükselt") || lower.Contains("increase")) return "increase";
-        if (lower.Contains("azalt") || lower.Contains("düşür") || lower.Contains("decrease")) return "decrease";
+
+        var actionMappings = new Dictionary<string, string[]>
+        {
+            ["open"] = new[] { "aç", "open", "başlat", "start", "çalıştır", "run" },
+            ["close"] = new[] { "kapat", "close", "durdur", "stop", "sonlandır", "end" },
+            ["increase"] = new[] { "artır", "yükselt", "increase", "up", "arttır" },
+            ["decrease"] = new[] { "azalt", "düşür", "decrease", "down", "alçalt" },
+            ["mute"] = new[] { "sustur", "mute", "sessiz" },
+            ["unmute"] = new[] { "sesli", "unmute", "aç" },
+            ["enable"] = new[] { "etkinleştir", "enable", "açık" },
+            ["disable"] = new[] { "devre dışı", "disable", "kapalı" }
+        };
+
+        foreach (var action in actionMappings)
+        {
+            if (action.Value.Any(keyword => lower.Contains(keyword)))
+            {
+                return action.Key;
+            }
+        }
+
         return "toggle";
     }
 
-    // Localization helpers
+    private string ExtractRecipientFromText(string text)
+    {
+        var lower = text.ToLowerInvariant();
+
+        // Pattern to extract recipient after words like "to", "için", etc.
+        var patterns = new[]
+        {
+            @"(?:to|için)\s+(.+?)(?:\s+mesaj|\s+message|$)",
+            @"(.+?)(?:\s+için|\s+to)\s+mesaj",
+            @"(.+?)(?:'ye|'ya|'e|'a)\s+mesaj"
+        };
+
+        foreach (var pattern in patterns)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(lower, pattern);
+            if (match.Success && match.Groups[1].Value.Trim().Length > 0)
+            {
+                return match.Groups[1].Value.Trim();
+            }
+        }
+
+        return null;
+    }
+
+    private string ExtractMessageFromText(string text)
+    {
+        var lower = text.ToLowerInvariant();
+
+        // Remove command words and extract the actual message
+        var commandWords = new[] { "mesaj", "message", "gönder", "send", "yaz", "write" };
+
+        string cleanedText = text;
+        foreach (var word in commandWords)
+        {
+            cleanedText = System.Text.RegularExpressions.Regex.Replace(
+                cleanedText,
+                $@"\b{System.Text.RegularExpressions.Regex.Escape(word)}\b",
+                "",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase
+            );
+        }
+
+        return cleanedText.Trim();
+    }
+
+    private async Task<List<string>> GetSuggestionsForUnknownIntent(DynamicCommandRequest request)
+    {
+        var suggestions = new List<string>();
+
+        // Basic keyword matching for suggestions
+        var text = request.OriginalText.ToLowerInvariant();
+
+        if (text.Contains("aç") || text.Contains("open") || text.Contains("başlat"))
+            suggestions.Add("OpenApplication");
+
+        if (text.Contains("kapat") || text.Contains("close"))
+            suggestions.Add("CloseApplication");
+
+        if (text.Contains("müzik") || text.Contains("music") || text.Contains("çal"))
+            suggestions.Add("PlayMusic");
+
+        if (text.Contains("ara") || text.Contains("search") || text.Contains("bul"))
+            suggestions.Add("SearchWeb");
+
+        if (text.Contains("mesaj") || text.Contains("message") || text.Contains("gönder"))
+            suggestions.Add("SendMessage");
+
+        return suggestions;
+    }
+
+    // Localization helpers (keeping the existing ones)
     private string GetCommandDescription(CommandType commandType, string language)
     {
         var descriptions = new Dictionary<CommandType, Dictionary<string, string>>
@@ -197,6 +340,11 @@ public class CommandHandlerService : ICommandHandlerService
             {
                 ["tr"] = "Uygulama açar",
                 ["en"] = "Opens application"
+            },
+            [CommandType.CloseApplication] = new()
+            {
+                ["tr"] = "Uygulamayı kapatır",
+                ["en"] = "Closes application"
             },
             [CommandType.PlayMusic] = new()
             {
@@ -229,13 +377,18 @@ public class CommandHandlerService : ICommandHandlerService
         {
             [CommandType.OpenApplication] = new()
             {
-                ["tr"] = new() { "Chrome aç", "Chrome açar mısın?", "Lütfen Notepad başlat" },
-                ["en"] = new() { "Open Chrome", "Can you open Chrome?", "Please start Notepad" }
+                ["tr"] = new() { "Chrome aç", "Spotify başlat", "Word çalıştır", "Discord aç" },
+                ["en"] = new() { "Open Chrome", "Start Spotify", "Run Word", "Open Discord" }
+            },
+            [CommandType.CloseApplication] = new()
+            {
+                ["tr"] = new() { "Chrome kapat", "Spotify durdur", "Word sonlandır" },
+                ["en"] = new() { "Close Chrome", "Stop Spotify", "End Word" }
             },
             [CommandType.PlayMusic] = new()
             {
-                ["tr"] = new() { "Müzik çal", "Şarkı başlat", "Müzik çalar mısın?" },
-                ["en"] = new() { "Play music", "Start song", "Can you play music?" }
+                ["tr"] = new() { "Müzik çal", "Şarkı başlat", "Spotify çal" },
+                ["en"] = new() { "Play music", "Start song", "Play Spotify" }
             }
         };
 
