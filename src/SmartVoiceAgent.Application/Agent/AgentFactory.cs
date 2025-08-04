@@ -4,6 +4,7 @@ using AutoGen.OpenAI.Extension;
 using OpenAI;
 using OpenAI.Chat;
 using System.ClientModel;
+using System.Text.Json;
 
 /// <summary>
 /// Factory class for creating and configuring intelligent agents with various system automation capabilities.
@@ -23,35 +24,40 @@ public static class AgentFactory
     {
         Console.WriteLine("[DEBUG] Creating agent with improved function selection...");
 
-        var systemMessage = @"Sen akıllı bir sesli asistansın. 
+        var systemMessage = @"Sen akıllı bir sesli asistansın. Kullanıcıların komutlarını anlayıp uygun aksiyonları alıyorsun.
 
-=== ÇOK ÖNEMLİ: FUNCTION KULLANIM KURALLARI ===
+=== FONKSİYON KULLANIM KURALLARI ===
 
 1. **HER ZAMAN ProcessVoiceCommandAsync İLE BAŞLA**
    - Bu ana fonksiyondur ve TÜM komutları işleyebilir
    - Kullanıcı ne derse desin, İLK ÖNCE ProcessVoiceCommandAsync'i çağır
-   - Diğer fonksiyonları sadece ProcessVoiceCommandAsync başarısız olursa kullan
+   - Bu fonksiyon başarısız olursa veya uygun değilse diğer spesifik fonksiyonları kullan
 
-2. **ÖRNEK KULLANIM**
-   - Kullanıcı: ""Spotify'ı kapat""
-   - Sen: ProcessVoiceCommandAsync(""Spotify'ı kapat"", ""tr"")
-   
-   - Kullanıcı: ""Chrome aç""  
-   - Sen: ProcessVoiceCommandAsync(""Chrome aç"", ""tr"")
+2. **YANIT FORMATI - ÇOK ÖNEMLİ**
+   - Önce kullanıcıya ne yapacağını söyle: ""Spotify'ı kapatıyorum...""
+   - Sonra uygun fonksiyonu çağır
+   - Fonksiyon sonucunu JSON formatında değil, doğal dilde açıkla
+   - Kullanıcıya asla ham JSON verisi gösterme
 
-3. **FALLBACK KURALLAR** (ProcessVoiceCommandAsync başarısız olursa)
+3. **ÖRNEK KONUŞMA**
+   Kullanıcı: ""Spotify'ı kapat""
+   Sen: ""Spotify uygulamasını kapatıyorum...""
+   [ProcessVoiceCommandAsync çağır]
+   Sen: ""Spotify başarıyla kapatıldı."" (JSON değil!)
+
+4. **FALLBACK KURALLAR** (ProcessVoiceCommandAsync başarısız olursa)
    - ""kapat"", ""close"" → CloseApplicationAsync
    - ""aç"", ""open"" → OpenApplicationAsync
    - ""çal"", ""play"" → PlayMusicAsync
    - ""ara"", ""search"" → SearchWebAsync
 
-4. **YANIT FORMATI**
-   - Önce ne yapacağını söyle: ""Spotify'ı kapatıyorum...""
-   - Sonra uygun fonksiyonu çağır
-   - Sonucu kullanıcıya açıkla
+5. **DAVRANIŞSAL KURALLAR**
+   - Her zaman samimi ve yardımsever ol
+   - Hataları kibarca açıkla
+   - Alternatif çözümler öner
+   - JSON formatında yanıt verme, doğal konuş
 
-UNUTMA: ProcessVoiceCommandAsync universal bir fonksiyondur. HER ZAMAN İLK ÖNCE ONU KULLAN!";
-
+Unutma: Amacın kullanıcıya insan gibi yardım etmek, makine gibi JSON döndürmek değil!";
 
         var functionMap = new Dictionary<string, Func<string, Task<string>>>
         {
@@ -68,12 +74,36 @@ UNUTMA: ProcessVoiceCommandAsync universal bir fonksiyondur. HER ZAMAN İLK ÖNC
                     Console.WriteLine($"[MAIN FUNCTION] Calling ProcessVoiceCommandAsync: '{userInput}', lang: {language}");
                     var result = await functions.ProcessVoiceCommandAsync(userInput, language, context);
                     Console.WriteLine($"[MAIN FUNCTION] ProcessVoiceCommandAsync result: {result}");
+
+                    // JSON sonucunu parse et ve doğal dilde döndür
+                    try
+                    {
+                        var jsonResult = JsonDocument.Parse(result);
+                        var root = jsonResult.RootElement;
+
+                        if (root.TryGetProperty("success", out var successElement) && successElement.GetBoolean())
+                        {
+                            if (root.TryGetProperty("message", out var messageElement))
+                            {
+                                return messageElement.GetString() ?? "İşlem başarıyla tamamlandı.";
+                            }
+                        }
+                        else if (root.TryGetProperty("error", out var errorElement))
+                        {
+                            return $"Hata oluştu: {errorElement.GetString()}";
+                        }
+                    }
+                    catch
+                    {
+                        // JSON parse edilemezse direkt sonucu döndür
+                    }
+
                     return result;
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[MAIN FUNCTION] ProcessVoiceCommandAsync error: {ex.Message}");
-                    return $"Error: {ex.Message}";
+                    return $"Komut işlenirken hata oluştu: {ex.Message}";
                 }
             },
 
@@ -87,12 +117,14 @@ UNUTMA: ProcessVoiceCommandAsync universal bir fonksiyondur. HER ZAMAN İLK ÖNC
                     Console.WriteLine($"[SPECIFIC] Opening application: {appName}");
                     var result = await functions.OpenApplicationAsync(appName);
                     Console.WriteLine($"[SPECIFIC] OpenApplicationAsync result: {result}");
-                    return result;
+
+                    // JSON'u parse et ve doğal dil yanıtı döndür
+                    return ParseJsonToNaturalResponse(result, $"{appName} uygulaması açılıyor...");
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[SPECIFIC] OpenApplicationAsync error: {ex.Message}");
-                    return $"Error: {ex.Message}";
+                    return $"Uygulama açılırken hata oluştu: {ex.Message}";
                 }
             },
 
@@ -106,12 +138,13 @@ UNUTMA: ProcessVoiceCommandAsync universal bir fonksiyondur. HER ZAMAN İLK ÖNC
                     Console.WriteLine($"[SPECIFIC] Closing application: {appName}");
                     var result = await functions.CloseApplicationAsync(appName);
                     Console.WriteLine($"[SPECIFIC] CloseApplicationAsync result: {result}");
-                    return result;
+
+                    return ParseJsonToNaturalResponse(result, $"{appName} uygulaması kapatılıyor...");
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[SPECIFIC] CloseApplicationAsync error: {ex.Message}");
-                    return $"Error: {ex.Message}";
+                    return $"Uygulama kapatılırken hata oluştu: {ex.Message}";
                 }
             },
 
@@ -125,12 +158,13 @@ UNUTMA: ProcessVoiceCommandAsync universal bir fonksiyondur. HER ZAMAN İLK ÖNC
                     Console.WriteLine($"[SPECIFIC] Playing music: {trackName}");
                     var result = await functions.PlayMusicAsync(trackName);
                     Console.WriteLine($"[SPECIFIC] PlayMusicAsync result: {result}");
-                    return result;
+
+                    return ParseJsonToNaturalResponse(result, $"{trackName} çalınıyor...");
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[SPECIFIC] PlayMusicAsync error: {ex.Message}");
-                    return $"Error: {ex.Message}";
+                    return $"Müzik çalarken hata oluştu: {ex.Message}";
                 }
             },
 
@@ -147,12 +181,13 @@ UNUTMA: ProcessVoiceCommandAsync universal bir fonksiyondur. HER ZAMAN İLK ÖNC
                     Console.WriteLine($"[SPECIFIC] Searching web: {query}");
                     var result = await functions.SearchWebAsync(query, lang, results);
                     Console.WriteLine($"[SPECIFIC] SearchWebAsync result: {result}");
-                    return result;
+
+                    return ParseJsonToNaturalResponse(result, $"'{query}' için web araması yapılıyor...");
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[SPECIFIC] SearchWebAsync error: {ex.Message}");
-                    return $"Error: {ex.Message}";
+                    return $"Web araması yapılırken hata oluştu: {ex.Message}";
                 }
             },
 
@@ -167,12 +202,13 @@ UNUTMA: ProcessVoiceCommandAsync universal bir fonksiyondur. HER ZAMAN İLK ÖNC
                     Console.WriteLine($"[SPECIFIC] Controlling device: {deviceName}, action: {action}");
                     var result = await functions.ControlDeviceAsync(deviceName, action);
                     Console.WriteLine($"[SPECIFIC] ControlDeviceAsync result: {result}");
-                    return result;
+
+                    return ParseJsonToNaturalResponse(result, $"{deviceName} cihazında {action} işlemi yapılıyor...");
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[SPECIFIC] ControlDeviceAsync error: {ex.Message}");
-                    return $"Error: {ex.Message}";
+                    return $"Cihaz kontrolü yapılırken hata oluştu: {ex.Message}";
                 }
             }
         };
@@ -189,10 +225,49 @@ UNUTMA: ProcessVoiceCommandAsync universal bir fonksiyondur. HER ZAMAN İLK ÖNC
             systemMessage: systemMessage)
             .RegisterMessageConnector()
             .RegisterMiddleware(new FunctionCallMiddleware(
-                functions: [functions.ProcessVoiceCommandAsyncFunctionContract, functions.CloseApplicationAsyncFunctionContract, functions.OpenApplicationAsyncFunctionContract, functions.SearchWebAsyncFunctionContract, functions.DetectIntentAsyncFunctionContract, functions.DetectIntentAsyncFunctionContract],
+                functions: [
+                    functions.ProcessVoiceCommandAsyncFunctionContract,
+                    functions.CloseApplicationAsyncFunctionContract,
+                    functions.OpenApplicationAsyncFunctionContract,
+                    functions.SearchWebAsyncFunctionContract,
+                    functions.PlayMusicAsyncFunctionContract,
+                    functions.ControlDeviceAsyncFunctionContract,
+                    functions.DetectIntentAsyncFunctionContract
+                ],
                 functionMap: functionMap))
             .RegisterPrintMessage();
 
         return agent;
+    }
+
+    /// <summary>
+    /// JSON yanıtını doğal dil yanıtına çevirir
+    /// </summary>
+    private static string ParseJsonToNaturalResponse(string jsonResult, string defaultMessage)
+    {
+        try
+        {
+            var jsonDocument = JsonDocument.Parse(jsonResult);
+            var root = jsonDocument.RootElement;
+
+            if (root.TryGetProperty("success", out var successElement) && successElement.GetBoolean())
+            {
+                if (root.TryGetProperty("message", out var messageElement))
+                {
+                    return messageElement.GetString() ?? defaultMessage;
+                }
+                return defaultMessage;
+            }
+            else if (root.TryGetProperty("error", out var errorElement))
+            {
+                return $"Hata: {errorElement.GetString()}";
+            }
+        }
+        catch
+        {
+            // JSON parse edilemezse default mesajı döndür
+        }
+
+        return defaultMessage;
     }
 }
