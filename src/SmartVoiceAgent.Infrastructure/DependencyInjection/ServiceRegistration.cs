@@ -29,7 +29,7 @@ public static class ServiceRegistration
         services.AddSingleton<IVoiceRecognitionFactory, VoiceRecognitionServiceFactory>();
         services.AddSingleton<IMusicServiceFactory, MusicServiceFactory>();
         services.AddSingleton<ICommandLearningService, CommandLearningService>();
-        services.AddScoped<IWebResearchService, WebResearchService>();
+        services.AddScoped<IWebResearchService, AiWebResearchService>();
         services.AddScoped<ICommandHandlerService, CommandHandlerService>();
         services.AddHttpClient();
         services.AddSingleton<OllamaSTTService>();
