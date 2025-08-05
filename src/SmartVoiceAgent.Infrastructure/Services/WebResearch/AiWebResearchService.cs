@@ -35,11 +35,8 @@ public class AiWebResearchService : IWebResearchService
             ?? throw new NullReferenceException("OpenRouter ApiKey not found in configuration.");
         _model = configuration.GetSection("OpenRouter:Model").Get<string>() ?? "microsoft/wizardlm-2-8x22b";
 
-        // OpenRouter için HTTP client ayarları
+        // HttpClient'ı temiz başlat - her method kendi header'larını ayarlayacak
         _httpClient.DefaultRequestHeaders.Clear();
-        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_openRouterApiKey}");
-        _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://esquetta.netlify.app/");
-        _httpClient.DefaultRequestHeaders.Add("X-Title", "Smart Voice Agent");
     }
 
     public async Task<List<WebResearchResult>> SearchAsync(WebResearchRequest request)
@@ -341,7 +338,6 @@ SADECE JSON formatında yanıt ver:
     {
         try
         {
-            // Completions API kullanımı (örnekteki gibi)
             var requestBody = new
             {
                 model = _model,
@@ -352,15 +348,27 @@ SADECE JSON formatında yanıt ver:
             };
 
             var json = JsonSerializer.Serialize(requestBody);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync("https://openrouter.ai/api/v1/completions", content);
+            // HttpRequestMessage kullanarak OpenRouter header'larını ayarla
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://openrouter.ai/api/v1/completions");
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            // OpenRouter için gerekli header'ları ekle
+            request.Headers.Add("Authorization", $"Bearer {_openRouterApiKey}");
+            request.Headers.Add("HTTP-Referer", "https://esquetta.netlify.app/");
+            request.Headers.Add("X-Title", "Smart Voice Agent");
+
+            _logger.Info($"OpenRouter'a gönderilen istek: {json}");
+            _logger.Info($"Authorization header: Bearer {_openRouterApiKey.Substring(0, 10)}...");
+
+            var response = await _httpClient.SendAsync(request);
 
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
                 _logger.Error($"OpenRouter API hatası: {response.StatusCode} - {errorContent}");
-                throw new HttpRequestException($"OpenRouter API error: {response.StatusCode}");
+                _logger.Error($"Request Headers: {string.Join(", ", request.Headers.Select(h => $"{h.Key}: {string.Join(", ", h.Value)}"))}");
+                throw new HttpRequestException($"OpenRouter API error: {response.StatusCode} - {errorContent}");
             }
 
             var responseContent = await response.Content.ReadAsStringAsync();
@@ -382,8 +390,6 @@ SADECE JSON formatında yanıt ver:
         catch (JsonException jsonEx)
         {
             _logger.Error($"JSON Parse hatası: {jsonEx.Message}");
-
-            // Fallback: Chat Completions API dene
             return await CallOpenRouterChatAsync(systemMessage, userMessage);
         }
         catch (Exception ex)
@@ -413,15 +419,22 @@ SADECE JSON formatında yanıt ver:
             };
 
             var json = JsonSerializer.Serialize(requestBody);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync("https://openrouter.ai/api/v1/chat/completions", content);
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://openrouter.ai/api/v1/chat/completions");
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            // OpenRouter için gerekli header'ları ekle
+            request.Headers.Add("Authorization", $"Bearer {_openRouterApiKey}");
+            request.Headers.Add("HTTP-Referer", "https://esquetta.netlify.app/");
+            request.Headers.Add("X-Title", "Smart Voice Agent");
+
+            var response = await _httpClient.SendAsync(request);
 
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
                 _logger.Error($"OpenRouter Chat API hatası: {response.StatusCode} - {errorContent}");
-                throw new HttpRequestException($"OpenRouter Chat API error: {response.StatusCode}");
+                throw new HttpRequestException($"OpenRouter Chat API error: {response.StatusCode} - {errorContent}");
             }
 
             var responseContent = await response.Content.ReadAsStringAsync();
@@ -459,16 +472,63 @@ SADECE JSON formatında yanıt ver:
                 return results;
             }
 
+            // URL encoding ve parametre düzeltmeleri
             var encodedQuery = Uri.EscapeDataString(request.Query);
+
+            // Language code düzeltmesi (Google'ın beklediği format)
+            var languageCode = GetGoogleLanguageCode(request.Language);
+
             var url = $"https://www.googleapis.com/customsearch/v1?" +
                      $"key={_searchApiKey}&" +
                      $"cx={_searchEngineId}&" +
                      $"q={encodedQuery}&" +
-                     $"num={request.MaxResults}&" +
-                     $"lr=lang_{request.Language}";
+                     $"num={Math.Min(request.MaxResults, 10)}&" + // Google max 10 results per request
+                     $"hl={languageCode}&" +                      // Interface language
+                     $"gl={GetGoogleCountryCode(request.Language)}"; // Country for results
 
-            var response = await _httpClient.GetStringAsync(url);
-            var searchResponse = JsonSerializer.Deserialize<JsonElement>(response);
+            _logger.Info($"Google Search URL: {url.Replace(_searchApiKey, "***API_KEY***")}");
+
+            // HttpRequestMessage kullanarak Google Search için header'ları ayarla
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Get, url);
+
+            // Google Custom Search için sadece gerekli header'ları ekle (Authorization gerekmez)
+            httpRequest.Headers.Add("User-Agent", "Smart Voice Agent/1.0");
+            httpRequest.Headers.Add("Accept", "application/json");
+
+            using var response = await _httpClient.SendAsync(httpRequest);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.Error($"Google Search API hatası: {response.StatusCode} - {errorContent}");
+
+                // Specific error handling
+                if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                {
+                    _logger.Error("Google Search API: 403 Forbidden - API key veya Search Engine ID kontrol edin");
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    _logger.Error("Google Search API: 400 Bad Request - Query parametreleri kontrol edin");
+                }
+
+                return results; // Hata durumunda boş liste döndür
+            }
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+            _logger.Info($"Google Search Response Length: {responseContent.Length}");
+
+            var searchResponse = JsonSerializer.Deserialize<JsonElement>(responseContent);
+
+            // Error response kontrolü
+            if (searchResponse.TryGetProperty("error", out var errorElement))
+            {
+                var errorMessage = errorElement.TryGetProperty("message", out var msgProp)
+                    ? msgProp.GetString()
+                    : "Unknown error";
+                _logger.Error($"Google Search API Error: {errorMessage}");
+                return results;
+            }
 
             if (searchResponse.TryGetProperty("items", out var items))
             {
@@ -484,21 +544,153 @@ SADECE JSON formatında yanıt ver:
                     {
                         results.Add(new WebResearchResult
                         {
-                            Title = title ?? "Başlık Yok",
+                            Title = CleanText(title) ?? "Başlık Yok",
                             Url = link,
-                            Description = snippet ?? "Açıklama Yok",
+                            Description = CleanText(snippet) ?? "Açıklama Yok",
                             SearchDate = DateTime.Now
                         });
                     }
                 }
             }
+            else
+            {
+                _logger.Warn("Google Search API'den 'items' property'si bulunamadı");
+
+                // Search information kontrolü
+                if (searchResponse.TryGetProperty("searchInformation", out var searchInfo))
+                {
+                    if (searchInfo.TryGetProperty("totalResults", out var totalResults))
+                    {
+                        _logger.Info($"Total Results: {totalResults.GetString()}");
+                        if (totalResults.GetString() == "0")
+                        {
+                            _logger.Info("Arama sonucu bulunamadı");
+                        }
+                    }
+                }
+            }
+
+            _logger.Info($"Google Search'den {results.Count} sonuç alındı");
+        }
+        catch (HttpRequestException httpEx)
+        {
+            _logger.Error($"Google Search HTTP hatası: {httpEx.Message}");
+            if (httpEx.Message.Contains("401"))
+            {
+                _logger.Error("Google Search API Key geçersiz veya süresi dolmuş");
+            }
+            else if (httpEx.Message.Contains("403"))
+            {
+                _logger.Error("Google Search API quota aşıldı veya Custom Search Engine ID geçersiz");
+            }
+        }
+        catch (TaskCanceledException timeoutEx)
+        {
+            _logger.Error($"Google Search timeout: {timeoutEx.Message}");
+        }
+        catch (JsonException jsonEx)
+        {
+            _logger.Error($"Google Search JSON parse hatası: {jsonEx.Message}");
         }
         catch (Exception ex)
         {
-            _logger.Error($"Google Search API hatası: {ex.Message}");
+            _logger.Error($"Google Search API genel hata: {ex.Message}");
+            _logger.Error($"Stack Trace: {ex.StackTrace}");
         }
 
         return results;
+    }
+
+    /// <summary>
+    /// Google'ın beklediği language code formatına çevirir
+    /// </summary>
+    private string GetGoogleLanguageCode(string language)
+    {
+        return language?.ToLower() switch
+        {
+            "tr" or "turkish" or "türkçe" => "tr",
+            "en" or "english" or "ingilizce" => "en",
+            "de" or "german" or "almanca" => "de",
+            "fr" or "french" or "fransızca" => "fr",
+            "es" or "spanish" or "ispanyolca" => "es",
+            _ => "tr"
+        };
+    }
+
+    /// <summary>
+    /// Google'ın beklediği country code formatına çevirir
+    /// </summary>
+    private string GetGoogleCountryCode(string language)
+    {
+        return language?.ToLower() switch
+        {
+            "tr" or "turkish" or "türkçe" => "TR",
+            "en" or "english" or "ingilizce" => "US",
+            "de" or "german" or "almanca" => "DE",
+            "fr" or "french" or "fransızca" => "FR",
+            "es" or "spanish" or "ispanyolca" => "ES",
+            _ => "TR"
+        };
+    }
+
+    /// <summary>
+    /// Text'i temizler (HTML entities, fazla boşluklar vs.)
+    /// </summary>
+    private string CleanText(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return text;
+
+        // HTML entities decode
+        text = System.Net.WebUtility.HtmlDecode(text);
+
+        // Multiple spaces to single space
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ");
+
+        // Trim
+        text = text.Trim();
+
+        return text;
+    }
+
+    /// <summary>
+    /// Google Custom Search Engine kurulumu için yardımcı metod
+    /// Test amaçlı API'yi doğrular
+    /// </summary>
+    public async Task<bool> TestGoogleSearchAsync()
+    {
+        try
+        {
+            var testUrl = $"https://www.googleapis.com/customsearch/v1?" +
+                         $"key={_searchApiKey}&" +
+                         $"cx={_searchEngineId}&" +
+                         $"q=test&" +
+                         $"num=1";
+
+            _logger.Info("Google Search API test ediliyor...");
+
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Get, testUrl);
+            httpRequest.Headers.Add("User-Agent", "Smart Voice Agent/1.0");
+            httpRequest.Headers.Add("Accept", "application/json");
+
+            using var response = await _httpClient.SendAsync(httpRequest);
+            var content = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.Info("Google Search API test başarılı");
+                return true;
+            }
+            else
+            {
+                _logger.Error($"Google Search API test başarısız: {response.StatusCode} - {content}");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Google Search API test hatası: {ex.Message}");
+            return false;
+        }
     }
 
     private async Task OpenUrlInBrowserAsync(string url)
@@ -569,7 +761,7 @@ SADECE JSON formatında yanıt ver:
         // Markdown kod bloklarını temizle
         response = response.Replace("```json", "").Replace("```", "");
 
-        // Başta ve sondaki whitespace'leri temizle
+        // Başта ve sondaki whitespace'leri temizle
         response = response.Trim();
 
         // Backtick karakterlerini temizle
@@ -609,7 +801,3 @@ SADECE JSON formatında yanıt ver:
         }
     }
 }
-
-
-
-
