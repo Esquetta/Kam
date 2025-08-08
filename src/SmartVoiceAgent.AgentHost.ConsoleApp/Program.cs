@@ -6,13 +6,14 @@ using SmartVoiceAgent.Infrastructure.DependencyInjection;
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration(config =>
-    {       
+    {
         config.AddUserSecrets<Program>();
     })
     .ConfigureServices((context, services) =>
     {
+        var configuration = context.Configuration;
         services.AddApplicationServices();
-        services.AddInfrastructureServices();
+        services.AddInfrastructureServices(configuration);
     })
     .Build();
 
