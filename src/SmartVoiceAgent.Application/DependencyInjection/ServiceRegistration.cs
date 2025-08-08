@@ -34,7 +34,7 @@ public static class ServiceRegistration
             cfg.AddOpenBehavior(typeof(CacheRemovingBehavior<,>));
         });
         services.AddDistributedMemoryCache();
-        services.AddScoped<Functions>();
+
 
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
 
