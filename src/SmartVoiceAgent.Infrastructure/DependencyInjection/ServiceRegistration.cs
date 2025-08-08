@@ -1,7 +1,9 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Infrastructure.Factories;
 using SmartVoiceAgent.Infrastructure.Helpers;
+using SmartVoiceAgent.Infrastructure.Mcp;
 using SmartVoiceAgent.Infrastructure.Services;
 using SmartVoiceAgent.Infrastructure.Services.ApplicationScanner;
 using SmartVoiceAgent.Infrastructure.Services.Language;
@@ -15,7 +17,9 @@ namespace SmartVoiceAgent.Infrastructure.DependencyInjection;
 /// </summary>
 public static class ServiceRegistration
 {
-    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
+    public static IServiceCollection AddInfrastructureServices(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
         services.AddScoped<IIntentDetectionService, IntentDetectorService>();
         services.AddScoped<ICommandLearningService, CommandLearningService>();
@@ -35,9 +39,8 @@ public static class ServiceRegistration
         services.AddSingleton<OllamaSTTService>();
         services.AddSingleton<WhisperSTTService>();
         services.AddSingleton<HuggingFaceSTTService>();
-
-
-
+        services.AddScoped<Functions>();
+        services.Configure<McpOptions>(configuration.GetSection("MCP"));
 
         return services;
     }

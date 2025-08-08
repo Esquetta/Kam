@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Infrastructure.Agent;
 using SmartVoiceAgent.Infrastructure.Helpers;
 
 namespace SmartVoiceAgent.Infrastructure.Services
@@ -28,7 +29,7 @@ namespace SmartVoiceAgent.Infrastructure.Services
 
         private readonly IWebResearchService webResearchService;
 
-        private IAgent agent;
+        private SmartGroupChat AgentGroup;
         private readonly Functions functions;
         private readonly IServiceProvider serviceProvider;
 
@@ -51,10 +52,11 @@ namespace SmartVoiceAgent.Infrastructure.Services
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            this.agent = await AgentFactory.CreateAdminAgentAsync(apikey: configuration.GetSection("AiAgent:Apikey").Get<string>(), model: configuration.GetSection("AiAgent:Model").Get<string>(), endpoint: configuration.GetSection("AiAgent:EndPoint").Get<string>(), functions: functions);
+            this.AgentGroup = await GroupChatAgentFactory.CreateGroupChatAsync(apiKey: configuration.GetSection("AiAgent:Apikey").Get<string>(), model: configuration.GetSection("AiAgent:Model").Get<string>(), endpoint: configuration.GetSection("AiAgent:EndPoint").Get<string>(), functions: functions, configuration);
 
             var intent = await _intentDetector.DetectIntentAsync("Spotify kapat", "tr", stoppingToken);
-            await this.agent.SendAsync("Spotify kapat");
+            var result = this.AgentGroup.SendWithAnalyticsAsync("Spotify'ı kapat", "User", 10, stoppingToken);
+            Console.WriteLine(result.Result);
 
             //    // Voice captured event
             //    _voiceRecognitionService.OnVoiceCaptured += async (sender, audioData) =>
