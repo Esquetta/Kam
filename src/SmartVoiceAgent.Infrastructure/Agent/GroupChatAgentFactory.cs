@@ -42,7 +42,9 @@ public static class GroupChatAgentFactory
         var mcpOptions = new McpOptions();
         configuration.GetSection("Mcpverse").Bind(mcpOptions);
         Console.WriteLine("🏗️ Building Advanced Group Chat System with Intent-Based Routing...");
-
+        options.EnableAnalyticsAgent = true;
+        options.EnableWebSearchAgent = true;
+        options.EnableContextMemory = true;
         // Create context-aware agents
         var contextManager = new ConversationContextManager();
         var analytics = new GroupChatAnalytics();
@@ -54,8 +56,10 @@ public static class GroupChatAgentFactory
         var analyticsAgent = await CreateAnalyticsAgentAsync(apiKey, model, endpoint, analytics);
         var userProxy = CreateEnhancedUserProxy();
 
-        // Optional specialized agents
-        var agents = new List<IAgent> { coordinator, systemAgent, taskAgent, webResearchAgent, userProxy, analyticsAgent };
+        // Optional specialized 
+        var agents = new List<IAgent> { coordinator, systemAgent, taskAgent, webResearchAgent, analyticsAgent, userProxy };
+
+
 
         // Create intelligent workflow with intent-based routing
         var workflow = CreateIntelligentWorkflow(
@@ -75,6 +79,21 @@ public static class GroupChatAgentFactory
             contextManager: contextManager,
             analytics: analytics,
             options: options);
+
+        coordinator.SendIntroduction("Merhaba, ben gelişmiş AI koordinatörünüzüm! " +
+            "Grup sohbetini yönetmek ve  görevleri size yönlendirmek için burdayım." +
+            "Hadi başlayalım!", groupChat);
+
+        systemAgent.SendIntroduction("Merhaba, ben akıllı sistem kontrolcünüzüm! " +
+            "Sistem komutlarını yerine getirmek ve uygulamaları yönetmek için buradayım.", groupChat);
+
+        taskAgent.SendIntroduction("Merhaba, kullanıcının planlama  hatırlatma vb tüm görevlerini yapan asistanım.", groupChat);
+
+        webResearchAgent.SendIntroduction("Merhaba, ben web araştırma uzmanınızım! " +
+            "Güvenilir bilgi ve haberleri hızlıca bulmak için buradayım.", groupChat);
+
+        analyticsAgent.SendIntroduction("Merhaba, ben sistem analitik uzmanınızım! " +
+            "Performans ve kullanım verilerini analiz ederek size raporlar sunacağım.", groupChat);
 
         Console.WriteLine($"✅ Intent-Based Group Chat Ready with {agents.Count} agents");
         return groupChat;
@@ -108,7 +127,7 @@ public static class GroupChatAgentFactory
 User: ""Yarın için tam günlük plan hazırla""
 Sen: ""Şunları yapacağım:
 1. @TaskAgent Mevcut görevleri listele
-2. @WebAgent Hava durumu kontrol et  
+2. @WebSearchAgent Hava durumu kontrol et  
 3. @TaskAgent Optimized schedule oluştur
 4. @TaskAgent Hatırlatmaları kur""
 
@@ -173,7 +192,7 @@ Context'te User: 'Spotify kapat' varsa
         return new OpenAIChatAgent(
             chatClient: new ChatClient(model, new ApiKeyCredential(apiKey),
                 new OpenAIClientOptions { Endpoint = new Uri(endpoint) }),
-            name: "ContextAwareSystemAgent",
+            name: "SystemAgent",
             systemMessage: systemMessage)
             .RegisterMessageConnector()
             .RegisterMiddleware(new FunctionCallMiddleware(
@@ -232,7 +251,7 @@ Context'te User: 'Spotify kapat' varsa
 
         return new SemanticKernelAgent(
             kernel,
-            name: "ContextAwareTaskAgent",
+            name: "TaskAgent",
             systemMessage: @"Sen gelişmiş görev yönetimi uzmanısın.
 
 === CONTEXT-DRIVEN TASK MANAGEMENT ===
@@ -350,7 +369,7 @@ Sadece rapor et, proaktif öneriler sun!";
     {
         return new UserProxyAgent(
             name: "User",
-            humanInputMode: HumanInputMode.NEVER)
+            humanInputMode: HumanInputMode.ALWAYS)
             .RegisterPrintMessage();
     }
 
@@ -374,37 +393,37 @@ Sadece rapor et, proaktif öneriler sun!";
 
         // Intent-based routing from coordinator
         workflow.AddTransition(Transition.Create(coordinator, systemAgent,
-            async (_, _, ctx) => await ShouldRouteToSystemAgent(ctx, intentDetectionService)));
+            async (from, to, ctx) => await ShouldRouteToSystemAgent(ctx, intentDetectionService)));
 
         workflow.AddTransition(Transition.Create(coordinator, taskAgent,
-            async (_, _, ctx) => await ShouldRouteToTaskAgent(ctx, intentDetectionService)));
+           async (from, to, ctx) => await ShouldRouteToTaskAgent(ctx, intentDetectionService)));
 
         if (options.EnableWebSearchAgent && webAgent != null)
         {
             workflow.AddTransition(Transition.Create(coordinator, webAgent,
-                async (_, _, ctx) => await ShouldRouteToWebAgent(ctx, intentDetectionService)));
+                async (from, to, ctx) => await ShouldRouteToWebAgent(ctx, intentDetectionService)));
 
             // Web agent can chain to task agent for follow-up actions
             workflow.AddTransition(Transition.Create(webAgent, taskAgent,
-                async (_, _, ctx) => await RequiresTaskAfterWeb(ctx)));
+                async (from, to, ctx) => await RequiresTaskAfterWeb(ctx)));
 
             workflow.AddTransition(Transition.Create(webAgent, coordinator));
         }
 
         // System agent can chain to task agent for follow-up actions
         workflow.AddTransition(Transition.Create(systemAgent, taskAgent,
-            async (_, _, ctx) => await RequiresTaskAfterSystem(ctx)));
+            async (from, to, ctx) => await RequiresTaskAfterSystem(ctx)));
 
         // Analytics agent receives data from all agents
         if (options.EnableAnalyticsAgent && analyticsAgent != null)
         {
             workflow.AddTransition(Transition.Create(systemAgent, analyticsAgent,
-                async (_, _, ctx) => await ShouldCollectAnalytics(ctx)));
+                async (from, to, ctx) => await ShouldCollectAnalytics(ctx)));
             workflow.AddTransition(Transition.Create(taskAgent, analyticsAgent,
-                async (_, _, ctx) => await ShouldCollectAnalytics(ctx)));
+                async (from, to, ctx) => await ShouldCollectAnalytics(ctx)));
             if (webAgent != null)
                 workflow.AddTransition(Transition.Create(webAgent, analyticsAgent,
-                    async (_, _, ctx) => await ShouldCollectAnalytics(ctx)));
+                    async (from, to, ctx) => await ShouldCollectAnalytics(ctx)));
         }
 
         // All agents return to coordinator

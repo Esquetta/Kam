@@ -25,7 +25,7 @@ public class SmartGroupChat : GroupChat, IGroupChat
         ConversationContextManager contextManager,
         GroupChatAnalytics analytics,
         GroupChatOptions options)
-        : base(members, admin, null, workflow)
+        : base(members, admin, workflow: workflow)
     {
         _memberCount = members?.Count() ?? 0;
         ContextManager = contextManager;
