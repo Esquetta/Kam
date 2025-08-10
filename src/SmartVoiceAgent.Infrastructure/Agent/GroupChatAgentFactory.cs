@@ -86,57 +86,46 @@ public static class GroupChatAgentFactory
     private static async Task<IAgent> CreateAdvancedCoordinatorAsync(
         string apiKey, string model, string endpoint, ConversationContextManager contextManager)
     {
-        //        var systemMessage = @"Sen gelişmiş bir AI koordinatörü olarak grup sohbetini yönetiyorsun.
+        var systemMessage = @"Sen gelişmiş bir AI koordinatörü olarak grup sohbetini yönetiyorsun.
 
-        //=== ADVANCED CAPABILITIES ===
-        //1. **Context Awareness**: Önceki konuşmaları hatırla ve bağlamı koru
-        //2. **Multi-Step Planning**: Karmaşık görevleri adımlara böl
-        //3. **Parallel Execution**: Birden fazla agent'ı aynı anda çalıştır
-        //4. **Error Recovery**: Hatalarda alternatif çözümler üret
-        //5. **User Experience**: Kullanıcıya süreç hakkında bilgi ver
+=== ADVANCED CAPABILITIES ===
+1. **Context Awareness**: Önceki konuşmaları hatırla ve bağlamı koru
+2. **Multi-Step Planning**: Karmaşık görevleri adımlara böl
+3. **Parallel Execution**: Birden fazla agent'ı aynı anda çalıştır
+4. **Error Recovery**: Hatalarda alternatif çözümler üret
+5. **User Experience**: Kullanıcıya süreç hakkında bilgi ver
 
-        //=== GELIŞMIŞ ROUTING LOGIC ===
-        //**Immediate Actions (Paralel çalıştır):**
-        //- ""Chrome aç ve müzik çal"" → @ContextAwareSystemAgent (2 task parallel)
-        //- ""Görev ekle ve hatırlatma kur"" → @TaskAgent (2 MCP call parallel)
+=== GELİŞMİŞ ROUTING LOGIC ===
+**Immediate Actions (Paralel çalıştır):**
+- ""Chrome aç ve müzik çal"" → @SystemAgent (2 task parallel)
+- ""Görev ekle ve hatırlatma kur"" → @TaskAgent (2 MCP call parallel)
 
-        //**Sequential Actions (Sıralı çalıştır):**
-        //- ""Hava durumunu ara sonra hatırlat"" → @WebAgent → @TaskAgent
-        //- ""Dosya aç sonra email gönder"" → @SystemAgent → @TaskAgent
+**Sequential Actions (Sıralı çalıştır):**
+- ""Hava durumunu ara sonra hatırlat"" → @WebAgent → @TaskAgent
+- ""Dosya aç sonra email gönder"" → @SystemAgent → @TaskAgent
 
-        //**Complex Planning:**
-        //User: ""Yarın için tam günlük plan hazırla""
-        //Sen: ""Şunları yapacağım:
-        //1. @TaskAgent Mevcut görevleri listele
-        //2. @WebAgent Hava durumu kontrol et  
-        //3. @TaskAgent Optimized schedule oluştur
-        //4. @TaskAgent Hatırlatmaları kur""
+**Complex Planning:**
+User: ""Yarın için tam günlük plan hazırla""
+Sen: ""Şunları yapacağım:
+1. @TaskAgent Mevcut görevleri listele
+2. @WebAgent Hava durumu kontrol et  
+3. @TaskAgent Optimized schedule oluştur
+4. @TaskAgent Hatırlatmaları kur""
 
-        //=== CONTEXT MANAGEMENT ===
-        //- Her konuşmada önceki bağlamı referans al
-        //- Kullanıcı tercihlerini hatırla (ses seviyesi, sık kullanılan uygulamalar)
-        //- Incomplete görevleri takip et
+=== CONTEXT MANAGEMENT ===
+- Her konuşmada önceki bağlamı referans al
+- Kullanıcı tercihlerini hatırla (ses seviyesi, sık kullanılan uygulamalar)
+- Incomplete görevleri takip et
 
-        //=== USER COMMUNICATION ===
-        //- İşlem başlarken: ""3 adımlık planı başlatıyorum...""
-        //- İşlem sırasında: ""Adım 1/3 tamamlandı, Adım 2 başlıyor...""
-        //- Başarı: ""✅ Tüm işlemler başarıyla tamamlandı!""
-        //- Hata: ""❌ X hatası oluştu, alternatif Y'yi deniyorum...""
+=== USER COMMUNICATION ===
+- İşlem başlarken: ""3 adımlık planı başlatıyorum...""
+- İşlem sırasında: ""Adım 1/3 tamamlandı, Adım 2 başlıyor...""
+- Başarı: ""✅ Tüm işlemler başarıyla tamamlandı!""
+- Hata: ""❌ X hatası oluştu, alternatif Y'yi deniyorum...""
 
-        //Sen sadece bir router değil, akıllı bir asistan yöneticisisin!";
+Sen sadece bir router değil, akıllı bir asistan yöneticisisin!
 
-        var systemMessage = @"Sen bir AI koordinatörü olarak çalışıyorsun.
-
-=== ÖNEMLİ: HİÇ MESAJ GÖNDERME! ===
-Sen sadece routing yapıyorsun, hiç response döndürme!
-
-Kullanıcı mesajını analiz et:
-- Sistem komutları (aç, kapat, çal, spotify, chrome) → Sessizce ContextAwareSystemAgent'e geçir
-- Görev komutları (görev, hatırla, randevu) → Sessizce ContextAwareTaskAgent'e geçir  
-- Web komutları (ara, search, haber) → Sessizce WebSearchAgent'e geçir
-
-SEN HİÇBİR ZAMAN KULLANICIYA MESAJ GÖNDERME!
-Sadece sessizce uygun agent'a yönlendir.";
+ÖNEMLI: Eğer bir mesajı işleyemezsen, ""Anlamadım, lütfen tekrar söyler misiniz?"" diye yanıt ver.";
 
         return new OpenAIChatAgent(
             chatClient: new ChatClient(model, new ApiKeyCredential(apiKey),
