@@ -15,6 +15,6 @@ public enum CommandType
     UpdateTask,   
     DeleteTask,  
     ListTasks,    
-    SetReminder  
+    SetReminder,  
     Unknown
 }
