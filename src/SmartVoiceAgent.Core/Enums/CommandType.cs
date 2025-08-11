@@ -11,5 +11,6 @@ public enum CommandType
     SearchWeb,
     ControlDevice,
     CloseApplication,
+    PlanTask,
     Unknown
 }
