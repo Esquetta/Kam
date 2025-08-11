@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 namespace SmartVoiceAgent.Infrastructure.Services;
 
 /// <summary>
-/// Keyword-based intent detection service.
+/// Keyword-based intent detection service with Todoist task management support.
 /// </summary>
 public class IntentDetectorService : IIntentDetectionService
 {
@@ -21,7 +21,7 @@ public class IntentDetectorService : IIntentDetectionService
     public IntentDetectorService(LoggerServiceBase logger, IConfiguration configuration)
     {
         _logger = logger;
-        _config = configuration.GetSection("Intent").Get<IntentConfig>() ?? throw new NullReferenceException($"Intent section cannot found in configuration."); ;
+        _config = configuration.GetSection("Intent").Get<IntentConfig>() ?? throw new NullReferenceException("Intent section cannot found in configuration.");
         _intentPatterns = LoadIntentPatterns();
         _entityRegexes = LoadEntityRegexes();
     }
@@ -100,6 +100,13 @@ public class IntentDetectorService : IIntentDetectionService
                 new IntentPattern(CommandType.SendMessage, new[] { "message", "send", "sms" }),
                 new IntentPattern(CommandType.SearchWeb, new[] { "search", "google", "find" }),
                 new IntentPattern(CommandType.CloseApplication, new[] { "close", "stop", "kill" }),
+
+                // Todoist related intents
+                new IntentPattern(CommandType.AddTask, new[] { "add", "create", "new", "task", "reminder" }),
+                new IntentPattern(CommandType.UpdateTask, new[] { "update", "change", "edit", "modify" }),
+                new IntentPattern(CommandType.DeleteTask, new[] { "delete", "remove", "cancel", "sil", "kaldır" }),
+                new IntentPattern(CommandType.ListTasks, new[] { "list", "show", "display", "tasks", "görevler" }),
+                new IntentPattern(CommandType.SetReminder, new[] { "remind", "reminder", "hatırlat", "alarm" }),
             },
             ["tr"] = new List<IntentPattern>
             {
@@ -108,6 +115,13 @@ public class IntentDetectorService : IIntentDetectionService
                 new IntentPattern(CommandType.SendMessage, new[] { "mesaj", "gönder" }),
                 new IntentPattern(CommandType.SearchWeb, new[] { "ara", "bul", "google" }),
                 new IntentPattern(CommandType.CloseApplication, new[] { "kapat", "durdur", "sonlandır" }),
+
+                // Todoist related intents
+                new IntentPattern(CommandType.AddTask, new[] { "ekle", "oluştur", "yeni", "görev", "hatırlatıcı" }),
+                new IntentPattern(CommandType.UpdateTask, new[] { "güncelle", "değiştir", "düzenle" }),
+                new IntentPattern(CommandType.DeleteTask, new[] { "sil", "kaldır", "iptal" }),
+                new IntentPattern(CommandType.ListTasks, new[] { "listele", "göster", "görevler" }),
+                new IntentPattern(CommandType.SetReminder, new[] { "hatırlat", "alarm", "bildirim" }),
             }
         };
     }
@@ -116,9 +130,12 @@ public class IntentDetectorService : IIntentDetectionService
     {
         return new Dictionary<string, Regex>
         {
-            ["time"] = new Regex(@"\b\d{1,2}:\d{2}\b"),
-            ["date"] = new Regex(@"\b\d{1,2}/\d{1,2}/\d{4}\b"),
-            ["number"] = new Regex(@"\b\d+\b")
+            ["time"] = new Regex(@"\b\d{1,2}:\d{2}\b"), // 14:30 gibi saat
+            ["date"] = new Regex(@"\b\d{1,2}/\d{1,2}/\d{4}\b"), // 15/08/2025 gibi tarih
+            ["dateAlt"] = new Regex(@"\b\d{1,2}\.\d{1,2}\.\d{4}\b"), // 15.08.2025 gibi alternatif tarih
+            ["number"] = new Regex(@"\b\d+\b"),
+            ["priority"] = new Regex(@"\b(high|medium|low|yüksek|orta|düşük|önemli|acil)\b", RegexOptions.IgnoreCase),
+            ["repeat"] = new Regex(@"\b(every day|daily|weekly|monthly|her gün|haftalık|aylık)\b", RegexOptions.IgnoreCase),
         };
     }
 
@@ -127,20 +144,17 @@ public class IntentDetectorService : IIntentDetectionService
         if (string.IsNullOrWhiteSpace(text))
             return string.Empty;
 
-        
         var normalizedText = Regex.Replace(text, @"[^\w\s\u00C0-\u017F]", " ");
-
-        
         normalizedText = Regex.Replace(normalizedText, @"\s+", " ");
 
-        
-        //normalizedText = NormalizeTurkishChars(normalizedText);
+        // istersen Türkçe karakter normalizasyonu açılabilir
+        // normalizedText = NormalizeTurkishChars(normalizedText);
 
         return normalizedText.ToLowerInvariant().Trim();
     }
+
     private string NormalizeTurkishChars(string text)
     {
-        
         var turkishChars = new Dictionary<char, char>
         {
             {'ç', 'c'}, {'ğ', 'g'}, {'ı', 'i'}, {'ö', 'o'}, {'ş', 's'}, {'ü', 'u'},
@@ -177,12 +191,14 @@ public class IntentDetectorService : IIntentDetectionService
 
         return (float)matchCount / pattern.Keywords.Length * pattern.Weight;
     }
+
     private bool IsLikeMatch(string word, string keyword)
     {
         word = StripTurkishSuffixes(word);
 
         return word.StartsWith(keyword, StringComparison.OrdinalIgnoreCase);
     }
+
     private string StripTurkishSuffixes(string word)
     {
         return Regex.Replace(word, "(misin|mısın|mışsın|mişsin|sana|sene|abilir|ebilir|lütfen)$", "", RegexOptions.IgnoreCase);
@@ -193,12 +209,36 @@ public class IntentDetectorService : IIntentDetectionService
         await Task.Delay(1);
         var entities = new Dictionary<string, object>();
 
+        // Regex ile entity yakalama
         foreach (var kvp in _entityRegexes)
         {
             var matches = kvp.Value.Matches(text);
             if (matches.Any())
             {
                 entities[kvp.Key] = matches.Select(m => m.Value).ToArray();
+            }
+        }
+
+        // Görev adı çıkarımı: taskName
+        if (intent == CommandType.AddTask || intent == CommandType.UpdateTask)
+        {
+            var patternKeywords = GetPatternsForLanguage(language)
+                                  .FirstOrDefault(p => p.Intent == intent)?
+                                  .Keywords ?? Array.Empty<string>();
+
+            var normalizedText = NormalizeText(text);
+
+            // TaskName çıkarımı için intent keywordlerini çıkar
+            foreach (var keyword in patternKeywords)
+            {
+                normalizedText = Regex.Replace(normalizedText, $@"\b{Regex.Escape(keyword)}\b", "", RegexOptions.IgnoreCase);
+            }
+
+            normalizedText = normalizedText.Trim();
+
+            if (!string.IsNullOrEmpty(normalizedText))
+            {
+                entities["taskName"] = normalizedText;
             }
         }
 
