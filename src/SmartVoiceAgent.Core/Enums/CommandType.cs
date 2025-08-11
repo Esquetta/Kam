@@ -11,6 +11,10 @@ public enum CommandType
     SearchWeb,
     ControlDevice,
     CloseApplication,
-    PlanTask,
+    AddTask,      
+    UpdateTask,   
+    DeleteTask,  
+    ListTasks,    
+    SetReminder  
     Unknown
 }
