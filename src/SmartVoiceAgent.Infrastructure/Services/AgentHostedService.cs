@@ -52,11 +52,20 @@ namespace SmartVoiceAgent.Infrastructure.Services
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            this.AgentGroup = await GroupChatAgentFactory.CreateGroupChatAsync(apiKey: configuration.GetSection("AiAgent:Apikey").Get<string>(), model: configuration.GetSection("AiAgent:Model").Get<string>(), endpoint: configuration.GetSection("AiAgent:EndPoint").Get<string>(), functions: functions, configuration);
+            this.AgentGroup = await GroupChatAgentFactory.CreateGroupChatAsync(apiKey: configuration.GetSection("AiAgent:Apikey").Get<string>(), model: configuration.GetSection("AiAgent:Model").Get<string>(), endpoint: configuration.GetSection("AiAgent:EndPoint").Get<string>(), functions: functions, configuration, _intentDetector);
 
-            var intent = await _intentDetector.DetectIntentAsync("Spotify kapat", "tr", stoppingToken);
-            var result = this.AgentGroup.SendWithAnalyticsAsync("Spotify'ı kapat", "User", 10, stoppingToken);
-            Console.WriteLine(result.Result);
+            // Test 1: Intent Detection
+            var intent = await _intentDetector.DetectIntentAsync("Yarına Ders adında bir görev oluşturmanı istiyorum. Saat 9'a.", "tr", stoppingToken);
+
+            // Test 2: Agent Group Communication
+            var testMessage = "Yarına Ders adında bir görev oluşturmanı istiyorum. Saat 9'a.";
+
+            var result = await AgentGroup.SendWithAnalyticsAsync(
+                message: testMessage,
+                from: "TestUser",
+                maxRound: 10,
+                cancellationToken: stoppingToken);
+            Console.WriteLine($"📥 Agent response: {result?.GetContent() ?? "No response"}");
 
             //    // Voice captured event
             //    _voiceRecognitionService.OnVoiceCaptured += async (sender, audioData) =>
