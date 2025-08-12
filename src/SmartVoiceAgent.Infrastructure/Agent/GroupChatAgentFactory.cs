@@ -125,7 +125,7 @@ UNUTMA: Sen sadece router değil, conversation manager'sın!";
         return new OpenAIChatAgent(
             chatClient: new ChatClient(model, new ApiKeyCredential(apiKey),
                 new OpenAIClientOptions { Endpoint = new Uri(endpoint) }),
-            name: "AdvancedCoordinator",
+            name: "Coordinator",
             systemMessage: systemMessage)
             .RegisterMessageConnector()
             .RegisterMiddleware(new ContextAwareMiddleware(contextManager))
