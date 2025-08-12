@@ -75,20 +75,6 @@ public static class GroupChatAgentFactory
             analytics: analytics,
             options: options);
 
-        coordinator.SendIntroduction("Merhaba, ben gelişmiş AI koordinatörünüzüm! " +
-            "Grup sohbetini yönetmek ve  görevleri size yönlendirmek için burdayım." +
-            "Hadi başlayalım!", groupChat);
-
-        systemAgent.SendIntroduction("Merhaba, ben akıllı sistem kontrolcünüzüm! " +
-            "Sistem komutlarını yerine getirmek ve uygulamaları yönetmek için buradayım.", groupChat);
-
-        taskAgent.SendIntroduction("Merhaba, kullanıcının planlama  hatırlatma vb tüm görevlerini yapan asistanım.", groupChat);
-
-        webResearchAgent.SendIntroduction("Merhaba, ben web araştırma uzmanınızım! " +
-            "Güvenilir bilgi ve haberleri hızlıca bulmak için buradayım.", groupChat);
-
-        analyticsAgent.SendIntroduction("Merhaba, ben sistem analitik uzmanınızım! " +
-            "Performans ve kullanım verilerini analiz ederek size raporlar sunacağım.", groupChat);
 
         Console.WriteLine($"✅ Intent-Based Group Chat Ready with {agents.Count} agents");
         return groupChat;
@@ -120,7 +106,7 @@ public static class GroupChatAgentFactory
 - Direct question: Kendin cevapla
 - Command needed: Agent'a yönlendir
 
-UNUTMA: Sen sadece router değil, conversation manager'sın!";
+UNUTMA: Sen sadece router değil, hemde  conversation manager'sın! kullanıcının isteğini ilgili agent'a iletmeyi unutma";
 
         return new OpenAIChatAgent(
             chatClient: new ChatClient(model, new ApiKeyCredential(apiKey),
@@ -128,9 +114,6 @@ UNUTMA: Sen sadece router değil, conversation manager'sın!";
             name: "Coordinator",
             systemMessage: systemMessage)
             .RegisterMessageConnector()
-            .RegisterMiddleware(new ContextAwareMiddleware(contextManager))
-            .RegisterMiddleware(new ConversationFlowMiddleware())
-            .RegisterMiddleware(new ConversationDebugMiddleware())
             .RegisterPrintMessage();
     }
 
@@ -183,18 +166,13 @@ Context'te User: 'Spotify kapat' varsa
                     functions.SearchWebAsyncFunctionContract
                 ],
                 functionMap: functionMap))
-            .RegisterMiddleware(new ContextAwareMiddleware(contextManager))
-            .RegisterMiddleware(new ConversationFlowMiddleware())
-            .RegisterMiddleware(new ConversationDebugMiddleware())
-            .RegisterMiddleware(new RawMessageDebugMiddleware())
-
             .RegisterPrintMessage();
     }
 
     /// <summary>
     /// Context-aware Task Agent with intelligent task management
     /// </summary>
-    private static async Task<IAgent> CreateContextAwareTaskAgentAsync(
+    public static async Task<IAgent> CreateContextAwareTaskAgentAsync(
         string apiKey, string model, string endpoint, ConversationContextManager contextManager, McpOptions mcpOptions)
     {
 
@@ -234,47 +212,24 @@ Context'te User: 'Spotify kapat' varsa
         return new SemanticKernelAgent(
             kernel,
             name: "TaskAgent",
-            systemMessage: @"Sen gelişmiş görev yönetimi uzmanısın.
-
-=== CONTEXT-DRIVEN TASK MANAGEMENT ===
-- Recurring patterns: ""Her Pazartesi toplantı"" → Otomatik recurring task
-- Related tasks: ""Doktor randevusu"" → Insurance, documents, reminder chain
-- Time intelligence: ""Yarın"" → Exact date calculation
-- Priority inference: ""Acil"" vs ""Yapılabilir"" 
-
-=== INTELLIGENT SCHEDULING ===
-- Conflict detection: Çakışan randevuları yakala
-- Buffer time: Toplantı aralarında 15dk buffer
-- Location awareness: Trafik hesabı ile departure reminder
-- Dependency chains: Task A → Task B → Task C
-
-=== PROACTIVE FEATURES ===
-- Deadline warnings: ""3 gün kaldı"" 
-- Completion suggestions: ""İlgili görevler: X, Y, Z""
-- Context suggestions: ""Toplantı için hazırlık gerekiyor mu?""
-
-=== NATURAL LANGUAGE PROCESSING ===
-- ""Gelecek hafta bir gün doktor"" → Flexible scheduling
-- ""Bu işi bitirince hatırlat"" → Conditional reminder
-- ""Önemli toplantıdan önce"" → Smart timing
-
-Sen sadece görev eklemiyorsun, akıllı yaşam asistanı oluyorsun!",
+            systemMessage: @"Sen bir yapay zeka asistanısın.
+Kullanıcı görev yönetimiyle ilgili sorular soracak ve senden yardım bekleyecektir.
+Bu soruları en iyi şekilde cevapla ve yardımcı ol.
+Verileri analiz edebilir, aralarında mantıksal ilişki kurabilirsin.
+İhtiyaç gördüğün taktirde farklı görevleri yerine getirebilirsin.
+Yanıtı açık ve yardımcı bir şekilde ver:",
             settings: new OpenAIPromptExecutionSettings
             {
                 FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(options: new() { RetainArgumentTypes = true })
             })
             .RegisterMessageConnector()
-            .RegisterMiddleware(new ContextAwareMiddleware(contextManager))
-            .RegisterMiddleware(new ConversationFlowMiddleware())
-            .RegisterMiddleware(new ConversationDebugMiddleware())
-            .RegisterMiddleware(new RawMessageDebugMiddleware())
             .RegisterPrintMessage();
     }
 
     /// <summary>
     /// Optional Web Search Agent
     /// </summary>
-    private static async Task<IAgent> CreateWebSearchAgentAsync(
+    public static async Task<IAgent> CreateWebSearchAgentAsync(
         string apiKey, string model, string endpoint, Functions functions)
     {
         var systemMessage = @"Sen web araştırma uzmanısın.
@@ -347,8 +302,6 @@ Sadece rapor et, proaktif öneriler sun!";
             name: "AnalyticsAgent",
             systemMessage: systemMessage)
             .RegisterMessageConnector()
-                        .RegisterMiddleware(new ConversationFlowMiddleware())
-            .RegisterMiddleware(new ConversationDebugMiddleware())
             .RegisterPrintMessage();
     }
 
@@ -383,24 +336,24 @@ Sadece rapor et, proaktif öneriler sun!";
 
         // 2. INTENT-BASED ROUTING: Coordinator to specialized agents
         workflow.AddTransition(Transition.Create(coordinator, systemAgent,
-            async (from, to, ctx) => {
-                var shouldRoute = await ShouldRouteToSystemAgent(ctx, intentDetectionService);
+            async (from, to, messages) => {
+                var shouldRoute = await ShouldRouteToSystemAgent(messages, intentDetectionService);
                 Console.WriteLine($"🎯 ROUTING CHECK: {from.Name} → {to.Name} = {shouldRoute}");
                 if (shouldRoute)
                 {
-                    var lastMsg = ctx.LastOrDefault()?.GetContent() ?? "";
+                    var lastMsg = messages.LastOrDefault()?.GetContent() ?? "";
                     Console.WriteLine($"📝 Routing reason: System command detected in '{lastMsg.Substring(0, Math.Min(50, lastMsg.Length))}...'");
                 }
                 return shouldRoute;
             }));
 
         workflow.AddTransition(Transition.Create(coordinator, taskAgent,
-            async (from, to, ctx) => {
-                var shouldRoute = await ShouldRouteToTaskAgent(ctx, intentDetectionService);
+            async (from, to, messages) => {
+                var shouldRoute = await ShouldRouteToTaskAgent(messages, intentDetectionService);
                 Console.WriteLine($"🎯 ROUTING CHECK: {from.Name} → {to.Name} = {shouldRoute}");
                 if (shouldRoute)
                 {
-                    var lastMsg = ctx.LastOrDefault()?.GetContent() ?? "";
+                    var lastMsg = messages.LastOrDefault()?.GetContent() ?? "";
                     Console.WriteLine($"📝 Routing reason: Task command detected in '{lastMsg.Substring(0, Math.Min(50, lastMsg.Length))}...'");
                 }
                 return shouldRoute;
@@ -409,12 +362,12 @@ Sadece rapor et, proaktif öneriler sun!";
         if (options.EnableWebSearchAgent && webAgent != null)
         {
             workflow.AddTransition(Transition.Create(coordinator, webAgent,
-                async (from, to, ctx) => {
-                    var shouldRoute = await ShouldRouteToWebAgent(ctx, intentDetectionService);
+                async (from, to, messages) => {
+                    var shouldRoute = await ShouldRouteToWebAgent(messages, intentDetectionService);
                     Console.WriteLine($"🎯 ROUTING CHECK: {from.Name} → {to.Name} = {shouldRoute}");
                     if (shouldRoute)
                     {
-                        var lastMsg = ctx.LastOrDefault()?.GetContent() ?? "";
+                        var lastMsg = messages.LastOrDefault()?.GetContent() ?? "";
                         Console.WriteLine($"📝 Routing reason: Web search detected in '{lastMsg.Substring(0, Math.Min(50, lastMsg.Length))}...'");
                     }
                     return shouldRoute;
@@ -424,13 +377,13 @@ Sadece rapor et, proaktif öneriler sun!";
 
         // 3. CRITICAL FIX: Agents must return to coordinator (not directly to user)
         workflow.AddTransition(Transition.Create(systemAgent, coordinator,
-            async (from, to, ctx) => {
+            async (from, to, messages) => {
                 Console.WriteLine($"🔄 RETURN FLOW: {from.Name} → {to.Name} (agent completed)");
                 return true; // Always return to coordinator after agent completes
             }));
 
         workflow.AddTransition(Transition.Create(taskAgent, coordinator,
-            async (from, to, ctx) => {
+            async (from, to, messages) => {
                 Console.WriteLine($"🔄 RETURN FLOW: {from.Name} → {to.Name} (agent completed)");
                 return true; // Always return to coordinator after agent completes
             }));
@@ -438,7 +391,7 @@ Sadece rapor et, proaktif öneriler sun!";
         if (webAgent != null)
         {
             workflow.AddTransition(Transition.Create(webAgent, coordinator,
-                async (from, to, ctx) => {
+                async (from, to, messages) => {
                     Console.WriteLine($"🔄 RETURN FLOW: {from.Name} → {to.Name} (agent completed)");
                     return true; // Always return to coordinator after agent completes
                 }));
@@ -448,12 +401,12 @@ Sadece rapor et, proaktif öneriler sun!";
 
         // 4. AGENT CHAINING: For multi-step operations
         workflow.AddTransition(Transition.Create(systemAgent, taskAgent,
-            async (from, to, ctx) => {
-                var requiresTask = await RequiresTaskAfterSystem(ctx);
+            async (from, to, messages) => {
+                var requiresTask = await RequiresTaskAfterSystem(messages);
                 if (requiresTask)
                 {
                     Console.WriteLine($"🔗 CHAINING: {from.Name} → {to.Name} (multi-step operation)");
-                    var lastMsg = ctx.LastOrDefault()?.GetContent() ?? "";
+                    var lastMsg = messages.LastOrDefault()?.GetContent() ?? "";
                     Console.WriteLine($"📝 Chain reason: Task action needed after '{lastMsg.Substring(0, Math.Min(50, lastMsg.Length))}...'");
                 }
                 return requiresTask;
@@ -462,12 +415,12 @@ Sadece rapor et, proaktif öneriler sun!";
         if (webAgent != null)
         {
             workflow.AddTransition(Transition.Create(webAgent, taskAgent,
-                async (from, to, ctx) => {
-                    var requiresTask = await RequiresTaskAfterWeb(ctx);
+                async (from, to, messages) => {
+                    var requiresTask = await RequiresTaskAfterWeb(messages);
                     if (requiresTask)
                     {
                         Console.WriteLine($"🔗 CHAINING: {from.Name} → {to.Name} (multi-step operation)");
-                        var lastMsg = ctx.LastOrDefault()?.GetContent() ?? "";
+                        var lastMsg = messages.LastOrDefault()?.GetContent() ?? "";
                         Console.WriteLine($"📝 Chain reason: Task needed after web search '{lastMsg.Substring(0, Math.Min(50, lastMsg.Length))}...'");
                     }
                     return requiresTask;
@@ -480,8 +433,8 @@ Sadece rapor et, proaktif öneriler sun!";
         if (options.EnableAnalyticsAgent && analyticsAgent != null)
         {
             workflow.AddTransition(Transition.Create(systemAgent, analyticsAgent,
-                async (from, to, ctx) => {
-                    var shouldCollect = await ShouldCollectAnalytics(ctx);
+                async (from, to, messages) => {
+                    var shouldCollect = await ShouldCollectAnalytics(messages);
                     if (shouldCollect)
                     {
                         Console.WriteLine($"📊 ANALYTICS: {from.Name} → {to.Name} (collecting data)");
@@ -490,8 +443,8 @@ Sadece rapor et, proaktif öneriler sun!";
                 }));
 
             workflow.AddTransition(Transition.Create(taskAgent, analyticsAgent,
-                async (from, to, ctx) => {
-                    var shouldCollect = await ShouldCollectAnalytics(ctx);
+                async (from, to, messages) => {
+                    var shouldCollect = await ShouldCollectAnalytics(messages);
                     if (shouldCollect)
                     {
                         Console.WriteLine($"📊 ANALYTICS: {from.Name} → {to.Name} (collecting data)");
@@ -502,8 +455,8 @@ Sadece rapor et, proaktif öneriler sun!";
             if (webAgent != null)
             {
                 workflow.AddTransition(Transition.Create(webAgent, analyticsAgent,
-                    async (from, to, ctx) => {
-                        var shouldCollect = await ShouldCollectAnalytics(ctx);
+                    async (from, to, messages) => {
+                        var shouldCollect = await ShouldCollectAnalytics(messages);
                         if (shouldCollect)
                         {
                             Console.WriteLine($"📊 ANALYTICS: {from.Name} → {to.Name} (collecting data)");
@@ -514,7 +467,7 @@ Sadece rapor et, proaktif öneriler sun!";
 
             // Analytics agent also returns to coordinator
             workflow.AddTransition(Transition.Create(analyticsAgent, coordinator,
-                async (from, to, ctx) => {
+                async (from, to, messages) => {
                     Console.WriteLine($"🔄 RETURN FLOW: {from.Name} → {to.Name} (analytics completed)");
                     return true;
                 }));
@@ -524,9 +477,9 @@ Sadece rapor et, proaktif öneriler sun!";
 
         // 6. CONVERSATION TERMINATION: Coordinator back to user
         workflow.AddTransition(Transition.Create(coordinator, userProxy,
-            async (from, to, ctx) => {
+            async (from, to, messages) => {
                 // Check if coordinator has a final response to give
-                var lastMessage = ctx.LastOrDefault();
+                var lastMessage = messages.LastOrDefault();
                 var shouldTerminate = lastMessage?.From == "AdvancedCoordinator" ||
                                      lastMessage?.From == "Coordinator";
 
