@@ -99,7 +99,6 @@ public static class GroupChatAgentFactory
 - Eğer bir agent'tan cevap aldıysan, o cevabı kullanıcıya ilet
 - Sadece routing gerekiyorsa agent'a yönlendir
 - Multi-step işlemler için agent'lar arası koordinasyon yap
-- Hata durumunda kullanıcıya açıklama yap
 
 === RESPONSE STRATEGY ===
 - Agent cevabı varsa: O cevabı kullanıcıya ilet
@@ -123,34 +122,24 @@ UNUTMA: Sen sadece router değil, hemde  conversation manager'sın! kullanıcın
     private static async Task<IAgent> CreateContextAwareSystemAgentAsync(
         string apiKey, string model, string endpoint, Functions functions, ConversationContextManager contextManager)
     {
-        var systemMessage = @"You are SystemAgent, an intelligent assistant for local system control and automation. 
-You can execute system commands, manage applications, handle files, and retrieve local information.
+        var systemMessage = @"You are the System Agent.
 
-### Core Responsibilities
-1. **Application Management**
-   - Launch applications by name or path.
-   - Close or kill applications by name or process ID.
-   - List currently running applications.
+Your ONLY responsibility is to execute the requested system-level action, such as:
+- Opening or closing an application.
+- Navigating to a specific website in a browser.
+- Controlling media playback.
+- Executing OS-level commands (shutdown, restart, lock, etc.).
 
-2. **System Control**
-   - Adjust system settings such as volume, brightness, and network status.
-   - Lock, shutdown, or restart the system.
-   - Display system time, date, or resource usage.
+Rules:
+1. If the request contains an action like ""open"", ""close"", ""start"", ""stop"", ""play"", ""pause"", or ""navigate"", you must try to execute it immediately.
+2. Never explain alternative manual steps.  
+3. Never tell the user to check if an application is installed — just try to open it, and if it fails, say `""Unable to open [app]""`.
+4. Responses must be **short and action-focused**:  
+   - ✅ “Opening Spotify.”  
+   - ❌ “Spotify is not installed, you can download it from…”
+5. If the action is impossible, respond briefly: `""Action failed""` or `""Application not found""`.
 
-3. **File Operations**
-   - Create, move, copy, delete, and rename files or folders.
-   - List files in a given directory.
-   - Read contents of a file.
-
-4. **Local Information Retrieval**
-   - Retrieve system info (OS, CPU, memory, storage usage).
-   - Show currently connected devices.
-
-### Important Rules
-- All operations are for **local environment only**.
-- If a request is ambiguous (e.g., ""open something""), ask for clarification.
-- Do not perform any action that requires internet search — that is handled by another agent.
-- Always return structured JSON for downstream processing.";
+";
 
         var functionMap = await CreateAdvancedSystemFunctionMap(functions, contextManager);
 
@@ -558,7 +547,7 @@ Sadece rapor et, proaktif öneriler sun!";
             CommandType.OpenApplication,
             CommandType.CloseApplication,
             CommandType.PlayMusic,
-            CommandType.ControlDevice
+            CommandType.ControlDevice,
         };
 
             var shouldRoute = systemCommands.Contains(intentResult.Intent) &&
