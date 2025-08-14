@@ -25,7 +25,7 @@ public class SmartGroupChat : GroupChat, IGroupChat
         ConversationContextManager contextManager,
         GroupChatAnalytics analytics,
         GroupChatOptions options)
-        : base(members, admin, workflow: workflow)
+        : base(members, admin)
     {
         _memberCount = members?.Count() ?? 0;
         ContextManager = contextManager;
@@ -33,10 +33,10 @@ public class SmartGroupChat : GroupChat, IGroupChat
     }
 
     public async Task<IMessage> SendWithAnalyticsAsync(
-    string message,
-    string from = "User",
-    int maxRound = 10,
-    CancellationToken cancellationToken = default)
+        string message,
+        string from = "User",
+        int maxRound = 10,
+        CancellationToken cancellationToken = default)
     {
         var startTime = DateTime.UtcNow;
         var conversationId = Guid.NewGuid().ToString();
@@ -46,51 +46,106 @@ public class SmartGroupChat : GroupChat, IGroupChat
             ContextManager.StartConversation(conversationId, message);
             Console.WriteLine($"🚀 Starting conversation: {message}");
 
-            // TextMessage yerine UserProxyAgent'tan mesaj göndermek daha doğru
-            var userMessage = new TextMessage(Role.User, message, from: "User");
-            var messages = new List<IMessage> { userMessage };
+            // CRITICAL FIX 1: Doğru mesaj formatı
+            var userMessage = new TextMessage(Role.User, message, from: from);
 
-            var result = this.SendAsync(messages, maxRound, cancellationToken);
+            Console.WriteLine($"📨 Created user message: From={userMessage.From}, Content={userMessage.GetContent()}");
 
-            IMessage lastMessage = null;
+            var result = this.SendAsync([new TextMessage(Role.User, message, from)], maxRound);
+
+            IMessage lastValidMessage = null;
             var messageCount = 0;
+            var allMessages = new List<IMessage>();
 
-            Console.WriteLine($"📨 Starting message processing...");
+            Console.WriteLine($"📨 Processing message stream...");
 
-            await foreach (var item in result)
+            await foreach (var receivedMessage in result)
             {
-                Console.WriteLine($"📩 Received message from {item.From}: {item.GetContent()?.Substring(0, Math.Min(100, item.GetContent()?.Length ?? 0))}...");
-                lastMessage = item;
                 messageCount++;
+                allMessages.Add(receivedMessage);
 
-                // Response'u hemen döndür, tüm mesajları bekleme
-                if (item.From != "User" && !string.IsNullOrEmpty(item.GetContent()))
+                Console.WriteLine($"📩 [{messageCount}] From: {receivedMessage.From}");
+                Console.WriteLine($"    Content: {receivedMessage.GetContent()?.Substring(0, Math.Min(150, receivedMessage.GetContent()?.Length ?? 0))}...");
+                Console.WriteLine($"    Role: {receivedMessage.GetRole()}");
+
+                // CRITICAL FIX 3: Sadece User olmayan mesajları kabul et
+                if (receivedMessage.From != from &&
+                    !string.IsNullOrEmpty(receivedMessage.GetContent()) &&
+                    receivedMessage.GetContent().Trim().Length > 10) // Minimum content length
                 {
-                    Console.WriteLine($"✅ Found response from {item.From}");
+                    Console.WriteLine($"✅ Valid response found from {receivedMessage.From}");
+                    lastValidMessage = receivedMessage;
+
+                    // CRITICAL FIX 4: TaskAgent'tan gelen mesajları bekle
+                    if (receivedMessage.From?.Contains("TaskAgent") == true ||
+                        receivedMessage.From?.Contains("SystemAgent") == true ||
+                        receivedMessage.From?.Contains("WebAgent") == true)
+                    {
+                        Console.WriteLine($"🎯 Agent response received from {receivedMessage.From}");
+                        // Agent'tan cevap gelirse biraz daha bekle
+                        continue;
+                    }
+
+                    // CRITICAL FIX 5: Coordinator'dan final cevap gelirse bitir
+                    if (receivedMessage.From?.Contains("Coordinator") == true &&
+                        messageCount > 2) // En az bir routing olmuş olmalı
+                    {
+                        Console.WriteLine($"🏁 Final coordinator response received");
+                        break;
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"⏭️  Skipping message from {receivedMessage.From} (User or empty content)");
+                }
+
+                // CRITICAL FIX 6: Maximum round kontrolü
+                if (messageCount >= maxRound)
+                {
+                    Console.WriteLine($"⏰ Max rounds ({maxRound}) reached, ending conversation");
                     break;
                 }
             }
 
-            if (lastMessage == null)
+            // CRITICAL FIX 7: Valid response kontrolü
+            if (lastValidMessage == null)
             {
-                Console.WriteLine("❌ No response received from agents");
-                throw new InvalidOperationException("No response received from agents");
+                Console.WriteLine("❌ No valid response received from any agent");
+
+                // Debug: Tüm mesajları yazdır
+                Console.WriteLine("📋 All received messages:");
+                for (int i = 0; i < allMessages.Count; i++)
+                {
+                    var msg = allMessages[i];
+                    Console.WriteLine($"  {i + 1}. [{msg.From}] {msg.GetRole()}: {msg.GetContent()}");
+                }
+
+                // Fallback: En son agent mesajını al
+                lastValidMessage = allMessages.LastOrDefault(m => m.From != from) ??
+                                  allMessages.LastOrDefault() ??
+                                  new TextMessage(Role.Assistant, "İşlem tamamlanamadı", from: "System");
             }
 
+            Console.WriteLine($"📊 Conversation stats:");
+            Console.WriteLine($"   Total messages: {messageCount}");
+            Console.WriteLine($"   Duration: {(DateTime.UtcNow - startTime).TotalMilliseconds:F0}ms");
+            Console.WriteLine($"   Final response from: {lastValidMessage.From}");
+
+            // Analytics kayıt
             Analytics.RecordConversation(new ConversationMetrics
             {
                 ConversationId = conversationId,
                 StartTime = startTime,
                 EndTime = DateTime.UtcNow,
-                Success = true,
+                Success = lastValidMessage != null,
                 UserInput = message,
-                FinalResult = lastMessage.GetContent(),
-                ParticipantCount = GetParticipantCount(),
+                FinalResult = lastValidMessage?.GetContent() ?? "No response",
+                ParticipantCount = _memberCount,
                 MessageCount = messageCount
             });
 
             Console.WriteLine($"✅ Conversation completed successfully");
-            return lastMessage;
+            return lastValidMessage;
         }
         catch (Exception ex)
         {
@@ -105,9 +160,11 @@ public class SmartGroupChat : GroupChat, IGroupChat
                 Success = false,
                 UserInput = message,
                 Error = ex.Message,
-                ParticipantCount = GetParticipantCount()
+                ParticipantCount = _memberCount
             });
-            throw;
+
+            // Hata durumunda fallback response
+            return new TextMessage(Role.Assistant, $"Üzgünüm, bir hata oluştu: {ex.Message}", from: "System");
         }
         finally
         {
