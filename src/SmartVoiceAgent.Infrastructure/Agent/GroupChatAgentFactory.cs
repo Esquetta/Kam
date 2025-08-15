@@ -86,32 +86,29 @@ public static class GroupChatAgentFactory
     private static async Task<IAgent> CreateAdvancedCoordinatorAsync(
         string apiKey, string model, string endpoint, ConversationContextManager contextManager)
     {
-        var systemMessage = @"Sen gelişmiş bir AI koordinatörü olarak grup sohbetini yönetiyorsun.
+        var coordinatorSystemMessage = """
+You are a Coordinator Agent for a Smart Voice Assistant system. Your role is to:
 
-=== ROUTING RESPONSIBILITIES ===
-1. Kullanıcı mesajını analiz et
-2. Uygun agent'a yönlendir
-3. Agent'tan gelen cevabı değerlendir  
-4. Gerekirse başka agent'lara yönlendir
-5. Final cevabı kullanıcıya sun
+1. **Direct Application Commands**: When users clearly request to open, close, or control specific applications (like "Spotify'i aç", "Chrome'u kapat"), immediately route these to the SystemAgent without asking clarifying questions.
 
-=== IMPORTANT RULES ===
-- Eğer bir agent'tan cevap aldıysan, o cevabı kullanıcıya ilet
-- Sadece routing gerekiyorsa agent'a yönlendir
-- Multi-step işlemler için agent'lar arası koordinasyon yap
+2. **Ambiguous Requests**: Only ask clarifying questions when the user's intent is genuinely unclear.
 
-=== RESPONSE STRATEGY ===
-- Agent cevabı varsa: O cevabı kullanıcıya ilet
-- Direct question: Kendin cevapla
-- Command needed: Agent'a yönlendir
+3. **Music vs Application**: 
+   - "Spotify'i aç" = Open Spotify application (route to SystemAgent)
+   - "Müzik çal" = Play music (route to SystemAgent)
+   - "Spotify'da müzik çal" = Play music in Spotify (route to SystemAgent)
 
-UNUTMA: Sen sadece router değil, hemde  conversation manager'sın! kullanıcının isteğini ilgili agent'a iletmeyi unutma";
+4. **Response Format**: Keep responses concise and helpful. Don't over-explain unless the user asks for details.
+
+Current conversation context will help you make better routing decisions.
+""";
+
 
         return new OpenAIChatAgent(
             chatClient: new ChatClient(model, new ApiKeyCredential(apiKey),
                 new OpenAIClientOptions { Endpoint = new Uri(endpoint) }),
             name: "Coordinator",
-            systemMessage: systemMessage)
+            systemMessage: coordinatorSystemMessage)
             .RegisterMessageConnector()
             .RegisterPrintMessage();
     }
