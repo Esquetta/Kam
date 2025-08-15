@@ -800,5 +800,138 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
 
             return null;
         }
+        private string GetApplicationDisplayName(string executablePath, string fallbackName)
+        {
+            try
+            {
+                // .desktop dosyasından display name almaya çalış
+                var desktopName = GetDisplayNameFromDesktopFile(executablePath);
+                if (!string.IsNullOrEmpty(desktopName))
+                    return desktopName;
+
+                // Executable dosya adından al
+                var fileName = Path.GetFileNameWithoutExtension(executablePath);
+                return !string.IsNullOrEmpty(fileName) ? fileName : fallbackName;
+            }
+            catch
+            {
+                return fallbackName;
+            }
+        }
+
+        private string GetDisplayNameFromDesktopFile(string executablePath)
+        {
+            var desktopPaths = new[]
+            {
+                "/usr/share/applications",
+                "/usr/local/share/applications",
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local/share/applications")
+            };
+
+            foreach (var desktopPath in desktopPaths)
+            {
+                if (!Directory.Exists(desktopPath)) continue;
+
+                try
+                {
+                    var desktopFiles = Directory.GetFiles(desktopPath, "*.desktop");
+                    foreach (var desktopFile in desktopFiles)
+                    {
+                        var lines = File.ReadAllLines(desktopFile);
+                        var execLine = lines.FirstOrDefault(l => l.StartsWith("Exec="));
+                        if (execLine != null)
+                        {
+                            var exec = execLine.Substring(5);
+                            if (exec.Contains(Path.GetFileName(executablePath)))
+                            {
+                                var nameLine = lines.FirstOrDefault(l => l.StartsWith("Name="));
+                                if (nameLine != null)
+                                {
+                                    return nameLine.Substring(5);
+                                }
+                            }
+                        }
+                    }
+                }
+                catch { }
+            }
+            return null;
+        }
+
+        private string GetApplicationVersion(string executablePath)
+        {
+            try
+            {
+                // Önce --version parametresi ile dene
+                var versionOutput = ExecuteBashCommand($"'{executablePath}' --version 2>/dev/null | head -1");
+                if (!string.IsNullOrEmpty(versionOutput))
+                {
+                    var versionMatch = Regex.Match(versionOutput, @"(\d+\.)*\d+");
+                    if (versionMatch.Success)
+                        return versionMatch.Value;
+                }
+
+                // dpkg ile dene (Debian/Ubuntu)
+                var packageName = Path.GetFileName(executablePath);
+                var dpkgOutput = ExecuteBashCommand($"dpkg -l | grep {packageName} | awk '{{print $3}}' | head -1");
+                if (!string.IsNullOrEmpty(dpkgOutput))
+                    return dpkgOutput.Trim();
+
+                // rpm ile dene (RedHat/CentOS)
+                var rpmOutput = ExecuteBashCommand($"rpm -q --qf '%{{VERSION}}' $(rpm -qf '{executablePath}' 2>/dev/null) 2>/dev/null");
+                if (!string.IsNullOrEmpty(rpmOutput) && !rpmOutput.Contains("not owned"))
+                    return rpmOutput.Trim();
+            }
+            catch { }
+            return null;
+        }
+
+        private DateTime? GetApplicationInstallDate(string executablePath)
+        {
+            try
+            {
+                var fileInfo = new FileInfo(executablePath);
+                return fileInfo.CreationTime;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        public async Task<ApplicationInstallInfo> CheckApplicationInstallationAsync(string appName)
+        {
+            try
+            {
+                var executablePath = await FindApplicationExecutableAsync(appName);
+
+                if (!string.IsNullOrEmpty(executablePath))
+                {
+                    var displayName = GetApplicationDisplayName(executablePath, appName);
+                    var version = GetApplicationVersion(executablePath);
+                    var installDate = GetApplicationInstallDate(executablePath);
+
+                    return new ApplicationInstallInfo(
+                        true,
+                        executablePath,
+                        displayName,
+                        version,
+                        installDate
+                    );
+                }
+
+                return new ApplicationInstallInfo(false, null, appName);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error checking application installation: {ex.Message}");
+                return new ApplicationInstallInfo(false, null, appName);
+            }
+        }
+
+        public async Task<string> GetApplicationExecutablePathAsync(string appName)
+        {
+            var installInfo = await CheckApplicationInstallationAsync(appName);
+            return installInfo.IsInstalled ? installInfo.ExecutablePath : null;
+        }
     }
 }

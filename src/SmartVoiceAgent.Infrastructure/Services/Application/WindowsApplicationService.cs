@@ -778,5 +778,84 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             }
             return null;
         }
+        
+
+        private string GetApplicationDisplayName(string executablePath, string fallbackName)
+        {
+            try
+            {
+                var versionInfo = FileVersionInfo.GetVersionInfo(executablePath);
+                return !string.IsNullOrEmpty(versionInfo.ProductName)
+                    ? versionInfo.ProductName
+                    : Path.GetFileNameWithoutExtension(executablePath);
+            }
+            catch
+            {
+                return fallbackName;
+            }
+        }
+        private string GetApplicationVersion(string executablePath)
+        {
+            try
+            {
+                var versionInfo = FileVersionInfo.GetVersionInfo(executablePath);
+                return versionInfo.FileVersion ?? versionInfo.ProductVersion;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private DateTime? GetApplicationInstallDate(string executablePath)
+        {
+            try
+            {
+                var fileInfo = new FileInfo(executablePath);
+                return fileInfo.CreationTime;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        /// <summary>
+        /// Checks whether the given application is installed.
+        /// </summary>
+        public async Task<ApplicationInstallInfo> CheckApplicationInstallationAsync(string appName)
+        {
+            try
+            {
+                var executablePath = await FindApplicationExecutableAsync(appName);
+
+                if (!string.IsNullOrEmpty(executablePath))
+                {
+                    var displayName = GetApplicationDisplayName(executablePath, appName);
+                    var version = GetApplicationVersion(executablePath);
+                    var installDate = GetApplicationInstallDate(executablePath);
+
+                    return new ApplicationInstallInfo(
+                        true,
+                        executablePath,
+                        displayName,
+                        version,
+                        installDate
+                    );
+                }
+
+                return new ApplicationInstallInfo(false, null, appName);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error checking application installation: {ex.Message}");
+                return new ApplicationInstallInfo(false, null, appName);
+            }
+        }
+
+        public async Task<string> GetApplicationExecutablePathAsync(string appName)
+        {
+            var installInfo = await CheckApplicationInstallationAsync(appName);
+            return installInfo.IsInstalled ? installInfo.ExecutablePath : null;
+        }
     }
 }

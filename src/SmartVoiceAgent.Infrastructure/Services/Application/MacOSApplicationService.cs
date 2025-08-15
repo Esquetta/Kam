@@ -2,6 +2,7 @@
 using SmartVoiceAgent.Core.Enums;
 using SmartVoiceAgent.Core.Interfaces;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace SmartVoiceAgent.Infrastructure.Services.Application
 {
@@ -250,5 +251,210 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
                 return $"/Applications/{appName}.app";
             }
         }
+        public async Task<ApplicationInstallInfo> CheckApplicationInstallationAsync(string appName)
+        {
+            try
+            {
+                var executablePath = await FindApplicationExecutableAsync(appName);
+
+                if (!string.IsNullOrEmpty(executablePath))
+                {
+                    var displayName = GetApplicationDisplayName(executablePath, appName);
+                    var version = GetApplicationVersion(executablePath);
+                    var installDate = GetApplicationInstallDate(executablePath);
+
+                    return new ApplicationInstallInfo(
+                        true,
+                        executablePath,
+                        displayName,
+                        version,
+                        installDate
+                    );
+                }
+
+                return new ApplicationInstallInfo(false, null, appName);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error checking application installation: {ex.Message}");
+                return new ApplicationInstallInfo(false, null, appName);
+            }
+        }
+
+        public async Task<string> GetApplicationExecutablePathAsync(string appName)
+        {
+            var installInfo = await CheckApplicationInstallationAsync(appName);
+            return installInfo.IsInstalled ? installInfo.ExecutablePath : null;
+        }
+
+        private async Task<string> FindApplicationExecutableAsync(string appName)
+        {
+            // .app bundle'ları ara
+            var appPaths = new[]
+            {
+                "/Applications",
+                "/System/Applications",
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Applications")
+            };
+
+            foreach (var appPath in appPaths)
+            {
+                if (Directory.Exists(appPath))
+                {
+                    var appBundles = Directory.GetDirectories(appPath, "*.app");
+                    var matchingApp = appBundles.FirstOrDefault(app =>
+                    {
+                        var bundleName = Path.GetFileNameWithoutExtension(app);
+                        return bundleName.ToLower().Contains(appName.ToLower()) ||
+                               appName.ToLower().Contains(bundleName.ToLower());
+                    });
+
+                    if (!string.IsNullOrEmpty(matchingApp))
+                        return matchingApp;
+                }
+            }
+
+            // PATH'de ara
+            var pathResult = SearchInPathEnvironment(appName);
+            if (!string.IsNullOrEmpty(pathResult))
+                return pathResult;
+
+            // mdfind ile ara
+            var mdfindResult = ExecuteShellCommand($"mdfind \"kMDItemKind == 'Application' && kMDItemDisplayName == '*{appName}*'\" | head -1");
+            if (!string.IsNullOrEmpty(mdfindResult))
+                return mdfindResult.Trim();
+
+            return null;
+        }
+
+        private string GetApplicationDisplayName(string executablePath, string fallbackName)
+        {
+            try
+            {
+                if (executablePath.EndsWith(".app"))
+                {
+                    // .app bundle için Info.plist'ten al
+                    var infoPlistPath = Path.Combine(executablePath, "Contents", "Info.plist");
+                    if (File.Exists(infoPlistPath))
+                    {
+                        var plistContent = File.ReadAllText(infoPlistPath);
+                        var displayName = ExtractPlistValue(plistContent, "CFBundleDisplayName") ??
+                                         ExtractPlistValue(plistContent, "CFBundleName");
+
+                        if (!string.IsNullOrEmpty(displayName))
+                            return displayName;
+                    }
+
+                    return Path.GetFileNameWithoutExtension(executablePath);
+                }
+                else
+                {
+                    return Path.GetFileNameWithoutExtension(executablePath);
+                }
+            }
+            catch
+            {
+                return fallbackName;
+            }
+        }
+
+        private string GetApplicationVersion(string executablePath)
+        {
+            try
+            {
+                if (executablePath.EndsWith(".app"))
+                {
+                    // .app bundle için Info.plist'ten al
+                    var infoPlistPath = Path.Combine(executablePath, "Contents", "Info.plist");
+                    if (File.Exists(infoPlistPath))
+                    {
+                        var plistContent = File.ReadAllText(infoPlistPath);
+                        return ExtractPlistValue(plistContent, "CFBundleShortVersionString") ??
+                               ExtractPlistValue(plistContent, "CFBundleVersion");
+                    }
+                }
+                else
+                {
+                    // Regular executable için --version dene
+                    var versionOutput = ExecuteShellCommand($"'{executablePath}' --version 2>/dev/null | head -1");
+                    if (!string.IsNullOrEmpty(versionOutput))
+                    {
+                        var versionMatch = Regex.Match(versionOutput, @"(\d+\.)*\d+");
+                        if (versionMatch.Success)
+                            return versionMatch.Value;
+                    }
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        private DateTime? GetApplicationInstallDate(string executablePath)
+        {
+            try
+            {
+                if (Directory.Exists(executablePath))
+                {
+                    var dirInfo = new DirectoryInfo(executablePath);
+                    return dirInfo.CreationTime;
+                }
+                else if (File.Exists(executablePath))
+                {
+                    var fileInfo = new FileInfo(executablePath);
+                    return fileInfo.CreationTime;
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        private string ExtractPlistValue(string plistContent, string key)
+        {
+            var keyTag = $"<key>{key}</key>";
+            var keyIndex = plistContent.IndexOf(keyTag);
+            if (keyIndex == -1) return null;
+
+            var valueStart = plistContent.IndexOf("<string>", keyIndex);
+            if (valueStart == -1) return null;
+
+            valueStart += 8; // Length of "<string>"
+            var valueEnd = plistContent.IndexOf("</string>", valueStart);
+            if (valueEnd == -1) return null;
+
+            return plistContent.Substring(valueStart, valueEnd - valueStart);
+        }
+
+        private string SearchInPathEnvironment(string appName)
+        {
+            var pathVariable = Environment.GetEnvironmentVariable("PATH");
+            if (string.IsNullOrEmpty(pathVariable)) return null;
+
+            var paths = pathVariable.Split(':');
+            foreach (var path in paths)
+            {
+                if (Directory.Exists(path))
+                {
+                    try
+                    {
+                        var files = Directory.GetFiles(path);
+                        var match = files.FirstOrDefault(f =>
+                        {
+                            var fileName = Path.GetFileName(f);
+                            return fileName.ToLower().Contains(appName.ToLower());
+                        });
+                        if (!string.IsNullOrEmpty(match))
+                        {
+                            return match;
+                        }
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                }
+            }
+            return null;
+        }
     }
+
 }
