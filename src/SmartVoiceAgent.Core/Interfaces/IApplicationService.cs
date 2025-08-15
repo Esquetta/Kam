@@ -23,4 +23,18 @@ public interface IApplicationService
     Task CloseApplicationAsync(string appName);
     Task<IEnumerable<AppInfoDTO>> ListApplicationsAsync();
 
+    // <summary>
+    /// Checks if an application is installed and returns its executable path if found.
+    /// </summary>
+    /// <param name="appName">The name of the application to search for.</param>
+    /// <returns>ApplicationInstallInfo containing installation status and path.</returns>
+    Task<ApplicationInstallInfo> CheckApplicationInstallationAsync(string appName);
+
+    /// <summary>
+    /// Gets the executable path of an installed application.
+    /// </summary>
+    /// <param name="appName">The name of the application.</param>
+    /// <returns>The executable path if found, null otherwise.</returns>
+    Task<string> GetApplicationExecutablePathAsync(string appName);
+
 }
