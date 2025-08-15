@@ -4,7 +4,7 @@ using SmartVoiceAgent.Core.Interfaces;
 
 namespace SmartVoiceAgent.Application.Handlers.CommandHandlers
 {
-    public class GetApplicationExecutablePathCommandHandler:IRequestHandler<GetApplicationExecutablePathCommand, CommandResultDTO>
+    public class GetApplicationExecutablePathCommandHandler : IRequestHandler<GetApplicationExecutablePathCommand, string>
     {
         private readonly IMediator _mediator;
         private readonly IApplicationServiceFactory _factory;
@@ -14,12 +14,12 @@ namespace SmartVoiceAgent.Application.Handlers.CommandHandlers
             _factory = factory;
         }
 
-        public async Task<CommandResultDTO> Handle(GetApplicationExecutablePathCommand request, CancellationToken cancellationToken)
+        public async Task<string> Handle(GetApplicationExecutablePathCommand request, CancellationToken cancellationToken)
         {
             var appService = _factory.Create();
-            //await appService(request.ApplicationName);
+            var result = await appService.GetApplicationExecutablePathAsync(request.ApplicationName);
             await Task.CompletedTask;
-            return new CommandResultDTO(true, $"{request.ApplicationName} execute path found...");
+            return result;
         }
     }
 }

@@ -4,7 +4,7 @@ using SmartVoiceAgent.Application.Pipelines.Performance;
 
 namespace SmartVoiceAgent.Application.Commands
 {
-    public record GetApplicationExecutablePathCommand(string ApplicationName) : IRequest<CommandResultDTO>, ICachableRequest, IIntervalRequest
+    public record GetApplicationExecutablePathCommand(string ApplicationName) : IRequest<string>, ICachableRequest, IIntervalRequest
     {
         // Caching
         public string CacheKey => $"GetApplicationExecutablePath-{ApplicationName}";
