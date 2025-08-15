@@ -32,7 +32,7 @@ public class IntentDetectorService : IIntentDetectionService
 
     public async Task<IntentResult> DetectIntentAsync(string text, string language, CancellationToken cancellationToken = default)
     {
-        await Task.Delay(1, cancellationToken); // async context
+        await Task.Delay(1, cancellationToken);
 
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -42,6 +42,14 @@ public class IntentDetectorService : IIntentDetectionService
         try
         {
             var normalizedText = NormalizeText(text);
+
+            // First, try context-aware application detection
+            var appIntent = DetectApplicationIntent(normalizedText, text);
+            if (appIntent != null)
+            {
+                return appIntent;
+            }
+
             var patterns = GetPatternsForLanguage(language);
 
             var matches = patterns
@@ -71,7 +79,7 @@ public class IntentDetectorService : IIntentDetectionService
             return new IntentResult
             {
                 Intent = bestMatch.Intent,
-                Confidence = bestMatch.Score,
+                Confidence = (float)bestMatch.Score,   
                 Entities = entities,
                 Language = language,
                 OriginalText = text
@@ -89,42 +97,67 @@ public class IntentDetectorService : IIntentDetectionService
         }
     }
 
+
     private Dictionary<string, List<IntentPattern>> LoadIntentPatterns()
     {
         return new Dictionary<string, List<IntentPattern>>
         {
             ["en"] = new List<IntentPattern>
-            {
-                new IntentPattern(CommandType.OpenApplication, new[] { "open", "start", "launch" }),
-                new IntentPattern(CommandType.PlayMusic, new[] { "music", "song", "play" }),
-                new IntentPattern(CommandType.SendMessage, new[] { "message", "send", "sms" }),
-                new IntentPattern(CommandType.SearchWeb, new[] { "search", "google", "find" }),
-                new IntentPattern(CommandType.CloseApplication, new[] { "close", "stop", "kill" }),
-
-                // Todoist related intents
-                new IntentPattern(CommandType.AddTask, new[] { "add", "create", "new", "task", "reminder" }),
-                new IntentPattern(CommandType.UpdateTask, new[] { "update", "change", "edit", "modify" }),
-                new IntentPattern(CommandType.DeleteTask, new[] { "delete", "remove", "cancel", "sil", "kaldır" }),
-                new IntentPattern(CommandType.ListTasks, new[] { "list", "show", "display", "tasks", "görevler" }),
-                new IntentPattern(CommandType.SetReminder, new[] { "remind", "reminder", "hatırlat", "alarm" }),
-            },
+        {
+            new IntentPattern(CommandType.OpenApplication, new[] { "open", "start", "launch" }),
+            new IntentPattern(CommandType.PlayMusic, new[] { "music", "song", "play" }),
+            new IntentPattern(CommandType.SendMessage, new[] { "message", "send", "sms" }),
+            new IntentPattern(CommandType.SearchWeb, new[] { "search", "google", "find" }),
+            new IntentPattern(CommandType.CloseApplication, new[] { "close", "stop", "kill" }),
+            new IntentPattern(CommandType.AddTask, new[] { "add", "create", "new", "task", "reminder" }),
+            new IntentPattern(CommandType.UpdateTask, new[] { "update", "change", "edit", "modify" }),
+            new IntentPattern(CommandType.DeleteTask, new[] { "delete", "remove", "cancel" }),
+            new IntentPattern(CommandType.ListTasks, new[] { "list", "show", "display", "tasks" }),
+            new IntentPattern(CommandType.SetReminder, new[] { "remind", "reminder", "alarm" }),
+        },
             ["tr"] = new List<IntentPattern>
-            {
-                new IntentPattern(CommandType.OpenApplication, new[] { "aç", "başlat", "çalıştır" }),
-                new IntentPattern(CommandType.PlayMusic, new[] { "müzik", "şarkı", "çal" }),
-                new IntentPattern(CommandType.SendMessage, new[] { "mesaj", "gönder" }),
-                new IntentPattern(CommandType.SearchWeb, new[] { "ara", "bul", "google" }),
-                new IntentPattern(CommandType.CloseApplication, new[] { "kapat", "durdur", "sonlandır" }),
-
-                // Todoist related intents
-                new IntentPattern(CommandType.AddTask, new[] { "ekle", "oluştur", "yeni", "görev", "hatırlatıcı" }),
-                new IntentPattern(CommandType.UpdateTask, new[] { "güncelle", "değiştir", "düzenle" }),
-                new IntentPattern(CommandType.DeleteTask, new[] { "sil", "kaldır", "iptal" }),
-                new IntentPattern(CommandType.ListTasks, new[] { "listele", "göster", "görevler" }),
-                new IntentPattern(CommandType.SetReminder, new[] { "hatırlat", "alarm", "bildirim" }),
-            }
+        {
+            // Higher priority patterns for specific application opening
+            new IntentPattern(CommandType.OpenApplication, new[] { "aç", "başlat", "çalıştır", "spotify aç", "chrome aç", "notepad aç" }),
+            new IntentPattern(CommandType.PlayMusic, new[] { "müzik", "şarkı", "çal", "müzik çal", "şarkı çal" }),
+            new IntentPattern(CommandType.SendMessage, new[] { "mesaj", "gönder" }),
+            new IntentPattern(CommandType.SearchWeb, new[] { "ara", "bul", "google" }),
+            new IntentPattern(CommandType.CloseApplication, new[] { "kapat", "durdur", "sonlandır" }),
+            new IntentPattern(CommandType.AddTask, new[] { "ekle", "oluştur", "yeni", "görev", "hatırlatıcı" }),
+            new IntentPattern(CommandType.UpdateTask, new[] { "güncelle", "değiştir", "düzenle" }),
+            new IntentPattern(CommandType.DeleteTask, new[] { "sil", "kaldır", "iptal" }),
+            new IntentPattern(CommandType.ListTasks, new[] { "listele", "göster", "görevler" }),
+            new IntentPattern(CommandType.SetReminder, new[] { "hatırlat", "alarm", "bildirim" }),
+        }
         };
     }
+    private IntentResult DetectApplicationIntent(string normalizedText, string originalText)
+    {
+        var applicationKeywords = new[]
+        {
+        "spotify", "chrome", "notepad", "firefox", "word", "excel",
+        "powerpoint", "calculator", "paint", "skype", "discord"
+    };
+
+        var openingKeywords = new[] { "aç", "başlat", "çalıştır", "open", "start", "launch" };
+
+        var hasApp = applicationKeywords.Any(app => normalizedText.Contains(app));
+        var hasOpenCommand = openingKeywords.Any(cmd => normalizedText.Contains(cmd));
+
+        if (hasApp && hasOpenCommand)
+        {
+            return new IntentResult
+            {
+                Intent = CommandType.OpenApplication,
+                Confidence = 0.95f,
+                OriginalText = originalText,
+                Language = "tr"
+            };
+        }
+
+        return null;
+    }
+
 
     private Dictionary<string, Regex> LoadEntityRegexes()
     {
@@ -176,21 +209,64 @@ public class IntentDetectorService : IIntentDetectionService
             : _intentPatterns["en"];
     }
 
-    private float CalculateScore(string text, IntentPattern pattern)
+    private double CalculateScore(string normalizedText, IntentPattern pattern)
     {
-        var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        int matchCount = 0;
+        var score = 0.0;
+        var words = normalizedText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-        foreach (var keyword in pattern.Keywords)
+        // Special handling for application opening patterns
+        if (pattern.Intent == CommandType.OpenApplication)
         {
-            if (words.Any(word => IsLikeMatch(word, keyword)))
+            // Check for specific "app_name + aç" patterns
+            if (normalizedText.Contains("spotify") && normalizedText.Contains("aç"))
+                return 0.95;
+            if (normalizedText.Contains("chrome") && normalizedText.Contains("aç"))
+                return 0.95;
+            if (normalizedText.Contains("notepad") && normalizedText.Contains("aç"))
+                return 0.95;
+
+            // General application opening patterns
+            if (words.Contains("aç") || words.Contains("başlat") || words.Contains("çalıştır"))
             {
-                matchCount++;
+                score += 0.8;
             }
         }
 
-        return (float)matchCount / pattern.Keywords.Length * pattern.Weight;
+        // Special handling for music patterns - be more specific
+        if (pattern.Intent == CommandType.PlayMusic)
+        {
+            // Only trigger for explicit music commands, not application opening
+            if ((normalizedText.Contains("müzik") || normalizedText.Contains("şarkı")) &&
+                (normalizedText.Contains("çal") || normalizedText.Contains("oynat")))
+            {
+                score += 0.8;
+            }
+            else if (normalizedText.Contains("çal") && !normalizedText.Contains("aç"))
+            {
+                score += 0.6;
+            }
+            else
+            {
+                return 0.0; // Don't match PlayMusic for application opening commands
+            }
+        }
+
+        // General keyword matching for other patterns
+        foreach (var keyword in pattern.Keywords)
+        {
+            if (words.Contains(keyword.ToLower()))
+            {
+                score += 1.0 / pattern.Keywords.Length;
+            }
+            else if (normalizedText.Contains(keyword.ToLower()))
+            {
+                score += 0.5 / pattern.Keywords.Length;
+            }
+        }
+
+        return Math.Min(score, 1.0);
     }
+
 
     private bool IsLikeMatch(string word, string keyword)
     {
