@@ -57,6 +57,83 @@ public class MacOSApplicationScanner : IApplicationScanner
             return apps.DistinctBy(a => a.Name).OrderBy(a => a.Name);
         });
     }
+    public async Task<ApplicationInstallInfo> FindApplicationAsync(string appName)
+    {
+        return await Task.Run(() =>
+        {
+            if (string.IsNullOrWhiteSpace(appName))
+                return new ApplicationInstallInfo(false, string.Empty, string.Empty);
+
+            var appNameLower = appName.ToLower();
+
+            foreach (var path in _applicationPaths)
+            {
+                var expandedPath = path.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+
+                if (!Directory.Exists(expandedPath)) continue;
+
+                try
+                {
+                    var appBundles = Directory.GetDirectories(expandedPath, "*.app");
+
+                    foreach (var appBundle in appBundles)
+                    {
+                        try
+                        {
+                            var appInfo = ParseAppBundle(appBundle);
+                            if (appInfo != null && appInfo.Name.ToLower().Contains(appNameLower))
+                            {
+                                var infoPlistPath = Path.Combine(appBundle, "Contents", "Info.plist");
+                                string version = null;
+                                DateTime? installDate = null;
+
+                                if (File.Exists(infoPlistPath))
+                                {
+                                    try
+                                    {
+                                        var plistContent = File.ReadAllText(infoPlistPath);
+                                        version = ExtractPlistValue(plistContent, "CFBundleShortVersionString") ??
+                                                 ExtractPlistValue(plistContent, "CFBundleVersion");
+
+                                        var creationTime = Directory.GetCreationTime(appBundle);
+                                        installDate = creationTime;
+                                    }
+                                    catch
+                                    {
+                                        // Ignore plist parsing errors
+                                    }
+                                }
+
+                                return new ApplicationInstallInfo(
+                                    true,
+                                    appBundle,
+                                    appInfo.Name,
+                                    version,
+                                    installDate
+                                );
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error parsing app bundle {appBundle}: {ex.Message}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error accessing directory {expandedPath}: {ex.Message}");
+                }
+            }
+
+            return new ApplicationInstallInfo(false, string.Empty, string.Empty);
+        });
+    }
+
+    public async Task<string> GetApplicationPathAsync(string appName)
+    {
+        var appInfo = await FindApplicationAsync(appName);
+        return appInfo.IsInstalled ? appInfo.ExecutablePath : null;
+    }
 
     private AppInfoDTO ParseAppBundle(string bundlePath)
     {

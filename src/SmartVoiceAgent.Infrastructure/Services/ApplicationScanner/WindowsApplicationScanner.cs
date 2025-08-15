@@ -64,6 +64,78 @@ public class WindowsApplicationScanner : IApplicationScanner
             return apps.DistinctBy(a => a.Name).OrderBy(a => a.Name);
         });
     }
+    public async Task<ApplicationInstallInfo> FindApplicationAsync(string appName)
+    {
+        return await Task.Run(() =>
+        {
+            if (string.IsNullOrWhiteSpace(appName))
+                return new ApplicationInstallInfo(false, string.Empty, string.Empty);
+
+            var appNameLower = appName.ToLower();
+
+            foreach (var keyPath in _registryKeys)
+            {
+                try
+                {
+                    using var key = Registry.LocalMachine.OpenSubKey(keyPath);
+                    if (key == null) continue;
+
+                    foreach (var subKeyName in key.GetSubKeyNames())
+                    {
+                        try
+                        {
+                            using var subKey = key.OpenSubKey(subKeyName);
+                            if (subKey == null) continue;
+
+                            var displayName = subKey.GetValue("DisplayName")?.ToString();
+                            if (string.IsNullOrWhiteSpace(displayName)) continue;
+
+                            if (displayName.ToLower().Contains(appNameLower))
+                            {
+                                var installLocation = subKey.GetValue("InstallLocation")?.ToString();
+                                var displayIcon = subKey.GetValue("DisplayIcon")?.ToString();
+                                var uninstallString = subKey.GetValue("UninstallString")?.ToString();
+                                var version = subKey.GetValue("DisplayVersion")?.ToString();
+                                var installDateString = subKey.GetValue("InstallDate")?.ToString();
+
+                                var executablePath = GetExecutablePath(installLocation, displayIcon, uninstallString);
+
+                                DateTime? installDate = null;
+                                if (!string.IsNullOrEmpty(installDateString) && DateTime.TryParseExact(installDateString, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
+                                {
+                                    installDate = parsedDate;
+                                }
+
+                                return new ApplicationInstallInfo(
+                                    true,
+                                    executablePath ?? string.Empty,
+                                    displayName,
+                                    version,
+                                    installDate
+                                );
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error reading registry subkey {subKeyName}: {ex.Message}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error accessing registry key {keyPath}: {ex.Message}");
+                }
+            }
+
+            return new ApplicationInstallInfo(false, string.Empty, string.Empty);
+        });
+    }
+
+    public async Task<string> GetApplicationPathAsync(string appName)
+    {
+        var appInfo = await FindApplicationAsync(appName);
+        return appInfo.IsInstalled ? appInfo.ExecutablePath : null;
+    }
 
     private Dictionary<string, string> GetRunningProcesses()
     {

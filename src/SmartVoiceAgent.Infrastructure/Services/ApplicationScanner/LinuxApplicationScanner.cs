@@ -57,6 +57,86 @@ public class LinuxApplicationScanner : IApplicationScanner
             return apps.DistinctBy(a => a.Name).OrderBy(a => a.Name);
         });
     }
+    public async Task<ApplicationInstallInfo> FindApplicationAsync(string appName)
+    {
+        return await Task.Run(() =>
+        {
+            if (string.IsNullOrWhiteSpace(appName))
+                return new ApplicationInstallInfo(false, string.Empty, string.Empty);
+
+            var appNameLower = appName.ToLower();
+
+            foreach (var path in _applicationPaths)
+            {
+                var expandedPath = path.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+
+                if (!Directory.Exists(expandedPath)) continue;
+
+                try
+                {
+                    var desktopFiles = Directory.GetFiles(expandedPath, "*.desktop");
+
+                    foreach (var desktopFile in desktopFiles)
+                    {
+                        try
+                        {
+                            var appInfo = ParseDesktopFile(desktopFile);
+                            if (appInfo != null && appInfo.Name.ToLower().Contains(appNameLower))
+                            {
+                                string version = null;
+                                DateTime? installDate = null;
+
+                                try
+                                {
+                                    var lines = File.ReadAllLines(desktopFile);
+                                    foreach (var line in lines)
+                                    {
+                                        if (line.StartsWith("Version="))
+                                        {
+                                            version = line.Substring(8).Trim();
+                                            break;
+                                        }
+                                    }
+
+                                    var creationTime = File.GetCreationTime(desktopFile);
+                                    installDate = creationTime;
+                                }
+                                catch
+                                {
+                                    // Ignore file parsing errors
+                                }
+
+                                return new ApplicationInstallInfo(
+                                    true,
+                                    appInfo.Path,
+                                    appInfo.Name,
+                                    version,
+                                    installDate
+                                );
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error parsing desktop file {desktopFile}: {ex.Message}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error accessing directory {expandedPath}: {ex.Message}");
+                }
+            }
+
+            return new ApplicationInstallInfo(false, string.Empty, string.Empty);
+        });
+    }
+
+    public async Task<string> GetApplicationPathAsync(string appName)
+    {
+        var appInfo = await FindApplicationAsync(appName);
+        return appInfo.IsInstalled ? appInfo.ExecutablePath : null;
+    }
+
 
     private AppInfoDTO ParseDesktopFile(string filePath)
     {
