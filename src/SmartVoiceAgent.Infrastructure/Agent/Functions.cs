@@ -2,6 +2,7 @@
 using MediatR;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Commands;
+using SmartVoiceAgent.Core.Dtos;
 using SmartVoiceAgent.Core.Entities;
 using SmartVoiceAgent.Core.Interfaces;
 using System.Text.Json;
@@ -186,5 +187,154 @@ public partial class Functions
             WriteIndented = true
         });
     }
+    /// <summary>
+    /// Checks if an application is installed and provides detailed information about it.
+    /// This method verifies application installation status and returns comprehensive details.
+    /// </summary>
+    /// <param name="applicationName">The name of the application to check</param>
+    /// <returns>JSON response containing installation status, path, and additional details</returns>
+    [Function]
+    public async Task<string> CheckApplicationAsync(string applicationName)
+    {
+        Console.WriteLine($"Check application called with: {applicationName}");
+
+        try
+        {
+            var command = new CheckApplicationCommand(applicationName);
+            var result = await _mediator.Send(command);
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error checking application {applicationName}: {ex.Message}");
+            return JsonSerializer.Serialize(new AgentApplicationResponse(
+                Success: false,
+                Message: $"Uygulama kontrol edilirken hata oluştu: {ex.Message}",
+                ApplicationName: applicationName
+            ), new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true
+            });
+        }
+    }
+
+    /// <summary>
+    /// Gets the executable path of an installed application.
+    /// Returns the full path to the application's executable file if found.
+    /// </summary>
+    /// <param name="applicationName">The name of the application</param>
+    /// <returns>JSON response containing the executable path or error information</returns>
+    [Function]
+    public async Task<string> GetApplicationPathAsync(string applicationName)
+    {
+        Console.WriteLine($"Get application path called with: {applicationName}");
+
+        try
+        {
+            var command = new GetApplicationPathCommand(applicationName);
+            var result = await _mediator.Send(command);
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error getting application path for {applicationName}: {ex.Message}");
+            return JsonSerializer.Serialize(new AgentApplicationResponse(
+                Success: false,
+                Message: $"Uygulama yolu alınırken hata oluştu: {ex.Message}",
+                ApplicationName: applicationName
+            ), new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true
+            });
+        }
+    }
+
+    /// <summary>
+    /// Lists all installed applications on the system.
+    /// Provides a comprehensive list of available applications with their details.
+    /// </summary>
+    /// <param name="includeSystemApps">Whether to include system applications in the list</param>
+    /// <returns>JSON response containing the list of installed applications</returns>
+    [Function]
+    public async Task<string> ListInstalledApplicationsAsync(bool includeSystemApps = false)
+    {
+        Console.WriteLine($"List installed applications called with includeSystemApps: {includeSystemApps}");
+
+        try
+        {
+            var command = new ListInstalledApplicationsCommand(includeSystemApps);
+            var result = await _mediator.Send(command);
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error listing installed applications: {ex.Message}");
+            return JsonSerializer.Serialize(new CommandResult
+            {
+                Success = false,
+                Message = $"Yüklü uygulamalar listelenirken hata oluştu: {ex.Message}",
+                Error = ex.Message
+            }, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true
+            });
+        }
+    }
+
+    /// <summary>
+    /// Checks if an application is currently running on the system.
+    /// Provides real-time status information about application execution state.
+    /// </summary>
+    /// <param name="applicationName">The name of the application to check</param>
+    /// <returns>JSON response indicating if the application is running</returns>
+    [Function]
+    public async Task<string> IsApplicationRunningAsync(string applicationName)
+    {
+        Console.WriteLine($"Is application running called with: {applicationName}");
+
+        try
+        {
+            var command = new IsApplicationRunningCommand(applicationName);
+            var result = await _mediator.Send(command);
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error checking if application {applicationName} is running: {ex.Message}");
+            return JsonSerializer.Serialize(new AgentApplicationResponse(
+                Success: false,
+                Message: $"Uygulama çalışma durumu kontrol edilirken hata oluştu: {ex.Message}",
+                ApplicationName: applicationName
+            ), new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true
+            });
+        }
+    }
+
 }
 
