@@ -45,4 +45,34 @@ public class ApplicationService : IApplicationService
 
         return Task.FromResult<IEnumerable<AppInfoDTO>>(apps.AsEnumerable());
     }
+
+    Task IApplicationService.OpenApplicationAsync(string appName)
+    {
+        throw new NotImplementedException();
+    }
+
+    Task<AppStatus> IApplicationService.GetApplicationStatusAsync(string appName)
+    {
+        throw new NotImplementedException();
+    }
+
+    Task IApplicationService.CloseApplicationAsync(string appName)
+    {
+        throw new NotImplementedException();
+    }
+
+    Task<IEnumerable<AppInfoDTO>> IApplicationService.ListApplicationsAsync()
+    {
+        throw new NotImplementedException();
+    }
+
+    Task<ApplicationInstallInfo> IApplicationService.CheckApplicationInstallationAsync(string appName)
+    {
+        throw new NotImplementedException();
+    }
+
+    Task<string> IApplicationService.GetApplicationExecutablePathAsync(string appName)
+    {
+        throw new NotImplementedException();
+    }
 }

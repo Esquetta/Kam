@@ -58,14 +58,9 @@ namespace SmartVoiceAgent.Infrastructure.Services
             var intent = await _intentDetector.DetectIntentAsync("Yarına Ders adında bir görev oluşturmanı istiyorum. Saat 9'a.", "tr", stoppingToken);
 
             // Test 2: Agent Group Communication
-            var testMessage = "Yarına Ders adında bir görev oluşturmanı istiyorum. Saat 9'a.";
+            var testMessage = "Spotify'ı aç.";
 
-            var result = await AgentGroup.SendWithAnalyticsAsync(
-                message: testMessage,
-                from: "TestUser",
-                maxRound: 10,
-                cancellationToken: stoppingToken);
-            Console.WriteLine($"📥 Agent response: {result?.GetContent() ?? "No response"}");
+            var result = AgentGroup.SendWithAnalyticsAsync(testMessage, "User", 10, stoppingToken);
 
             //    // Voice captured event
             //    _voiceRecognitionService.OnVoiceCaptured += async (sender, audioData) =>
