@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Core.CrossCuttingConcerns.Logging.Serilog;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Infrastructure.Factories;
@@ -6,6 +7,7 @@ using SmartVoiceAgent.Infrastructure.Helpers;
 using SmartVoiceAgent.Infrastructure.Mcp;
 using SmartVoiceAgent.Infrastructure.Services;
 using SmartVoiceAgent.Infrastructure.Services.ApplicationScanner;
+using SmartVoiceAgent.Infrastructure.Services.Intent;
 using SmartVoiceAgent.Infrastructure.Services.Language;
 using SmartVoiceAgent.Infrastructure.Services.Stt;
 using SmartVoiceAgent.Infrastructure.Services.WebResearch;
@@ -21,10 +23,8 @@ public static class ServiceRegistration
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddScoped<IIntentDetectionService, IntentDetectorService>();
         services.AddScoped<ICommandLearningService, CommandLearningService>();
         services.AddHostedService<AgentHostedService>();
-        services.AddSingleton<IIntentDetectionService, IntentDetectorService>();
         services.AddSingleton<ISTTServiceFactory, STTServiceFactory>();
         services.AddSingleton<AudioProcessingService>();
         services.AddScoped<ILanguageDetectionService, HuggingFaceLanguageDetectionService>();
@@ -41,6 +41,19 @@ public static class ServiceRegistration
         services.AddSingleton<HuggingFaceSTTService>();
         services.AddScoped<Functions>();
         services.Configure<McpOptions>(configuration.GetSection("MCP"));
+
+
+
+        services.AddScoped<IntentDetectorService>(); // Original pattern-based service
+        services.AddScoped<AiIntentDetectionService>();
+        services.AddScoped<SemanticIntentDetectionService>();
+        services.AddScoped<ConversationContextManager>();
+
+        // Register context-aware service with proper dependencies
+        services.AddScoped<ContextAwareIntentDetectionService>();
+
+        // Register the hybrid service as the main implementation
+        services.AddScoped<IIntentDetectionService,HybridIntentDetectionService>();
 
         return services;
     }
