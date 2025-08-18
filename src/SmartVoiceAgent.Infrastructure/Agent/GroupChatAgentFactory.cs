@@ -71,9 +71,6 @@ public static class GroupChatAgentFactory
             analytics: analytics,
             options: options);
 
-        var testGroup=new GroupChat(
-            members: agents,
-            admin: coordinator);
 
 
         Console.WriteLine($"✅ Intent-Based Group Chat Ready with {agents.Count} agents");
@@ -368,8 +365,10 @@ Sadece rapor et, proaktif öneriler sun!";
 
         workflow.AddTransition(Transition.Create(coordinator, taskAgent, canTransitionAsync: async (from, to, messages) =>
         {
+            var message = messages.Where(x => x.From == "User").LastOrDefault().GetContent() ?? "";
+
             var intentResult = await intentDetectionService.DetectIntentAsync(
-                messages.LastOrDefault()?.GetContent() ?? "", "tr");
+                message ?? "", "tr");
 
             var taskCommands = new[]
             {
@@ -391,7 +390,7 @@ Sadece rapor et, proaktif öneriler sun!";
                 async (from, to, messages) =>
                 {
                     var shouldRoute = await ShouldRouteToWebAgent(messages, intentDetectionService);
-                    
+
                     return shouldRoute;
                 }));
         }
@@ -501,7 +500,7 @@ Sadece rapor et, proaktif öneriler sun!";
 
 
         return workflow;
-    }   
+    }
 
     /// <summary>
     /// Debug helper for transition validation
@@ -525,7 +524,7 @@ Sadece rapor et, proaktif öneriler sun!";
     IEnumerable<IMessage> context,
     IIntentDetectionService intentDetectionService)
     {
-        var message = context.LastOrDefault()?.GetContent() ?? "";
+        var message = context.Where(x => x.From == "User").LastOrDefault().GetContent() ?? "";
         Console.ForegroundColor = ConsoleColor.Yellow;
         Console.WriteLine($"[RoutingTest:SystemAgent] Incoming message: '{message}'");
         Console.ResetColor();
@@ -578,7 +577,7 @@ Sadece rapor et, proaktif öneriler sun!";
             // Route to WebAgent based on SearchWeb intent
             var shouldRoute = intentResult.Intent == CommandType.SearchWeb &&
                              intentResult.Confidence >= 0.3f;
-        
+
             return shouldRoute;
         }
         catch (Exception ex)

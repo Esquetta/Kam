@@ -11,11 +11,6 @@ public class SmartGroupChat : GroupChat, IGroupChat
     public GroupChatAnalytics Analytics { get; }
     public GroupChatOptions Options { get; }
 
-    private int GetParticipantCount()
-    {
-        return _memberCount;
-    }
-
     private readonly int _memberCount;
 
     public SmartGroupChat(
