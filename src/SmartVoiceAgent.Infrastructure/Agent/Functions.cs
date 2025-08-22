@@ -335,6 +335,117 @@ public partial class Functions
             });
         }
     }
+    /// <summary>
+    /// Controls system volume level (not just music playback volume)
+    /// </summary>
+    /// <param name="action">Action: increase, decrease, mute, unmute, set</param>
+    /// <param name="level">Volume level (0-100) when action is 'set'</param>
+    /// <returns>JSON result of volume control operation</returns>
+    [Function]
+    public async Task<string> ControlSystemVolumeAsync(string action, int level = 50)
+    {
+        Console.WriteLine($"Control system volume called with action: {action}, level: {level}");
+        var command = new ControlSystemVolumeCommand(action, level);
+        var result = await _mediator.Send(command);
+        return JsonSerializer.Serialize(result, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true
+        });
+    }
+
+    /// <summary>
+    /// Controls screen brightness
+    /// </summary>
+    /// <param name="action">Action: increase, decrease, set</param>
+    /// <param name="level">Brightness level (0-100) when action is 'set'</param>
+    /// <returns>JSON result of brightness control operation</returns>
+    [Function]
+    public async Task<string> ControlScreenBrightnessAsync(string action, int level = 50)
+    {
+        Console.WriteLine($"Control screen brightness called with action: {action}, level: {level}");
+        var command = new ControlScreenBrightnessCommand(action, level);
+        var result = await _mediator.Send(command);
+        return JsonSerializer.Serialize(result, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true
+        });
+    }
+
+    /// <summary>
+    /// Controls WiFi connection
+    /// </summary>
+    /// <param name="action">Action: enable, disable, toggle, status</param>
+    /// <returns>JSON result of WiFi control operation</returns>
+    [Function]
+    public async Task<string> ControlWiFiAsync(string action)
+    {
+        Console.WriteLine($"Control WiFi called with action: {action}");
+        var command = new ControlWiFiCommand(action);
+        var result = await _mediator.Send(command);
+        return JsonSerializer.Serialize(result, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true
+        });
+    }
+
+    /// <summary>
+    /// Controls Bluetooth connection
+    /// </summary>
+    /// <param name="action">Action: enable, disable, toggle, status</param>
+    /// <returns>JSON result of Bluetooth control operation</returns>
+    [Function]
+    public async Task<string> ControlBluetoothAsync(string action)
+    {
+        Console.WriteLine($"Control Bluetooth called with action: {action}");
+        var command = new ControlBluetoothCommand(action);
+        var result = await _mediator.Send(command);
+        return JsonSerializer.Serialize(result, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true
+        });
+    }
+
+    /// <summary>
+    /// Controls system power options
+    /// </summary>
+    /// <param name="action">Action: shutdown, restart, sleep, hibernate, lock</param>
+    /// <param name="delayMinutes">Delay in minutes before executing action</param>
+    /// <returns>JSON result of power control operation</returns>
+    [Function]
+    public async Task<string> ControlSystemPowerAsync(string action, int delayMinutes = 0)
+    {
+        Console.WriteLine($"Control system power called with action: {action}, delay: {delayMinutes}");
+        var command = new ControlSystemPowerCommand(action, delayMinutes);
+        var result = await _mediator.Send(command);
+        return JsonSerializer.Serialize(result, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true
+        });
+    }
+
+    /// <summary>
+    /// Gets current system status information
+    /// </summary>
+    /// <param name="infoType">Type of info: volume, brightness, wifi, bluetooth, battery, all</param>
+    /// <returns>JSON result containing system status information</returns>
+    [Function]
+    public async Task<string> GetSystemStatusAsync(string infoType = "all")
+    {
+        Console.WriteLine($"Get system status called with info type: {infoType}");
+        var command = new GetSystemStatusCommand(infoType);
+        var result = await _mediator.Send(command);
+        return JsonSerializer.Serialize(result, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true
+        });
+    }
+
 
 }
 
