@@ -2,7 +2,7 @@
 
 namespace SmartVoiceAgent.Infrastructure.Services.System
 {
-    public class SystemServiceFactory : ISystemControlServiceFactory
+    public class SystemControlServiceFactory : ISystemControlServiceFactory
     {
         public ISystemControlService CreateSystemService()
         {

@@ -10,6 +10,7 @@ using SmartVoiceAgent.Infrastructure.Services.ApplicationScanner;
 using SmartVoiceAgent.Infrastructure.Services.Intent;
 using SmartVoiceAgent.Infrastructure.Services.Language;
 using SmartVoiceAgent.Infrastructure.Services.Stt;
+using SmartVoiceAgent.Infrastructure.Services.System;
 using SmartVoiceAgent.Infrastructure.Services.WebResearch;
 
 namespace SmartVoiceAgent.Infrastructure.DependencyInjection;
@@ -41,7 +42,7 @@ public static class ServiceRegistration
         services.AddSingleton<HuggingFaceSTTService>();
         services.AddScoped<Functions>();
         services.Configure<McpOptions>(configuration.GetSection("MCP"));
-
+        services.AddSingleton<ISystemControlServiceFactory, SystemControlServiceFactory>();
 
 
         services.AddScoped<IntentDetectorService>(); // Original pattern-based service
