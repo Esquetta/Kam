@@ -52,13 +52,13 @@ namespace SmartVoiceAgent.Infrastructure.Services
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            this.AgentGroup = await GroupChatAgentFactory.CreateGroupChatAsync(apiKey: configuration.GetSection("AiAgent:Apikey").Get<string>(), model: configuration.GetSection("AiAgent:Model").Get<string>(), endpoint: configuration.GetSection("AiAgent:EndPoint").Get<string>(), functions: functions, configuration, _intentDetector);
+            this.AgentGroup = await GroupChatAgentFactory.CreateGroupChatAsync(apiKey: configuration.GetSection("AiAgent:Apikey").Get<string>(), model: configuration.GetSection("AiAgent:Model").Get<string>(), serviceProvider: serviceProvider, endpoint: configuration.GetSection("AiAgent:EndPoint").Get<string>(),configuration);
 
             // Test 1: Intent Detection
-            var intent = await _intentDetector.DetectIntentAsync("Yarına Ders adında bir görev oluşturmanı istiyorum. Saat 9'a.", "tr", stoppingToken);
+            //var intent = await _intentDetector.DetectIntentAsync("Yarına Ders adında bir görev oluşturmanı istiyorum. Saat 9'a.", "tr", stoppingToken);
 
             // Test 2: Agent Group Communication
-            var testMessage = "Spotify'ı aç.";
+            var testMessage = "Yarın saat 07:00'a   'İş başlangıç' adında bir görev oluştur.";
 
             var result = AgentGroup.SendWithAnalyticsAsync(testMessage, "User", 10, stoppingToken);
 

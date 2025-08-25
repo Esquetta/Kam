@@ -3,8 +3,10 @@ using Microsoft.Extensions.Configuration;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
 using System.Diagnostics;
-using System.Text.Json;
+using System.Net;
 using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace SmartVoiceAgent.Infrastructure.Services.WebResearch;
 
@@ -503,11 +505,11 @@ SADECE JSON formatında yanıt ver:
                 _logger.Error($"Google Search API hatası: {response.StatusCode} - {errorContent}");
 
                 // Specific error handling
-                if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                if (response.StatusCode == HttpStatusCode.Forbidden)
                 {
                     _logger.Error("Google Search API: 403 Forbidden - API key veya Search Engine ID kontrol edin");
                 }
-                else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                else if (response.StatusCode == HttpStatusCode.BadRequest)
                 {
                     _logger.Error("Google Search API: 400 Bad Request - Query parametreleri kontrol edin");
                 }
@@ -641,10 +643,10 @@ SADECE JSON formatında yanıt ver:
         if (string.IsNullOrEmpty(text)) return text;
 
         // HTML entities decode
-        text = System.Net.WebUtility.HtmlDecode(text);
+        text = WebUtility.HtmlDecode(text);
 
-        // Multiple spaces to single space
-        text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ");
+        // Multiple spaces to single space - DÜZELTME: Regex sınıfını doğrudan kullan
+        text = Regex.Replace(text, @"\s+", " ");
 
         // Trim
         text = text.Trim();
@@ -761,7 +763,7 @@ SADECE JSON formatında yanıt ver:
         // Markdown kod bloklarını temizle
         response = response.Replace("```json", "").Replace("```", "");
 
-        // Başта ve sondaki whitespace'leri temizle
+        // Başta ve sondaki whitespace'leri temizle
         response = response.Trim();
 
         // Backtick karakterlerini temizle

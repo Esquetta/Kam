@@ -1,5 +1,6 @@
 ﻿using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Infrastructure.Helpers;
+using System.Diagnostics;
 
 namespace SmartVoiceAgent.Infrastructure.Services.Voice;
 
@@ -240,7 +241,7 @@ public abstract class VoiceRecognitionServiceBase : IVoiceRecognitionService
         // Debug için
         if (rmsCondition || energyCondition || relativeCondition)
         {
-            System.Diagnostics.Debug.WriteLine($"Voice Detection - RMS: {rms:F6}, Threshold: {_adaptiveThreshold:F6}, Energy: {energy:F0}, Background: {_backgroundNoiseLevel:F6}");
+            Debug.WriteLine($"Voice Detection - RMS: {rms:F6}, Threshold: {_adaptiveThreshold:F6}, Energy: {energy:F0}, Background: {_backgroundNoiseLevel:F6}");
         }
 
         return rmsCondition || energyCondition || relativeCondition;
@@ -273,7 +274,7 @@ public abstract class VoiceRecognitionServiceBase : IVoiceRecognitionService
                 _currentSpeechStream.Write(preData, 0, preData.Length);
             }
 
-            System.Diagnostics.Debug.WriteLine($"Voice started - RMS: {rms:F6}");
+            Debug.WriteLine($"Voice started - RMS: {rms:F6}");
         }
 
         // Mevcut veriyi ekle
@@ -306,14 +307,14 @@ public abstract class VoiceRecognitionServiceBase : IVoiceRecognitionService
                 {
                     var voiceData = _currentSpeechStream.ToArray();
 
-                    System.Diagnostics.Debug.WriteLine($"Voice captured - Duration: {speechDuration}ms, Size: {voiceData.Length} bytes");
+                    Debug.WriteLine($"Voice captured - Duration: {speechDuration}ms, Size: {voiceData.Length} bytes");
 
                     // Event'i tetikle
                     InvokeOnVoiceCaptured(voiceData);
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine($"Voice too short - Duration: {speechDuration}ms");
+                    Debug.WriteLine($"Voice too short - Duration: {speechDuration}ms");
                 }
 
                 // Stream'i sıfırla

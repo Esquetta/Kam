@@ -2,6 +2,7 @@
 using SmartVoiceAgent.Core.Dtos;
 using SmartVoiceAgent.Core.Interfaces;
 using System.Diagnostics;
+using System.Globalization;
 
 namespace SmartVoiceAgent.Infrastructure.Services.ApplicationScanner;
 /// <summary>
@@ -101,7 +102,7 @@ public class WindowsApplicationScanner : IApplicationScanner
                                 var executablePath = GetExecutablePath(installLocation, displayIcon, uninstallString);
 
                                 DateTime? installDate = null;
-                                if (!string.IsNullOrEmpty(installDateString) && DateTime.TryParseExact(installDateString, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
+                                if (!string.IsNullOrEmpty(installDateString) && DateTime.TryParseExact(installDateString, "yyyyMMdd", null, DateTimeStyles.None, out var parsedDate))
                                 {
                                     installDate = parsedDate;
                                 }

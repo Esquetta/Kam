@@ -5,6 +5,8 @@ using SmartVoiceAgent.Core.Interfaces;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Management;
+using System.Text.RegularExpressions;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace SmartVoiceAgent.Infrastructure.Services.Application
 {
@@ -452,7 +454,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
                     try
                     {
                         var content = await File.ReadAllTextAsync(manifestFile);
-                        var installLocationMatch = System.Text.RegularExpressions.Regex.Match(
+                        var installLocationMatch = Regex.Match(
                             content, @"""InstallLocation"":\s*""([^""]+)""");
                         if (installLocationMatch.Success)
                         {

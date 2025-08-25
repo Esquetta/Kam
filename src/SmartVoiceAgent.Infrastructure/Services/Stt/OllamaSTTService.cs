@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
 using System.Diagnostics;
+using System.Text;
+using System.Text.Json;
 
 namespace SmartVoiceAgent.Infrastructure.Services.Stt;
 /// <summary>
@@ -41,14 +43,14 @@ public class OllamaSTTService : ISpeechToTextService
                 stream = false
             };
 
-            var json = System.Text.Json.JsonSerializer.Serialize(request);
-            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            var json =JsonSerializer.Serialize(request);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await _httpClient.PostAsync($"{_baseUrl}/api/generate", content, cancellationToken);
             response.EnsureSuccessStatusCode();
 
             var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
-            var result = System.Text.Json.JsonSerializer.Deserialize<OllamaResponse>(responseJson);
+            var result = JsonSerializer.Deserialize<OllamaResponse>(responseJson);
 
             stopwatch.Stop();
 

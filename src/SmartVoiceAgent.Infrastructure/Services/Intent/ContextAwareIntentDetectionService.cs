@@ -1,6 +1,8 @@
 ﻿using Core.CrossCuttingConcerns.Logging.Serilog;
 using SmartVoiceAgent.Core.Entities;
 using SmartVoiceAgent.Core.Enums;
+using System;
+using System.Text.RegularExpressions;
 
 namespace SmartVoiceAgent.Infrastructure.Services;
 
@@ -202,10 +204,10 @@ public class ContextAwareIntentDetectionService : IIntentDetectionService
 
         if (!string.IsNullOrEmpty(preferencesSection))
         {
-            var match = System.Text.RegularExpressions.Regex.Match(
+            var match = Regex.Match(
                 preferencesSection,
                 @"preferred_music_app:\s*(\w+)",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                RegexOptions.IgnoreCase);
 
             if (match.Success)
             {

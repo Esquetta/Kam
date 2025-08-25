@@ -4,6 +4,9 @@ using SmartVoiceAgent.Core.Config;
 using SmartVoiceAgent.Core.Entities;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -31,7 +34,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Language
             if (!string.IsNullOrEmpty(_config.ApiKey))
             {
                 _httpClient.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _config.ApiKey);
+                    new AuthenticationHeaderValue("Bearer", _config.ApiKey);
             }
         }
 
@@ -90,7 +93,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Language
             var requestData = new { inputs = text };
             var json = JsonSerializer.Serialize(requestData);
 
-            using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await _httpClient.PostAsync(apiUrl, content, cancellationToken);
 
@@ -99,7 +102,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Language
                 var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
 
                 // Model loading durumu kontrolü
-                if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+                if (response.StatusCode == HttpStatusCode.ServiceUnavailable)
                 {
                     var errorResponse = JsonSerializer.Deserialize<HuggingFaceErrorResponse>(errorContent);
                     if (errorResponse?.Error?.Contains("loading") == true)
