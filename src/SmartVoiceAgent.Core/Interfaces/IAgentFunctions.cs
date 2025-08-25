@@ -5,4 +5,5 @@ namespace SmartVoiceAgent.Core.Interfaces;
 public interface IAgentFunctions
 {
     IEnumerable<FunctionContract> GetFunctionContracts();
+    IDictionary<string, Func<string,Task<string>>> GetFunctionMap();
 }
