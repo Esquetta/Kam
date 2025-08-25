@@ -3,32 +3,21 @@ using MediatR;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Commands;
 using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Core.Models;
 using System.Text.Json;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace SmartVoiceAgent.Infrastructure.Agent.Functions;
 
 public class SystemAgentFunctions : IAgentFunctions
 {
     private readonly IMediator _mediator;
+    private readonly ConversationContextManager contextManager;
 
-    public SystemAgentFunctions(IMediator mediator)
+    public SystemAgentFunctions(IMediator mediator, ConversationContextManager contextManager)
     {
         _mediator = mediator;
-    }
-
-    public IEnumerable<FunctionContract> GetFunctionContracts()
-    {
-        return new[]
-        {
-            OpenApplicationAsyncFunctionContract,
-            CloseApplicationAsyncFunctionContract,
-            CheckApplicationAsyncFunctionContract,
-            GetApplicationPathAsyncFunctionContract,
-            IsApplicationRunningAsyncFunctionContract,
-            ListInstalledApplicationsAsyncFunctionContract,
-            PlayMusicAsyncFunctionContract,
-            ControlDeviceAsyncFunctionContract
-        };
+        this.contextManager = contextManager;
     }
 
     [Function]
@@ -183,162 +172,229 @@ public class SystemAgentFunctions : IAgentFunctions
         }
     }
 
-    // Function Contracts
-    public FunctionContract OpenApplicationAsyncFunctionContract => new()
+    public IDictionary<string, Func<string, Task<string>>> GetFunctionMap()
     {
-        Name = nameof(OpenApplicationAsync),
-        Description = "Opens a desktop application based on the given name",
-        Parameters = (IEnumerable<FunctionParameterContract>)BinaryData.FromObjectAsJson(new
-        {
-            Type = "object",
-            Properties = new
+        return new Dictionary<string, Func<string, Task<string>>>
+        {            
+            ["OpenApplicationAsync"] = async (args) =>
             {
-                applicationName = new
+                try
                 {
-                    Type = "string",
-                    Description = "The name of the application to open"
-                }
-            },
-            Required = new[] { "applicationName" }
-        }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })
-    };
+                    var jsonArgs = JsonSerializer.Deserialize<Dictionary<string, object>>(args);
+                    var appName = jsonArgs["applicationName"]?.ToString() ?? "";
 
-    public FunctionContract CloseApplicationAsyncFunctionContract => new()
-    {
-        Name = nameof(CloseApplicationAsync),
-        Description = "Closes a desktop application based on the given name",
-        Parameters = (IEnumerable<FunctionParameterContract>)BinaryData.FromObjectAsJson(new
-        {
-            Type = "object",
-            Properties = new
-            {
-                applicationName = new
-                {
-                    Type = "string",
-                    Description = "The name of the application to close"
-                }
-            },
-            Required = new[] { "applicationName" }
-        }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })
-    };
+                    // Check if app is already open
+                    if (contextManager.IsApplicationOpen(appName))
+                    {
+                        return $"ℹ️ {appName} zaten açık";
+                    }
 
-    public FunctionContract CheckApplicationAsyncFunctionContract => new()
-    {
-        Name = nameof(CheckApplicationAsync),
-        Description = "Checks if an application is installed and provides detailed information",
-        Parameters = (IEnumerable<FunctionParameterContract>)BinaryData.FromObjectAsJson(new
-        {
-            Type = "object",
-            Properties = new
-            {
-                applicationName = new
-                {
-                    Type = "string",
-                    Description = "The name of the application to check"
-                }
-            },
-            Required = new[] { "applicationName" }
-        }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })
-    };
+                    var result = await OpenApplicationAsync(appName);
 
-    public FunctionContract GetApplicationPathAsyncFunctionContract => new()
-    {
-        Name = nameof(GetApplicationPathAsync),
-        Description = "Gets the executable path of an installed application",
-        Parameters = (IEnumerable<FunctionParameterContract>)BinaryData.FromObjectAsJson(new
-        {
-            Type = "object",
-            Properties = new
-            {
-                applicationName = new
-                {
-                    Type = "string",
-                    Description = "The name of the application"
-                }
-            },
-            Required = new[] { "applicationName" }
-        }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })
-    };
+                    // Update application state on successful open
+                    var parsedResult = TryParseJsonResult(result);
+                    if (parsedResult?.Success == true)
+                    {
+                        contextManager.SetApplicationState(appName, true);
+                    }
 
-    public FunctionContract IsApplicationRunningAsyncFunctionContract => new()
-    {
-        Name = nameof(IsApplicationRunningAsync),
-        Description = "Checks if an application is currently running",
-        Parameters = (IEnumerable<FunctionParameterContract>)BinaryData.FromObjectAsJson(new
-        {
-            Type = "object",
-            Properties = new
-            {
-                applicationName = new
+                    contextManager.UpdateContext("app_open", appName, result);
+                    return ParseJsonResponse(result, $"✅ {appName} açıldı");
+                }
+                catch (Exception ex)
                 {
-                    Type = "string",
-                    Description = "The name of the application to check"
+                    contextManager.UpdateContext("app_open_error", args, ex.Message);
+                    return $"❌ Uygulama açma hatası: {ex.Message}";
                 }
             },
-            Required = new[] { "applicationName" }
-        }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })
-    };
 
-    public FunctionContract ListInstalledApplicationsAsyncFunctionContract => new()
-    {
-        Name = nameof(ListInstalledApplicationsAsync),
-        Description = "Lists all installed applications on the system",
-        Parameters = (IEnumerable<FunctionParameterContract>)BinaryData.FromObjectAsJson(new
-        {
-            Type = "object",
-            Properties = new
+            ["CloseApplicationAsync"] = async (args) =>
             {
-                includeSystemApps = new
+                try
                 {
-                    Type = "boolean",
-                    Description = "Whether to include system applications in the list",
-                    Default = false
-                }
-            },
-            Required = new string[] { }
-        }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })
-    };
+                    var jsonArgs = JsonSerializer.Deserialize<Dictionary<string, object>>(args);
+                    var appName = jsonArgs["applicationName"]?.ToString() ?? "";
 
-    public FunctionContract PlayMusicAsyncFunctionContract => new()
-    {
-        Name = nameof(PlayMusicAsync),
-        Description = "Plays music based on the given track name",
-        Parameters = (IEnumerable<FunctionParameterContract>)BinaryData.FromObjectAsJson(new
-        {
-            Type = "object",
-            Properties = new
-            {
-                trackName = new
-                {
-                    Type = "string",
-                    Description = "The name or path of the track to play"
-                }
-            },
-            Required = new[] { "trackName" }
-        }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })
-    };
+                    // Check if app is actually open
+                    if (!contextManager.IsApplicationOpen(appName))
+                    {
+                        return $"ℹ️ {appName} zaten kapalı";
+                    }
 
-    public FunctionContract ControlDeviceAsyncFunctionContract => new()
-    {
-        Name = nameof(ControlDeviceAsync),
-        Description = "Controls a device based on the given device name and action",
-        Parameters = (IEnumerable<FunctionParameterContract>)BinaryData.FromObjectAsJson(new
-        {
-            Type = "object",
-            Properties = new
-            {
-                deviceName = new
+                    var result = await CloseApplicationAsync(appName);
+
+                    // Update application state on successful close
+                    var parsedResult = TryParseJsonResult(result);
+                    if (parsedResult?.Success == true)
+                    {
+                        contextManager.SetApplicationState(appName, false);
+                    }
+
+                    contextManager.UpdateContext("app_close", appName, result);
+                    return ParseJsonResponse(result, $"✅ {appName} kapatıldı");
+                }
+                catch (Exception ex)
                 {
-                    Type = "string",
-                    Description = "The name of the device to control"
-                },
-                action = new
-                {
-                    Type = "string",
-                    Description = "The action to perform on the device"
+                    contextManager.UpdateContext("app_close_error", args, ex.Message);
+                    return $"❌ Uygulama kapatma hatası: {ex.Message}";
                 }
             },
-            Required = new[] { "deviceName", "action" }
-        }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })
-    };
+
+            ["PlayMusicAsync"] = async (args) =>
+            {
+                try
+                {
+                    var jsonArgs = JsonSerializer.Deserialize<Dictionary<string, object>>(args);
+                    var trackName = jsonArgs["trackName"]?.ToString() ?? "";
+
+                    var result = await PlayMusicAsync(trackName);
+
+                    contextManager.UpdateContext("music_play", trackName, result);
+                    return ParseJsonResponse(result, $"🎵 Müzik çalıyor: {trackName}");
+                }
+                catch (Exception ex)
+                {
+                    contextManager.UpdateContext("music_play_error", args, ex.Message);
+                    return $"❌ Müzik çalma hatası: {ex.Message}";
+                }
+            },
+
+            ["ControlDeviceAsync"] = async (args) =>
+            {
+                try
+                {
+                    var jsonArgs = JsonSerializer.Deserialize<Dictionary<string, object>>(args);
+                    var deviceName = jsonArgs["deviceName"]?.ToString() ?? "";
+                    var action = jsonArgs["action"]?.ToString() ?? "";
+
+                    var result = await ControlDeviceAsync(deviceName, action);
+
+                    contextManager.UpdateContext("device_control", $"{deviceName}:{action}", result);
+                    return ParseJsonResponse(result, $"📱 {deviceName} - {action} işlemi tamamlandı");
+                }
+                catch (Exception ex)
+                {
+                    contextManager.UpdateContext("device_control_error", args, ex.Message);
+                    return $"❌ Cihaz kontrol hatası: {ex.Message}";
+                }
+            }        
+      
+        };
+    }
+    /// <summary>
+    /// Helper method to safely parse JSON result for internal use
+    /// </summary>
+    private static CommandResultWrapper? TryParseJsonResult(string jsonResult)
+    {
+        try
+        {
+            var jsonDocument = JsonDocument.Parse(jsonResult);
+            var root = jsonDocument.RootElement;
+
+            var success = false;
+            var message = "";
+            var error = "";
+
+            if (root.TryGetProperty("success", out var successElement))
+            {
+                success = successElement.GetBoolean();
+            }
+
+            if (root.TryGetProperty("message", out var messageElement))
+            {
+                message = messageElement.GetString() ?? "";
+            }
+
+            if (root.TryGetProperty("error", out var errorElement))
+            {
+                error = errorElement.GetString() ?? "";
+            }
+
+            return new CommandResultWrapper
+            {
+                Success = success,
+                Message = message,
+                Error = error
+            };
+        }
+        catch
+        {
+            return null;
+        }
+    }
+    /// <summary>
+    /// Parses JSON response and extracts meaningful message
+    /// </summary>
+    private static string ParseJsonResponse(string jsonResult, string defaultMessage = "İşlem tamamlandı")
+    {
+        try
+        {
+            var jsonDocument = JsonDocument.Parse(jsonResult);
+            var root = jsonDocument.RootElement;
+
+            // Check for success field
+            if (root.TryGetProperty("success", out var successElement))
+            {
+                var isSuccess = successElement.GetBoolean();
+
+                if (isSuccess)
+                {
+                    // Try to get message
+                    if (root.TryGetProperty("message", out var messageElement))
+                    {
+                        var message = messageElement.GetString();
+                        return !string.IsNullOrEmpty(message) ? message : defaultMessage;
+                    }
+
+                    // Try to get result field
+                    if (root.TryGetProperty("result", out var resultElement))
+                    {
+                        var result = resultElement.GetString();
+                        return !string.IsNullOrEmpty(result) ? result : defaultMessage;
+                    }
+
+                    return defaultMessage;
+                }
+                else
+                {
+                    // Handle error case
+                    if (root.TryGetProperty("error", out var errorElement))
+                    {
+                        return $"❌ {errorElement.GetString()}";
+                    }
+
+                    if (root.TryGetProperty("message", out var errorMessageElement))
+                    {
+                        return $"❌ {errorMessageElement.GetString()}";
+                    }
+
+                    return "❌ İşlem başarısız";
+                }
+            }
+
+            // If no success field, try to extract any meaningful data
+            if (root.TryGetProperty("message", out var directMessageElement))
+            {
+                return directMessageElement.GetString() ?? defaultMessage;
+            }
+
+            // If it's an array or complex object, return summary
+            if (root.ValueKind == JsonValueKind.Array)
+            {
+                return $"✅ {root.GetArrayLength()} öğe döndürüldü";
+            }
+
+            return defaultMessage;
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine($"⚠️ JSON parse hatası: {ex.Message}");
+            return defaultMessage;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Response parse hatası: {ex.Message}");
+            return defaultMessage;
+        }
+    }
 }
