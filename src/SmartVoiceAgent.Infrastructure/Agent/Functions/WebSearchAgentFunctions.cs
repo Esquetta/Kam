@@ -41,8 +41,6 @@ public class WebSearchAgentFunctions : IAgentFunctions
             return JsonSerializer.Serialize(new { Success = false, Message = ex.Message });
         }
     }
-
-    // Function Contracts
     public FunctionContract SearchWebAsyncFunctionContract => new()
     {
         Name = nameof(SearchWebAsync),
