@@ -5,6 +5,7 @@ using AutoGen.OpenAI.Extension;
 using AutoGen.SemanticKernel;
 using AutoGen.SemanticKernel.Extension;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using ModelContextProtocol.Client;
@@ -13,8 +14,10 @@ using OpenAI;
 using OpenAI.Chat;
 using SmartVoiceAgent.Application.Agent;
 using SmartVoiceAgent.Core.Enums;
+using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
 using SmartVoiceAgent.Infrastructure.Agent;
+using SmartVoiceAgent.Infrastructure.Agent.Functions;
 using SmartVoiceAgent.Infrastructure.Mcp;
 using System.ClientModel;
 using System.Text.Json;
@@ -24,16 +27,13 @@ using System.Text.Json;
 /// </summary>
 public static class GroupChatAgentFactory
 {
-    /// <summary>
-    /// Creates a production-ready group chat system with context awareness
-    /// </summary>
+
     public static async Task<SmartGroupChat> CreateGroupChatAsync(
     string apiKey,
     string model,
+    IServiceProvider serviceProvider,
     string endpoint,
-    Functions functions,
     IConfiguration configuration,
-    IIntentDetectionService intentDetectionService, // Yeni parametre eklendi
     GroupChatOptions options = null)
     {
         options ??= new GroupChatOptions();
@@ -47,10 +47,15 @@ public static class GroupChatAgentFactory
         var contextManager = new ConversationContextManager();
         var analytics = new GroupChatAnalytics();
 
+        var systemFunctions = serviceProvider.GetRequiredService<SystemAgentFunctions>();
+        var webSearchFunctions = serviceProvider.GetRequiredService<WebSearchAgentFunctions>();
+
+        var intentDetectionService = serviceProvider.GetRequiredService<IIntentDetectionService>();
+
         var coordinator = await CreateAdvancedCoordinatorAsync(apiKey, model, endpoint, contextManager);
-        var systemAgent = await CreateContextAwareSystemAgentAsync(apiKey, model, endpoint, functions, contextManager);
+        var systemAgent = await CreateContextAwareSystemAgentAsync(apiKey, model, endpoint, systemFunctions, contextManager);
         var taskAgent = await CreateContextAwareTaskAgentAsync(apiKey, model, endpoint, contextManager, mcpOptions);
-        var webResearchAgent = await CreateWebSearchAgentAsync(apiKey, model, endpoint, functions);
+        var webResearchAgent = await CreateWebSearchAgentAsync(apiKey, model, endpoint, webSearchFunctions);
         var analyticsAgent = await CreateAnalyticsAgentAsync(apiKey, model, endpoint, analytics);
         var userProxy = CreateEnhancedUserProxy();
 
@@ -133,7 +138,7 @@ You: ""@WebAgent check current weather @TaskAgent create umbrella reminder""";
     /// Context-aware System Agent with state management
     /// </summary>
     private static async Task<IAgent> CreateContextAwareSystemAgentAsync(
-        string apiKey, string model, string endpoint, Functions functions, ConversationContextManager contextManager)
+        string apiKey, string model, string endpoint, SystemAgentFunctions functions, ConversationContextManager contextManager)
     {
         var systemMessage = @"You are the SystemAgent, specializing in system operations and application management.
 
@@ -166,8 +171,7 @@ You: ""@WebAgent check current weather @TaskAgent create umbrella reminder""";
 
 
 
-        var functionMap = await CreateAdvancedSystemFunctionMap(functions, contextManager);
-
+        var functionMap = functions.GetFunctionMap();
         return new OpenAIChatAgent(
             chatClient: new ChatClient(model, new ApiKeyCredential(apiKey),
                 new OpenAIClientOptions { Endpoint = new Uri(endpoint) }),
@@ -176,7 +180,7 @@ You: ""@WebAgent check current weather @TaskAgent create umbrella reminder""";
             .RegisterMessageConnector()
             .RegisterMiddleware(new FunctionCallMiddleware(
                 functions: [
-                    functions.ProcessVoiceCommandAsyncFunctionContract,
+                    functions.CheckApplicationAsyncFunctionContract,
                     functions.OpenApplicationAsyncFunctionContract,
                     functions.CloseApplicationAsyncFunctionContract,
                     functions.PlayMusicAsyncFunctionContract,
@@ -279,7 +283,7 @@ You: ""@WebAgent check current weather @TaskAgent create umbrella reminder""";
     /// Optional Web Search Agent
     /// </summary>
     public static async Task<IAgent> CreateWebSearchAgentAsync(
-        string apiKey, string model, string endpoint, Functions functions)
+        string apiKey, string model, string endpoint, WebSearchAgentFunctions functions)
     {
         var systemMessage = @"You are the WebAgent, specializing in web research and information retrieval.
 
@@ -317,26 +321,7 @@ You: ""@WebAgent check current weather @TaskAgent create umbrella reminder""";
 - Provide context for other agents' actions";
 
 
-        var functionMap = new Dictionary<string, Func<string, Task<string>>>
-        {
-            ["SearchWebAsync"] = async (args) =>
-            {
-                try
-                {
-                    var jsonArgs = JsonSerializer.Deserialize<Dictionary<string, object>>(args);
-                    var query = jsonArgs["query"]?.ToString() ?? "";
-                    var lang = jsonArgs.ContainsKey("lang") ? jsonArgs["lang"]?.ToString() : "tr";
-                    var results = jsonArgs.ContainsKey("results") ? Convert.ToInt32(jsonArgs["results"]) : 5;
-
-                    var result = await functions.SearchWebAsync(query, lang, results);
-                    return ParseJsonResponse(result, $"🔍 '{query}' araması tamamlandı");
-                }
-                catch (Exception ex)
-                {
-                    return $"❌ Arama hatası: {ex.Message}";
-                }
-            }
-        };
+        var functionMap = functions.GetFunctionMap();
 
         return new OpenAIChatAgent(
             chatClient: new ChatClient(model, new ApiKeyCredential(apiKey),
@@ -717,300 +702,5 @@ Sadece rapor et, proaktif öneriler sun!";
         var keywords = new[] { "ara", "search", "haber", "news", "hava", "weather", "google", "web" };
         return keywords.Any(k => message.Contains(k));
     }
-    /// <summary>
-    /// Advanced function map with context awareness
-    /// </summary>
-    private static async Task<Dictionary<string, Func<string, Task<string>>>> CreateAdvancedSystemFunctionMap(
-        Functions functions, ConversationContextManager contextManager)
-    {
-        return new Dictionary<string, Func<string, Task<string>>>
-        {
-            ["ProcessVoiceCommandAsync"] = async (args) =>
-            {
-                try
-                {
-                    var jsonArgs = JsonSerializer.Deserialize<Dictionary<string, object>>(args);
-                    var userInput = jsonArgs["userInput"]?.ToString() ?? "";
-                    var language = jsonArgs.ContainsKey("language") ? jsonArgs["language"]?.ToString() : "tr";
-
-                    // Add context to command processing
-                    var context = contextManager.GetRelevantContext(userInput);
-
-                    var result = await functions.ProcessVoiceCommandAsync(userInput, language, context);
-
-                    // Update context with result
-                    contextManager.UpdateContext("system_command", userInput, result);
-
-                    return ParseJsonResponse(result, $"✅ Komut işlendi: {userInput}");
-                }
-                catch (Exception ex)
-                {
-                    contextManager.UpdateContext("system_error", args, ex.Message);
-                    return $"❌ Komut işleme hatası: {ex.Message}";
-                }
-            },
-
-            ["OpenApplicationAsync"] = async (args) =>
-            {
-                try
-                {
-                    var jsonArgs = JsonSerializer.Deserialize<Dictionary<string, object>>(args);
-                    var appName = jsonArgs["applicationName"]?.ToString() ?? "";
-
-                    // Check if app is already open
-                    if (contextManager.IsApplicationOpen(appName))
-                    {
-                        return $"ℹ️ {appName} zaten açık";
-                    }
-
-                    var result = await functions.OpenApplicationAsync(appName);
-
-                    // Update application state on successful open
-                    var parsedResult = TryParseJsonResult(result);
-                    if (parsedResult?.Success == true)
-                    {
-                        contextManager.SetApplicationState(appName, true);
-                    }
-
-                    contextManager.UpdateContext("app_open", appName, result);
-                    return ParseJsonResponse(result, $"✅ {appName} açıldı");
-                }
-                catch (Exception ex)
-                {
-                    contextManager.UpdateContext("app_open_error", args, ex.Message);
-                    return $"❌ Uygulama açma hatası: {ex.Message}";
-                }
-            },
-
-            ["CloseApplicationAsync"] = async (args) =>
-            {
-                try
-                {
-                    var jsonArgs = JsonSerializer.Deserialize<Dictionary<string, object>>(args);
-                    var appName = jsonArgs["applicationName"]?.ToString() ?? "";
-
-                    // Check if app is actually open
-                    if (!contextManager.IsApplicationOpen(appName))
-                    {
-                        return $"ℹ️ {appName} zaten kapalı";
-                    }
-
-                    var result = await functions.CloseApplicationAsync(appName);
-
-                    // Update application state on successful close
-                    var parsedResult = TryParseJsonResult(result);
-                    if (parsedResult?.Success == true)
-                    {
-                        contextManager.SetApplicationState(appName, false);
-                    }
-
-                    contextManager.UpdateContext("app_close", appName, result);
-                    return ParseJsonResponse(result, $"✅ {appName} kapatıldı");
-                }
-                catch (Exception ex)
-                {
-                    contextManager.UpdateContext("app_close_error", args, ex.Message);
-                    return $"❌ Uygulama kapatma hatası: {ex.Message}";
-                }
-            },
-
-            ["PlayMusicAsync"] = async (args) =>
-            {
-                try
-                {
-                    var jsonArgs = JsonSerializer.Deserialize<Dictionary<string, object>>(args);
-                    var trackName = jsonArgs["trackName"]?.ToString() ?? "";
-
-                    var result = await functions.PlayMusicAsync(trackName);
-
-                    contextManager.UpdateContext("music_play", trackName, result);
-                    return ParseJsonResponse(result, $"🎵 Müzik çalıyor: {trackName}");
-                }
-                catch (Exception ex)
-                {
-                    contextManager.UpdateContext("music_play_error", args, ex.Message);
-                    return $"❌ Müzik çalma hatası: {ex.Message}";
-                }
-            },
-
-            ["ControlDeviceAsync"] = async (args) =>
-            {
-                try
-                {
-                    var jsonArgs = JsonSerializer.Deserialize<Dictionary<string, object>>(args);
-                    var deviceName = jsonArgs["deviceName"]?.ToString() ?? "";
-                    var action = jsonArgs["action"]?.ToString() ?? "";
-
-                    var result = await functions.ControlDeviceAsync(deviceName, action);
-
-                    contextManager.UpdateContext("device_control", $"{deviceName}:{action}", result);
-                    return ParseJsonResponse(result, $"📱 {deviceName} - {action} işlemi tamamlandı");
-                }
-                catch (Exception ex)
-                {
-                    contextManager.UpdateContext("device_control_error", args, ex.Message);
-                    return $"❌ Cihaz kontrol hatası: {ex.Message}";
-                }
-            },
-
-            ["DetectIntentAsync"] = async (args) =>
-            {
-                try
-                {
-                    var jsonArgs = JsonSerializer.Deserialize<Dictionary<string, object>>(args);
-                    var text = jsonArgs["text"]?.ToString() ?? "";
-                    var language = jsonArgs.ContainsKey("language") ? jsonArgs["language"]?.ToString() : "tr";
-
-                    var result = await functions.DetectIntentAsync(text, language);
-
-                    contextManager.UpdateContext("intent_detection", text, result);
-                    return ParseJsonResponse(result, $"🎯 Intent tespit edildi: {text}");
-                }
-                catch (Exception ex)
-                {
-                    contextManager.UpdateContext("intent_detection_error", args, ex.Message);
-                    return $"❌ Intent tespit hatası: {ex.Message}";
-                }
-            },
-
-            ["GetAvailableCommandsAsync"] = async (args) =>
-            {
-                try
-                {
-                    var jsonArgs = JsonSerializer.Deserialize<Dictionary<string, object>>(args);
-                    var language = jsonArgs.ContainsKey("language") ? jsonArgs["language"]?.ToString() : "tr";
-                    var category = jsonArgs.ContainsKey("category") ? jsonArgs["category"]?.ToString() : null;
-
-                    var result = await functions.GetAvailableCommandsAsync(language, category);
-
-                    contextManager.UpdateContext("get_commands", $"{language}:{category}", result);
-                    return ParseJsonResponse(result, "📋 Mevcut komutlar listelendi");
-                }
-                catch (Exception ex)
-                {
-                    contextManager.UpdateContext("get_commands_error", args, ex.Message);
-                    return $"❌ Komut listesi alma hatası: {ex.Message}";
-                }
-            }
-        };
-    }
-
-    /// <summary>
-    /// Parses JSON response and extracts meaningful message
-    /// </summary>
-    private static string ParseJsonResponse(string jsonResult, string defaultMessage = "İşlem tamamlandı")
-    {
-        try
-        {
-            var jsonDocument = JsonDocument.Parse(jsonResult);
-            var root = jsonDocument.RootElement;
-
-            // Check for success field
-            if (root.TryGetProperty("success", out var successElement))
-            {
-                var isSuccess = successElement.GetBoolean();
-
-                if (isSuccess)
-                {
-                    // Try to get message
-                    if (root.TryGetProperty("message", out var messageElement))
-                    {
-                        var message = messageElement.GetString();
-                        return !string.IsNullOrEmpty(message) ? message : defaultMessage;
-                    }
-
-                    // Try to get result field
-                    if (root.TryGetProperty("result", out var resultElement))
-                    {
-                        var result = resultElement.GetString();
-                        return !string.IsNullOrEmpty(result) ? result : defaultMessage;
-                    }
-
-                    return defaultMessage;
-                }
-                else
-                {
-                    // Handle error case
-                    if (root.TryGetProperty("error", out var errorElement))
-                    {
-                        return $"❌ {errorElement.GetString()}";
-                    }
-
-                    if (root.TryGetProperty("message", out var errorMessageElement))
-                    {
-                        return $"❌ {errorMessageElement.GetString()}";
-                    }
-
-                    return "❌ İşlem başarısız";
-                }
-            }
-
-            // If no success field, try to extract any meaningful data
-            if (root.TryGetProperty("message", out var directMessageElement))
-            {
-                return directMessageElement.GetString() ?? defaultMessage;
-            }
-
-            // If it's an array or complex object, return summary
-            if (root.ValueKind == JsonValueKind.Array)
-            {
-                return $"✅ {root.GetArrayLength()} öğe döndürüldü";
-            }
-
-            return defaultMessage;
-        }
-        catch (JsonException ex)
-        {
-            Console.WriteLine($"⚠️ JSON parse hatası: {ex.Message}");
-            return defaultMessage;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"⚠️ Response parse hatası: {ex.Message}");
-            return defaultMessage;
-        }
-    }
-
-    /// <summary>
-    /// Helper method to safely parse JSON result for internal use
-    /// </summary>
-    private static CommandResultWrapper? TryParseJsonResult(string jsonResult)
-    {
-        try
-        {
-            var jsonDocument = JsonDocument.Parse(jsonResult);
-            var root = jsonDocument.RootElement;
-
-            var success = false;
-            var message = "";
-            var error = "";
-
-            if (root.TryGetProperty("success", out var successElement))
-            {
-                success = successElement.GetBoolean();
-            }
-
-            if (root.TryGetProperty("message", out var messageElement))
-            {
-                message = messageElement.GetString() ?? "";
-            }
-
-            if (root.TryGetProperty("error", out var errorElement))
-            {
-                error = errorElement.GetString() ?? "";
-            }
-
-            return new CommandResultWrapper
-            {
-                Success = success,
-                Message = message,
-                Error = error
-            };
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
+    
 }
