@@ -27,8 +27,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ConversationContextManager>();
         services.AddSingleton<GroupChatAnalytics>();
 
-        // Agent factory service
-        services.AddScoped<IGroupChatFactory, GroupChatFactory>();
+        services.BuildServiceProvider();
 
         // Configuration options
         services.Configure<GroupChatOptions>(configuration.GetSection("GroupChat"));
@@ -53,44 +52,3 @@ public static class ServiceCollectionExtensions
     }
 }
 
-/// <summary>
-/// Factory interface for creating group chats
-/// </summary>
-public interface IGroupChatFactory
-{
-    Task<SmartGroupChat> CreateGroupChatAsync(
-        string apiKey,
-        string model,
-        string endpoint,
-        GroupChatOptions options = null);
-}
-
-/// <summary>
-/// Factory implementation for creating group chats with DI
-/// </summary>
-public class GroupChatFactory : IGroupChatFactory
-{
-    private readonly IServiceProvider _serviceProvider;
-    private readonly IConfiguration _configuration;
-
-    public GroupChatFactory(IServiceProvider serviceProvider, IConfiguration configuration)
-    {
-        _serviceProvider = serviceProvider;
-        _configuration = configuration;
-    }
-
-    public async Task<SmartGroupChat> CreateGroupChatAsync(
-        string apiKey,
-        string model,
-        string endpoint,
-        GroupChatOptions options = null)
-    {
-        return await GroupChatAgentFactory.CreateGroupChatAsync(
-            apiKey: apiKey,
-            model: model,
-            endpoint: endpoint,
-            serviceProvider: _serviceProvider,
-            configuration: _configuration,
-            options: options);
-    }
-}

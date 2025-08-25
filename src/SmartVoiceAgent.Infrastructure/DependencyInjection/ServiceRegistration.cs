@@ -41,7 +41,6 @@ public static class ServiceRegistration
 
         services.AddSingleton<ISystemControlServiceFactory, SystemControlServiceFactory>();
 
-
         services.AddScoped<IntentDetectorService>(); // Original pattern-based service
         services.AddScoped<AiIntentDetectionService>();
         services.AddScoped<SemanticIntentDetectionService>();
