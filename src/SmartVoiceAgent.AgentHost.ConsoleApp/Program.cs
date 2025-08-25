@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Hosting;
 using SmartVoiceAgent.Application.DependencyInjection;
 using SmartVoiceAgent.Infrastructure.DependencyInjection;
+using SmartVoiceAgent.Infrastructure.Extensions;
 
 
 var host = Host.CreateDefaultBuilder(args)
@@ -13,7 +14,9 @@ var host = Host.CreateDefaultBuilder(args)
     {
         var configuration = context.Configuration;
         services.AddApplicationServices();
+        services.AddSmartVoiceAgent(configuration);
         services.AddInfrastructureServices(configuration);
+
     })
     .Build();
 
