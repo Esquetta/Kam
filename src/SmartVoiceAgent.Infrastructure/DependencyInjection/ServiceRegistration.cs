@@ -39,15 +39,13 @@ public static class ServiceRegistration
         services.AddSingleton<OllamaSTTService>();
         services.AddSingleton<WhisperSTTService>();
         services.AddSingleton<HuggingFaceSTTService>();
-        services.AddScoped<Functions>();
-        services.Configure<McpOptions>(configuration.GetSection("MCP"));
+
         services.AddSingleton<ISystemControlServiceFactory, SystemControlServiceFactory>();
 
 
         services.AddScoped<IntentDetectorService>(); // Original pattern-based service
         services.AddScoped<AiIntentDetectionService>();
         services.AddScoped<SemanticIntentDetectionService>();
-        services.AddScoped<ConversationContextManager>();
 
         // Register context-aware service with proper dependencies
         services.AddScoped<ContextAwareIntentDetectionService>();
