@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Infrastructure.Factories;
 using SmartVoiceAgent.Infrastructure.Helpers;
-using SmartVoiceAgent.Infrastructure.Mcp;
 using SmartVoiceAgent.Infrastructure.Services;
 using SmartVoiceAgent.Infrastructure.Services.ApplicationScanner;
 using SmartVoiceAgent.Infrastructure.Services.Intent;
