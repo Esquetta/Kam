@@ -7,7 +7,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace SmartVoiceAgent.Infrastructure.Agent.Functions;
 
-public class WebSearchAgentFunctions : IAgentFunctions
+public partial class WebSearchAgentFunctions : IAgentFunctions
 {
     private readonly IMediator _mediator;
 
@@ -60,36 +60,6 @@ public class WebSearchAgentFunctions : IAgentFunctions
         };
     }
 
-    public FunctionContract SearchWebAsyncFunctionContract => new()
-    {
-        Name = nameof(SearchWebAsync),
-        Description = "Searches the web for the given query and opens results on user's default browser",
-        Parameters = (IEnumerable<FunctionParameterContract>)BinaryData.FromObjectAsJson(new
-        {
-            Type = "object",
-            Properties = new
-            {
-                query = new
-                {
-                    Type = "string",
-                    Description = "Search Query string"
-                },
-                lang = new
-                {
-                    Type = "string",
-                    Description = "Search Language",
-                    Default = "tr"
-                },
-                results = new
-                {
-                    Type = "integer",
-                    Description = "Results count",
-                    Default = 5
-                }
-            },
-            Required = new[] { "query" }
-        }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })
-    };
     /// <summary>
     /// Parses JSON response and extracts meaningful message
     /// </summary>

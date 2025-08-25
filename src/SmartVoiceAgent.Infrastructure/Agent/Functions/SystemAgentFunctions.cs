@@ -9,7 +9,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace SmartVoiceAgent.Infrastructure.Agent.Functions;
 
-public class SystemAgentFunctions : IAgentFunctions
+public partial class SystemAgentFunctions : IAgentFunctions
 {
     private readonly IMediator _mediator;
     private readonly ConversationContextManager contextManager;
