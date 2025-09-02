@@ -14,13 +14,11 @@ using OpenAI;
 using OpenAI.Chat;
 using SmartVoiceAgent.Application.Agent;
 using SmartVoiceAgent.Core.Enums;
-using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
 using SmartVoiceAgent.Infrastructure.Agent;
 using SmartVoiceAgent.Infrastructure.Agent.Functions;
 using SmartVoiceAgent.Infrastructure.Mcp;
 using System.ClientModel;
-using System.Text.Json;
 
 /// <summary>
 /// Advanced Group Chat System with Context Management, Memory, and Analytics
@@ -58,6 +56,8 @@ public static class GroupChatAgentFactory
         var webResearchAgent = await CreateWebSearchAgentAsync(apiKey, model, endpoint, webSearchFunctions);
         var analyticsAgent = await CreateAnalyticsAgentAsync(apiKey, model, endpoint, analytics);
         var userProxy = CreateEnhancedUserProxy();
+
+
 
         // Optional specialized 
         var agents = new List<IAgent> { coordinator, systemAgent, taskAgent, webResearchAgent, analyticsAgent, userProxy };
@@ -702,5 +702,5 @@ Sadece rapor et, proaktif öneriler sun!";
         var keywords = new[] { "ara", "search", "haber", "news", "hava", "weather", "google", "web" };
         return keywords.Any(k => message.Contains(k));
     }
-    
+
 }
