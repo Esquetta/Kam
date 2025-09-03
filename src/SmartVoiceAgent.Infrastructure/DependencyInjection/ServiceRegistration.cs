@@ -45,6 +45,7 @@ public static class ServiceRegistration
         services.AddScoped<AiIntentDetectionService>();
         services.AddScoped<SemanticIntentDetectionService>();
 
+
         // Register context-aware service with proper dependencies
         services.AddScoped<ContextAwareIntentDetectionService>();
 
