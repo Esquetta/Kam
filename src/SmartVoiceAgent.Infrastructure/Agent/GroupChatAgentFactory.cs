@@ -4,7 +4,6 @@ using AutoGen.OpenAI;
 using AutoGen.OpenAI.Extension;
 using AutoGen.SemanticKernel;
 using AutoGen.SemanticKernel.Extension;
-using Core.CrossCuttingConcerns.Logging.Serilog;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
@@ -61,7 +60,7 @@ public static class GroupChatAgentFactory
 
 
         // Optional specialized 
-        var agents = new List<IAgent> {systemAgent, taskAgent, webResearchAgent, analyticsAgent, userProxy };
+        var agents = new List<IAgent> { systemAgent, taskAgent, webResearchAgent, analyticsAgent, userProxy };
 
 
         // Create intelligent workflow with intent-based routing
@@ -93,17 +92,17 @@ public static class GroupChatAgentFactory
 **TEAM MEMBERS:**
 - **SystemAgent**: Handles applications, system controls, device management
 - **TaskAgent**: Manages tasks, reminders, scheduling, appointments  
-- **WebAgent**: Performs web searches, finds information, research
+- **WebSearchAgent**: Performs web searches, finds information, research
 
 **COLLABORATION RULES:**
 1. **Direct Routing**: For clear requests, immediately mention the right agent
    - ""@SystemAgent please open Spotify""
    - ""@TaskAgent add this to my tasks""
-   - ""@WebAgent search for weather information""
+   - ""@WebSearchAgent search for weather information""
 
 2. **Parallel Operations**: Handle multi-step requests by mentioning multiple agents
    - ""@SystemAgent open Spotify @TaskAgent remind me to check playlist later""
-   - ""@WebAgent search weather @TaskAgent add weather check to daily routine""
+   - ""@WebSearchAgent search weather @TaskAgent add weather check to daily routine""
 
 3. **Natural Flow**: Let agents communicate directly with each other when needed
    - Don't interrupt agent-to-agent communication
@@ -111,20 +110,23 @@ public static class GroupChatAgentFactory
 
 4. **User Questions**: Answer general questions yourself, route specific actions to agents
 
-**RESPONSE STYLE:**
-- Keep responses concise and action-focused
-- Use @mentions to route requests
-- Don't ask unnecessary clarifying questions for obvious requests
-- Let the team work naturally together
+**CRITICAL: When mentioning agents, use EXACT names:**
+- **SystemAgent** (not System Agent, systemagent, or SystemAgent_*)
+- **TaskAgent** (not Task Agent, taskagent, or TaskAgent_*)
+- **WebSearchAgent** (not Web Agent, WebAgent, or WebSearchAgent_*)
+
+**RESPONSE RULES:**
+1. Always use @AgentName format with exact spelling
+2. Agent names are case-sensitive and must match exactly
+3. Available agents: SystemAgent, TaskAgent, WebSearchAgent
 
 **EXAMPLES:**
-User: ""Open Spotify and set a reminder for 5pm""
-You: ""@SystemAgent open Spotify @TaskAgent set reminder for 5pm""
+User: 'Open Spotify'
+You: '@SystemAgent please open Spotify'
 
-User: ""What's the weather and remind me to bring umbrella""
-You: ""@WebAgent check current weather @TaskAgent create umbrella reminder""";
+User: 'Search weather'";
 
-        
+
         return new OpenAIChatAgent(
             chatClient: new ChatClient(model, new ApiKeyCredential(apiKey),
                 new OpenAIClientOptions { Endpoint = new Uri(endpoint) }),
@@ -167,7 +169,7 @@ You: ""@WebAgent check current weather @TaskAgent create umbrella reminder""";
 
 **COLLABORATION EXAMPLES:**
 - After opening music app: ""@TaskAgent user might want music-related reminders""
-- After system changes: ""@WebAgent user might need related information""";
+- After system changes: ""@WebSearchAgent user might need related information""";
 
 
 
@@ -258,12 +260,12 @@ You: ""@WebAgent check current weather @TaskAgent create umbrella reminder""";
 
 **COLLABORATION EXAMPLES:**
 - After @SystemAgent opens app: ""💡 Want a reminder to close this later?""
-- After @WebAgent finds info: ""💡 Should I add this to your tasks?""
+- After @WebSearchAgent finds info: ""💡 Should I add this to your tasks?""
 - Parallel operations: Handle multiple task requests in one go
 
 **SMART INTEGRATIONS:**
 - Link tasks to applications opened by @SystemAgent
-- Create reminders based on @WebAgent search results
+- Create reminders based on @WebSearchAgent search results
 - Suggest recurring tasks for routine activities";
 
 
@@ -285,7 +287,7 @@ You: ""@WebAgent check current weather @TaskAgent create umbrella reminder""";
     public static async Task<IAgent> CreateWebSearchAgentAsync(
         string apiKey, string model, string endpoint, WebSearchAgentFunctions functions)
     {
-        var systemMessage = @"You are the WebAgent, specializing in web research and information retrieval.
+        var systemMessage = @"You are the WebSearchAgent, specializing in web research and information retrieval.
 
 **YOUR EXPERTISE:**
 - Web searches for current information
@@ -305,7 +307,7 @@ You: ""@WebAgent check current weather @TaskAgent create umbrella reminder""";
 - Suggestions: ""💡 @TaskAgent could set reminders based on this info""
 
 **TRIGGERS:**
-- Direct @WebAgent mentions
+- Direct @WebSearchAgent mentions
 - Search keywords: search, find, weather, news, information, lookup
 - Question words: what, when, where, how, why
 - Current events and real-time data requests
@@ -375,7 +377,7 @@ Sadece rapor et, proaktif öneriler sun!";
 • **Coordinator** 🎯 - Routes requests and facilitates collaboration
 • **SystemAgent** ⚙️ - Opens apps, controls system, manages devices  
 • **TaskAgent** 📝 - Handles tasks, reminders, scheduling
-• **WebAgent** 🔍 - Searches web, finds information, research
+• **WebSearchAgent** 🔍 - Searches web, finds information, research
 
 **How It Works:**
 ✨ **Natural Conversation**: Just speak naturally - ""Open Spotify and remind me to check new releases""
@@ -385,9 +387,9 @@ Sadece rapor et, proaktif öneriler sun!";
 
 **Example Commands:**
 • ""Open Spotify"" → SystemAgent handles it
-• ""Search weather and set reminder"" → WebAgent + TaskAgent collaborate  
+• ""Search weather and set reminder"" → WebSearchAgent + TaskAgent collaborate  
 • ""Add task to call John tomorrow"" → TaskAgent manages it
-• ""What's the news today?"" → WebAgent researches it
+• ""What's the news today?"" → WebSearchAgent researches it
 
 **Ready to assist! What would you like to do?** 🚀";
 
