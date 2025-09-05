@@ -4,6 +4,7 @@ using AutoGen.OpenAI;
 using AutoGen.OpenAI.Extension;
 using AutoGen.SemanticKernel;
 using AutoGen.SemanticKernel.Extension;
+using Core.CrossCuttingConcerns.Logging.Serilog;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
@@ -60,8 +61,7 @@ public static class GroupChatAgentFactory
 
 
         // Optional specialized 
-        var agents = new List<IAgent> { coordinator, systemAgent, taskAgent, webResearchAgent, analyticsAgent, userProxy };
-
+        var agents = new List<IAgent> {systemAgent, taskAgent, webResearchAgent, analyticsAgent, userProxy };
 
 
         // Create intelligent workflow with intent-based routing
@@ -88,7 +88,7 @@ public static class GroupChatAgentFactory
     private static async Task<IAgent> CreateAdvancedCoordinatorAsync(
         string apiKey, string model, string endpoint, ConversationContextManager contextManager)
     {
-        var systemMessage = @"You are the Smart Coordinator in a collaborative AI team. Your role is to facilitate natural collaboration between specialized agents.
+        var systemMessage = @"You are the Coordinator in a collaborative AI team. Your role is to facilitate natural collaboration between specialized agents.
 
 **TEAM MEMBERS:**
 - **SystemAgent**: Handles applications, system controls, device management
@@ -124,7 +124,7 @@ You: ""@SystemAgent open Spotify @TaskAgent set reminder for 5pm""
 User: ""What's the weather and remind me to bring umbrella""
 You: ""@WebAgent check current weather @TaskAgent create umbrella reminder""";
 
-
+        
         return new OpenAIChatAgent(
             chatClient: new ChatClient(model, new ApiKeyCredential(apiKey),
                 new OpenAIClientOptions { Endpoint = new Uri(endpoint) }),
