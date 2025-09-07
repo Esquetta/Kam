@@ -60,12 +60,13 @@ public static class GroupChatAgentFactory
 
 
         // Optional specialized 
-        var agents = new List<IAgent> { systemAgent, taskAgent, webResearchAgent, analyticsAgent, userProxy };
+        var agents = new List<IAgent> {systemAgent, taskAgent, webResearchAgent, analyticsAgent };
 
 
         // Create intelligent workflow with intent-based routing
         var workflow = CreateIntelligentWorkflow(
            userProxy, coordinator, systemAgent, taskAgent, webResearchAgent, analyticsAgent, options, intentDetectionService); // Intent service geçiliyor
+
 
         var groupChat = new SmartGroupChat(
             members: agents,
@@ -123,8 +124,7 @@ public static class GroupChatAgentFactory
 **EXAMPLES:**
 User: 'Open Spotify'
 You: '@SystemAgent please open Spotify'
-
-User: 'Search weather'";
+";
 
 
         return new OpenAIChatAgent(
@@ -133,7 +133,19 @@ User: 'Search weather'";
             name: "Coordinator",
             systemMessage: systemMessage)
             .RegisterMessageConnector()
-            .RegisterPrintMessage();
+            .RegisterPrintMessage()
+            .RegisterMiddleware(async (messages, options, agent, ct) => {
+                var reply = await agent.GenerateReplyAsync(messages, options, ct);
+                var content = reply.GetContent();
+                if (content is string text)
+                {
+                    // the next speaker is among the group, return the reply
+                    return reply;
+                }
+
+                // otherwise, always fall back to user as next speaker
+                return new TextMessage(AutoGen.Core.Role.Assistant, "from User", from: agent.Name);
+            }); ;
     }
 
     /// <summary>
