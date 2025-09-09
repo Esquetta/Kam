@@ -5,7 +5,6 @@ using SmartVoiceAgent.Core.Commands;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
 using System.Text.Json;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace SmartVoiceAgent.Infrastructure.Agent.Functions;
 
