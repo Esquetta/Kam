@@ -154,6 +154,8 @@ Samimi ve yardımcı ol, teknik detay verme.";
                     functions.OpenApplicationAsyncFunctionContract,
                     functions.CloseApplicationAsyncFunctionContract,
                     functions.PlayMusicAsyncFunctionContract,
+                    functions.ControlDeviceAsyncFunctionContract,
+                    functions.IsApplicationRunningAsyncFunctionContract,
                     functions.ControlDeviceAsyncFunctionContract
                 ],
                 functionMap: functionMap))
