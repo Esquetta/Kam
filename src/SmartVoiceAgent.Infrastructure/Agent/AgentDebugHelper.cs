@@ -110,8 +110,8 @@ public static class AgentDebugHelper
         Console.WriteLine("🔄 BASIC FLOW TEST");
         Console.WriteLine("==================");
 
-        var testMessage = "Hello world";
-        var userMessage = new TextMessage(Role.User, testMessage, "TestUser");
+        var testMessage = "Spotify'ı açarmısın.";
+        var userMessage = new TextMessage(Role.User, testMessage);
 
         Console.WriteLine($"Sending: '{testMessage}'");
 

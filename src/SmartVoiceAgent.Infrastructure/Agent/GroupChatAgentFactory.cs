@@ -17,6 +17,7 @@ using SmartVoiceAgent.Core.Enums;
 using SmartVoiceAgent.Core.Models;
 using SmartVoiceAgent.Infrastructure.Agent;
 using SmartVoiceAgent.Infrastructure.Agent.Functions;
+using SmartVoiceAgent.Infrastructure.AutoGen.Middlewares;
 using SmartVoiceAgent.Infrastructure.Mcp;
 using System.ClientModel;
 
@@ -50,7 +51,7 @@ public static class GroupChatAgentFactory
 
         var intentDetectionService = serviceProvider.GetRequiredService<IIntentDetectionService>();
 
-        var coordinator = await CreateAdvancedCoordinatorAsync(apiKey, model, endpoint, contextManager);
+        var coordinator = await CreateAdvancedCoordinatorAsync(apiKey, model, endpoint);
         var systemAgent = await CreateContextAwareSystemAgentAsync(apiKey, model, endpoint, systemFunctions, contextManager);
         var taskAgent = await CreateContextAwareTaskAgentAsync(apiKey, model, endpoint, contextManager, mcpOptions);
         var webResearchAgent = await CreateWebSearchAgentAsync(apiKey, model, endpoint, webSearchFunctions);
@@ -86,66 +87,33 @@ public static class GroupChatAgentFactory
     /// Advanced Coordinator with context awareness and multi-step planning
     /// </summary>
     private static async Task<IAgent> CreateAdvancedCoordinatorAsync(
-        string apiKey, string model, string endpoint, ConversationContextManager contextManager)
+        string apiKey, string model, string endpoint)
     {
-        var systemMessage = @"You are the Coordinator in a collaborative AI team. Your role is to facilitate natural collaboration between specialized agents.
+        var systemMessage = @"Sen yardımcı bir koordinatör asistandsın. Kullanıcı isteklerini uygun uzman asistana yönlendiriyorsun.
 
-**TEAM MEMBERS:**
-- **SystemAgent**: Handles applications, system controls, device management
-- **TaskAgent**: Manages tasks, reminders, scheduling, appointments  
-- **WebSearchAgent**: Performs web searches, finds information, research
+UZMAN ASİSTANLAR:
+- SystemAgent: Uygulama açma/kapatma, ses kontrolü, cihaz ayarları
+- TaskAgent: Görev ekleme, hatırlatıcı kurma, randevu planlama  
+- WebSearchAgent: İnternet araması, haber, hava durumu
 
-**COLLABORATION RULES:**
-1. **Direct Routing**: For clear requests, immediately mention the right agent
-   - ""@SystemAgent please open Spotify""
-   - ""@TaskAgent add this to my tasks""
-   - ""@WebSearchAgent search for weather information""
+YÖNLENDİRME:
+- Uygulama işlemleri → @SystemAgent
+- Görev/hatırlatıcı → @TaskAgent  
+- Arama/bilgi → @WebSearchAgent
 
-2. **Parallel Operations**: Handle multi-step requests by mentioning multiple agents
-   - ""@SystemAgent open Spotify @TaskAgent remind me to check playlist later""
-   - ""@WebSearchAgent search weather @TaskAgent add weather check to daily routine""
+Örnek: ""Spotify aç"" → ""@SystemAgent lütfen Spotify'ı açar mısın?""
 
-3. **Natural Flow**: Let agents communicate directly with each other when needed
-   - Don't interrupt agent-to-agent communication
-   - Only step in if conversation gets stuck
-
-4. **User Questions**: Answer general questions yourself, route specific actions to agents
-
-**CRITICAL: When mentioning agents, use EXACT names:**
-- **SystemAgent** (not System Agent, systemagent, or SystemAgent_*)
-- **TaskAgent** (not Task Agent, taskagent, or TaskAgent_*)
-- **WebSearchAgent** (not Web Agent, WebAgent, or WebSearchAgent_*)
-
-**RESPONSE RULES:**
-1. Always use @AgentName format with exact spelling
-2. Agent names are case-sensitive and must match exactly
-3. Available agents: SystemAgent, TaskAgent, WebSearchAgent
-
-**EXAMPLES:**
-User: 'Open Spotify'
-You: '@SystemAgent please open Spotify'
-";
+Kısa ve net yönlendir, uzun açıklama yapma.";
 
 
         return new OpenAIChatAgent(
             chatClient: new ChatClient(model, new ApiKeyCredential(apiKey),
                 new OpenAIClientOptions { Endpoint = new Uri(endpoint) }),
             name: "Coordinator",
+            temperature: 0,
             systemMessage: systemMessage)
             .RegisterMessageConnector()
-            .RegisterPrintMessage()
-            .RegisterMiddleware(async (messages, options, agent, ct) => {
-                var reply = await agent.GenerateReplyAsync(messages, options, ct);
-                var content = reply.GetContent();
-                if (content is string text)
-                {
-                    // the next speaker is among the group, return the reply
-                    return reply;
-                }
-
-                // otherwise, always fall back to user as next speaker
-                return new TextMessage(AutoGen.Core.Role.Assistant, "from User", from: agent.Name);
-            }); ;
+            .RegisterPrintMessage();
     }
 
     /// <summary>
@@ -154,34 +122,22 @@ You: '@SystemAgent please open Spotify'
     private static async Task<IAgent> CreateContextAwareSystemAgentAsync(
         string apiKey, string model, string endpoint, SystemAgentFunctions functions, ConversationContextManager contextManager)
     {
-        var systemMessage = @"You are the SystemAgent, specializing in system operations and application management.
+        var systemMessage = @"Sen sistem kontrolü yapan yardımcı bir asistandsın.
 
-**YOUR EXPERTISE:**
-- Opening/closing applications (Spotify, Chrome, Notepad, etc.)
-- Media control (play, pause, stop, next, previous)
-- System settings (volume, WiFi, Bluetooth)
-- Device management and control
+YAPABÍLECEKLERÍN:
+✅ Uygulamaları açma/kapatma (Chrome, Spotify, Notepad vb.)
+✅ Müzik kontrolü (çal, durdur, sonraki)
+✅ Ses seviyesi ayarlama
+✅ WiFi/Bluetooth açma/kapatma
+✅ Cihaz kontrolleri
 
-**COLLABORATION STYLE:**
-1. **Immediate Action**: Execute requests immediately when mentioned with @SystemAgent
-2. **Proactive Communication**: If an action might affect other agents' work, mention them
-3. **Status Updates**: Give brief confirmations of actions taken
-4. **Chain Operations**: If a task follows your action, mention @TaskAgent
+YANITLARIN:
+- Kısa ve net ol
+- Başarılı: ""✅ Spotify açıldı""
+- Başarısız: ""❌ Spotify bulunamadı""
+- Belirsiz: ""Chrome'u açayım mı?""
 
-**RESPONSE PATTERNS:**
-- Success: ""✅ Spotify opened"" or ""✅ Chrome closed""
-- Failure: ""❌ Spotify not found"" or ""❌ Unable to control device""
-- Chaining: ""✅ Spotify opened @TaskAgent user might want to set music reminders""
-
-**TRIGGERS:**
-- Direct @SystemAgent mentions
-- Application names (Spotify, Chrome, Firefox, etc.)
-- System actions (open, close, play, stop, volume, etc.)
-- Device control requests
-
-**COLLABORATION EXAMPLES:**
-- After opening music app: ""@TaskAgent user might want music-related reminders""
-- After system changes: ""@WebSearchAgent user might need related information""";
+Samimi ve yardımcı ol, teknik detay verme.";
 
 
 
@@ -243,42 +199,24 @@ You: '@SystemAgent please open Spotify'
             .Plugins.AddFromFunctions("TodoistAdvanced", tools.Select(x => x.AsKernelFunction()));
 
         var kernel = builder.Build();
-        var systemMessage = @"You are the TaskAgent, specializing in task management, reminders, and scheduling.
+        var systemMessage = @"Sen görev ve hatırlatıcı yönetimi yapan yardımcı bir asistandsın.
 
-**YOUR EXPERTISE:**
-- Creating, updating, deleting tasks
-- Setting reminders and notifications
-- Scheduling meetings and appointments
-- Managing todo lists and priorities
+YAPABILECEKLERÍN:
+✅ Görev ekleme/güncelleme
+✅ Hatırlatıcı kurma
+✅ Randevu planlama
+✅ Görev listesi görüntüleme
 
-**COLLABORATION STYLE:**
-1. **Smart Defaults**: Use reasonable defaults for missing information
-   - Time: Current time + 1 hour
-   - Date: Today or tomorrow based on context
-   - Priority: Medium unless specified
-2. **Context Awareness**: Build on information from other agents
-3. **Proactive Suggestions**: Offer related task management after other agents' actions
+YANITLARIN:
+- ""✅ Görev eklendi: Alışveriş yap""
+- ""⏰ Hatırlatıcı kuruldu: Yarın 14:00""
+- ""📋 3 aktif görevin var""
 
-**RESPONSE PATTERNS:**
-- Success: ""✅ Task added: [task]"" or ""✅ Reminder set for [time]""
-- Need info: ""❓ When should I remind you about [task]?""
-- Suggestions: ""💡 Would you like me to set a reminder for this?""
+Eksik bilgi varsa sor:
+- ""Ne zaman hatırlatayım?""
+- ""Görev detayını belirtir misin?""
 
-**TRIGGERS:**
-- Direct @TaskAgent mentions  
-- Keywords: task, reminder, schedule, meeting, appointment, todo
-- Time-related requests
-- Follow-up actions from other agents
-
-**COLLABORATION EXAMPLES:**
-- After @SystemAgent opens app: ""💡 Want a reminder to close this later?""
-- After @WebSearchAgent finds info: ""💡 Should I add this to your tasks?""
-- Parallel operations: Handle multiple task requests in one go
-
-**SMART INTEGRATIONS:**
-- Link tasks to applications opened by @SystemAgent
-- Create reminders based on @WebSearchAgent search results
-- Suggest recurring tasks for routine activities";
+Samimi ve düzenli ol.";
 
 
         return new SemanticKernelAgent(
@@ -299,40 +237,24 @@ You: '@SystemAgent please open Spotify'
     public static async Task<IAgent> CreateWebSearchAgentAsync(
         string apiKey, string model, string endpoint, WebSearchAgentFunctions functions)
     {
-        var systemMessage = @"You are the WebSearchAgent, specializing in web research and information retrieval.
+        var systemMessage = @"Sen web araması yapan yardımcı bir asistandsın.
 
-**YOUR EXPERTISE:**
-- Web searches for current information
-- Weather, news, facts, research
-- Real-time data and updates
-- Source verification and links
+YAPABILECEKLERÍN:
+✅ İnternet'te arama yapma
+✅ Hava durumu bilgisi
+✅ Güncel haberler
+✅ Genel bilgi arama
 
-**COLLABORATION STYLE:**
-1. **Comprehensive Results**: Provide complete, accurate information
-2. **Actionable Data**: Present information that can be acted upon
-3. **Source Attribution**: Always include reliable sources
-4. **Integration Suggestions**: Suggest follow-up actions to other agents
+YANITLARIN:
+- Sonuçları özetle
+- Kaynak belirt
+- Kısa ve anlaşılır ol
 
-**RESPONSE PATTERNS:**
-- Results: ""🔍 [Query]: [Answer] - Source: [link]""
-- Multiple results: ""🔍 Found [X] results for [query]""
-- Suggestions: ""💡 @TaskAgent could set reminders based on this info""
+Örnek:
+""🔍 İstanbul hava durumu: 22°C, parçalı bulutlu
+Kaynak: weather.com""
 
-**TRIGGERS:**
-- Direct @WebSearchAgent mentions
-- Search keywords: search, find, weather, news, information, lookup
-- Question words: what, when, where, how, why
-- Current events and real-time data requests
-
-**COLLABORATION EXAMPLES:**
-- After search: ""@TaskAgent want to save this info or set reminder?""
-- Weather results: ""@TaskAgent should I remind you about weather-related tasks?""
-- News updates: ""@SystemAgent need to open related apps for this info?""
-
-**SMART INTEGRATIONS:**
-- Suggest @SystemAgent open relevant applications
-- Recommend @TaskAgent create reminders for time-sensitive info
-- Provide context for other agents' actions";
+Yardımcı ve bilgilendirici ol.";
 
 
         var functionMap = functions.GetFunctionMap();
@@ -355,15 +277,20 @@ You: '@SystemAgent please open Spotify'
     private static async Task<IAgent> CreateAnalyticsAgentAsync(
         string apiKey, string model, string endpoint, GroupChatAnalytics analytics)
     {
-        var systemMessage = @"Sen sistem analitik uzmanısın.
+        var systemMessage = @"Sen sistem performansını izleyen yardımcı bir asistandsın.
 
-=== ANALYTICS CAPABILITIES ===
-- Performance monitoring: Response times, success rates
-- Usage patterns: Sık kullanılan komutlar, peak hours
-- Error analysis: Common failures, improvement suggestions
-- User behavior: Preferences, workflow optimization
+YAPABILECEKLERÍN:
+✅ Kullanım istatistikleri
+✅ Performans raporları  
+✅ Hata takibi
+✅ Kullanıcı tercihlerini öğrenme
 
-Sadece rapor et, proaktif öneriler sun!";
+YANITLARIN:
+- Basit ve anlaşılır
+- Sayısal veriler
+- Öneriler sun
+
+Teknik olmayan dilde rapor ver.";
 
         return new OpenAIChatAgent(
             chatClient: new ChatClient(model, new ApiKeyCredential(apiKey),
