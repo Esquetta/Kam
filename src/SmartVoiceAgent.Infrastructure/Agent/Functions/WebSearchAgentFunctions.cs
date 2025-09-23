@@ -3,7 +3,6 @@ using MediatR;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Interfaces;
 using System.Text.Json;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace SmartVoiceAgent.Infrastructure.Agent.Functions;
 
@@ -15,7 +14,6 @@ public partial class WebSearchAgentFunctions : IAgentFunctions
     {
         _mediator = mediator;
     }
-
 
     [Function]
     public async Task<string> SearchWebAsync(string query, string lang = "tr", int results = 5)
@@ -44,10 +42,36 @@ public partial class WebSearchAgentFunctions : IAgentFunctions
             {
                 try
                 {
-                    var jsonArgs = JsonSerializer.Deserialize<Dictionary<string, object>>(args);
-                    var query = jsonArgs["query"]?.ToString() ?? "";
-                    var lang = jsonArgs.ContainsKey("lang") ? jsonArgs["lang"]?.ToString() : "tr";
-                    var results = jsonArgs.ContainsKey("results") ? Convert.ToInt32(jsonArgs["results"]) : 5;
+                    var jsonArgs = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(args);
+
+                    // Query değerini güvenli şekilde al
+                    var query = jsonArgs.ContainsKey("query") && jsonArgs["query"].ValueKind == JsonValueKind.String
+                        ? jsonArgs["query"].GetString() ?? ""
+                        : "";
+
+                    // Language değerini güvenli şekilde al
+                    var lang = "tr";
+                    if (jsonArgs.ContainsKey("lang") && jsonArgs["lang"].ValueKind == JsonValueKind.String)
+                    {
+                        lang = jsonArgs["lang"].GetString() ?? "tr";
+                    }
+
+                    // Results değerini güvenli şekilde al
+                    var results = 5;
+                    if (jsonArgs.ContainsKey("results"))
+                    {
+                        if (jsonArgs["results"].ValueKind == JsonValueKind.Number)
+                        {
+                            results = jsonArgs["results"].GetInt32();
+                        }
+                        else if (jsonArgs["results"].ValueKind == JsonValueKind.String)
+                        {
+                            if (int.TryParse(jsonArgs["results"].GetString(), out var parsedResults))
+                            {
+                                results = parsedResults;
+                            }
+                        }
+                    }
 
                     var result = await SearchWebAsync(query, lang, results);
                     return ParseJsonResponse(result, $"🔍 '{query}' araması tamamlandı");
@@ -135,5 +159,4 @@ public partial class WebSearchAgentFunctions : IAgentFunctions
             return defaultMessage;
         }
     }
-
 }
