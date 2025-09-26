@@ -39,6 +39,8 @@ public static class ServiceRegistration
         services.AddSingleton<WhisperSTTService>();
         services.AddSingleton<HuggingFaceSTTService>();
 
+        services.AddSingleton<IOcrService, OcrService>();
+
         services.AddSingleton<ISystemControlServiceFactory, SystemControlServiceFactory>();
 
         services.AddScoped<IntentDetectorService>(); // Original pattern-based service
@@ -50,7 +52,7 @@ public static class ServiceRegistration
         services.AddScoped<ContextAwareIntentDetectionService>();
 
         // Register the hybrid service as the main implementation
-        services.AddScoped<IIntentDetectionService,HybridIntentDetectionService>();
+        services.AddScoped<IIntentDetectionService, HybridIntentDetectionService>();
 
         return services;
     }
