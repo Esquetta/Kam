@@ -9,9 +9,9 @@ public class OcrService : IOcrService
     private readonly string _tessDataPath;
     private readonly LoggerServiceBase _logger;
 
-    public OcrService(string tessDataPath, LoggerServiceBase loggerServiceBase)
+    public OcrService(LoggerServiceBase loggerServiceBase)
     {
-        _tessDataPath = tessDataPath;
+        _tessDataPath = @"./tessdata";
         _logger = loggerServiceBase;
     }
 
