@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using SmartVoiceAgent.Core.Dtos;
+using System.Drawing;
 
 namespace SmartVoiceAgent.Core.Interfaces;
 /// <summary>
@@ -7,8 +8,12 @@ namespace SmartVoiceAgent.Core.Interfaces;
 public interface IScreenCaptureService
 {
     /// <summary>
-    /// Captures the entire screen as a bitmap.
+    /// Captures all screens and returns a collection of frames.
     /// </summary>
-    /// <returns>Bitmap image of the current screen.</returns>
-    Task<Bitmap> CaptureScreenAsync();
+    Task<IReadOnlyList<ScreenCaptureFrame>> CaptureAllAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Captures a specific screen by index.
+    /// </summary>
+    Task<ScreenCaptureFrame> CaptureScreenAsync(int screenIndex, CancellationToken cancellationToken = default);
 }
