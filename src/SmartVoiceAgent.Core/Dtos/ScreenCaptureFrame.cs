@@ -5,4 +5,6 @@ public record ScreenCaptureFrame
     public DateTimeOffset Timestamp { get; init; }
     public int Width { get; init; }
     public int Height { get; init; }
+    public int ScreenIndex { get; init; } 
+    public string DeviceName { get; init; }
 }
