@@ -26,6 +26,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tessdata", "tessdata", "{FC111D78-FDA1-4161-B5FD-5F8852F990B4}"
+	ProjectSection(SolutionItems) = preProject
+		src\tessdata\eng.traineddata = src\tessdata\eng.traineddata
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -72,6 +77,7 @@ Global
 		{C45089FA-47B0-4283-A3FE-6C923DAD4B73} = {728C4854-55AD-4F58-991C-B5BCB2CB8198}
 		{14329E3B-7368-4249-8C21-E4E6CEA5BD9B} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{CB629E8D-71F2-4AA9-9959-6C5F05221A1A} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{FC111D78-FDA1-4161-B5FD-5F8852F990B4} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {39FCBD97-557D-4E1C-A908-83AE30DA4C4D}
