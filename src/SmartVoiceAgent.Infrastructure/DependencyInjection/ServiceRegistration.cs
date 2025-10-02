@@ -48,6 +48,11 @@ public static class ServiceRegistration
         services.AddScoped<SemanticIntentDetectionService>();
 
 
+        services.AddScoped<IScreenCaptureService, ScreenCaptureService>();
+        services.AddScoped<IOcrService, OcrService>();
+        services.AddScoped<IActiveWindowService, ActiveWindowService>();
+
+
         // Register context-aware service with proper dependencies
         services.AddScoped<ContextAwareIntentDetectionService>();
 
