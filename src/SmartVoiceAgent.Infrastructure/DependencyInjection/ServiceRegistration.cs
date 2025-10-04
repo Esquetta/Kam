@@ -51,6 +51,7 @@ public static class ServiceRegistration
         services.AddScoped<IScreenCaptureService, ScreenCaptureService>();
         services.AddScoped<IOcrService, OcrService>();
         services.AddScoped<IActiveWindowService, ActiveWindowService>();
+        services.AddScoped<IScreenContextService, ScreenContextService>();
 
 
         // Register context-aware service with proper dependencies
