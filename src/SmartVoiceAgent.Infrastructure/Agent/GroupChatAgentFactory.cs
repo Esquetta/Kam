@@ -170,8 +170,8 @@ Samimi ve yardımcı ol, teknik detay verme.";
     {
 
 
-        IMcpClient mcpClient = await McpClientFactory.CreateAsync(
-        clientTransport: new SseClientTransport(new()
+        IMcpClient mcpClient = await McpClient.CreateAsync(
+        clientTransport: new HttpClientTransport(new()
         {
             Endpoint = new Uri(mcpOptions.TodoistServerLink),
             Name = "todoist.mcpverse.dev",
