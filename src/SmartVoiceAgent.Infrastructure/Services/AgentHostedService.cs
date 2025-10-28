@@ -1,11 +1,10 @@
-﻿using AutoGen.Core;
-using MediatR;
+﻿using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Interfaces;
-using SmartVoiceAgent.Infrastructure.Agent;
 using SmartVoiceAgent.Infrastructure.Helpers;
+using System.Drawing;
 
 namespace SmartVoiceAgent.Infrastructure.Services
 {
@@ -29,12 +28,11 @@ namespace SmartVoiceAgent.Infrastructure.Services
 
         private readonly IWebResearchService webResearchService;
 
-        private SmartGroupChat AgentGroup;
         private readonly Functions functions;
         private readonly IServiceProvider serviceProvider;
+        private readonly IOcrService ocrService;
 
-
-        public AgentHostedService(IIntentDetectionService intentDetector, ILogger<AgentHostedService> logger, IMediator mediator, AudioProcessingService audioProcessingService, ILanguageDetectionService languageDetectionService, IApplicationScannerServiceFactory applicationScannerServiceFactory, IVoiceRecognitionFactory voiceRecognitionFactory, IConfiguration configuration, Functions functions, IWebResearchService webResearchService, IServiceProvider serviceProvider)
+        public AgentHostedService(IIntentDetectionService intentDetector, ILogger<AgentHostedService> logger, IMediator mediator, AudioProcessingService audioProcessingService, ILanguageDetectionService languageDetectionService, IApplicationScannerServiceFactory applicationScannerServiceFactory, IVoiceRecognitionFactory voiceRecognitionFactory, IConfiguration configuration, Functions functions, IWebResearchService webResearchService, IServiceProvider serviceProvider, IOcrService ocrService)
         {
             _intentDetector = intentDetector;
             _logger = logger;
@@ -48,19 +46,30 @@ namespace SmartVoiceAgent.Infrastructure.Services
             this.configuration = configuration;
             this.functions = functions;
             this.webResearchService = webResearchService;
-
+            this.serviceProvider = serviceProvider;
+            this.ocrService = ocrService;
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            this.AgentGroup = await GroupChatAgentFactory.CreateGroupChatAsync(apiKey: configuration.GetSection("AiAgent:Apikey").Get<string>(), model: configuration.GetSection("AiAgent:Model").Get<string>(), serviceProvider: serviceProvider, endpoint: configuration.GetSection("AiAgent:EndPoint").Get<string>(),configuration);
+            var AgentGroup = await GroupChatAgentFactory.CreateGroupChatAsync(apiKey: configuration.GetSection("AiAgent:Apikey").Get<string>(), model: configuration.GetSection("AiAgent:Model").Get<string>(), serviceProvider: serviceProvider, endpoint: configuration.GetSection("AiAgent:EndPoint").Get<string>(), configuration);
 
             // Test 1: Intent Detection
             //var intent = await _intentDetector.DetectIntentAsync("Yarına Ders adında bir görev oluşturmanı istiyorum. Saat 9'a.", "tr", stoppingToken);
 
             // Test 2: Agent Group Communication
-            var testMessage = "Yarın saat 07:00'a   'İş başlangıç' adında bir görev oluştur.";
+            //var testMessage = "Malazgirt savaşını araştır";
+            //var testMessage = "Spotfiy'ı aç";
+            //var testMessage = "Malazgirt savaşı hakkında bana web üzerinden araştırma yaparmısın.";
+            //await AgentGroup.SendWithAnalyticsAsync(testMessage);
 
-            var result = AgentGroup.SendWithAnalyticsAsync(testMessage, "User", 10, stoppingToken);
+            var bitmap = (Bitmap)Image.FromFile("screen.png");
+            var results = await ocrService.ExtractTextAsync(bitmap);
+
+            foreach (var line in results)
+            {
+                Console.WriteLine($"Line {line.LineNumber}: {line.Text} (Conf: {line.Confidence:P})");
+            }
+            //await AgentDebugHelper.TestBasicGroupChatFlow(AgentGroup);
 
             //    // Voice captured event
             //    _voiceRecognitionService.OnVoiceCaptured += async (sender, audioData) =>
