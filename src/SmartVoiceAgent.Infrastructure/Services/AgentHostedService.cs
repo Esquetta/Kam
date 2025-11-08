@@ -53,22 +53,22 @@ namespace SmartVoiceAgent.Infrastructure.Services
         {
             var AgentGroup = await GroupChatAgentFactory.CreateGroupChatAsync(apiKey: configuration.GetSection("AiAgent:Apikey").Get<string>(), model: configuration.GetSection("AiAgent:Model").Get<string>(), serviceProvider: serviceProvider, endpoint: configuration.GetSection("AiAgent:EndPoint").Get<string>(), configuration);
 
-            // Test 1: Intent Detection
+            //Test 1: Intent Detection
             //var intent = await _intentDetector.DetectIntentAsync("Yarına Ders adında bir görev oluşturmanı istiyorum. Saat 9'a.", "tr", stoppingToken);
 
-            // Test 2: Agent Group Communication
+            //Test 2: Agent Group Communication
             //var testMessage = "Malazgirt savaşını araştır";
-            //var testMessage = "Spotfiy'ı aç";
+            var testMessage = "'Toplantı' adında gir görev oluştur'";
             //var testMessage = "Malazgirt savaşı hakkında bana web üzerinden araştırma yaparmısın.";
-            //await AgentGroup.SendWithAnalyticsAsync(testMessage);
+            await AgentGroup.SendWithAnalyticsAsync(testMessage);
 
-            var bitmap = (Bitmap)Image.FromFile("screen.png");
-            var results = await ocrService.ExtractTextAsync(bitmap);
+            //var bitmap = (Bitmap)Image.FromFile("screen.png");
+            //var results = await ocrService.ExtractTextAsync(bitmap);
 
-            foreach (var line in results)
-            {
-                Console.WriteLine($"Line {line.LineNumber}: {line.Text} (Conf: {line.Confidence:P})");
-            }
+            //foreach (var line in results)
+            //{
+            //    Console.WriteLine($"Line {line.LineNumber}: {line.Text} (Conf: {line.Confidence:P})");
+            //}
             //await AgentDebugHelper.TestBasicGroupChatFlow(AgentGroup);
 
             //    // Voice captured event

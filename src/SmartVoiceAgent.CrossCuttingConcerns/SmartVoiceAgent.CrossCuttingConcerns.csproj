@@ -18,7 +18,7 @@
     <PackageReference Include="Serilog.Sinks.Elasticsearch" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Graylog" Version="3.1.1" />
     <PackageReference Include="Serilog.Sinks.MongoDB" Version="7.2.0" />
-    <PackageReference Include="Serilog.Sinks.MSSqlServer" Version="9.0.1" />
+    <PackageReference Include="Serilog.Sinks.MSSqlServer" Version="9.0.2" />
     <PackageReference Include="Serilog.Sinks.PostgreSQL" Version="2.3.0" />
     <PackageReference Include="Serilog.Sinks.RabbitMQ" Version="8.0.0" />
   </ItemGroup>
