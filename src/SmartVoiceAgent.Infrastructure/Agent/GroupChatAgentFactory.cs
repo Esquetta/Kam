@@ -17,7 +17,6 @@ using SmartVoiceAgent.Core.Enums;
 using SmartVoiceAgent.Core.Models;
 using SmartVoiceAgent.Infrastructure.Agent;
 using SmartVoiceAgent.Infrastructure.Agent.Functions;
-using SmartVoiceAgent.Infrastructure.AutoGen.Middlewares;
 using SmartVoiceAgent.Infrastructure.Mcp;
 using System.ClientModel;
 
@@ -101,7 +100,7 @@ YÖNLENDİRME:
 - Görev/hatırlatıcı → @TaskAgent  
 - Arama/bilgi → @WebSearchAgent
 
-Örnek: ""Spotify aç"" → ""@SystemAgent lütfen Spotify'ı açar mısın?""
+Örnek: ""Spotify aç"" → ""@SystemAgent Spotify'ı açar mısın?""
 
 Kısa ve net yönlendir, uzun açıklama yapma.";
 
