@@ -1,7 +1,9 @@
 ﻿using Core.CrossCuttingConcerns.Logging.Serilog;
 using SmartVoiceAgent.Core.Dtos;
 using SmartVoiceAgent.Core.Interfaces;
+using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 
@@ -10,6 +12,12 @@ namespace SmartVoiceAgent.Infrastructure.Services;
 public class ScreenCaptureService : IScreenCaptureService
 {
     private readonly LoggerServiceBase _logger;
+#if DEBUG
+    public bool EnableDebugPreview { get; set; } = true;
+#else
+    public bool EnableDebugPreview { get; set; } = false;  // Prod'da kapalı
+#endif
+
 
     public ScreenCaptureService(LoggerServiceBase logger)
     {
@@ -237,10 +245,21 @@ public class ScreenCaptureService : IScreenCaptureService
                 clonedBitmap.Save(memoryStream, ImageFormat.Png);
                 var pngData = memoryStream.ToArray();
 
+                byte[]? previewPng = null;
+
+#if DEBUG
+                if (EnableDebugPreview)
+                {
+                    previewPng = CreateScaledPreview(clonedBitmap);     
+                    SaveAndOpenDebugPreview(previewPng, screenIndex);   
+                }
+#endif
+
                 return new ScreenCaptureFrame
                 {
                     PngImage = pngData,
                     Timestamp = DateTimeOffset.UtcNow,
+                    PreviewPng = previewPng,
                     Width = bounds.Width,
                     Height = bounds.Height,
                     ScreenIndex = screenIndex,
@@ -445,6 +464,46 @@ public class ScreenCaptureService : IScreenCaptureService
         {
             _logger.Error($"Error capturing virtual screen: {ex.Message}");
             throw;
+        }
+    }
+    private byte[] CreateScaledPreview(Bitmap original, float scale = 0.25f)
+    {
+        int newW = (int)(original.Width * scale);
+        int newH = (int)(original.Height * scale);
+
+        using var bmp = new Bitmap(newW, newH);
+        using var g = Graphics.FromImage(bmp);
+        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        g.DrawImage(original, 0, 0, newW, newH);
+
+
+        g.DrawImage(original, 0, 0, newW, newH);
+
+        using var ms = new MemoryStream();
+        bmp.Save(ms, ImageFormat.Png);
+        return ms.ToArray();
+    }
+
+
+    private void SaveAndOpenDebugPreview(byte[] previewPng, int screenIndex)
+    {
+        try
+        {
+            var folder = "capture-debug";
+            Directory.CreateDirectory(folder);
+
+            var file = Path.Combine(folder,
+                $"screen_{screenIndex}_{DateTime.Now:yyyyMMdd_HHmmssfff}.png");
+
+            File.WriteAllBytes(file, previewPng);
+
+            _logger.Debug($"[ScreenCapture DEBUG] Saved: {file}");
+
+            Process.Start(new ProcessStartInfo(file) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Failed to save/open preview: {ex.Message}");
         }
     }
 }
