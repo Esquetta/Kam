@@ -28,57 +28,94 @@ public class ScreenContextService : IScreenContextService
         _activeWindowService = activeWindowService;
     }
 
-    public async Task<ScreenContext> CaptureAndAnalyzeAsync()
+    /// <summary>
+    /// Captures and analyzes ALL monitors.
+    /// Returns a list of ScreenContext (one per monitor)
+    /// </summary>
+    public async Task<List<ScreenContext>> CaptureAndAnalyzeAsync()
     {
         try
         {
-            _logger.Info("Starting screen capture and analysis");
+            _logger.Info("Starting multi-monitor screen capture and analysis");
 
-            // 1. Capture primary screen
-            var captureFrame = await _screenCaptureService.CapturePrimaryScreenAsync();
+            // 1. Capture all monitors
+            var captures = await _screenCaptureService.CaptureAllAsync();
 
-            // 2. Convert PNG bytes to Bitmap
-            using var bitmap = ConvertToBitmap(captureFrame.PngImage);
+            _logger.Info($"Captured {captures.Count} screens. Starting analysis...");
 
-            // 3. Run OCR
-            var ocrLines = await _ocrService.ExtractTextAsync(bitmap);
+            var results = new List<ScreenContext>();
 
-            // 4. Run object detection (if enabled)
-            IEnumerable<ObjectDetectionItem> objects = Enumerable.Empty<ObjectDetectionItem>();
-            if (_objectDetectionService != null)
-            {
-                objects = await _objectDetectionService.DetectObjectsAsync(bitmap);
-            }
-
-            // 5. Get active window info
-            ActiveWindowInfo? activeWindow = null;
+            // 2. Get active window only once (makes sense only for primary monitor)
+            ActiveWindowInfo? activeWindowInfo = null;
             if (_activeWindowService != null)
             {
-                activeWindow = await _activeWindowService.GetActiveWindowInfoAsync();
+                activeWindowInfo = await _activeWindowService.GetActiveWindowInfoAsync();
             }
 
-            // 6. Compute hash of screenshot (for duplicate detection)
-            string screenshotHash = GenerateScreenshotHash(captureFrame.PngImage);
-
-            // 7. Build final ScreenContext
-            var context = new ScreenContext
+            // 3. Analyze each monitor in parallel (better performance)
+            var tasks = captures.Select(async frame =>
             {
-                ActiveWindow = activeWindow,
-                OcrLines = ocrLines.ToList(),
-                Objects = objects.ToList(),
-                ScreenshotHash = screenshotHash,
-                Timestamp = captureFrame.Timestamp
-            };
+                try
+                {
+                    return await AnalyzeSingleMonitorAsync(frame, activeWindowInfo);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error($"Error analyzing monitor {frame.ScreenIndex}: {ex.Message}");
+                    return null;
+                }
+            });
 
-            _logger.Info($"Screen analysis completed. OCR lines: {context.OcrLines.Count}, Objects: {context.Objects.Count}");
+            var contexts = await Task.WhenAll(tasks);
 
-            return context;
+            results.AddRange(contexts.Where(c => c != null)!);
+
+            _logger.Info($"Multi-monitor analysis completed. Total contexts: {results.Count}");
+
+            return results;
         }
         catch (Exception ex)
         {
-            _logger.Error($"Error during screen capture and analysis: {ex.Message}");
+            _logger.Error($"Error during multi-monitor capture and analysis: {ex.Message}");
             throw;
         }
+    }
+
+    /// <summary>
+    /// Analyze a single monitor frame (OCR, Object Detection, Hash, etc)
+    /// </summary>
+    private async Task<ScreenContext> AnalyzeSingleMonitorAsync(
+        ScreenCaptureFrame frame,
+        ActiveWindowInfo? activeWindowInfo)
+    {
+        using var bitmap = ConvertToBitmap(frame.PngImage);
+
+        // OCR
+        var ocrLines = await _ocrService.ExtractTextAsync(bitmap);
+
+        // Object detection
+        IEnumerable<ObjectDetectionItem> detectedObjects = Enumerable.Empty<ObjectDetectionItem>();
+        if (_objectDetectionService != null)
+        {
+            detectedObjects = await _objectDetectionService.DetectObjectsAsync(bitmap);
+        }
+
+        // Hash
+        string screenshotHash = GenerateScreenshotHash(frame.PngImage);
+
+        // Build context
+        return new ScreenContext
+        {
+            ScreenIndex = frame.ScreenIndex,
+            DeviceName = frame.DeviceName,
+            Timestamp = frame.Timestamp,
+            ScreenshotHash = screenshotHash,
+            OcrLines = ocrLines.ToList(),
+            Objects = detectedObjects.ToList(),
+
+            // Only primary monitor gets active window info
+            ActiveWindow = frame.ScreenIndex == 0 ? activeWindowInfo : null
+        };
     }
 
     /// <summary>

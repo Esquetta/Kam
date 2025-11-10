@@ -6,5 +6,5 @@ public interface IScreenContextService
     /// <summary>
     /// Captures the screen, runs OCR, and builds a full screen context.
     /// </summary>
-    Task<ScreenContext> CaptureAndAnalyzeAsync();
+    Task<List<ScreenContext>> CaptureAndAnalyzeAsync();
 }
