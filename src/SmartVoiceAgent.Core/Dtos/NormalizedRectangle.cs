@@ -1,26 +1,66 @@
-﻿namespace SmartVoiceAgent.Core.Dtos
+﻿using System.Drawing;
+
+namespace SmartVoiceAgent.Core.Dtos
 {
+    /// <summary>
+    /// Normalized rectangle with values between 0 and 1
+    /// </summary>
     public record NormalizedRectangle
     {
-        /// <summary>
-        /// X coordinate normalized to [0..1] in monitor-local coordinates (0 = left, 1 = right).
-        /// </summary>
         public double X { get; init; }
-
-        /// <summary>
-        /// Y coordinate normalized to [0..1] in monitor-local coordinates (0 = top, 1 = bottom).
-        /// </summary>
         public double Y { get; init; }
-
-        /// <summary>
-        /// Width normalized to [0..1] relative to monitor width.
-        /// </summary>
         public double Width { get; init; }
+        public double Height { get; init; }
 
         /// <summary>
-        /// Height normalized to [0..1] relative to monitor height.
+        /// Center point X coordinate (normalized)
         /// </summary>
-        public double Height { get; init; }
+        public double CenterX => X + (Width / 2);
+
+        /// <summary>
+        /// Center point Y coordinate (normalized)
+        /// </summary>
+        public double CenterY => Y + (Height / 2);
+
+        /// <summary>
+        /// Area of the rectangle (0-1 range)
+        /// </summary>
+        public double Area => Width * Height;
+
+        /// <summary>
+        /// Check if point is inside this rectangle
+        /// </summary>
+        public bool Contains(double x, double y)
+        {
+            return x >= X && x <= (X + Width) && y >= Y && y <= (Y + Height);
+        }
+
+        /// <summary>
+        /// Convert back to pixel coordinates given screen dimensions
+        /// </summary>
+        public Rectangle ToAbsolute(int screenWidth, int screenHeight)
+        {
+            return new Rectangle(
+                (int)(X * screenWidth),
+                (int)(Y * screenHeight),
+                (int)(Width * screenWidth),
+                (int)(Height * screenHeight)
+            );
+        }
+
+        /// <summary>
+        /// Create normalized rectangle from absolute bounds
+        /// </summary>
+        public static NormalizedRectangle FromAbsolute(Rectangle bounds, int screenWidth, int screenHeight)
+        {
+            return new NormalizedRectangle
+            {
+                X = (double)bounds.X / screenWidth,
+                Y = (double)bounds.Y / screenHeight,
+                Width = (double)bounds.Width / screenWidth,
+                Height = (double)bounds.Height / screenHeight
+            };
+        }
     }
 
 }
