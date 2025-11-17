@@ -18,9 +18,9 @@
     <PackageReference Include="FluentValidation" Version="12.1.0" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.0" />
     <PackageReference Include="MediatR" Version="12.5.0" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
     <PackageReference Include="Microsoft.SemanticKernel.Core" Version="1.67.1" />
     <PackageReference Include="ModelContextProtocol-SemanticKernel" Version="0.5.0" />
   </ItemGroup>

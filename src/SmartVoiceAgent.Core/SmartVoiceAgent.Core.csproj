@@ -10,9 +10,9 @@
     <PackageReference Include="AutoGen.Core" Version="0.2.3" />
     <PackageReference Include="Mediator.Abstractions" Version="3.0.1" />
     <PackageReference Include="MediatR" Version="12.5.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
-    <PackageReference Include="System.Drawing.Common" Version="9.0.10" />
-    <PackageReference Include="Whisper.net" Version="1.8.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+    <PackageReference Include="System.Drawing.Common" Version="10.0.0" />
+    <PackageReference Include="Whisper.net" Version="1.9.0" />
   </ItemGroup>
 
 </Project>
