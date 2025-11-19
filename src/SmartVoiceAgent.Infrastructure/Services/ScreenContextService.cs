@@ -31,155 +31,171 @@ public class ScreenContextService : IScreenContextService
         _activeWindowService = activeWindowService;
     }
 
+    /// <summary>
+    /// Captures and analyzes all monitors using balanced CPU/IO mode
+    /// </summary>
     public async Task<List<ScreenContext>> CaptureAndAnalyzeAsync(CancellationToken cancellationToken = default)
     {
-        try
+        _logger.Info("Balanced-mode: Screenshot capture & analysis started.");
+
+        var frames = await _screenCaptureService.CaptureAllAsync(cancellationToken);
+        if (frames == null || frames.Count == 0)
         {
-            _logger.Info("Starting multi-monitor balanced-mode capture + analysis");
-
-            var frames = await _screenCaptureService.CaptureAllAsync(cancellationToken);
-            if (frames == null || frames.Count == 0)
-            {
-                _logger.Warn("No frames received from ScreenCaptureService");
-                return new List<ScreenContext>();
-            }
-
-            // 1. Active window once
-            ActiveWindowInfo? activeWindow = null;
-            if (_activeWindowService != null)
-            {
-                try
-                {
-                    activeWindow = await _activeWindowService.GetActiveWindowInfoAsync();
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error($"Failed to get active window info: {ex.Message}");
-                }
-            }
-
-            // 2. Parallel per-monitor analysis
-            var semaphore = new SemaphoreSlim(Environment.ProcessorCount * 2);
-            var tasks = frames.Select(async frame =>
-            {
-                await semaphore.WaitAsync(cancellationToken);
-                try
-                {
-                    return await AnalyzeFrameAsync(frame, activeWindow, cancellationToken);
-                }
-                finally
-                {
-                    semaphore.Release();
-                }
-            });
-
-            var results = await Task.WhenAll(tasks);
-
-            var contexts = results.Where(x => x != null).Select(x => x!).ToList();
-            _logger.Info($"Balanced-mode analysis finished for {contexts.Count} screens.");
-
-            return contexts;
+            _logger.Warn("ScreenCaptureService returned zero frames.");
+            return new();
         }
-        catch
+
+        // Active window is fetched once
+        ActiveWindowInfo? activeWindowInfo = null;
+        if (_activeWindowService != null)
         {
-            throw;
+            try
+            {
+                activeWindowInfo = await _activeWindowService.GetActiveWindowInfoAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Active window retrieval failed: {ex.Message}");
+            }
         }
+
+        var semaphore = new SemaphoreSlim(Environment.ProcessorCount * 2);
+
+        var tasks = frames.Select(async frame =>
+        {
+            await semaphore.WaitAsync(cancellationToken);
+            try
+            {
+                return await AnalyzeFrameAsync(frame, activeWindowInfo, cancellationToken);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        });
+
+        var results = await Task.WhenAll(tasks);
+
+        var contexts = results.Where(r => r != null).ToList()!;
+
+        _logger.Info($"Balanced-mode: Completed analysis for {contexts.Count} monitors.");
+
+        return contexts;
     }
 
+    /// <summary>
+    /// Performs OCR + Object Detection + Active Window normalization for a single monitor
+    /// </summary>
     private async Task<ScreenContext?> AnalyzeFrameAsync(
         ScreenCaptureFrame frame,
-        ActiveWindowInfo? activeWindow,
+        ActiveWindowInfo? activeWindowInfo,
         CancellationToken cancellationToken)
     {
         try
         {
-            if (frame.PngImage == null || frame.PngImage.Length == 0)
+            if (frame.PngImage is null || frame.PngImage.Length == 0)
                 return null;
 
-            int screenIndex = frame.ScreenIndex;
-            string deviceName = frame.DeviceName ?? $"Monitor{screenIndex}";
-            int width = frame.Width;
-            int height = frame.Height;
-
-            // Hash-based skip
+            int index = frame.ScreenIndex;
             string hash = GenerateScreenshotHash(frame.PngImage);
-            if (ShouldSkip(screenIndex, hash))
-            {
-                _logger.Debug($"Skipping unchanged frame on screen {screenIndex}");
 
-                return new ScreenContext
-                {
-                    ScreenIndex = screenIndex,
-                    DeviceName = deviceName,
-                    Width = width,
-                    Height = height,
-                    IsPrimary = (screenIndex == 0),
-                    ScreenshotHash = hash,
-                    Timestamp = frame.Timestamp,
-                    NormalizedArea = new NormalizedRectangle { X = 0, Y = 0, Width = 1, Height = 1 },
-                    ActiveWindow = (screenIndex == 0) ? activeWindow : null,
-                    OcrLines = new(),
-                    Objects = new()
-                };
+            // Skip unchanged
+            if (ShouldSkip(index, hash))
+            {
+                _logger.Debug($"Balanced-mode: Screen {index} unchanged → skipping heavy analysis.");
+
+                return CreateSkippedContext(frame, hash, activeWindowInfo);
             }
 
             using var ms = new MemoryStream(frame.PngImage, false);
-            using var bitmap = new Bitmap(ms);
+            using var bmp = new Bitmap(ms);
 
-            // Parallel analysis
-            var ocrTask = _ocrService.ExtractTextAsync(bitmap);
-            var objectsTask = _objectDetectionService != null
-                ? _objectDetectionService.DetectObjectsAsync(bitmap)
-                : Task.FromResult<IEnumerable<ObjectDetectionItem>>(Enumerable.Empty<ObjectDetectionItem>());
+            // Run OCR and Object detection in parallel
+            var ocrTask = _ocrService.ExtractTextAsync(bmp);
+            var objTask = _objectDetectionService != null
+                ? _objectDetectionService.DetectObjectsAsync(bmp)
+                : Task.FromResult<IEnumerable<ObjectDetectionItem>>(Array.Empty<ObjectDetectionItem>());
 
-            await Task.WhenAll(ocrTask, objectsTask);
+            await Task.WhenAll(ocrTask, objTask);
 
             var ocrLines = (await ocrTask).ToList();
-            var objects = (await objectsTask).ToList();
+            var objects = (await objTask).ToList();
 
-            // Normalize active window for correct monitor
-            ActiveWindowInfo? windowForThisScreen = null;
-            if (activeWindow != null && activeWindow.ScreenIndex == screenIndex)
-            {
-                windowForThisScreen = activeWindow with
-                {
-                    NormalizedBounds = NormalizedRectangle.FromAbsolute(activeWindow.WindowBounds, width, height)
-                };
-            }
+            _lastScreenshotHashes[index] = hash;
 
-            _lastScreenshotHashes.AddOrUpdate(screenIndex, hash, (_, __) => hash);
-
-            return new ScreenContext
-            {
-                ScreenIndex = screenIndex,
-                DeviceName = deviceName,
-                IsPrimary = (screenIndex == 0),
-                Width = width,
-                Height = height,
-                Timestamp = frame.Timestamp,
-                ScreenshotHash = hash,
-                OcrLines = ocrLines,
-                Objects = objects,
-                ActiveWindow = windowForThisScreen,
-                NormalizedArea = new NormalizedRectangle { X = 0, Y = 0, Width = 1, Height = 1 }
-            };
+            return CreateFullContext(frame, hash, activeWindowInfo, ocrLines, objects);
         }
         catch (Exception ex)
         {
-            _logger.Error($"Frame analysis error on screen {frame.ScreenIndex}: {ex.Message}");
+            _logger.Error($"Screen {frame.ScreenIndex} analysis error: {ex.Message}");
             return null;
         }
     }
 
-    private bool ShouldSkip(int screenIndex, string hash)
+    private ScreenContext CreateSkippedContext(
+        ScreenCaptureFrame frame,
+        string hash,
+        ActiveWindowInfo? activeWindowInfo)
     {
-        return _lastScreenshotHashes.TryGetValue(screenIndex, out var last)
-               && last == hash;
+        return new ScreenContext
+        {
+            ScreenIndex = frame.ScreenIndex,
+            DeviceName = frame.DeviceName ?? $"Monitor{frame.ScreenIndex}",
+            Width = frame.Width,
+            Height = frame.Height,
+            ScreenshotHash = hash,
+            Timestamp = frame.Timestamp,
+            IsPrimary = (frame.ScreenIndex == 0),
+            NormalizedArea = new NormalizedRectangle { X = 0, Y = 0, Width = 1, Height = 1 },
+            ActiveWindow = (frame.ScreenIndex == 0) ? NormalizeWindow(activeWindowInfo, frame) : null,
+            OcrLines = new(),
+            Objects = new()
+        };
     }
 
-    private static string GenerateScreenshotHash(byte[] png)
+    private ScreenContext CreateFullContext(
+        ScreenCaptureFrame frame,
+        string hash,
+        ActiveWindowInfo? activeWindow,
+        List<OcrLine> ocr,
+        List<ObjectDetectionItem> objects)
+    {
+        return new ScreenContext
+        {
+            ScreenIndex = frame.ScreenIndex,
+            DeviceName = frame.DeviceName ?? $"Monitor{frame.ScreenIndex}",
+            Width = frame.Width,
+            Height = frame.Height,
+            ScreenshotHash = hash,
+            Timestamp = frame.Timestamp,
+            IsPrimary = (frame.ScreenIndex == 0),
+            OcrLines = ocr,
+            Objects = objects,
+            ActiveWindow = NormalizeWindow(activeWindow, frame),
+            NormalizedArea = new NormalizedRectangle { X = 0, Y = 0, Width = 1, Height = 1 }
+        };
+    }
+
+    private ActiveWindowInfo? NormalizeWindow(ActiveWindowInfo? win, ScreenCaptureFrame frame)
+    {
+        if (win == null || win.ScreenIndex != frame.ScreenIndex)
+            return null;
+
+        return win with
+        {
+            NormalizedBounds = NormalizedRectangle.FromAbsolute(
+                win.WindowBounds,
+                frame.Width,
+                frame.Height)
+        };
+    }
+
+    private bool ShouldSkip(int screenIndex, string hash)
+        => _lastScreenshotHashes.TryGetValue(screenIndex, out var last) && last == hash;
+
+    private static string GenerateScreenshotHash(byte[] data)
     {
         using var sha = SHA256.Create();
-        return Convert.ToHexString(sha.ComputeHash(png));
+        return Convert.ToHexString(sha.ComputeHash(data));
     }
 }
