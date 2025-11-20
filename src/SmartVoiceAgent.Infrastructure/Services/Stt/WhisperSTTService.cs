@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Interfaces;
-using SmartVoiceAgent.Core.Models;
+using SmartVoiceAgent.Core.Models.Audio;
 using System.Diagnostics;
 using Whisper.net;
 

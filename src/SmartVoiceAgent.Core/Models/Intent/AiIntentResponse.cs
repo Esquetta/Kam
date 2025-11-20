@@ -1,4 +1,4 @@
-﻿namespace SmartVoiceAgent.Core.Models;
+﻿namespace SmartVoiceAgent.Core.Models.Intent;
 public class AiIntentResponse
 {
     public string Intent { get; set; }

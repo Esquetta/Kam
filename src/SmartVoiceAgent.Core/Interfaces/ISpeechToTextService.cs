@@ -1,4 +1,4 @@
-﻿using SmartVoiceAgent.Core.Models;
+﻿using SmartVoiceAgent.Core.Models.Audio;
 
 namespace SmartVoiceAgent.Core.Interfaces;
 

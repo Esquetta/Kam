@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using SmartVoiceAgent.Core.Entities;
 using SmartVoiceAgent.Core.Enums;
 using SmartVoiceAgent.Core.Models;
+using SmartVoiceAgent.Core.Models.Intent;
 using System.Text;
 using System.Text.Json;
 

@@ -1,5 +1,5 @@
 ﻿using SmartVoiceAgent.Core.Entities;
-using SmartVoiceAgent.Core.Models;
+using SmartVoiceAgent.Core.Models.Audio;
 
 namespace SmartVoiceAgent.Core.EventArgs;
 

@@ -2,7 +2,7 @@
 using NAudio.Wave;
 using SmartVoiceAgent.Core.Enums;
 using SmartVoiceAgent.Core.Interfaces;
-using SmartVoiceAgent.Core.Models;
+using SmartVoiceAgent.Core.Models.Audio;
 using SmartVoiceAgent.Infrastructure.Services.Stt;
 
 namespace SmartVoiceAgent.Infrastructure.Helpers

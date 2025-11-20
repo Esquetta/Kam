@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using SmartVoiceAgent.Core.Config;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
+using SmartVoiceAgent.Core.Models.Audio;
 using System.Diagnostics;
 using System.Text.Json;
 
