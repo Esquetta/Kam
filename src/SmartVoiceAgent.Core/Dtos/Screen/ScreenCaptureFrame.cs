@@ -1,4 +1,4 @@
-﻿namespace SmartVoiceAgent.Core.Dtos;
+﻿namespace SmartVoiceAgent.Core.Dtos.Screen;
 public record ScreenCaptureFrame
 {
     public byte[] PngImage { get; init; }

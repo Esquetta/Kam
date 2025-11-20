@@ -1,4 +1,4 @@
-﻿using SmartVoiceAgent.Core.Dtos;
+﻿using SmartVoiceAgent.Core.Dtos.Screen;
 
 namespace SmartVoiceAgent.Core.Interfaces;
 public interface IScreenContextService

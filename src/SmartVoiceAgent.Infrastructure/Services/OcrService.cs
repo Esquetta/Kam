@@ -1,5 +1,5 @@
 ﻿using Core.CrossCuttingConcerns.Logging.Serilog;
-using SmartVoiceAgent.Core.Dtos;
+using SmartVoiceAgent.Core.Dtos.Screen;
 using SmartVoiceAgent.Core.Interfaces;
 using System.Drawing;
 using Tesseract;

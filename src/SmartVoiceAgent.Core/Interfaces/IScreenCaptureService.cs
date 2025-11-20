@@ -1,4 +1,5 @@
 ﻿using SmartVoiceAgent.Core.Dtos;
+using SmartVoiceAgent.Core.Dtos.Screen;
 using System.Drawing;
 
 namespace SmartVoiceAgent.Core.Interfaces;

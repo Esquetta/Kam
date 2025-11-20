@@ -1,6 +1,6 @@
 ﻿using System.Drawing;
 
-namespace SmartVoiceAgent.Core.Dtos;
+namespace SmartVoiceAgent.Core.Dtos.Screen;
 public record OcrLine(
     int LineNumber,
     string Text,
