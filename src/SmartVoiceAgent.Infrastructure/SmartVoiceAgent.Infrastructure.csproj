@@ -19,6 +19,7 @@
     <PackageReference Include="Microsoft.Agents.AI" Version="1.0.0-preview.251125.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+    <PackageReference Include="ModelContextProtocol" Version="0.4.0-preview.1" />
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="Serilog" Version="4.3.0" />
     <PackageReference Include="Serilog.Sinks.MongoDB" Version="7.2.0" />
@@ -36,6 +37,10 @@
   <ItemGroup>
     <ProjectReference Include="..\SmartVoiceAgent.Application\SmartVoiceAgent.Application.csproj" />
     <ProjectReference Include="..\SmartVoiceAgent.Core\SmartVoiceAgent.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Agent\Agents\" />
   </ItemGroup>
 
 </Project>
