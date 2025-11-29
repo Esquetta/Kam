@@ -9,7 +9,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
     /// <summary>
     /// System Agent Functions for desktop application management and device control.
     /// </summary>
-    public class SystemAgentTools
+    public sealed class SystemAgentTools
     {
         private readonly IMediator _mediator;
         private readonly ConversationContextManager _contextManager;

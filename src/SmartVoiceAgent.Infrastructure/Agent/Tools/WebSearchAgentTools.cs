@@ -5,7 +5,7 @@ using System.ComponentModel;
 
 namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 {
-    public class WebSearchAgentTools
+    public sealed class WebSearchAgentTools
     {
         private readonly IMediator _mediator;
         public WebSearchAgentTools(IMediator mediator)
