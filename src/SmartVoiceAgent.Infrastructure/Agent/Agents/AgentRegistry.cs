@@ -9,9 +9,9 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Agents;
 public class AgentRegistry : IAgentRegistry
 {
     private readonly ConcurrentDictionary<string, AIAgent> _agents = new();
-    private readonly LoggerServiceBase _logger;
+    private readonly ILogger<AgentRegistry> _logger;
 
-    public AgentRegistry(LoggerServiceBase logger)
+    public AgentRegistry(ILogger<AgentRegistry> logger)
     {
         _logger = logger;
     }
@@ -20,11 +20,11 @@ public class AgentRegistry : IAgentRegistry
     {
         if (_agents.TryAdd(name, agent))
         {
-            _logger.Info($"Agent registered: {agent.Name}");
+            _logger.LogInformation("✓ Agent registered: {AgentName}", name);
         }
         else
         {
-            _logger.Warn($"Agent already exists: {agent.Name}");
+            _logger.LogWarning("⚠ Agent already exists: {AgentName}", name);
         }
     }
 
@@ -37,21 +37,7 @@ public class AgentRegistry : IAgentRegistry
         throw new InvalidOperationException($"Agent not found: {name}");
     }
 
-    public IEnumerable<string> GetAllAgentNames()
-    {
-        return _agents.Keys;
-    }
+    public IEnumerable<string> GetAllAgentNames() => _agents.Keys;
 
-    public void UnregisterAgent(string name)
-    {
-        if (_agents.TryRemove(name, out _))
-        {
-            _logger.Info($"Agent unregistered: {name}");
-        }
-    }
-
-    public bool IsAgentAvailable(string name)
-    {
-        return _agents.ContainsKey(name);
-    }
+    public bool IsAgentAvailable(string name) => _agents.ContainsKey(name);
 }
