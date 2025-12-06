@@ -1,13 +1,12 @@
 ﻿using Microsoft.Agents.AI;
-using Microsoft.Extensions.AI;
 
 namespace SmartVoiceAgent.Core.Interfaces;
 
-public interface IAgentBuilder
+public interface IAgentFactory
 {
-    IAgentBuilder WithName(string name);
-    IAgentBuilder WithInstructions(string instructions);
-    IAgentBuilder WithTools<TToolClass>() where TToolClass : class;
-    IAgentBuilder WithTools(IEnumerable<AIFunction> tools);
-    AIAgent Build();
+    AIAgent CreateSystemAgent();
+    AIAgent CreateTaskAgent();
+    AIAgent CreateResearchAgent();
+    AIAgent CreateCoordinatorAgent();
+    IAgentBuilder CreateCustomAgent();
 }
