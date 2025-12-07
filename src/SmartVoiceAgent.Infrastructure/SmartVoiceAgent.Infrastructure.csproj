@@ -40,7 +40,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Agent\Agents\" />
+    <Folder Include="Agent\Executors\" />
   </ItemGroup>
 
 </Project>
