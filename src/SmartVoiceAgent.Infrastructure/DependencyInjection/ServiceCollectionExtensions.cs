@@ -1,11 +1,17 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OpenAI;
 using SmartVoiceAgent.Application.Agent;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
-using SmartVoiceAgent.Infrastructure.Agent;
+using SmartVoiceAgent.Infrastructure.Agent.Agents;
+using SmartVoiceAgent.Infrastructure.Agent.Conf;
 using SmartVoiceAgent.Infrastructure.Agent.Functions;
+using SmartVoiceAgent.Infrastructure.Agent.Tools;
 using SmartVoiceAgent.Infrastructure.Mcp;
+using SmartVoiceAgent.Infrastructure.Services;
+using System.ClientModel;
 
 namespace SmartVoiceAgent.Infrastructure.Extensions;
 
@@ -36,6 +42,36 @@ public static class ServiceCollectionExtensions
         services.Configure<McpOptions>(configuration.GetSection("MCP"));
 
         Console.WriteLine("✅ Smart Voice Agent services registered");
+
+
+
+        //Migration
+
+        services.Configure<AgentConfiguration>(
+                configuration.GetSection("AIService"));
+
+        services.AddSingleton<IChatClient>(sp =>
+        {
+            var config = configuration.GetSection("AIService")
+                .Get<AgentConfiguration>() ?? new();
+
+            return config.Provider switch
+            {
+                "OpenRouter" => new OpenAIClient(credential: new ApiKeyCredential(config.ApiKey), options: new OpenAIClientOptions({
+                    Endpoint: new Uri(config.Endpoint)
+                }).GetChatClient(config.ModelId)
+            };
+        });
+
+        services.AddSingleton<IAgentRegistry, AgentRegistry>();
+        services.AddSingleton<IAgentFactory, AgentFactory>();
+        services.AddSingleton<IAgentOrchestrator, SmartAgentOrchestrator>();
+
+        services.AddSingleton<SystemAgentTools>();
+        services.AddSingleton<TaskAgentTools>();
+        services.AddSingleton<WebSearchAgentTools>();
+
+        services.AddHostedService<VoiceAgentHostedService>();
 
         return services;
     }
