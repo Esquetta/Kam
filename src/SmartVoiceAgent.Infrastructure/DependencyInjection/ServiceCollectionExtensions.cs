@@ -58,7 +58,7 @@ public static class ServiceCollectionExtensions
             return config.Provider switch
             {
                 "OpenRouter" => new OpenAIClient(credential: new ApiKeyCredential(config.ApiKey), options: new OpenAIClientOptions({
-                    Endpoint: new Uri(config.Endpoint)
+                    Endpoint = new Uri(config.Endpoint)
                 }).GetChatClient(config.ModelId)
             };
         });
