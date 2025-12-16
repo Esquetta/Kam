@@ -48,12 +48,23 @@ public static class ServiceCollectionExtensions
         //Migration
 
         services.Configure<AIServiceConfiguration>(
-                configuration.GetSection("AIService"));
+    configuration.GetSection("AIService"));
 
-        // Register ChatClient based on provider
-        var config = configuration.GetSection("AIService").Get<AIServiceConfiguration>() ?? new();
+        services.AddSingleton<IChatClient>(sp =>
+        {
+            var config = configuration
+                .GetSection("AIService")
+                .Get<AIServiceConfiguration>()
+                ?? throw new InvalidOperationException("AIService configuration is missing.");
 
-        
+            return config.Provider switch
+            {
+                "OpenRouter" => CreateOpenRouterClient(config),
+
+                _ => throw new NotSupportedException(
+                    $"AI provider '{config.Provider}' is not supported.")
+            };
+        });
 
         services.AddSingleton<IAgentRegistry, AgentRegistry>();
         services.AddSingleton<IAgentFactory, AgentFactory>();
@@ -77,6 +88,19 @@ public static class ServiceCollectionExtensions
         services.AddScoped<T>();
         Console.WriteLine($"✅ Agent function service {typeof(T).Name} registered");
         return services;
+    }
+    static IChatClient CreateOpenRouterClient(AIServiceConfiguration config)
+    {
+        var options = new OpenAIClientOptions
+        {
+            Endpoint = new Uri(config.Endpoint)
+        };
+
+        var client = new OpenAIClient(
+            credential: new ApiKeyCredential(config.ApiKey),
+            options: options);
+
+        return (IChatClient)client.GetChatClient(config.ModelId);
     }
 }
 
