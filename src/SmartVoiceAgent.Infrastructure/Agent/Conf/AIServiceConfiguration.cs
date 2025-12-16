@@ -1,6 +1,6 @@
 ﻿namespace SmartVoiceAgent.Infrastructure.Agent.Conf;
 
-public class AgentConfiguration
+public class AIServiceConfiguration
 {
     public string Provider { get; set; } = string.Empty;
     public string Endpoint { get; set; } = string.Empty;
