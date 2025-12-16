@@ -47,21 +47,13 @@ public static class ServiceCollectionExtensions
 
         //Migration
 
-        services.Configure<AgentConfiguration>(
+        services.Configure<AIServiceConfiguration>(
                 configuration.GetSection("AIService"));
 
-        services.AddSingleton<IChatClient>(sp =>
-        {
-            var config = configuration.GetSection("AIService")
-                .Get<AgentConfiguration>() ?? new();
+        // Register ChatClient based on provider
+        var config = configuration.GetSection("AIService").Get<AIServiceConfiguration>() ?? new();
 
-            return config.Provider switch
-            {
-                "OpenRouter" => new OpenAIClient(credential: new ApiKeyCredential(config.ApiKey), options: new OpenAIClientOptions({
-                    Endpoint = new Uri(config.Endpoint)
-                }).GetChatClient(config.ModelId)
-            };
-        });
+        
 
         services.AddSingleton<IAgentRegistry, AgentRegistry>();
         services.AddSingleton<IAgentFactory, AgentFactory>();
