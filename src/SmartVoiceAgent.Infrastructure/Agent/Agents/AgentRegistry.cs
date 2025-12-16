@@ -1,5 +1,4 @@
-﻿using Core.CrossCuttingConcerns.Logging.Serilog;
-using Microsoft.Agents.AI;
+﻿using Microsoft.Agents.AI;
 using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Interfaces;
 using System.Collections.Concurrent;
