@@ -27,12 +27,12 @@ public class SmartAgentOrchestrator : IAgentOrchestrator
         {
             if (_routerAgent == null)
             {
-                if (!_registry.IsAgentAvailable("RouterAgent"))
+                if (!_registry.IsAgentAvailable("Coordinator"))
                 {
                     throw new InvalidOperationException(
-                        "RouterAgent not found. Make sure agents are initialized before using orchestrator.");
+                        "Coordinator not found. Make sure agents are initialized before using orchestrator.");
                 }
-                _routerAgent = _registry.GetAgent("RouterAgent");
+                _routerAgent = _registry.GetAgent("Coordinator");
             }
             return _routerAgent;
         }
