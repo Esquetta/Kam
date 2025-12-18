@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OpenAI;
 using SmartVoiceAgent.Application.Agent;
 using SmartVoiceAgent.Core.Interfaces;
@@ -66,9 +67,15 @@ public static class ServiceCollectionExtensions
             };
         });
 
-        services.AddSingleton<IAgentRegistry, AgentRegistry>();
         services.AddSingleton<IAgentFactory, AgentFactory>();
-        services.AddSingleton<IAgentOrchestrator, SmartAgentOrchestrator>();
+        services.AddSingleton<IAgentRegistry, AgentRegistry>();
+
+        services.AddSingleton<IAgentOrchestrator>(sp =>
+        {
+            var registry = sp.GetRequiredService<IAgentRegistry>();
+            var logger = sp.GetRequiredService<ILogger<SmartAgentOrchestrator>>();
+            return new SmartAgentOrchestrator(registry, logger);
+        });
 
         services.AddSingleton<SystemAgentTools>();
         services.AddSingleton<TaskAgentTools>();
@@ -100,7 +107,7 @@ public static class ServiceCollectionExtensions
             credential: new ApiKeyCredential(config.ApiKey),
             options: options);
 
-        return (IChatClient)client.GetChatClient(config.ModelId);
+        return client.GetChatClient(config.ModelId).AsIChatClient();
     }
 }
 
