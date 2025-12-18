@@ -10,8 +10,8 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Agents;
 public class SmartAgentOrchestrator : IAgentOrchestrator
 {
     private readonly IAgentRegistry _registry;
-    private readonly AIAgent _routerAgent;
     private readonly ILogger<SmartAgentOrchestrator> _logger;
+    private AIAgent? _routerAgent;
 
     public SmartAgentOrchestrator(
         IAgentRegistry registry,
@@ -19,7 +19,23 @@ public class SmartAgentOrchestrator : IAgentOrchestrator
     {
         _registry = registry;
         _logger = logger;
-        _routerAgent = _registry.GetAgent("RouterAgent");
+    }
+
+    private AIAgent RouterAgent
+    {
+        get
+        {
+            if (_routerAgent == null)
+            {
+                if (!_registry.IsAgentAvailable("RouterAgent"))
+                {
+                    throw new InvalidOperationException(
+                        "RouterAgent not found. Make sure agents are initialized before using orchestrator.");
+                }
+                _routerAgent = _registry.GetAgent("RouterAgent");
+            }
+            return _routerAgent;
+        }
     }
 
     public async Task<string> ExecuteAsync(string userRequest)
@@ -76,7 +92,7 @@ public class SmartAgentOrchestrator : IAgentOrchestrator
     private async Task<RoutingDecision> GetRoutingDecisionAsync(string userRequest)
     {
         var routerMessage = new ChatMessage(ChatRole.User, userRequest);
-        var routerResponse = await _routerAgent.RunAsync(new[] { routerMessage });
+        var routerResponse = await RouterAgent.RunAsync(new[] { routerMessage });
 
         var responseText = routerResponse.Messages.First().Text ?? "";
         return ParseRoutingDecision(responseText);
@@ -270,6 +286,4 @@ public class SmartAgentOrchestrator : IAgentOrchestrator
         }
         return combined.ToString();
     }
-
 }
-
