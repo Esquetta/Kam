@@ -100,7 +100,7 @@ YÖNLENDİRME:
 - Görev/hatırlatıcı → @TaskAgent  
 - Arama/bilgi → @WebSearchAgent
 
-Örnek: ""Spotify aç"" → ""@SystemAgent Spotify'ı açar mısın?""
+Örnek: ""Spotify aç"" → ""@SystemAgent Spotify'ı aç ""
 
 Kısa ve net yönlendir, uzun açıklama yapma.";
 
