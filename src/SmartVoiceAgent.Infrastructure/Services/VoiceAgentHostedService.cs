@@ -32,7 +32,7 @@ public class VoiceAgentHostedService : BackgroundService
             await InitializeAgentsAsync();
 
             _logger.LogInformation("🎤 Ready for commands...");
-
+            await _orchestrator.ExecuteAsync("Open spotify");
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
