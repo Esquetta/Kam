@@ -1,11 +1,18 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OpenAI;
 using SmartVoiceAgent.Application.Agent;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
-using SmartVoiceAgent.Infrastructure.Agent;
+using SmartVoiceAgent.Infrastructure.Agent.Agents;
+using SmartVoiceAgent.Infrastructure.Agent.Conf;
 using SmartVoiceAgent.Infrastructure.Agent.Functions;
+using SmartVoiceAgent.Infrastructure.Agent.Tools;
 using SmartVoiceAgent.Infrastructure.Mcp;
+using SmartVoiceAgent.Infrastructure.Services;
+using System.ClientModel;
 
 namespace SmartVoiceAgent.Infrastructure.Extensions;
 
@@ -37,6 +44,45 @@ public static class ServiceCollectionExtensions
 
         Console.WriteLine("✅ Smart Voice Agent services registered");
 
+
+
+        //Migration
+
+        services.Configure<AIServiceConfiguration>(
+    configuration.GetSection("AIService"));
+
+        services.AddSingleton<IChatClient>(sp =>
+        {
+            var config = configuration
+                .GetSection("AIService")
+                .Get<AIServiceConfiguration>()
+                ?? throw new InvalidOperationException("AIService configuration is missing.");
+
+            return config.Provider switch
+            {
+                "OpenRouter" => CreateOpenRouterClient(config),
+
+                _ => throw new NotSupportedException(
+                    $"AI provider '{config.Provider}' is not supported.")
+            };
+        });
+
+        services.AddSingleton<IAgentFactory, AgentFactory>();
+        services.AddSingleton<IAgentRegistry, AgentRegistry>();
+
+        services.AddSingleton<IAgentOrchestrator>(sp =>
+        {
+            var registry = sp.GetRequiredService<IAgentRegistry>();
+            var logger = sp.GetRequiredService<ILogger<SmartAgentOrchestrator>>();
+            return new SmartAgentOrchestrator(registry, logger);
+        });
+
+        services.AddSingleton<SystemAgentTools>();
+        services.AddSingleton<TaskAgentTools>();
+        services.AddSingleton<WebSearchAgentTools>();
+
+        services.AddHostedService<VoiceAgentHostedService>();
+
         return services;
     }
 
@@ -49,6 +95,19 @@ public static class ServiceCollectionExtensions
         services.AddScoped<T>();
         Console.WriteLine($"✅ Agent function service {typeof(T).Name} registered");
         return services;
+    }
+    static IChatClient CreateOpenRouterClient(AIServiceConfiguration config)
+    {
+        var options = new OpenAIClientOptions
+        {
+            Endpoint = new Uri(config.Endpoint)
+        };
+
+        var client = new OpenAIClient(
+            credential: new ApiKeyCredential(config.ApiKey),
+            options: options);
+
+        return client.GetChatClient(config.ModelId).AsIChatClient();
     }
 }
 
