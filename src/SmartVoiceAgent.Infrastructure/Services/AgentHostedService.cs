@@ -31,8 +31,9 @@ namespace SmartVoiceAgent.Infrastructure.Services
         private readonly Functions functions;
         private readonly IServiceProvider serviceProvider;
         private readonly IOcrService ocrService;
+        private readonly IScreenContextService screenContextService;
 
-        public AgentHostedService(IIntentDetectionService intentDetector, ILogger<AgentHostedService> logger, IMediator mediator, AudioProcessingService audioProcessingService, ILanguageDetectionService languageDetectionService, IApplicationScannerServiceFactory applicationScannerServiceFactory, IVoiceRecognitionFactory voiceRecognitionFactory, IConfiguration configuration, Functions functions, IWebResearchService webResearchService, IServiceProvider serviceProvider, IOcrService ocrService)
+        public AgentHostedService(IIntentDetectionService intentDetector, ILogger<AgentHostedService> logger, IMediator mediator, AudioProcessingService audioProcessingService, ILanguageDetectionService languageDetectionService, IApplicationScannerServiceFactory applicationScannerServiceFactory, IVoiceRecognitionFactory voiceRecognitionFactory, IConfiguration configuration, Functions functions, IWebResearchService webResearchService, IServiceProvider serviceProvider, IOcrService ocrService, IScreenContextService screenContextService)
         {
             _intentDetector = intentDetector;
             _logger = logger;
@@ -48,6 +49,7 @@ namespace SmartVoiceAgent.Infrastructure.Services
             this.webResearchService = webResearchService;
             this.serviceProvider = serviceProvider;
             this.ocrService = ocrService;
+            this.screenContextService = screenContextService;
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -58,9 +60,17 @@ namespace SmartVoiceAgent.Infrastructure.Services
 
             //Test 2: Agent Group Communication
             //var testMessage = "Malazgirt savaşını araştır";
-            var testMessage = "'Toplantı' adında gir görev oluştur'";
-            //var testMessage = "Malazgirt savaşı hakkında bana web üzerinden araştırma yaparmısın.";
+            //var testMessage = "Toplantı adında gir görev oluştur öncelik derecesi 3 ve yarın saat 10:00'da olsun.";
+            var testMessage = "Spotfiy'ı aç.";
             await AgentGroup.SendWithAnalyticsAsync(testMessage);
+
+            while (true)
+            {
+                await AgentGroup.SendWithAnalyticsAsync(Console.ReadLine());
+            }
+
+            //Test 3: OCR Service
+            //var result = await screenContextService.CaptureAndAnalyzeAsync(stoppingToken);
 
             //var bitmap = (Bitmap)Image.FromFile("screen.png");
             //var results = await ocrService.ExtractTextAsync(bitmap);
