@@ -32,13 +32,15 @@ public class VoiceAgentHostedService : BackgroundService
             await InitializeAgentsAsync();
 
             _logger.LogInformation("🎤 Ready for commands...");
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
-                    var userInput = Console.ReadLine();
-                    var result = await _orchestrator.ExecuteAsync(userInput);
-                    Console.WriteLine(result);
+                    var input = Console.ReadLine();
+                    var result = await _orchestrator.ExecuteAsync(input);
+                    Console.WriteLine($"📝 Result: {result}");
+
                 }
                 catch (OperationCanceledException)
                 {
