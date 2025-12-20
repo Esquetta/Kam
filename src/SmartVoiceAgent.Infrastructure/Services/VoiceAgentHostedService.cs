@@ -32,13 +32,13 @@ public class VoiceAgentHostedService : BackgroundService
             await InitializeAgentsAsync();
 
             _logger.LogInformation("🎤 Ready for commands...");
-            await _orchestrator.ExecuteAsync("Open spotify");
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
-                    // TODO: Voice recognition integration
-                    await Task.Delay(1000, stoppingToken);
+                    var userInput = Console.ReadLine();
+                    var result = await _orchestrator.ExecuteAsync(userInput);
+                    Console.WriteLine(result);
                 }
                 catch (OperationCanceledException)
                 {
@@ -64,7 +64,7 @@ public class VoiceAgentHostedService : BackgroundService
 
         _registry.RegisterAgent("Coordinator", _factory.CreateCoordinatorAgent());
         _registry.RegisterAgent("SystemAgent", _factory.CreateSystemAgent());
-        _registry.RegisterAgent("TaskAgent", _factory.CreateTaskAgent());
+        _registry.RegisterAgent("TaskAgent", await _factory.CreateTaskAgentAsync());
         _registry.RegisterAgent("ResearchAgent", _factory.CreateResearchAgent());
 
         _logger.LogInformation("✅ All agents ready");

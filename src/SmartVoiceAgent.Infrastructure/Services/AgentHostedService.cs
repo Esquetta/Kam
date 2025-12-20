@@ -53,7 +53,7 @@ namespace SmartVoiceAgent.Infrastructure.Services
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var AgentGroup = await GroupChatAgentFactory.CreateGroupChatAsync(apiKey: configuration.GetSection("AiAgent:Apikey").Get<string>(), model: configuration.GetSection("AiAgent:Model").Get<string>(), serviceProvider: serviceProvider, endpoint: configuration.GetSection("AiAgent:EndPoint").Get<string>(), configuration);
+            //var AgentGroup = await GroupChatAgentFactory.CreateGroupChatAsync(apiKey: configuration.GetSection("AiAgent:Apikey").Get<string>(), model: configuration.GetSection("AiAgent:Model").Get<string>(), serviceProvider: serviceProvider, endpoint: configuration.GetSection("AiAgent:EndPoint").Get<string>(), configuration);
 
             //Test 1: Intent Detection
             //var intent = await _intentDetector.DetectIntentAsync("Yarına Ders adında bir görev oluşturmanı istiyorum. Saat 9'a.", "tr", stoppingToken);
@@ -61,13 +61,13 @@ namespace SmartVoiceAgent.Infrastructure.Services
             //Test 2: Agent Group Communication
             //var testMessage = "Malazgirt savaşını araştır";
             //var testMessage = "Toplantı adında gir görev oluştur öncelik derecesi 3 ve yarın saat 10:00'da olsun.";
-            var testMessage = "Spotfiy'ı aç.";
-            await AgentGroup.SendWithAnalyticsAsync(testMessage);
+            //var testMessage = "Spotfiy'ı aç.";
+            //await AgentGroup.SendWithAnalyticsAsync(testMessage);
 
-            while (true)
-            {
-                await AgentGroup.SendWithAnalyticsAsync(Console.ReadLine());
-            }
+            //while (true)
+            //{
+             //   await AgentGroup.SendWithAnalyticsAsync(Console.ReadLine());
+            //}
 
             //Test 3: OCR Service
             //var result = await screenContextService.CaptureAndAnalyzeAsync(stoppingToken);
