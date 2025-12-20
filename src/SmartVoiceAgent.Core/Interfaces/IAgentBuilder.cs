@@ -9,5 +9,7 @@ public interface IAgentBuilder
     IAgentBuilder WithInstructions(string instructions);
     IAgentBuilder WithTools<TToolClass>() where TToolClass : class;
     IAgentBuilder WithTools(IEnumerable<AIFunction> tools);
+    Task<IAgentBuilder> WithToolsAsync<TToolClass>() where TToolClass : class;
     AIAgent Build();
+    Task<AIAgent> BuildAsync();
 }
