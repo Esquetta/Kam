@@ -9,6 +9,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
     public sealed class TaskAgentTools
     {
         private readonly McpOptions _mcpOptions;
+        private IEnumerable<AIFunction>? _mcpTools;
         public TaskAgentTools(IOptions<McpOptions> options)
         {
             this._mcpOptions = options.Value;
@@ -37,13 +38,15 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
             return mcpClient;
         }
-
-        public static async Task<AITool> GetTodoistTools(McpOptions mcpOptions)
+        public async Task InitializeAsync()
         {
-            var client = await GetMcpClientAsync(mcpOptions);
-            var tools = await client.ListToolsAsync().ConfigureAwait(false);
+            var client = await GetMcpClientAsync(_mcpOptions);
+            _mcpTools = await client.ListToolsAsync();
+        }
 
-            return (AITool)tools;
+        public IEnumerable<AIFunction> GetTools()
+        {
+            return _mcpTools ?? Array.Empty<AIFunction>();
         }
     }
 }
