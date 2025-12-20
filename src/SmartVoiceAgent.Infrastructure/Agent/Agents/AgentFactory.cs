@@ -1,5 +1,6 @@
 ﻿using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Infrastructure.Agent.Functions;
@@ -21,6 +22,11 @@ public class AgentFactory : IAgentFactory
         _chatClient = chatClient;
         _serviceProvider = serviceProvider;
         _logger = logger;
+    }
+    private IAgentBuilder CreateBuilder()
+    {
+        var builderLogger = _serviceProvider.GetService<ILogger<AgentBuilder>>();
+        return new AgentBuilder(_chatClient, _serviceProvider, builderLogger);
     }
 
     public AIAgent CreateSystemAgent()
@@ -49,7 +55,7 @@ Always:
             .Build();
     }
 
-    public AIAgent CreateTaskAgent()
+    public async Task<AIAgent> CreateTaskAgentAsync()
     {
         _logger.LogInformation("Creating TaskAgent...");
 
@@ -68,11 +74,11 @@ Always:
 - Keep tasks organized and clear
 - Use Turkish for responses when appropriate";
 
-        return new AgentBuilder(_chatClient, _serviceProvider)
-            .WithName("TaskAgent")
-            .WithInstructions(instructions)
-            .WithTools<TaskAgentTools>()
-            .Build();
+        return await CreateBuilder()
+                .WithName("TaskAgent")
+                .WithInstructions(instructions)
+                .WithToolsAsync<TaskAgentTools>() 
+                .ContinueWith(builder => builder.Result.Build());
     }
 
     public AIAgent CreateResearchAgent()
