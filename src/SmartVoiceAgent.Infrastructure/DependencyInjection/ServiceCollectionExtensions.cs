@@ -40,7 +40,7 @@ public static class ServiceCollectionExtensions
         services.Configure<GroupChatOptions>(configuration.GetSection("GroupChat"));
 
         services.AddScoped<Functions>();
-        services.Configure<McpOptions>(configuration.GetSection("McpOptions"));
+        services.Configure<McpOptions>(configuration.GetSection("MCP"));
 
         Console.WriteLine("✅ Smart Voice Agent services registered");
 
