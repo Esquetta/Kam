@@ -11,6 +11,7 @@
   <ItemGroup>
     <PackageReference Include="MediatR" Version="12.5.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.1" />
+    <PackageReference Include="ModelContextProtocol" Version="0.5.0-preview.1" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.MongoDB" Version="7.2.0" />
   </ItemGroup>

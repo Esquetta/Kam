@@ -7,7 +7,6 @@
     <UserSecretsId>c596b7d6-7516-451c-b4fc-598ea1e7ddc6</UserSecretsId>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,6 +22,7 @@
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.1" />
     <PackageReference Include="Microsoft.SemanticKernel.Core" Version="1.67.1" />
+    <PackageReference Include="ModelContextProtocol" Version="0.5.0-preview.1" />
     <PackageReference Include="ModelContextProtocol-SemanticKernel" Version="0.5.0" />
   </ItemGroup>
 
