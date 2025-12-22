@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using AgentFrameworkToolkit.Tools;
+using MediatR;
 using Microsoft.Extensions.AI;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Commands;
@@ -20,7 +21,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             _contextManager = contextManager;
         }
 
-        [Description("Opens a desktop application by name.")]
+        [AITool("open_application_async","Opens a desktop application by name.")]
         public async Task<string> OpenApplicationAsync(
             [Description("Name of the application to open (e.g., Chrome, Spotify)")]
             string applicationName)
@@ -50,7 +51,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             }
         }
 
-        [Description("Closes a running desktop application safely.")]
+        [AITool("close_application","Closes a running desktop application safely.")]
         public async Task<string> CloseApplicationAsync(
             [Description("Name of the application to close")]
             string applicationName)
@@ -77,7 +78,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             }
         }
 
-        [Description("Checks if an application is installed and returns diagnostic info.")]
+        [AITool("check_application_status","Checks if an application is installed and returns diagnostic info.")]
         public async Task<string> CheckApplicationAsync(
             [Description("Name of the application to verify")]
             string applicationName)
@@ -85,8 +86,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             try
             {
                 var result = await _mediator.Send(new CheckApplicationCommand(applicationName));
-                // Mediator'un döndüğü string (muhtemelen teknik bilgi) Agent için yeterlidir.
-                // Eğer result null ise "Bulunamadı" döneriz.
                 return result?.ToString() ?? $"{applicationName} hakkında bilgi bulunamadı.";
             }
             catch (Exception ex)
@@ -95,7 +94,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             }
         }
 
-        [Description("Retrieves the full installation path for an application.")]
+        [AITool("get_application_path","Retrieves the full installation path for an application.")]
         public async Task<string> GetApplicationPathAsync(string applicationName)
         {
             try
@@ -109,13 +108,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             }
         }
 
-        [Description("Checks if an application is currently running.")]
+        [AITool("is_application_running","Checks if an application is currently running.")]
         public async Task<string> IsApplicationRunningAsync(string applicationName)
         {
             try
             {
-                // Mediator muhtemelen bool veya detaylı string dönüyor. 
-                // Bunu net bir cümleye çevirebiliriz veya direkt sonucu dönebiliriz.
                 var result = await _mediator.Send(new IsApplicationRunningCommand(applicationName));
                 return result.ToString();
             }
@@ -125,7 +122,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             }
         }
 
-        [Description("Lists all installed applications on the system.")]
+        [AITool("list_installed_applications","Lists all installed applications on the system.")]
         public async Task<string> ListInstalledApplicationsAsync(bool includeSystemApps = false)
         {
             try
@@ -141,7 +138,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             }
         }
 
-        [Description("Plays music using available media players.")]
+        [AITool("play_music","Plays music using available media players.")]
         public async Task<string> PlayMusicAsync(
             [Description("Name of the track, playlist, etc.")] string trackName)
         {
@@ -159,7 +156,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             }
         }
 
-        [Description("Controls system devices and hardware components.")]
+        [AITool("control_device","Controls system devices and hardware components.")]
         public async Task<string> ControlDeviceAsync(
             [Description("Name of the device (volume, wifi, etc)")] string deviceName,
             [Description("Action (increase, toggle, on, off)")] string action)

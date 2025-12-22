@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using AgentFrameworkToolkit.Tools;
+using MediatR;
 using Microsoft.Extensions.AI;
 using SmartVoiceAgent.Application.Commands;
 using System.ComponentModel;
@@ -12,11 +13,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         {
             _mediator = mediator;
         }
-        /// <summary>
-        /// Executes a web search using the provided query, language, and result count.
-        /// Returns a plain text summary or result set from the search handler.
-        /// </summary>
-        [Description("Belirtilen sorgu için web araması yapar ve sonuçları özetlenmiş metin olarak döndürür. Bu araç, sadece arama yapılması gerektiğinde kullanılmalıdır.")]
+        [AITool("search_web","Search given query in web.")]
         public async Task<string> SearchWebAsync(
             [Description("Web'de aranacak sorgu metni (örn: 'İstanbul hava durumu')")]
         string query,
@@ -36,15 +33,9 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
             catch (Exception ex)
             {
-                // Hata durumunda net bir hata mesajı döndür.
                 return $"❌ Web araması gerçekleştirilemedi. Hata: {ex.Message}";
             }
         }
-
-        /// <summary>
-        /// Retrieves all function tools for this agent as AIFunction instances, 
-        /// allowing the Microsoft Agent Framework to register them automatically.
-        /// </summary>
         public IEnumerable<AIFunction> GetTools()
         {
             return
