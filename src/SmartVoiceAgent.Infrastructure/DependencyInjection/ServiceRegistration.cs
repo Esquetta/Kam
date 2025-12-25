@@ -23,7 +23,6 @@ public static class ServiceRegistration
         IConfiguration configuration)
     {
         services.AddScoped<ICommandLearningService, CommandLearningService>();
-        services.AddHostedService<AgentHostedService>();
         services.AddSingleton<ISTTServiceFactory, STTServiceFactory>();
         services.AddSingleton<AudioProcessingService>();
         services.AddScoped<ILanguageDetectionService, HuggingFaceLanguageDetectionService>();

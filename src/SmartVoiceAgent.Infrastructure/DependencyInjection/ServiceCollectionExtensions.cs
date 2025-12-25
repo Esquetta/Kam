@@ -3,7 +3,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenAI;
-using SmartVoiceAgent.Application.Agent;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
 using SmartVoiceAgent.Infrastructure.Agent.Agents;
@@ -26,20 +25,16 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddSmartVoiceAgent(this IServiceCollection services, IConfiguration configuration)
     {
-        // Core agent function services
-        services.AddScoped<SystemAgentFunctions>();
-        services.AddScoped<WebSearchAgentFunctions>();
+
 
         // Context and analytics services
         services.AddSingleton<ConversationContextManager>();
-        services.AddSingleton<GroupChatAnalytics>();
 
         services.BuildServiceProvider();
 
         // Configuration options
         services.Configure<GroupChatOptions>(configuration.GetSection("GroupChat"));
 
-        services.AddScoped<Functions>();
         services.Configure<McpOptions>(configuration.GetSection("McpOptions"));
 
         Console.WriteLine("✅ Smart Voice Agent services registered");

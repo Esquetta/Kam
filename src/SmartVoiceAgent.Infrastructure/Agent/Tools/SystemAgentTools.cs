@@ -30,7 +30,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
 
             if (_contextManager.IsApplicationOpen(applicationName))
             {
-                // Agent bunu okuduğunda: "Zaten açıkmış, tekrar açmama gerek yok" der.
+                
                 return $"{applicationName} uygulaması zaten şu an açık.";
             }
 
