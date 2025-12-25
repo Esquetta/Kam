@@ -127,8 +127,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
         {
             try
             {
-                // Liste çok uzun olabilir, Mediator string olarak formatlı bir liste dönmelidir.
-                // Örn: "1. Chrome\n2. Spotify..."
                 var result = await _mediator.Send(new ListInstalledApplicationsCommand(includeSystemApps));
                 return result?.ToString() ?? "Yüklü uygulama listesi boş.";
             }
