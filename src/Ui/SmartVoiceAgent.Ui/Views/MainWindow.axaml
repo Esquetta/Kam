@@ -39,9 +39,9 @@
 		</Style>
 
 		<Style Selector="Button.NavBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="#1000F2FF"/>
-			<Setter Property="BorderBrush" Value="#4400F2FF"/>
-			<Setter Property="BoxShadow" Value="0 0 12 0 #6600F2FF"/> </Style>
+			<Setter Property="Background" Value="#1500F2FF"/>
+			<Setter Property="BoxShadow" Value="0 0 15 0 #AA00F2FF"/>
+		</Style>
 
 		<Style Selector="Button.NavBtn:pointerover Path">
 			<Setter Property="Fill" Value="#00F2FF"/>
@@ -88,7 +88,9 @@
 						</Button>
 
 						<Button Classes="NavBtn">
-							<Path Data="M12,2L2,22H22L12,2M12,6L19.5,20H4.5L12,6Z"/>
+							<Viewbox Width="24" Height="24">
+								<Path Data="M12,2L2,22H22L12,2M12,6L19.5,20H4.5L12,6Z"/>
+							</Viewbox>
 						</Button>
 
 						<Button Classes="NavBtn">
@@ -137,12 +139,7 @@
 					<Border Grid.Row="0" Grid.Column="2" Classes="AgentCard" Padding="20">
 						<StackPanel Spacing="15">
 							<TextBlock Text="TASK_SCHEDULER" Classes="AgentHeader" Foreground="#FF9F0A"/>
-							<ProgressBar Value="{Binding TaskProgress}"
-										 Height="3"
-										 Foreground="#FF9F0A"
-										 Background="#11FFFFFF"
-										 CornerRadius="2"/>
-							<TextBlock Text="QUEUE: ACTIVE" FontSize="9" Opacity="0.4" HorizontalAlignment="Right"/>
+							<ProgressBar Value="{Binding TaskProgress}" Height="3" Foreground="#FF9F0A"/>
 						</StackPanel>
 					</Border>
 
