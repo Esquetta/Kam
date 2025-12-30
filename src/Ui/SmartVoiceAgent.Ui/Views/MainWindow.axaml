@@ -50,8 +50,8 @@
 		<Style Selector="Button.NavBtn[Tag=Active] /template/ ContentPresenter#PART_ContentPresenter">
 			<Setter Property="Background" Value="#2000F2FF"/>
 			<Setter Property="BorderBrush" Value="#00F2FF"/>
-			<Setter Property="BoxShadow" Value="0 0 15 2 #8800F2FF"/>
-		</Style>
+			<Setter Property="BoxShadow" Value="0 0 15 0 #AA00F2FF"/>
+	</Style>
 
 		<Style Selector="Button.NavBtn[Tag=Active] Path">
 			<Setter Property="Fill" Value="#00F2FF"/>
