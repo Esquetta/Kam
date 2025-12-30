@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using SmartVoiceAgent.Ui.ViewModels;
 
 namespace SmartVoiceAgent.Ui.Views
 {
@@ -7,6 +8,13 @@ namespace SmartVoiceAgent.Ui.Views
         public MainWindow()
         {
             InitializeComponent();
+            this.Opened += (s, e) =>
+            {
+                if (DataContext is MainWindowViewModel vm)
+                {
+                    vm.StartSimulation();
+                }
+            };
         }
 
     }
