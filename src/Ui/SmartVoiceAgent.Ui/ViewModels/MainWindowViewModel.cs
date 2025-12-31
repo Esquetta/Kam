@@ -1,6 +1,9 @@
-﻿using Avalonia.Threading;
+﻿using Avalonia;
+using Avalonia.Threading;
 using ReactiveUI;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace SmartVoiceAgent.Ui.ViewModels
 {
@@ -20,6 +23,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
             get => _researchLogs;
             set => this.RaiseAndSetIfChanged(ref _researchLogs, value);
         }
+        private Points _analyzerPoints = new Points();
+        public Points AnalyzerPoints
+        {
+            get => _analyzerPoints;
+            set => this.RaiseAndSetIfChanged(ref _analyzerPoints, value);
+        }
+        private List<double> _rawPoints = new List<double>(Enumerable.Repeat(50.0, 20));
         public void StartSimulation()
         {
             var timer = new DispatcherTimer
