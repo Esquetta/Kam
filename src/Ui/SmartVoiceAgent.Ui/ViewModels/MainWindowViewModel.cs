@@ -1,4 +1,5 @@
 ﻿using Avalonia;
+using Avalonia.Media;
 using Avalonia.Threading;
 using ReactiveUI;
 using System;
@@ -30,25 +31,40 @@ namespace SmartVoiceAgent.Ui.ViewModels
             set => this.RaiseAndSetIfChanged(ref _analyzerPoints, value);
         }
         private List<double> _rawPoints = new List<double>(Enumerable.Repeat(50.0, 20));
+        private IBrush _currentOrbColor = Brush.Parse("#00F2FF");
+        public IBrush CurrentOrbColor
+        {
+            get => _currentOrbColor;
+            set => this.RaiseAndSetIfChanged(ref _currentOrbColor, value);
+        }
         public void StartSimulation()
         {
             var timer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromMilliseconds(800) // Updates every 0.8 seconds
+                Interval = TimeSpan.FromMilliseconds(800)
             };
 
             timer.Tick += (s, e) =>
             {
-                // 1. Update Progress Bar (loops back to 0 at 100)
                 TaskProgress = (TaskProgress + 1.5) % 100;
 
-                // 2. Generate Fake Logs
                 string timestamp = DateTime.Now.ToString("HH:mm:ss");
-                string[] fakeTasks = { "ANALYZING_NODE", "ENCRYPTING_DATA", "VOICE_RECOGNITION_ACTIVE", "SYNCING_CORES" };
-                string randomTask = fakeTasks[new Random().Next(fakeTasks.Length)];
+                string[] fakeTasks = { "ANALYZING_NODE", "ENCRYPTING_DATA", "VOICE_RECOGNITION", "SYNCING_CORES", "CRITICAL_ERROR_71", "SYSTEM_OVERLOAD" };
 
-                // Add new log to the top
-                ResearchLogs = $"[{timestamp}] {randomTask}... OK\n" + ResearchLogs;
+                // Declare the variable here first!
+                string newTask = fakeTasks[new Random().Next(fakeTasks.Length)];
+
+                ResearchLogs = $"[{timestamp}] {newTask}... OK\n" + ResearchLogs;
+
+                // Now you can use newTask
+                if (newTask.Contains("ERROR") || newTask.Contains("OVERLOAD"))
+                {
+                    CurrentOrbColor = Brush.Parse("#FF3B30"); // Red
+                }
+                else
+                {
+                    CurrentOrbColor = Brush.Parse("#00F2FF"); // Cyan
+                }
             };
 
             timer.Start();
