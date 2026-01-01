@@ -1,73 +1,95 @@
 ﻿using Avalonia;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using ReactiveUI;
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Collections.ObjectModel;
 
 namespace SmartVoiceAgent.Ui.ViewModels
 {
-    
+
     public partial class MainWindowViewModel : ReactiveObject
     {
-        private double _taskProgress = 45.0;
+        private NavView _activeView = NavView.Coordinator;
+        public NavView ActiveView
+        {
+            get => _activeView;
+            set => this.RaiseAndSetIfChanged(ref _activeView, value);
+        }
+
+        private ObservableCollection<string> _logEntries = new ObservableCollection<string>();
+        public ObservableCollection<string> LogEntries
+        {
+            get => _logEntries;
+            set => this.RaiseAndSetIfChanged(ref _logEntries, value);
+        }
+
+        private double _taskProgress;
         public double TaskProgress
         {
             get => _taskProgress;
             set => this.RaiseAndSetIfChanged(ref _taskProgress, value);
         }
 
-        private string _researchLogs = "SYSTEM_INITIALIZED...";
-        public string ResearchLogs
-        {
-            get => _researchLogs;
-            set => this.RaiseAndSetIfChanged(ref _researchLogs, value);
-        }
-        private Points _analyzerPoints = new Points();
-        public Points AnalyzerPoints
-        {
-            get => _analyzerPoints;
-            set => this.RaiseAndSetIfChanged(ref _analyzerPoints, value);
-        }
-        private List<double> _rawPoints = new List<double>(Enumerable.Repeat(50.0, 20));
-        private IBrush _currentOrbColor = Brush.Parse("#00F2FF");
+        private IBrush _currentOrbColor = Brush.Parse("#00D4FF");
         public IBrush CurrentOrbColor
         {
             get => _currentOrbColor;
             set => this.RaiseAndSetIfChanged(ref _currentOrbColor, value);
         }
+
+        public void SetView(string viewName)
+        {
+            if (Enum.TryParse(viewName, out NavView target))
+            {
+                ActiveView = target;
+                AddLog($"MOUNTED_VIEW: {target.ToString().ToUpper()}");
+            }
+        }
+
+        public void AddLog(string message)
+        {
+            string timestamp = DateTime.Now.ToString("HH:mm:ss");
+            LogEntries.Insert(0, $"[{timestamp}] {message}");
+        }
+
+        public void ToggleTheme()
+        {
+            var app = Application.Current;
+            if (app != null)
+            {
+                app.RequestedThemeVariant = app.ActualThemeVariant == ThemeVariant.Dark
+                    ? ThemeVariant.Light : ThemeVariant.Dark;
+                AddLog("SYSTEM_THEME_TOGGLED");
+            }
+        }
+
         public void StartSimulation()
         {
-            var timer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(800)
-            };
-
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
             timer.Tick += (s, e) =>
             {
-                TaskProgress = (TaskProgress + 1.5) % 100;
+                TaskProgress = (TaskProgress + 2) % 100;
+                string[] tasks = { "ANALYZING_NODE", "SYNCING_CORES", "CRITICAL_ERROR", "VOICE_RECOGNITION" };
 
-                string timestamp = DateTime.Now.ToString("HH:mm:ss");
-                string[] fakeTasks = { "ANALYZING_NODE", "ENCRYPTING_DATA", "VOICE_RECOGNITION", "SYNCING_CORES", "CRITICAL_ERROR_71", "SYSTEM_OVERLOAD" };
+                // FIXED: Declare variable inside this scope
+                string newTask = tasks[new Random().Next(tasks.Length)];
 
-                // Declare the variable here first!
-                string newTask = fakeTasks[new Random().Next(fakeTasks.Length)];
+                AddLog($"{newTask}... OK");
 
-                ResearchLogs = $"[{timestamp}] {newTask}... OK\n" + ResearchLogs;
-
-                // Now you can use newTask
-                if (newTask.Contains("ERROR") || newTask.Contains("OVERLOAD"))
-                {
-                    CurrentOrbColor = Brush.Parse("#FF3B30"); // Red
-                }
+                if (newTask.Contains("ERROR"))
+                    CurrentOrbColor = Brush.Parse("#FF3B30");
                 else
-                {
-                    CurrentOrbColor = Brush.Parse("#00F2FF"); // Cyan
-                }
+                    CurrentOrbColor = Brush.Parse("#00D4FF");
             };
-
             timer.Start();
+        }
+
+        public MainWindowViewModel()
+        {
+            StartSimulation();
+            AddLog("SYSTEM_INITIALIZED...");
         }
     }
 }
