@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SmartVoiceAgent.Ui.ViewModels"
              x:Class="SmartVoiceAgent.Ui.Views.NeuralOrb">
 	<UserControl.Styles>
 		<Style Selector="Ellipse.OrbCore">
@@ -26,11 +27,14 @@
 	</UserControl.Styles>
 
 	<Panel VerticalAlignment="Center" HorizontalAlignment="Center">
-		<Ellipse Fill="#00F2FF" Width="140" Height="140" Opacity="0.1">
-			<Ellipse.Effect><BlurEffect Radius="30"/></Ellipse.Effect>
-		</Ellipse>
-		<Ellipse Name="OrbCore" Classes="OrbCore" Fill="#00F2FF" Width="100" Height="100" RenderTransformOrigin="50%,50%">
-			<Ellipse.RenderTransform><ScaleTransform/></Ellipse.RenderTransform>
-		</Ellipse>
-	</Panel>
+        <Ellipse Fill="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).CurrentOrbColor}"
+                 Width="160" Height="160" Opacity="0.1">
+            <Ellipse.Effect><BlurEffect Radius="30"/></Ellipse.Effect>
+        </Ellipse>
+
+        <Ellipse Name="OrbCore" Width="150" Height="150"
+                 Fill="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).CurrentOrbColor}">
+            <Ellipse.RenderTransform><ScaleTransform/></Ellipse.RenderTransform>
+        </Ellipse>
+    </Panel>
 </UserControl>

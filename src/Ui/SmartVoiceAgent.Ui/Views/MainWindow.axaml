@@ -36,25 +36,27 @@
 
 		<Grid ColumnDefinitions="65, *">
 			<Border Grid.Column="0" Background="#0A0A0C" BorderBrush="#1AFFFFFF" BorderThickness="0,0,1,0">
-    <Grid RowDefinitions="*, Auto" Margin="0,50,0,20">
-        
-        <StackPanel Grid.Row="0" Spacing="15" HorizontalAlignment="Center">
-            <Button Classes="NavBtn">
-                <Path Data="M12,2L2,12L12,22L22,12L12,2M12,5L19,12L12,19L5,12L12,5Z" Fill="#00F2FF"/>
-            </Button>
-            <Button Classes="NavBtn">
-                <Path Data="M12,2L2,22H22L12,2M12,6L19.5,20H4.5L12,6Z"/>
-            </Button>
-            <Button Classes="NavBtn">
-                <Path Data="M10.59,13.41L14.59,9.41L13.17,8L9.17,12L10.59,13.41M14.59,14.59L18.59,10.59L17.17,9.17L13.17,13.17L14.59,14.59M5.93,17.17C5.54,16.78 5.34,16.3 5.34,15.81C5.34,15.32 5.53,14.84 5.92,14.45L8.75,11.62L7.34,10.21L4.5,13.04C3.72,13.82 3.33,14.82 3.33,15.81C3.33,16.81 3.72,17.81 4.5,18.58C6.07,20.14 8.6,20.14 10.17,18.58L13,15.75L11.59,14.34L8.76,17.17C8.37,17.56 7.89,17.75 7.4,17.75C6.91,17.75 6.42,17.56 6.03,17.17L5.93,17.17Z"/>
-            </Button>
-        </StackPanel>
+				<Grid RowDefinitions="*, Auto" Margin="0,50,0,20">
 
-        <Button Grid.Row="1" Classes="NavBtn" HorizontalAlignment="Center">
-            <Path Data="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11.03L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.97 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.97 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11.03C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.95C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.95L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
-        </Button>
-    </Grid>
-</Border>
+					<StackPanel Grid.Row="0" Spacing="15" HorizontalAlignment="Center">
+						<Button Classes="NavBtn" Tag="Active">
+							<Path Data="M12,2 L2,12 L12,22 L22,12 L12,2 M12,5 L19,12 L12,19 L5,12 L12,5 Z" Fill="#00F2FF"/>
+						</Button>
+
+						<Button Classes="NavBtn">
+							<Path Data="M12,2 L2,22 L22,22 L12,2 M12,6 L19.5,20 L4.5,20 L12,6 Z"/>
+						</Button>
+
+						<Button Classes="NavBtn">
+							<Path Data="M10.59,13.41 L14.59,9.41 L13.17,8 L9.17,12 L10.59,13.41 M14.59,14.59 L18.59,10.59 L17.17,9.17 L13.17,13.17 L14.59,14.59 M5.93,17.17 C5.54,16.78 5.34,16.3 5.34,15.81 C5.34,15.32 5.53,14.84 5.92,14.45 L8.75,11.62 L7.34,10.21 L4.5,13.04 C3.72,13.82 3.33,14.82 3.33,15.81 C3.33,16.81 3.72,17.81 4.5,18.58 C6.07,20.14 8.6,20.14 10.17,18.58 L13,15.75 L11.59,14.34 L8.76,17.17 C8.37,17.56 7.89,17.75 7.4,17.75 C6.91,17.75 6.42,17.56 6.03,17.17 L5.93,17.17 Z"/>
+						</Button>
+					</StackPanel>
+
+					<Button Grid.Row="1" Classes="NavBtn" HorizontalAlignment="Center">
+						<Path Data="M12,15.5 A3.5,3.5 0 0,1 8.5,12 A3.5,3.5 0 0,1 12,8.5 A3.5,3.5 0 0,1 15.5,12 A3.5,3.5 0 0,1 12,15.5 M19.43,12.97 C19.47,12.65 19.5,12.33 19.5,12 C19.5,11.67 19.47,11.34 19.43,11.03 L21.54,9.37 C21.73,9.22 21.78,8.95 21.66,8.73 L19.66,5.27 C19.54,5.05 19.27,4.97 19.05,5.05 L16.56,6.05 C16.04,5.66 15.5,5.32 14.87,5.07 L14.5,2.42 C14.46,2.18 14.25,2 14,2 H10 C9.75,2 9.54,2.18 9.5,2.42 L9.13,5.07 C8.5,5.32 7.96,5.66 7.44,6.05 L4.95,5.05 C4.73,4.97 4.46,5.05 4.34,5.27 L2.34,8.73 C2.21,8.95 2.27,9.22 2.46,9.37 L4.57,11.03 C4.53,11.34 4.5,11.67 4.5,12 C4.5,12.33 4.53,12.65 4.57,12.97 L2.46,14.63 C2.27,14.78 2.21,15.05 2.34,15.27 L4.34,18.73 C4.46,18.95 4.73,19.03 4.95,18.95 L7.44,17.95 C7.96,18.34 8.5,18.68 9.13,18.93 L9.5,21.58 C9.54,21.82 9.75,22 10,22 H14 C14.25,22 14.46,21.82 14.5,21.58 L14.87,18.93 C15.5,18.68 16.04,18.34 16.56,17.95 L19.05,18.95 C19.27,19.03 19.54,18.95 19.66,18.73 L21.66,15.27 C21.78,15.05 21.73,14.78 21.54,14.63 L19.43,12.97 Z"/>
+					</Button>
+				</Grid>
+			</Border>
 
 			<Grid Grid.Column="1" Margin="30" RowDefinitions="*, *" ColumnDefinitions="*, 1.6*, *">
 				<Border Grid.Row="0" Grid.Column="0" Grid.RowSpan="2" Classes="AgentCard">
@@ -77,13 +79,30 @@
 
 				<Border Grid.Row="1" Grid.Column="2" Classes="AgentCard" Padding="20">
 					<StackPanel>
-						<TextBlock Text="SYSTEM_ANALYZER" Foreground="#30D158"/>
+						<TextBlock Text="SYSTEM_ANALYZER" Foreground="#30D158" FontWeight="Bold"/>
 						<Canvas Height="80" Margin="0,10">
-							<Polyline Points="{Binding AnalyzerPoints}" Stroke="#30D158" StrokeThickness="2" Opacity="0.8"/>
+							<Polyline Points="{Binding AnalyzerPoints}" Stroke="#30D158" StrokeThickness="4" Opacity="0.2">
+								<Polyline.Effect><BlurEffect Radius="8"/></Polyline.Effect>
+							</Polyline>
+							<Polyline Points="{Binding AnalyzerPoints}" Stroke="#30D158" StrokeThickness="2"/>
 						</Canvas>
 					</StackPanel>
 				</Border>
 			</Grid>
 		</Grid>
+		<Panel IsHitTestVisible="False">
+			<Canvas>
+				<Canvas.Background>
+					<VisualBrush TileMode="Tile" SourceRect="0,0,4,4" DestinationRect="0,0,4,4">
+						<VisualBrush.Visual>
+							<Canvas Width="4" Height="4" Background="Transparent">
+								<Rectangle Height="1" Width="4" Fill="#33000000" Opacity="0.3"/>
+							</Canvas>
+						</VisualBrush.Visual>
+					</VisualBrush>
+				</Canvas.Background>
+			</Canvas>
+		</Panel>
 	</Panel>
+
 </Window>
