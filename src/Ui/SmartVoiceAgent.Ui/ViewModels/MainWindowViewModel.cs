@@ -32,6 +32,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             set => this.RaiseAndSetIfChanged(ref _taskProgress, value);
         }
 
+
         private IBrush _currentOrbColor = Brush.Parse("#00D4FF");
         public IBrush CurrentOrbColor
         {
