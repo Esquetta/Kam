@@ -4,141 +4,280 @@
         xmlns:local="clr-namespace:SmartVoiceAgent.Ui.Views"
         x:Class="SmartVoiceAgent.Ui.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Background="Transparent"
+        Background="Black"
         TransparencyLevelHint="Mica"
         ExtendClientAreaToDecorationsHint="True"
         Title="KAM NEURAL // CORE v3.5"
-        Width="1200" Height="900">
+        Width="1100" Height="750">
 
     <Window.Styles>
         <Style Selector="Button.NavBtn">
-            <Setter Property="Width" Value="60"/>
-            <Setter Property="Height" Value="60"/>
+            <Setter Property="Width" Value="44"/>
+            <Setter Property="Height" Value="44"/>
             <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="0"/>
-            <Setter Property="Margin" Value="0,10"/>
+            <Setter Property="Margin" Value="0,15"/>
+            <Setter Property="Cursor" Value="Hand"/>
         </Style>
 
         <Style Selector="Button.NavBtn /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="CornerRadius" Value="15"/>
+            <Setter Property="CornerRadius" Value="10"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="Transitions">
                 <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                    <BrushTransition Property="Background" Duration="0:0:0.3"/>
                 </Transitions>
             </Setter>
         </Style>
 
         <Style Selector="Button.NavBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#10FFFFFF"/>
-            <Setter Property="BorderBrush" Value="#20FFFFFF"/>
+            <Setter Property="Background" Value="#0A00F2FF"/>
         </Style>
 
         <Style Selector="Button.ActiveNav /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="#1500F2FF"/>
-            <Setter Property="BorderBrush" Value="#00F2FF"/>
+            <Setter Property="Background" Value="#2000F2FF"/>
+            <Setter Property="BoxShadow" Value="0 0 20 0 #4000F2FF"/>
         </Style>
 
         <Style Selector="Button.NavBtn Path">
-            <Setter Property="Fill" Value="#666666"/>
-            <Setter Property="Width" Value="24"/>
+            <Setter Property="Fill" Value="#444444"/>
+            <Setter Property="Width" Value="20"/>
             <Setter Property="Stretch" Value="Uniform"/>
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Fill" Duration="0:0:0.3"/>
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="Button.NavBtn:pointerover Path">
+            <Setter Property="Fill" Value="#00A0B0"/>
         </Style>
         
         <Style Selector="Button.ActiveNav Path">
             <Setter Property="Fill" Value="#00F2FF"/>
         </Style>
 
+        <Style Selector="TextBlock.Glitch[Tag=True]">
+            <Style.Animations>
+                <Animation Duration="0:0:0.2" IterationCount="Infinite">
+                    <KeyFrame KeyTime="0:0:0.0">
+                        <Setter Property="(TranslateTransform.X)" Value="0"/>
+                    </KeyFrame>
+                    <KeyFrame KeyTime="0:0:0.05">
+                        <Setter Property="(TranslateTransform.X)" Value="-3"/>
+                        <Setter Property="Foreground" Value="#FF3B30"/>
+                    </KeyFrame>
+                    <KeyFrame KeyTime="0:0:0.1">
+                        <Setter Property="(TranslateTransform.X)" Value="3"/>
+                        <Setter Property="Foreground" Value="#00F2FF"/>
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+
+        <!-- Card Styles -->
+        <Style Selector="Border.InfoCard">
+            <Setter Property="Background" Value="#0D0D0F"/>
+            <Setter Property="BorderBrush" Value="#1A00F2FF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="10"/>
+        </Style>
+
+        <!-- Icon Glow Effect -->
+        <Style Selector="Ellipse.IconGlow">
+            <Setter Property="Opacity" Value="0.8"/>
+        </Style>
     </Window.Styles>
 
     <Panel>
-        <ExperimentalAcrylicBorder IsHitTestVisible="False">
-            <ExperimentalAcrylicBorder.Material>
-                <ExperimentalAcrylicMaterial TintColor="#050505" TintOpacity="0.95" MaterialOpacity="0.85" />
-            </ExperimentalAcrylicBorder.Material>
-        </ExperimentalAcrylicBorder>
-
-        <Grid ColumnDefinitions="80, *, 300">
+        <Grid ColumnDefinitions="70, *, 300">
             
-            <Border Grid.Column="0" Background="#0A0A0C" BorderBrush="#1AFFFFFF" BorderThickness="0,0,1,0">
-                <Grid RowDefinitions="Auto, *, Auto" Margin="0,50,0,20">
+            <!-- Left Navbar -->
+            <Border Grid.Column="0" Background="#050505" BorderBrush="#1AFFFFFF" BorderThickness="0,0,1,0">
+                <Grid RowDefinitions="Auto, *, Auto" Margin="0,40,0,25">
                     
-                    <StackPanel Grid.Row="0" HorizontalAlignment="Stretch">
+                    <StackPanel Grid.Row="0">
                         <Button Classes="NavBtn ActiveNav" Command="{Binding SetView}" CommandParameter="Coordinator">
-                            <Path Data="M3,3 H10 V10 H3 Z M14,3 H21 V10 H14 Z M14,14 H21 V21 H14 Z M3,14 H10 V21 H3 Z"/>
+                            <Path Data="M3,11H11V3H3M3,21H11V13H3M13,21H21V13H13M13,3V11H21V3"/>
                         </Button>
-                        <Button Classes="NavBtn" Command="{Binding SetView}" CommandParameter="Network">
-                            <Path Data="M12,15.5 A3.5,3.5 0 0,1 8.5,12 A3.5,3.5 0 0,1 12,8.5 A3.5,3.5 0 0,1 15.5,12 A3.5,3.5 0 0,1 12,15.5 M19.43,12.97 C19.47,12.65 19.5,12.33 19.5,12 C19.5,11.67 19.47,11.34 19.43,11.03 L21.54,9.37 C21.73,9.22 21.78,8.95 21.66,8.73 L19.66,5.27 C19.54,5.05 19.27,4.97 19.05,5.05 L16.56,6.05 C16.04,5.66 15.5,5.32 14.87,5.07 L14.5,2.42 C14.46,2.18 14.25,2 14,2 H10 C9.75,2 9.54,2.18 9.5,2.42 L9.13,5.07 C8.5,5.32 7.96,5.66 7.44,6.05 L4.95,5.05 C4.73,4.97 4.46,5.05 4.34,5.27 L2.34,8.73 C2.21,8.95 2.27,9.22 2.46,9.37 L4.57,11.03 C4.53,11.34 4.5,11.67 4.5,12 C4.5,12.33 4.53,12.65 4.57,12.97 L2.46,14.63 C2.27,14.78 2.21,15.05 2.34,15.27 L4.34,18.73 C4.46,18.95 4.73,19.03 4.95,18.95 L7.44,17.95 C7.96,18.34 8.5,18.68 9.13,18.93 L9.5,21.58 C9.54,21.82 9.75,22 10,22 H14 C14.25,22 14.46,21.82 14.5,21.58 L14.87,18.93 C15.5,18.68 16.04,18.34 16.56,17.95 L19.05,18.95 C19.27,19.03 19.54,18.95 19.66,18.73 L21.66,15.27 C21.78,15.05 21.73,14.78 21.54,14.63 L19.43,12.97 Z"/>
+                        <Button Classes="NavBtn">
+                            <Path Data="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4C14,4 15.7,4.6 17,5.5L15.3,7.2C14.4,6.5 13.2,6 12,6C9.8,6 8,7.8 8,10H10L7,13L4,10H6C6,6.7 8.7,4 12,4M17,11L20,14H18C18,17.3 15.3,20 12,20C10,20 8.3,19.4 7,18.5L8.7,16.8C9.6,17.5 10.8,18 12,18C14.2,18 16,16.2 16,14H14L17,11Z"/>
+                        </Button>
+                        <Button Classes="NavBtn">
+                            <Path Data="M16,17V14H9V10H16V7L21,12L16,17M14,2A2,2 0 0,1 16,4V6H14V4H5V20H14V18H16V20A2,2 0 0,1 14,22H5A2,2 0 0,1 3,20V4A2,2 0 0,1 5,2H14Z"/>
+                        </Button>
+                        <Button Classes="NavBtn">
+                            <Path Data="M13.94,5.04L15.21,6.21C14.28,7.17 13,7.76 11.57,7.76C8.74,7.76 6.46,5.5 6.46,2.67H8.46C8.46,4.39 9.85,5.76 11.57,5.76C12.25,5.76 12.87,5.53 13.38,5.13L12.11,3.86L16.11,3.86V7.86L13.94,5.04M10.06,18.96L8.79,17.79C9.72,16.83 11,16.24 12.43,16.24C15.26,16.24 17.54,18.5 17.54,21.33H15.54C15.54,19.61 14.15,18.24 12.43,18.24C11.75,18.24 11.13,18.47 10.62,18.87L11.89,20.14L7.89,20.14V16.14L10.06,18.96Z"/>
+                        </Button>
+                        <Button Classes="NavBtn">
+                            <Path Data="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11.03L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.97 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.97 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11.03C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.95C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.95L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
                         </Button>
                     </StackPanel>
 
-                    <Button Grid.Row="2" Classes="NavBtn" Command="{Binding ToggleTheme}">
-                        <TextBlock Text="🌙" FontSize="20" HorizontalAlignment="Center"/>
-                    </Button>
+                    <StackPanel Grid.Row="2">
+                        <Button Classes="NavBtn" Command="{Binding ToggleTheme}">
+                            <TextBlock Text="🌙" FontSize="18" HorizontalAlignment="Center" Foreground="#444444"/>
+                        </Button>
+                        <Button Classes="NavBtn">
+                            <Path Data="M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10M10,22C9.75,22 9.54,21.82 9.5,21.58L9.13,18.91C8.5,18.65 7.96,18.32 7.44,17.94L4.95,18.95C4.73,19.03 4.46,18.95 4.34,18.73L2.34,15.27C2.21,15.05 2.27,14.78 2.46,14.63L4.57,12.97L4.5,12L4.57,11.03L2.46,9.37C2.27,9.22 2.21,8.95 2.34,8.73L4.34,5.27C4.46,5.05 4.73,4.97 4.95,5.05L7.44,6.05C7.96,5.68 8.5,5.35 9.13,5.09L9.5,2.42C9.54,2.18 9.75,2 10,2H14C14.25,2 14.46,2.18 14.5,2.42L14.87,5.09C15.5,5.35 16.04,5.68 16.56,6.05L19.05,5.05C19.27,4.97 19.54,5.05 19.66,5.27L21.66,8.73C21.78,8.95 21.73,9.22 21.54,9.37L19.43,11.03L19.5,12L19.43,12.97L21.54,14.63C21.73,14.78 21.78,15.05 21.66,15.27L19.66,18.73C19.54,18.95 19.27,19.03 19.05,18.95L16.56,17.94C16.04,18.32 15.5,18.65 14.87,18.91L14.5,21.58C14.46,21.82 14.25,22 14,22H10Z"/>
+                        </Button>
+                    </StackPanel>
                 </Grid>
             </Border>
 
+            <!-- Center Content -->
             <Grid Grid.Column="1" Margin="40">
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <Panel>
-                        <StackPanel>
-                            <TextBlock Text="COORDINATOR" FontSize="48" LetterSpacing="25" FontWeight="Thin" HorizontalAlignment="Center"/>
-                            <TextBlock Text="KERNEL v3.5 // NEURAL LINK STABLE" Foreground="#00D4FF" Opacity="0.6" HorizontalAlignment="Center" Margin="0,10,0,40"/>
-                        </StackPanel>
+                <Grid RowDefinitions="Auto, Auto, *, Auto">
+                    
+                    <!-- Title Section -->
+                    <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,40,0,0">
+                        <TextBlock Text="COORDINATOR" 
+                                   Classes="Glitch"
+                                   FontSize="48" 
+                                   LetterSpacing="25" 
+                                   HorizontalAlignment="Center"
+                                   Foreground="White"
+                                   FontWeight="Light">
+                            <TextBlock.RenderTransform>
+                                <TranslateTransform/>
+                            </TextBlock.RenderTransform>
+                        </TextBlock>
+                        <TextBlock Text="KERNEL v3.5 // NEURAL LINK STABLE" 
+                                   Foreground="#00F2FF" 
+                                   Opacity="0.6" 
+                                   HorizontalAlignment="Center" 
+                                   Margin="0,5,0,0"
+                                   FontSize="11"
+                                   LetterSpacing="2"/>
+                    </StackPanel>
 
-                        <Canvas Height="100" VerticalAlignment="Top" IsHitTestVisible="False">
-                            <Rectangle Name="ScannerLine" Width="600" Height="1" Fill="#00D4FF">
-                                <Rectangle.Effect>
-                                    <BlurEffect Radius="8"/>
-                                </Rectangle.Effect>
-                                <Rectangle.Styles>
-                                    <Style Selector="Rectangle">
-                                        <Style.Animations>
-                                            <Animation Duration="0:0:4" IterationCount="Infinite">
-                                                <KeyFrame KeyTime="0:0:0">
-                                                    <Setter Property="Canvas.Top" Value="0"/>
-                                                    <Setter Property="Opacity" Value="0"/>
-                                                </KeyFrame>
-                                                <KeyFrame KeyTime="0:0:2">
-                                                    <Setter Property="Opacity" Value="0.5"/>
-                                                </KeyFrame>
-                                                <KeyFrame KeyTime="0:0:4">
-                                                    <Setter Property="Canvas.Top" Value="100"/>
-                                                    <Setter Property="Opacity" Value="0"/>
-                                                </KeyFrame>
-                                            </Animation>
-                                        </Style.Animations>
-                                    </Style>
-                                </Rectangle.Styles>
-                            </Rectangle>
-                        </Canvas>
-                    </Panel>
+                    <!-- Neural Orb -->
+                    <Viewbox Grid.Row="2" Width="280" Height="280" VerticalAlignment="Center">
+                        <local:NeuralOrb/>
+                    </Viewbox>
 
-                    <local:NeuralOrb Width="350" Height="350" HorizontalAlignment="Center"/>
-                </StackPanel>
+                    <!-- Bottom Cards -->
+                    <UniformGrid Grid.Row="3" Columns="3" Margin="0,40,0,20">
+                        
+                        <!-- Research Card -->
+                        <Border Classes="InfoCard">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                                    <Canvas Width="28" Height="28" Margin="0,0,12,0">
+                                        <Ellipse Classes="IconGlow" Width="28" Height="28" Fill="#8B5CF6">
+                                            <Ellipse.Effect>
+                                                <BlurEffect Radius="8"/>
+                                            </Ellipse.Effect>
+                                        </Ellipse>
+                                        <Ellipse Width="18" Height="18" Canvas.Left="5" Canvas.Top="5" Fill="#8B5CF6"/>
+                                    </Canvas>
+                                    <TextBlock Text="RESEARCH" 
+                                               Foreground="#8B5CF6" 
+                                               FontWeight="Bold" 
+                                               FontSize="12"
+                                               LetterSpacing="1"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock Text="19:18:35  Local kernel initialized." 
+                                           Foreground="#666666" 
+                                           FontSize="9" 
+                                           FontFamily="Consolas"
+                                           Margin="0,0,0,3"/>
+                                <TextBlock Text="19:18:39  Passive scanning enabled." 
+                                           Foreground="#666666" 
+                                           FontSize="9" 
+                                           FontFamily="Consolas"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Analyzer Card -->
+                        <Border Classes="InfoCard">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                                    <Canvas Width="28" Height="28" Margin="0,0,12,0">
+                                        <Ellipse Classes="IconGlow" Width="28" Height="28" Fill="#10B981">
+                                            <Ellipse.Effect>
+                                                <BlurEffect Radius="8"/>
+                                            </Ellipse.Effect>
+                                        </Ellipse>
+                                        <Ellipse Width="18" Height="18" Canvas.Left="5" Canvas.Top="5" Fill="#10B981"/>
+                                    </Canvas>
+                                    <TextBlock Text="ANALYZER" 
+                                               Foreground="#10B981" 
+                                               FontWeight="Bold" 
+                                               FontSize="12"
+                                               LetterSpacing="1"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock Text="19:18:39  Offline semantic engine active." 
+                                           Foreground="#666666" 
+                                           FontSize="9" 
+                                           FontFamily="Consolas"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Tasks Card -->
+                        <Border Classes="InfoCard">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                                    <Canvas Width="28" Height="28" Margin="0,0,12,0">
+                                        <Ellipse Classes="IconGlow" Width="28" Height="28" Fill="#F59E0B">
+                                            <Ellipse.Effect>
+                                                <BlurEffect Radius="8"/>
+                                            </Ellipse.Effect>
+                                        </Ellipse>
+                                        <Ellipse Width="18" Height="18" Canvas.Left="5" Canvas.Top="5" Fill="#F59E0B"/>
+                                    </Canvas>
+                                    <TextBlock Text="TASKS" 
+                                               Foreground="#F59E0B" 
+                                               FontWeight="Bold" 
+                                               FontSize="12"
+                                               LetterSpacing="1"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock Text="18:18:38  Scheduler ready." 
+                                           Foreground="#666666" 
+                                           FontSize="9" 
+                                           FontFamily="Consolas"/>
+                            </StackPanel>
+                        </Border>
+                        
+                    </UniformGrid>
+                </Grid>
             </Grid>
 
-            <Border Grid.Column="2" Background="#0A0A0C" BorderBrush="#1AFFFFFF" BorderThickness="1,0,0,0" Padding="20">
+            <!-- Right Panel - Kernel Log -->
+            <Border Grid.Column="2" Background="#0A0A0C" Padding="25">
                 <Grid RowDefinitions="Auto, *">
-                    <TextBlock Grid.Row="0" Text="KERNEL_LOG" Foreground="#666666" FontSize="12" FontWeight="Bold" Margin="0,0,0,15"/>
-                    <ScrollViewer Grid.Row="1">
+                    <TextBlock Grid.Row="0" 
+                               Text="KERNEL_LOG" 
+                               Foreground="#444444" 
+                               FontSize="11" 
+                               FontWeight="Bold" 
+                               LetterSpacing="2"
+                               Margin="0,0,0,20"/>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                         <ItemsControl ItemsSource="{Binding LogEntries}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding}" Foreground="#00D4FF" FontSize="11" Margin="0,2" FontFamily="Consolas" Opacity="0.8"/>
+                                    <TextBlock Text="{Binding}" 
+                                               Foreground="#00F2FF" 
+                                               FontSize="10" 
+                                               Margin="0,3" 
+                                               FontFamily="Consolas" 
+                                               Opacity="0.7"
+                                               TextWrapping="Wrap"/>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </ScrollViewer>
                 </Grid>
             </Border>
-            
         </Grid>
     </Panel>
 </Window>

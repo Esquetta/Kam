@@ -8,18 +8,15 @@ public partial class NeuralOrb : UserControl
 {
     public NeuralOrb()
     {
-
         InitializeComponent();
-
     }
 
-    public static readonly StyledProperty<IBrush> ActiveColorProperty =
-        AvaloniaProperty.Register<NeuralOrb, IBrush>(nameof(ActiveColor));
+    public static readonly StyledProperty<IBrush> OrbColorProperty =
+        AvaloniaProperty.Register<NeuralOrb, IBrush>(nameof(OrbColor), Brush.Parse("#00D4FF"));
 
-    public IBrush ActiveColor
+    public IBrush OrbColor
     {
-        get => GetValue(ActiveColorProperty);
-        set => SetValue(ActiveColorProperty, value);
+        get => GetValue(OrbColorProperty);
+        set => SetValue(OrbColorProperty, value);
     }
-
 }
