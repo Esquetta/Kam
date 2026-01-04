@@ -32,6 +32,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
             set => this.RaiseAndSetIfChanged(ref _taskProgress, value);
         }
 
+        // UI tarafındaki Güneş/Ay ikon geçişini tetiklemek için IsDarkMode ekledik
+        private bool _isDarkMode = true;
+        public bool IsDarkMode
+        {
+            get => _isDarkMode;
+            set => this.RaiseAndSetIfChanged(ref _isDarkMode, value);
+        }
 
         private IBrush _currentOrbColor = Brush.Parse("#00D4FF");
         public IBrush CurrentOrbColor
@@ -52,7 +59,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public void AddLog(string message)
         {
             string timestamp = DateTime.Now.ToString("HH:mm:ss");
-            LogEntries.Insert(0, $"[{timestamp}] {message}");
+            // Logların UI'da donmaması için Dispatcher.UIThread kullanımı (Opsiyonel ama tavsiye edilir)
+            Dispatcher.UIThread.Post(() =>
+            {
+                LogEntries.Insert(0, $"[{timestamp}] {message}");
+            });
         }
 
         public void ToggleTheme()
@@ -60,9 +71,28 @@ namespace SmartVoiceAgent.Ui.ViewModels
             var app = Application.Current;
             if (app != null)
             {
-                app.RequestedThemeVariant = app.ActualThemeVariant == ThemeVariant.Dark
-                    ? ThemeVariant.Light : ThemeVariant.Dark;
-                AddLog("SYSTEM_THEME_TOGGLED");
+                // Mevcut durumu tersine çevir
+                IsDarkMode = !IsDarkMode;
+
+                app.RequestedThemeVariant = IsDarkMode ? ThemeVariant.Dark : ThemeVariant.Light;
+
+                // Pencere sınıflarını (Classes) güncellemek bazı özel CSS-like stiller için faydalıdır
+                var mainWindow = (app.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+                if (mainWindow != null)
+                {
+                    if (IsDarkMode)
+                    {
+                        if (!mainWindow.Classes.Contains("Dark")) mainWindow.Classes.Add("Dark");
+                        mainWindow.Classes.Remove("Light");
+                    }
+                    else
+                    {
+                        if (!mainWindow.Classes.Contains("Light")) mainWindow.Classes.Add("Light");
+                        mainWindow.Classes.Remove("Dark");
+                    }
+                }
+
+                AddLog($"SYSTEM_THEME_TOGGLED: {(IsDarkMode ? "DARK" : "LIGHT")}");
             }
         }
 
@@ -74,11 +104,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 TaskProgress = (TaskProgress + 2) % 100;
                 string[] tasks = { "ANALYZING_NODE", "SYNCING_CORES", "CRITICAL_ERROR", "VOICE_RECOGNITION" };
 
-                // FIXED: Declare variable inside this scope
                 string newTask = tasks[new Random().Next(tasks.Length)];
 
                 AddLog($"{newTask}... OK");
 
+                // Hata durumunda Orb rengini değiştirme
                 if (newTask.Contains("ERROR"))
                     CurrentOrbColor = Brush.Parse("#FF3B30");
                 else
@@ -89,6 +119,12 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public MainWindowViewModel()
         {
+            // İlk açılışta sistemin gerçek temasını yakala
+            if (Application.Current != null)
+            {
+                IsDarkMode = Application.Current.ActualThemeVariant == ThemeVariant.Dark;
+            }
+
             StartSimulation();
             AddLog("SYSTEM_INITIALIZED...");
         }
