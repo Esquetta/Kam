@@ -1,28 +1,49 @@
-<ResourceDictionary xmlns="https://github.com/avaloniaui"
-					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-	<ResourceDictionary.ThemeDictionaries>
+<ResourceDictionary
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-		<ResourceDictionary x:Key="Dark">
-			<ResourceInclude Source="avares://SmartVoiceAgent.Ui/Themes/Colors.Dark.axaml"/>
-		</ResourceDictionary>
+    <ResourceDictionary.ThemeDictionaries>
 
-		<ResourceDictionary x:Key="Light">
-			<ResourceInclude Source="avares://SmartVoiceAgent.Ui/Themes/Colors.Light.axaml"/>
-		</ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://SmartVoiceAgent.Ui/Themes/Colors.Dark.axaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
 
-	</ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://SmartVoiceAgent.Ui/Themes/Colors.Light.axaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
 
-	<!-- Brushes -->
-	<SolidColorBrush x:Key="AppBgBrush" Color="{DynamicResource AppBg}"/>
-	<SolidColorBrush x:Key="PanelBgBrush" Color="{DynamicResource PanelBg}"/>
-	<SolidColorBrush x:Key="CardBgBrush" Color="{DynamicResource CardBg}"/>
+    </ResourceDictionary.ThemeDictionaries>
 
-	<SolidColorBrush x:Key="TextPrimaryBrush" Color="{DynamicResource TextPrimary}"/>
-	<SolidColorBrush x:Key="TextMutedBrush" Color="{DynamicResource TextMuted}"/>
+    <!-- Brushes -->
+    <SolidColorBrush x:Key="PanelBgBrush"
+                     Color="{DynamicResource PanelBg}"/>
 
-	<SolidColorBrush x:Key="AccentCyanBrush" Color="{DynamicResource AccentCyan}"/>
-	<SolidColorBrush x:Key="AccentGreenBrush" Color="{DynamicResource AccentGreen}"/>
-	<SolidColorBrush x:Key="AccentPurpleBrush" Color="{DynamicResource AccentPurple}"/>
-	<SolidColorBrush x:Key="AccentOrangeBrush" Color="{DynamicResource AccentOrange}"/>
-	<SolidColorBrush x:Key="AccentErrorBrush" Color="{DynamicResource AccentError}"/>
+    <SolidColorBrush x:Key="CardBgBrush"
+                     Color="{DynamicResource CardBg}"/>
+
+    <SolidColorBrush x:Key="TextPrimaryBrush"
+                     Color="{DynamicResource TextPrimary}"/>
+
+    <SolidColorBrush x:Key="TextMutedBrush"
+                     Color="{DynamicResource TextMuted}"/>
+
+    <SolidColorBrush x:Key="AccentCyanBrush"
+                     Color="{DynamicResource AccentCyan}"/>
+
+    <SolidColorBrush x:Key="AccentGreenBrush"
+                     Color="{DynamicResource AccentGreen}"/>
+
+    <SolidColorBrush x:Key="AccentPurpleBrush"
+                     Color="{DynamicResource AccentPurple}"/>
+
+    <SolidColorBrush x:Key="AccentOrangeBrush"
+                     Color="{DynamicResource AccentOrange}"/>
+
+    <SolidColorBrush x:Key="AccentErrorBrush"
+                     Color="{DynamicResource AccentError}"/>
+
 </ResourceDictionary>
