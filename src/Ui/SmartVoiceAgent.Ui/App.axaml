@@ -1,18 +1,15 @@
-<Application xmlns="https://github.com/avaloniaui"
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 x:Class="SmartVoiceAgent.Ui.App"
-			 RequestedThemeVariant="Dark"> <Application.Styles>
-				 <FluentTheme>
-					 <FluentTheme.Palettes>
-						 <ColorPaletteResources x:Key="Dark" RegionColor="#0A0A0C" AltHigh="#0D0D0F" />
-						 <ColorPaletteResources x:Key="Light" RegionColor="#F5F5F7" AltHigh="#FFFFFF" />
-					 </FluentTheme.Palettes>
-				 </FluentTheme>
-			 </Application.Styles>
+<Application
+xmlns="https://github.com/avaloniaui"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+x:Class="SmartVoiceAgent.Ui.App"
+RequestedThemeVariant="Dark">
 
 	<Application.Resources>
-		<BoxShadows x:Key="CardShadow">0 2 8 0 #1A000000</BoxShadows>
-		<StaticResource x:Key="MainBg" ResourceKey="SystemRegionColor"/>
-		<StaticResource x:Key="CardBg" ResourceKey="SystemAltHighColor"/>
+		<ResourceDictionary>
+			<ResourceDictionary.MergedDictionaries>
+				<ResourceInclude Source="avares://SmartVoiceAgent.Ui/Themes/AppTheme.axaml"/>
+			</ResourceDictionary.MergedDictionaries>
+		</ResourceDictionary>
 	</Application.Resources>
+
 </Application>
