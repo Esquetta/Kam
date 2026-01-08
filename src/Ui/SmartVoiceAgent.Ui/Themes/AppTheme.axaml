@@ -1,0 +1,28 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<ResourceDictionary.ThemeDictionaries>
+
+		<ResourceDictionary x:Key="Dark">
+			<ResourceInclude Source="avares://SmartVoiceAgent.Ui/Themes/Colors.Dark.axaml"/>
+		</ResourceDictionary>
+
+		<ResourceDictionary x:Key="Light">
+			<ResourceInclude Source="avares://SmartVoiceAgent.Ui/Themes/Colors.Light.axaml"/>
+		</ResourceDictionary>
+
+	</ResourceDictionary.ThemeDictionaries>
+
+	<!-- Brushes -->
+	<SolidColorBrush x:Key="AppBgBrush" Color="{DynamicResource AppBg}"/>
+	<SolidColorBrush x:Key="PanelBgBrush" Color="{DynamicResource PanelBg}"/>
+	<SolidColorBrush x:Key="CardBgBrush" Color="{DynamicResource CardBg}"/>
+
+	<SolidColorBrush x:Key="TextPrimaryBrush" Color="{DynamicResource TextPrimary}"/>
+	<SolidColorBrush x:Key="TextMutedBrush" Color="{DynamicResource TextMuted}"/>
+
+	<SolidColorBrush x:Key="AccentCyanBrush" Color="{DynamicResource AccentCyan}"/>
+	<SolidColorBrush x:Key="AccentGreenBrush" Color="{DynamicResource AccentGreen}"/>
+	<SolidColorBrush x:Key="AccentPurpleBrush" Color="{DynamicResource AccentPurple}"/>
+	<SolidColorBrush x:Key="AccentOrangeBrush" Color="{DynamicResource AccentOrange}"/>
+	<SolidColorBrush x:Key="AccentErrorBrush" Color="{DynamicResource AccentError}"/>
+</ResourceDictionary>
