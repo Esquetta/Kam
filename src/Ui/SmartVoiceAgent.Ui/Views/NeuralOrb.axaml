@@ -1,0 +1,162 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:vm="using:SmartVoiceAgent.Ui.ViewModels"
+			 x:Class="SmartVoiceAgent.Ui.Views.NeuralOrb"
+			 x:Name="neuralOrbControl"
+			 Width="350" Height="350"
+			 Background="Transparent"
+			 ClipToBounds="False">
+
+	<UserControl.Styles>
+		<Style Selector="Ellipse.OuterGlow">
+			<Style.Animations>
+				<Animation Duration="0:0:3" IterationCount="Infinite" PlaybackDirection="Alternate" Easing="SineEaseInOut">
+					<KeyFrame KeyTime="0:0:0">
+						<Setter Property="Opacity" Value="0.1"/>
+						<Setter Property="ScaleTransform.ScaleX" Value="0.95"/>
+						<Setter Property="ScaleTransform.ScaleY" Value="0.95"/>
+					</KeyFrame>
+					<KeyFrame KeyTime="0:0:3">
+						<Setter Property="Opacity" Value="0.3"/>
+						<Setter Property="ScaleTransform.ScaleX" Value="1.1"/>
+					</KeyFrame>
+				</Animation>
+			</Style.Animations>
+		</Style>
+
+		<Style Selector="Ellipse.MiddleGlow">
+			<Style.Animations>
+				<Animation Duration="0:0:2" IterationCount="Infinite" PlaybackDirection="Alternate" Easing="SineEaseInOut">
+					<KeyFrame KeyTime="0:0:0">
+						<Setter Property="Opacity" Value="0.3"/>
+						<Setter Property="ScaleTransform.ScaleX" Value="1.0"/>
+						<Setter Property="ScaleTransform.ScaleY" Value="1.0"/>
+					</KeyFrame>
+					<KeyFrame KeyTime="0:0:2">
+						<Setter Property="Opacity" Value="0.5"/>
+						<Setter Property="ScaleTransform.ScaleX" Value="1.1"/>
+						<Setter Property="ScaleTransform.ScaleY" Value="1.1"/>
+					</KeyFrame>
+				</Animation>
+			</Style.Animations>
+		</Style>
+
+		<Style Selector="Ellipse.CorePulse">
+			<Style.Animations>
+				<Animation Duration="0:0:1.5" IterationCount="Infinite" PlaybackDirection="Alternate" Easing="SineEaseInOut">
+					<KeyFrame KeyTime="0:0:0">
+						<Setter Property="ScaleTransform.ScaleX" Value="1.0"/>
+						<Setter Property="ScaleTransform.ScaleY" Value="1.0"/>
+					</KeyFrame>
+					<KeyFrame KeyTime="0:0:1.5">
+						<Setter Property="ScaleTransform.ScaleX" Value="1.05"/>
+						<Setter Property="ScaleTransform.ScaleY" Value="1.05"/>
+					</KeyFrame>
+				</Animation>
+			</Style.Animations>
+		</Style>
+
+		<Style Selector="Ellipse.RotatingRing">
+			<Style.Animations>
+				<Animation Duration="0:0:10" IterationCount="Infinite">
+					<KeyFrame KeyTime="0:0:0">
+						<Setter Property="RotateTransform.Angle" Value="0"/>
+					</KeyFrame>
+					<KeyFrame KeyTime="0:0:10">
+						<Setter Property="RotateTransform.Angle" Value="360"/>
+					</KeyFrame>
+				</Animation>
+			</Style.Animations>
+		</Style>
+
+		<Style Selector="ToggleButton#OrbButton">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<TransformOperationsTransition  Property="RenderTransform" Duration="0:0:0.1"/>
+				</Transitions>
+			</Setter>
+		</Style>
+		<Style Selector="ToggleButton#OrbButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+		</Style>
+		<Style Selector="ToggleButton#OrbButton:pressed">
+			<Setter Property="RenderTransform" Value="scale(0.9)"/>
+		</Style>
+		<Style Selector="ToggleButton#OrbButton:checked Path">
+			<Setter Property="Fill" Value="White"/> 
+	</Style>
+
+	</UserControl.Styles>
+
+	<Grid Background="Transparent" ClipToBounds="False">
+		<Ellipse Classes="OuterGlow"
+				 Fill="{Binding #neuralOrbControl.OrbColor}"
+				 Width="250" Height="250">
+			<Ellipse.RenderTransform>
+				<ScaleTransform/>
+			</Ellipse.RenderTransform>
+			<Ellipse.Effect>
+				<BlurEffect Radius="60"/>
+			</Ellipse.Effect>
+		</Ellipse>
+
+		<Ellipse Classes="MiddleGlow"
+				 Fill="{Binding #neuralOrbControl.OrbColor}"
+				 Width="180" Height="180">
+			<Ellipse.RenderTransform>
+				<ScaleTransform/>
+			</Ellipse.RenderTransform>
+			<Ellipse.Effect>
+				<BlurEffect Radius="35"/>
+			</Ellipse.Effect>
+		</Ellipse>
+
+		<Ellipse Classes="RotatingRing"
+				 Stroke="{Binding #neuralOrbControl.OrbColor}"
+				 StrokeThickness="1.5"
+				 StrokeDashArray="12,8"
+				 Width="190" Height="190"
+				 Opacity="0.2">
+			<Ellipse.RenderTransform>
+				<RotateTransform/>
+			</Ellipse.RenderTransform>
+		</Ellipse>
+
+		<Ellipse Classes="CorePulse"
+				 Fill="{Binding #neuralOrbControl.OrbColor}"
+				 Width="120" Height="120">
+			<Ellipse.RenderTransform>
+				<ScaleTransform/>
+			</Ellipse.RenderTransform>
+			<Ellipse.Effect>
+				<BlurEffect Radius="20"/>
+			</Ellipse.Effect>
+		</Ellipse>
+
+		<Ellipse Fill="{Binding #neuralOrbControl.OrbColor}"
+				 Width="105" Height="105">
+			<Ellipse.OpacityMask>
+				<RadialGradientBrush Center="50%,50%" Radius="0.5">
+					<GradientStop Color="White" Offset="0"/>
+					<GradientStop Color="White" Offset="0.5"/>
+					<GradientStop Color="Transparent" Offset="1"/>
+				</RadialGradientBrush>
+			</Ellipse.OpacityMask>
+		</Ellipse>
+
+		<ToggleButton x:Name="OrbButton"
+					  HorizontalAlignment="Center"
+					  VerticalAlignment="Center"
+					  Cursor="Hand">
+			<Viewbox Width="50" Height="50">
+				<Path Fill="White"
+					  Opacity="0.9"
+					  Stretch="Uniform"
+					  Data="M313-114q-19.3 0-35.15-9.5Q262-133 254-149l-86-153h67l48.52 93H381v-40h-72.89l-47.69-93H145L87-447q-3.8-8-6.4-15.83-2.6-7.84-2.6-17.39 0-8.98 9-33.78l59.12-104H261l46.78-93H381v-40h-96.79L236-658h-67l85-153q7.57-15.86 23.56-25.43Q293.54-846 313-846h79q29.1 0 48.55 19.65Q460-806.7 460-779v164h-71l-40 40h111v149H356l-45.52-91H213l-40 40h111l47.47 91H460v205q0 27.7-19.45 47.35Q421.1-114 392-114h-79Zm255 0q-29.1 0-48.55-19.65Q500-153.3 500-181v-205h129l47.11-91H787l-40-40h-96.48L604-426H500v-149h111l-40-40h-71v-164q0-27.7 19.45-47.35Q538.9-846 568-846h80q19.3 0 35.15 9.5Q699-827 707-811l84 152h-65.51l-49.37-92H579v40h73.57l46.51 93H814l59 105q4 8.33 6.5 16.17Q882-489 882-480q0 10-9 33l-58 105H699.58l-46.69 93H579v40h97.48L725-302h67l-85 153q-8 16-23.85 25.5Q667.3-114 648-114h-80Z"/>
+			</Viewbox>
+		</ToggleButton>
+	</Grid>
+</UserControl>

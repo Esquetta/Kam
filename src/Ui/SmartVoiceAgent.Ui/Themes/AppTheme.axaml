@@ -1,0 +1,36 @@
+<ResourceDictionary
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Dark">
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://SmartVoiceAgent.Ui/Themes/Colors.Dark.axaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+        
+        <ResourceDictionary x:Key="Light">
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://SmartVoiceAgent.Ui/Themes/Colors.Light.axaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+    
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://SmartVoiceAgent.Ui/Themes/Brushes.axaml"/>
+    </ResourceDictionary.MergedDictionaries>
+    
+    <!-- SunIcon - Simplified for Avalonia -->
+    <StreamGeometry x:Key="SunIconGeometry">
+        M12 2 L12 4 M12 20 L12 22 M4 12 L2 12 M22 12 L20 12 
+        M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 
+        M17.66 6.34 L19.07 4.93 M4.93 19.07 L6.34 17.66 
+        M12 8 A4 4 0 1 1 12 16 A4 4 0 1 1 12 8 Z
+    </StreamGeometry>
+    
+    <!-- MoonIcon - Simplified for Avalonia -->
+    <StreamGeometry x:Key="MoonIconGeometry">
+        M21 12.79 A9 9 0 1 1 11.21 3 A7 7 0 0 0 21 12.79 Z
+    </StreamGeometry>
+    
+</ResourceDictionary>
