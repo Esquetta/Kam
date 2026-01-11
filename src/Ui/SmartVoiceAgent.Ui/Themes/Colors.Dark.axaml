@@ -1,14 +1,14 @@
 <ResourceDictionary
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-
-    <SolidColorBrush x:Key="AppBgBrush" Color="#0A0F14"/>
-    <SolidColorBrush x:Key="CardBgBrush" Color="#111827"/>
-
-    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#E5E7EB"/>
-    <SolidColorBrush x:Key="TextMutedBrush" Color="#9CA3AF"/>
-
-    <SolidColorBrush x:Key="AccentCyanBrush" Color="#06B6D4"/>
-    <SolidColorBrush x:Key="AccentGreenBrush" Color="#10B981"/>
-    <SolidColorBrush x:Key="AccentPurpleBrush" Color="#8B5CF6"/>
+    
+    <Color x:Key="PanelBg">#0A0F14</Color>
+    <Color x:Key="CardBg">#111827</Color>
+    <Color x:Key="TextPrimary">#E5E7EB</Color>
+    <Color x:Key="TextMuted">#9CA3AF</Color>
+    <Color x:Key="AccentCyan">#06B6D4</Color>
+    <Color x:Key="AccentGreen">#10B981</Color>
+    <Color x:Key="AccentPurple">#8B5CF6</Color>
+    <Color x:Key="AccentOrange">#FB923C</Color>
+    <Color x:Key="AccentError">#EF4444</Color>
 </ResourceDictionary>
