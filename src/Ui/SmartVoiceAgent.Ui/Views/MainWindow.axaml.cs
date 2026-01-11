@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using SmartVoiceAgent.Ui.ViewModels;
 
 namespace SmartVoiceAgent.Ui.Views
@@ -16,6 +17,10 @@ namespace SmartVoiceAgent.Ui.Views
                 }
             };
         }
-
+        private void ToggleTheme(object? sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel vm)
+                vm.ToggleTheme();
+        }
     }
 }
