@@ -32,17 +32,14 @@ namespace SmartVoiceAgent.Ui
 
                 var viewModel = new MainWindowViewModel();
 
-                // Ana pencereyi oluştur
                 desktop.MainWindow = new MainWindow
                 {
                     DataContext = viewModel
                 };
 
-                // Tray icon servisini başlat
                 _trayIconService = new TrayIconService();
                 _trayIconService.Initialize();
 
-                // ViewModel'e tray service referansı ver
                 viewModel.SetTrayIconService(_trayIconService);
 
                 // Uygulama kapanırken servis kaynaklarını temizle

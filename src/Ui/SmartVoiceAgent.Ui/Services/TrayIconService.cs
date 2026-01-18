@@ -23,7 +23,6 @@ namespace SmartVoiceAgent.Ui.Services
             {
                 _trayIcon = new TrayIcon
                 {
-                    // DOĞRU: AssetLoader kullanarak yükle
                     Icon = LoadIconFromAssets(),
                     ToolTipText = "KAM NEURAL // CORE v3.5",
                     IsVisible = true
@@ -43,9 +42,7 @@ namespace SmartVoiceAgent.Ui.Services
         private WindowIcon LoadIconFromAssets()
         {
             try
-            {
-                // Yöntem 1: AssetLoader ile (ÖNERİLEN)
-                var assetUri = new Uri("avares://SmartVoiceAgent.Ui/Assets/favicon.ico");
+            {                var assetUri = new Uri("avares://SmartVoiceAgent.Ui/Assets/favicon.ico");
                 var stream = AssetLoader.Open(assetUri);
                 var icon = new WindowIcon(stream);
 
