@@ -1,17 +1,18 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.ViewModels;
 using SmartVoiceAgent.Ui.Views;
-using System;
 using System.Linq;
 
 namespace SmartVoiceAgent.Ui
 {
     public partial class App : Application
     {
+        private TrayIconService? _trayIconService;
+
         public override void Initialize()
         {
             AvaloniaXamlLoader.Load(this);
@@ -28,6 +29,27 @@ namespace SmartVoiceAgent.Ui
                 {
                     DataContext = new MainWindowViewModel(),
                 };
+
+                var viewModel = new MainWindowViewModel();
+
+                // Ana pencereyi oluştur
+                desktop.MainWindow = new MainWindow
+                {
+                    DataContext = viewModel
+                };
+
+                // Tray icon servisini başlat
+                _trayIconService = new TrayIconService();
+                _trayIconService.Initialize();
+
+                // ViewModel'e tray service referansı ver
+                viewModel.SetTrayIconService(_trayIconService);
+
+                // Uygulama kapanırken servis kaynaklarını temizle
+                desktop.ShutdownRequested += (s, e) =>
+                {
+                    _trayIconService?.Dispose();
+                };
             }
 
             base.OnFrameworkInitializationCompleted();
@@ -43,36 +65,6 @@ namespace SmartVoiceAgent.Ui
             foreach (var plugin in dataValidationPluginsToRemove)
             {
                 BindingPlugins.DataValidators.Remove(plugin);
-            }
-        }
-        private void ShowWindow_Click(object? sender, EventArgs e)
-        {
-            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            {
-                if (desktop.MainWindow != null)
-                {
-                    desktop.MainWindow.Show();
-                    desktop.MainWindow.WindowState = Avalonia.Controls.WindowState.Normal;
-                    desktop.MainWindow.Activate();
-                }
-            }
-        }
-
-        private void Settings_Click(object? sender, EventArgs e)
-        {
-            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            {
-                desktop.MainWindow?.Show();
-                desktop.MainWindow?.Activate();
-                // TODO: Settings view'e navigate et
-            }
-        }
-
-        private void Exit_Click(object? sender, EventArgs e)
-        {
-            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            {
-                desktop.Shutdown();
             }
         }
     }

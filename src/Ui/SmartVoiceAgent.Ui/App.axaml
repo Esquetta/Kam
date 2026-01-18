@@ -21,21 +21,4 @@ RequestedThemeVariant="Dark">
 		Source="avares://SmartVoiceAgent.Ui/Themes/Controls.axaml"/>
 	</Application.Styles>
 
-	<TrayIcon.Icons>
-        <TrayIcons>
-            <TrayIcon Icon="/Assets/favicon.ico"
-                      ToolTipText="KAM NEURAL // CORE v3.5">
-                <TrayIcon.Menu>
-                    <NativeMenu>
-                        <NativeMenuItem Header="Show Window" Click="ShowWindow_Click"/>
-                        <NativeMenuItemSeparator />
-                        <NativeMenuItem Header="Settings" Click="Settings_Click"/>
-                        <NativeMenuItemSeparator />
-                        <NativeMenuItem Header="Exit" Click="Exit_Click"/>
-                    </NativeMenu>
-                </TrayIcon.Menu>
-            </TrayIcon>
-        </TrayIcons>
-    </TrayIcon.Icons>
-
 </Application>

@@ -27,5 +27,6 @@
 
   <ItemGroup>
     <Folder Include="Models\" />
+    <AvaloniaResource Include="Assets/favicon.ico" />
   </ItemGroup>
 </Project>
