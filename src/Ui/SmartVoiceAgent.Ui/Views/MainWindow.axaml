@@ -8,6 +8,7 @@
 		TransparencyLevelHint="Mica"
 		ExtendClientAreaToDecorationsHint="True"
 		Title="KAM NEURAL // CORE v3.5"
+		Icon="/Assets/favicon.ico"
 		Width="1280" Height="1024">
 
 	<Window.Styles>
