@@ -3,6 +3,7 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using ReactiveUI;
+using SmartVoiceAgent.Ui.Services;
 using System;
 using System.Collections.ObjectModel;
 
@@ -10,6 +11,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
 {
     public partial class MainWindowViewModel : ReactiveObject
     {
+        // Tray icon servisi referansı
+        private TrayIconService? _trayIconService;
+
         /* ========================= */
         /* NAVIGATION */
         /* ========================= */
@@ -81,6 +85,18 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /* ========================= */
+        /* TRAY ICON SERVICE */
+        /* ========================= */
+
+        /// <summary>
+        /// Tray icon servisini ViewModel'e bağlar
+        /// </summary>
+        public void SetTrayIconService(TrayIconService service)
+        {
+            _trayIconService = service;
+        }
+
+        /* ========================= */
         /* COMMANDS / ACTIONS */
         /* ========================= */
 
@@ -93,12 +109,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
             }
         }
 
-
-
         public void ToggleTheme()
         {
             IsDarkMode = !IsDarkMode;
-
         }
 
         public void AddLog(string message)
@@ -108,6 +121,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
             Dispatcher.UIThread.Post(() =>
             {
                 LogEntries.Insert(0, $"[{timestamp}] {message}");
+
+                // Tray tooltip'i güncelle (son log mesajını göster)
+                _trayIconService?.UpdateToolTip($"KAM NEURAL - {message}");
             });
         }
 
@@ -138,28 +154,39 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 string task = tasks[random.Next(tasks.Length)];
                 AddLog($"{task}... OK");
 
-                CurrentOrbColor = task.Contains("ERROR")
-                    ? Brush.Parse("#FF3B30")
-                    : Brush.Parse("#00D4FF");
+                // Hata durumunda tray status'u güncelle
+                if (task.Contains("ERROR"))
+                {
+                    CurrentOrbColor = Brush.Parse("#FF3B30");
+                    _trayIconService?.UpdateStatus("Error Detected");
+                }
+                else
+                {
+                    CurrentOrbColor = Brush.Parse("#00D4FF");
+                    _trayIconService?.UpdateStatus("Running");
+                }
             };
 
             timer.Start();
-        }
 
+            // İlk başlatma logu
+            AddLog("SYSTEM_INITIALIZED...");
+            _trayIconService?.UpdateStatus("Running");
+        }
 
         /* ========================= */
         /* CTOR */
         /* ========================= */
+
         public MainWindowViewModel()
         {
             if (Application.Current != null)
             {
                 IsDarkMode =
                     Application.Current.ActualThemeVariant == ThemeVariant.Dark;
-
             }
+
             StartSimulation();
-            AddLog("SYSTEM_INITIALIZED...");
         }
     }
 }
