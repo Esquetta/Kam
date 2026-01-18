@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using SmartVoiceAgent.Ui.ViewModels;
+using System.ComponentModel;
 
 namespace SmartVoiceAgent.Ui.Views
 {
@@ -9,6 +10,8 @@ namespace SmartVoiceAgent.Ui.Views
         public MainWindow()
         {
             InitializeComponent();
+
+            this.Closing += MainWindow_Closed;
             this.Opened += (s, e) =>
             {
                 if (DataContext is MainWindowViewModel vm)
@@ -16,6 +19,13 @@ namespace SmartVoiceAgent.Ui.Views
                     vm.StartSimulation();
                 }
             };
+
+
+        }
+        private void MainWindow_Closed(object? sender, CancelEventArgs e)
+        {
+            e.Cancel = true;
+            this.Hide();
         }
         private void ToggleTheme(object? sender, RoutedEventArgs e)
         {
