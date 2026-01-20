@@ -4,26 +4,46 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using ReactiveUI;
 using SmartVoiceAgent.Ui.Services;
+using SmartVoiceAgent.Ui.Services.Abstract;
+using SmartVoiceAgent.Ui.Services.Concrete;
+using SmartVoiceAgent.Ui.ViewModels.PageModels;
 using System;
 using System.Collections.ObjectModel;
+using System.Windows.Input;
 
 namespace SmartVoiceAgent.Ui.ViewModels
 {
-    public partial class MainWindowViewModel : ReactiveObject
+    public class MainWindowViewModel : ViewModelBase
     {
-        // Tray icon servisi referansı
+        private readonly INavigationService _navigationService;
         private TrayIconService? _trayIconService;
 
         /* ========================= */
         /* NAVIGATION */
         /* ========================= */
 
+        private ViewModelBase? _currentViewModel;
+        public ViewModelBase? CurrentViewModel
+        {
+            get => _currentViewModel;
+            private set => this.RaiseAndSetIfChanged(ref _currentViewModel, value);
+        }
+
         private NavView _activeView = NavView.Coordinator;
         public NavView ActiveView
         {
             get => _activeView;
-            set => this.RaiseAndSetIfChanged(ref _activeView, value);
+            private set => this.RaiseAndSetIfChanged(ref _activeView, value);
         }
+
+        /* ========================= */
+        /* COMMANDS */
+        /* ========================= */
+
+        public ICommand NavigateToCoordinatorCommand { get; }
+        public ICommand NavigateToPluginsCommand { get; }
+        public ICommand NavigateToSettingsCommand { get; }
+        public ICommand ToggleThemeCommand { get; }
 
         /* ========================= */
         /* LOGGING */
@@ -37,18 +57,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /* ========================= */
-        /* TASK / SIMULATION */
-        /* ========================= */
-
-        private double _taskProgress;
-        public double TaskProgress
-        {
-            get => _taskProgress;
-            set => this.RaiseAndSetIfChanged(ref _taskProgress, value);
-        }
-
-        /* ========================= */
-        /* THEME (DARK / LIGHT) */
+        /* THEME */
         /* ========================= */
 
         private bool _isDarkMode;
@@ -62,17 +71,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
             }
         }
 
-        private void ApplyTheme(bool isDark)
-        {
-            if (Application.Current is not { } app)
-                return;
-
-            app.RequestedThemeVariant =
-                isDark ? ThemeVariant.Dark : ThemeVariant.Light;
-
-            AddLog($"SYSTEM_THEME_TOGGLED: {(isDark ? "DARK" : "LIGHT")}");
-        }
-
         /* ========================= */
         /* NEURAL ORB */
         /* ========================= */
@@ -84,35 +82,93 @@ namespace SmartVoiceAgent.Ui.ViewModels
             set => this.RaiseAndSetIfChanged(ref _currentOrbColor, value);
         }
 
-        /* ========================= */
-        /* TRAY ICON SERVICE */
-        /* ========================= */
-
-        /// <summary>
-        /// Tray icon servisini ViewModel'e bağlar
-        /// </summary>
-        public void SetTrayIconService(TrayIconService service)
+        private double _taskProgress;
+        public double TaskProgress
         {
-            _trayIconService = service;
+            get => _taskProgress;
+            set => this.RaiseAndSetIfChanged(ref _taskProgress, value);
         }
 
         /* ========================= */
-        /* COMMANDS / ACTIONS */
+        /* CONSTRUCTOR */
         /* ========================= */
 
-        public void SetView(string viewName)
+        public MainWindowViewModel(INavigationService? navigationService = null)
         {
-            if (Enum.TryParse(viewName, out NavView target))
+            _navigationService = navigationService ?? new NavigationService();
+            _navigationService.NavigationChanged += OnNavigationChanged;
+
+            // Commands
+            NavigateToCoordinatorCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Coordinator));
+            NavigateToPluginsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Plugins));
+            NavigateToSettingsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Settings));
+            ToggleThemeCommand = ReactiveCommand.Create(ToggleTheme);
+
+            // Initialize theme
+            if (Application.Current != null)
             {
-                ActiveView = target;
-                AddLog($"MOUNTED_VIEW: {target.ToString().ToUpper()}");
+                IsDarkMode = Application.Current.ActualThemeVariant == ThemeVariant.Dark;
             }
+
+            // Start simulation
+            StartSimulation();
+            AddLog("SYSTEM_INITIALIZED...");
+        }
+
+        /* ========================= */
+        /* NAVIGATION */
+        /* ========================= */
+
+        private void NavigateTo(NavView view)
+        {
+            _navigationService.NavigateTo(view);
+        }
+
+        private void OnNavigationChanged(object? sender, NavView newView)
+        {
+            CurrentViewModel?.OnNavigatedFrom();
+            ActiveView = newView;
+
+            CurrentViewModel = newView switch
+            {
+                NavView.Plugins => new PluginsViewModel(),
+                _ => null
+            };
+
+            CurrentViewModel?.OnNavigatedTo();
+            AddLog($"NAVIGATED_TO: {newView.ToString().ToUpper()}");
+        }
+
+        /* ========================= */
+        /* THEME */
+        /* ========================= */
+
+        private void ApplyTheme(bool isDark)
+        {
+            if (Application.Current is not { } app)
+                return;
+
+            app.RequestedThemeVariant = isDark ? ThemeVariant.Dark : ThemeVariant.Light;
+            AddLog($"THEME_CHANGED: {(isDark ? "DARK" : "LIGHT")}");
         }
 
         public void ToggleTheme()
         {
             IsDarkMode = !IsDarkMode;
         }
+
+        /* ========================= */
+        /* TRAY ICON */
+        /* ========================= */
+
+        public void SetTrayIconService(TrayIconService service)
+        {
+            _trayIconService = service;
+        }
+
+        /* ========================= */
+        /* LOGGING */
+        /* ========================= */
 
         public void AddLog(string message)
         {
@@ -122,7 +178,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 LogEntries.Insert(0, $"[{timestamp}] {message}");
 
-                // Tray tooltip'i güncelle (son log mesajını göster)
+                if (LogEntries.Count > 100)
+                    LogEntries.RemoveAt(LogEntries.Count - 1);
+
                 _trayIconService?.UpdateToolTip($"KAM NEURAL - {message}");
             });
         }
@@ -154,7 +212,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 string task = tasks[random.Next(tasks.Length)];
                 AddLog($"{task}... OK");
 
-                // Hata durumunda tray status'u güncelle
                 if (task.Contains("ERROR"))
                 {
                     CurrentOrbColor = Brush.Parse("#FF3B30");
@@ -168,25 +225,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
             };
 
             timer.Start();
-
-            // İlk başlatma logu
-            AddLog("SYSTEM_INITIALIZED...");
-            _trayIconService?.UpdateStatus("Running");
-        }
-
-        /* ========================= */
-        /* CTOR */
-        /* ========================= */
-
-        public MainWindowViewModel()
-        {
-            if (Application.Current != null)
-            {
-                IsDarkMode =
-                    Application.Current.ActualThemeVariant == ThemeVariant.Dark;
-            }
-
-            StartSimulation();
         }
     }
 }
