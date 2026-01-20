@@ -5,7 +5,7 @@ using Avalonia.Platform;
 using System;
 using System.IO;
 
-namespace SmartVoiceAgent.Ui.Services
+namespace SmartVoiceAgent.Ui.Services.Concrete
 {
     public class TrayIconService
     {
