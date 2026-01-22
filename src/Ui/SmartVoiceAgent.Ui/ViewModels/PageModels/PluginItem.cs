@@ -1,4 +1,5 @@
 ﻿using ReactiveUI;
+using SmartVoiceAgent.Ui.ViewModels;
 using System.Collections.ObjectModel;
 
 namespace SmartVoiceAgent.Ui.ViewModels.PageModels
@@ -93,6 +94,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public override void OnNavigatedTo()
         {
             // Plugins view'a gelince yapılacak işlemler
+        }
+
+        public override void OnNavigatedFrom()
+        {
         }
     }
 }

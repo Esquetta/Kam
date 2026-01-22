@@ -1,4 +1,6 @@
-﻿namespace SmartVoiceAgent.Ui.ViewModels.PageModels
+﻿using SmartVoiceAgent.Ui.ViewModels;
+
+namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 {
     public class CoordinatorViewModel : ViewModelBase
     {
