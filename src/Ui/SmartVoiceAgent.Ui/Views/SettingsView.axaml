@@ -1,0 +1,98 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SmartVoiceAgent.Ui.ViewModels"
+             x:Class="SmartVoiceAgent.Ui.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+    
+    <Grid RowDefinitions="Auto, *">
+        
+        <!-- Title Section -->
+        <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,40,0,40">
+            <TextBlock Text="{Binding Title}"
+                       FontSize="48"
+                       LetterSpacing="25"
+                       HorizontalAlignment="Center"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="Light"/>
+            <TextBlock Text="SYSTEM CONFIGURATION // PREFERENCES"
+                       Foreground="{DynamicResource AccentCyanBrush}"
+                       Opacity="0.6"
+                       HorizontalAlignment="Center"
+                       Margin="0,5,0,0"
+                       FontSize="11"
+                       LetterSpacing="2"/>
+        </StackPanel>
+
+        <!-- Settings Content -->
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="20" Spacing="20" MaxWidth="800">
+                
+                <!-- Appearance Section -->
+                <Border Classes="InfoCard">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="APPEARANCE"
+                                   Foreground="{DynamicResource AccentCyanBrush}"
+                                   FontWeight="Bold"
+                                   FontSize="16"
+                                   LetterSpacing="2"/>
+                        
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="Theme Mode"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       FontSize="12"/>
+                            <TextBlock Text="Choose between light and dark theme"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       FontSize="10"
+                                       Margin="0,0,0,5"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- System Section -->
+                <Border Classes="InfoCard">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="SYSTEM"
+                                   Foreground="{DynamicResource AccentPurpleBrush}"
+                                   FontWeight="Bold"
+                                   FontSize="16"
+                                   LetterSpacing="2"/>
+                        
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="Kernel Version"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       FontSize="12"/>
+                            <TextBlock Text="v3.5.0 // Neural Link Stable"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       FontSize="10"
+                                       FontFamily="Consolas"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- About Section -->
+                <Border Classes="InfoCard">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="ABOUT"
+                                   Foreground="{DynamicResource AccentOrangeBrush}"
+                                   FontWeight="Bold"
+                                   FontSize="16"
+                                   LetterSpacing="2"/>
+                        
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="KAM NEURAL CORE"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       FontSize="12"/>
+                            <TextBlock Text="Advanced AI-powered voice agent system with modular architecture"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       FontSize="10"
+                                       TextWrapping="Wrap"
+                                       LineHeight="16"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
+

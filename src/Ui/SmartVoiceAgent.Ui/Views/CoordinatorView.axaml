@@ -1,0 +1,120 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SmartVoiceAgent.Ui.ViewModels.PageModels"
+             xmlns:local="clr-namespace:SmartVoiceAgent.Ui.Views"
+             x:Class="SmartVoiceAgent.Ui.Views.CoordinatorView"
+             x:DataType="vm:CoordinatorViewModel">
+    
+    <Grid RowDefinitions="Auto, Auto, *, Auto">
+
+        <!-- Title Section -->
+        <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,40,0,0">
+            <TextBlock Text="COORDINATOR"
+                       FontSize="48"
+                       LetterSpacing="25"
+                       HorizontalAlignment="Center"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="Light"/>
+            <TextBlock Text="KERNEL v3.5 // NEURAL LINK STABLE"
+                       Foreground="{DynamicResource AccentCyanBrush}"
+                       Opacity="0.6"
+                       HorizontalAlignment="Center"
+                       Margin="0,5,0,0"
+                       FontSize="11"
+                       LetterSpacing="2"/>
+        </StackPanel>
+
+        <!-- Neural Orb -->
+        <Viewbox Grid.Row="2" Width="280" Height="280" VerticalAlignment="Center">
+            <local:NeuralOrb/>
+        </Viewbox>
+
+        <!-- Bottom Cards -->
+        <UniformGrid Grid.Row="3" Columns="3" Margin="0,40,0,20">
+
+            <!-- Research Card -->
+            <Border Classes="InfoCard">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                        <Canvas Width="28" Height="28" Margin="0,0,12,0">
+                            <Ellipse Width="28" Height="28" Fill="{DynamicResource AccentPurpleBrush}">
+                                <Ellipse.Effect>
+                                    <BlurEffect Radius="8"/>
+                                </Ellipse.Effect>
+                            </Ellipse>
+                            <Ellipse Width="18" Height="18" Canvas.Left="5" Canvas.Top="5" Fill="{DynamicResource AccentPurpleBrush}"/>
+                        </Canvas>
+                        <TextBlock Text="RESEARCH"
+                                   Foreground="{DynamicResource AccentPurpleBrush}"
+                                   FontWeight="Bold"
+                                   FontSize="12"
+                                   LetterSpacing="1"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="19:18:35  Local kernel initialized."
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               FontSize="9"
+                               FontFamily="Consolas"
+                               Margin="0,0,0,3"/>
+                    <TextBlock Text="19:18:39  Passive scanning enabled."
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               FontSize="9"
+                               FontFamily="Consolas"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Analyzer Card -->
+            <Border Classes="InfoCard">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                        <Canvas Width="28" Height="28" Margin="0,0,12,0">
+                            <Ellipse Width="28" Height="28" Fill="{DynamicResource AccentGreenBrush}">
+                                <Ellipse.Effect>
+                                    <BlurEffect Radius="8"/>
+                                </Ellipse.Effect>
+                            </Ellipse>
+                            <Ellipse Width="18" Height="18" Canvas.Left="5" Canvas.Top="5" Fill="{DynamicResource AccentGreenBrush}"/>
+                        </Canvas>
+                        <TextBlock Text="ANALYZER"
+                                   Foreground="{DynamicResource AccentGreenBrush}"
+                                   FontWeight="Bold"
+                                   FontSize="12"
+                                   LetterSpacing="1"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="19:18:39  Offline semantic engine active."
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               FontSize="9"
+                               FontFamily="Consolas"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Tasks Card -->
+            <Border Classes="InfoCard">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                        <Canvas Width="28" Height="28" Margin="0,0,12,0">
+                            <Ellipse Width="28" Height="28" Fill="{DynamicResource AccentOrangeBrush}">
+                                <Ellipse.Effect>
+                                    <BlurEffect Radius="8"/>
+                                </Ellipse.Effect>
+                            </Ellipse>
+                            <Ellipse Width="18" Height="18" Canvas.Left="5" Canvas.Top="5" Fill="{DynamicResource AccentOrangeBrush}"/>
+                        </Canvas>
+                        <TextBlock Text="TASKS"
+                                   Foreground="{DynamicResource AccentOrangeBrush}"
+                                   FontWeight="Bold"
+                                   FontSize="12"
+                                   LetterSpacing="1"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="18:18:38  Scheduler ready."
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               FontSize="9"
+                               FontFamily="Consolas"/>
+                </StackPanel>
+            </Border>
+
+        </UniformGrid>
+    </Grid>
+</UserControl>
