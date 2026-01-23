@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:vm="clr-namespace:SmartVoiceAgent.Ui.ViewModels.PageModels"
+			 x:Class="SmartVoiceAgent.Ui.Views.PluginsView"
+			 x:DataType="vm:PluginsViewModel">
+
+
+	<Grid RowDefinitions="Auto, *">
+
+		<!-- Title Section -->
+		<StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,40,0,40">
+			<TextBlock Text="PLUGINS"
+					   FontSize="48"
+					   LetterSpacing="25"
+					   HorizontalAlignment="Center"
+					   Foreground="{DynamicResource TextPrimaryBrush}"
+					   FontWeight="Light"/>
+			<TextBlock Text="EXTENSION MANAGER // MODULAR SYSTEM"
+					   Foreground="{DynamicResource AccentCyanBrush}"
+					   Opacity="0.6"
+					   HorizontalAlignment="Center"
+					   Margin="0,5,0,0"
+					   FontSize="11"
+					   LetterSpacing="2"/>
+		</StackPanel>
+
+		<!-- Plugins Grid -->
+		<ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+			<ItemsControl ItemsSource="{Binding Plugins}">
+				<ItemsControl.ItemsPanel>
+					<ItemsPanelTemplate>
+						<UniformGrid Columns="3" Margin="0"/>
+					</ItemsPanelTemplate>
+				</ItemsControl.ItemsPanel>
+
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<Border Classes="InfoCard" Margin="10">
+							<Border.Opacity>
+								<MultiBinding Converter="{x:Static BoolConverters.And}">
+									<Binding Path="IsActive"/>
+								</MultiBinding>
+							</Border.Opacity>
+							<StackPanel>
+								<StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+									<Canvas Width="40" Height="40" Margin="0,0,15,0">
+										<Ellipse Width="40" Height="40" Fill="{Binding IconColor}">
+											<Ellipse.Effect>
+												<BlurEffect Radius="12"/>
+											</Ellipse.Effect>
+										</Ellipse>
+										<Path Width="24" Height="24" Canvas.Left="8" Canvas.Top="8"
+											  Data="{Binding IconPath}"
+											  Fill="{Binding IconColor}"
+											  Stretch="Uniform"/>
+									</Canvas>
+									<StackPanel VerticalAlignment="Center">
+										<TextBlock Text="{Binding Name}"
+												   Foreground="{Binding IconColor}"
+												   FontWeight="Bold"
+												   FontSize="14"
+												   LetterSpacing="1"/>
+										<TextBlock Text="{Binding Status}"
+												   FontSize="10"
+												   Margin="0,2,0,0">
+											<TextBlock.Foreground>
+												<SolidColorBrush Color="{Binding IsActive, Converter={x:Static BoolConverters.Not}}"/>
+											</TextBlock.Foreground>
+										</TextBlock>
+									</StackPanel>
+								</StackPanel>
+								<TextBlock Text="{Binding Description}"
+										   Foreground="{DynamicResource TextMutedBrush}"
+										   FontSize="10"
+										   TextWrapping="Wrap"
+										   LineHeight="16"/>
+							</StackPanel>
+						</Border>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
+		</ScrollViewer>
+	</Grid>
+</UserControl>
