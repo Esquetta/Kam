@@ -1,5 +1,4 @@
 ﻿using ReactiveUI;
-using SmartVoiceAgent.Ui.ViewModels;
 using System.Collections.ObjectModel;
 
 namespace SmartVoiceAgent.Ui.ViewModels.PageModels

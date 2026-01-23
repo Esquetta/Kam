@@ -1,4 +1,4 @@
-﻿namespace SmartVoiceAgent.Ui.ViewModels
+﻿namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 {
     public class SettingsViewModel : ViewModelBase
     {
