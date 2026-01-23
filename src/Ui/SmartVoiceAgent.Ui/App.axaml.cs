@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
-using SmartVoiceAgent.Ui.Services;
+using SmartVoiceAgent.Ui.Services.Concrete;
 using SmartVoiceAgent.Ui.ViewModels;
 using SmartVoiceAgent.Ui.Views;
 using System.Linq;

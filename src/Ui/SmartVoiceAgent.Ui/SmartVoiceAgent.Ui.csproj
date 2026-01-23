@@ -29,4 +29,13 @@
     <Folder Include="Models\" />
     <AvaloniaResource Include="Assets/favicon.ico" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Views\PluginsView.axaml.cs">
+      <DependentUpon>PluginsView.axaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\SettingsView.axaml.cs">
+      <DependentUpon>SettingsView.axaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
 </Project>
