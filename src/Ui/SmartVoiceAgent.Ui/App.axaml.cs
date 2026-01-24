@@ -12,6 +12,8 @@ namespace SmartVoiceAgent.Ui
     public partial class App : Application
     {
         private TrayIconService? _trayIconService;
+        private MainWindowViewModel? _mainViewModel;
+
 
         public override void Initialize()
         {
@@ -25,27 +27,24 @@ namespace SmartVoiceAgent.Ui
                 // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
                 // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
                 DisableAvaloniaDataAnnotationValidation();
+                _mainViewModel = new MainWindowViewModel();
                 desktop.MainWindow = new MainWindow
                 {
-                    DataContext = new MainWindowViewModel(),
+                    DataContext = _mainViewModel
                 };
-
-                var viewModel = new MainWindowViewModel();
-
-                desktop.MainWindow = new MainWindow
-                {
-                    DataContext = viewModel
-                };
+            
 
                 _trayIconService = new TrayIconService();
                 _trayIconService.Initialize();
 
-                viewModel.SetTrayIconService(_trayIconService);
+                _mainViewModel.SetTrayIconService(_trayIconService);
 
-                // Uygulama kapanırken servis kaynaklarını temizle
+
                 desktop.ShutdownRequested += (s, e) =>
                 {
+                    _mainViewModel.Cleanup();
                     _trayIconService?.Dispose();
+
                 };
             }
 
@@ -54,11 +53,9 @@ namespace SmartVoiceAgent.Ui
 
         private void DisableAvaloniaDataAnnotationValidation()
         {
-            // Get an array of plugins to remove
             var dataValidationPluginsToRemove =
                 BindingPlugins.DataValidators.OfType<DataAnnotationsValidationPlugin>().ToArray();
 
-            // remove each entry found
             foreach (var plugin in dataValidationPluginsToRemove)
             {
                 BindingPlugins.DataValidators.Remove(plugin);

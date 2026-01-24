@@ -36,11 +36,7 @@
 				<ItemsControl.ItemTemplate>
 					<DataTemplate>
 						<Border Classes="InfoCard" Margin="10">
-							<Border.Opacity>
-								<MultiBinding Converter="{x:Static BoolConverters.And}">
-									<Binding Path="IsActive"/>
-								</MultiBinding>
-							</Border.Opacity>
+                            <!-- Opacity handling could be added via style if needed, removing for stability -->
 							<StackPanel>
 								<StackPanel Orientation="Horizontal" Margin="0,0,0,20">
 									<Canvas Width="40" Height="40" Margin="0,0,15,0">
@@ -62,20 +58,17 @@
 												   LetterSpacing="1"/>
 										<TextBlock Text="{Binding Status}"
 												   FontSize="10"
-												   Margin="0,2,0,0">
-											<TextBlock.Foreground>
-												<SolidColorBrush Color="{Binding IsActive, Converter={x:Static BoolConverters.Not}}"/>
-											</TextBlock.Foreground>
-										</TextBlock>
+												   Margin="0,2,0,0"
+                                                   Foreground="{DynamicResource TextMutedBrush}"/>
 									</StackPanel>
 								</StackPanel>
-								<TextBlock Text="{Binding Description}"
+                                <TextBlock Text="{Binding Description}"
 										   Foreground="{DynamicResource TextMutedBrush}"
 										   FontSize="10"
 										   TextWrapping="Wrap"
 										   LineHeight="16"/>
-							</StackPanel>
-						</Border>
+                            </StackPanel>
+                        </Border>
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>

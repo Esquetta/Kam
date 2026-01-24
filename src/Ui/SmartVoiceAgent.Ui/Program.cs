@@ -1,4 +1,5 @@
 ﻿using Avalonia;
+using ReactiveUI.Avalonia;
 using System;
 
 namespace SmartVoiceAgent.Ui
@@ -17,6 +18,7 @@ namespace SmartVoiceAgent.Ui
             => AppBuilder.Configure<App>()
                 .UsePlatformDetect()
                 .WithInterFont()
-                .LogToTrace();
+                .LogToTrace()
+                .UseReactiveUI();
     }
 }

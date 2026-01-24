@@ -41,10 +41,10 @@
 
 		<!-- Active button style -->
 		<Style Selector="Button.NavBtn.Active /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background">
-				<SolidColorBrush Color="#00F2FF" Opacity="0.15"/>
-			</Setter>
-			<Setter Property="BoxShadow" Value="0 0 20 4 #4000F2FF, inset 0 0 15 2 #2000F2FF"/>
+			<Setter Property="Background" Value="#1000F2FF"/>
+            <Setter Property="BorderBrush" Value="#00F2FF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="14"/>
 		</Style>
 
 		<Style Selector="Button.NavBtn Path">
