@@ -3,8 +3,6 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using ReactiveUI;
-using SmartVoiceAgent.Ui.Services;
-using SmartVoiceAgent.Ui.Services.Abstract;
 using SmartVoiceAgent.Ui.Services.Concrete;
 using SmartVoiceAgent.Ui.ViewModels.PageModels;
 using System;
@@ -15,8 +13,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
 {
     public class MainWindowViewModel : ViewModelBase
     {
-        private readonly INavigationService _navigationService;
         private TrayIconService? _trayIconService;
+        private DispatcherTimer? _simulationTimer; 
 
         /* ========================= */
         /* NAVIGATION */
@@ -93,10 +91,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /* CONSTRUCTOR */
         /* ========================= */
 
-        public MainWindowViewModel(INavigationService? navigationService = null)
+        public MainWindowViewModel()
         {
-            _navigationService = navigationService ?? new NavigationService();
-            _navigationService.NavigationChanged += OnNavigationChanged;
+            
 
             // Commands
             NavigateToCoordinatorCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Coordinator));
@@ -104,15 +101,23 @@ namespace SmartVoiceAgent.Ui.ViewModels
             NavigateToSettingsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Settings));
             ToggleThemeCommand = ReactiveCommand.Create(ToggleTheme);
 
-            // Initialize theme
-            if (Application.Current != null)
+           
+            Dispatcher.UIThread.Post(() =>
             {
-                IsDarkMode = Application.Current.ActualThemeVariant == ThemeVariant.Dark;
-            }
+                // Initialize theme
+                if (Application.Current != null)
+                {
+                    IsDarkMode = Application.Current.ActualThemeVariant == ThemeVariant.Dark;
+                }
 
-            // Start simulation
-            StartSimulation();
-            AddLog("SYSTEM_INITIALIZED...");
+                // Initialize View
+                CurrentViewModel = new CoordinatorViewModel();
+                ActiveView = NavView.Coordinator;
+
+                
+                StartSimulation();
+                AddLog("SYSTEM_INITIALIZED...");
+            }, DispatcherPriority.Background);
         }
 
         /* ========================= */
@@ -121,35 +126,47 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         private void NavigateTo(NavView view)
         {
-            _navigationService.NavigateTo(view);
-        }
-
-        private void OnNavigationChanged(object? sender, NavView newView)
-        {
-            CurrentViewModel?.OnNavigatedFrom();
-            ActiveView = newView;
-
-            CurrentViewModel = newView switch
+            // Ensure we are on UI thread
+             if (!Dispatcher.UIThread.CheckAccess())
             {
+                Dispatcher.UIThread.Post(() => NavigateTo(view));
+                return;
+            }
+
+            if (ActiveView == view && CurrentViewModel != null)
+                return;
+
+            CurrentViewModel?.OnNavigatedFrom();
+            ActiveView = view;
+            
+
+            CurrentViewModel = view switch
+            {
+                NavView.Coordinator => new CoordinatorViewModel(),
                 NavView.Plugins => new PluginsViewModel(),
+                NavView.Settings => new SettingsViewModel(),
                 _ => null
             };
 
             CurrentViewModel?.OnNavigatedTo();
-            AddLog($"NAVIGATED_TO: {newView.ToString().ToUpper()}");
+            AddLog($"NAVIGATED_TO: {view.ToString().ToUpper()}");
         }
 
         /* ========================= */
         /* THEME */
         /* ========================= */
 
+
         private void ApplyTheme(bool isDark)
         {
-            if (Application.Current is not { } app)
-                return;
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (Application.Current is not { } app)
+                    return;
 
-            app.RequestedThemeVariant = isDark ? ThemeVariant.Dark : ThemeVariant.Light;
-            AddLog($"THEME_CHANGED: {(isDark ? "DARK" : "LIGHT")}");
+                app.RequestedThemeVariant = isDark ? ThemeVariant.Dark : ThemeVariant.Light;
+                AddLog($"THEME_CHANGED: {(isDark ? "DARK" : "LIGHT")}");
+            });
         }
 
         public void ToggleTheme()
@@ -174,15 +191,30 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             string timestamp = DateTime.Now.ToString("HH:mm:ss");
 
-            Dispatcher.UIThread.Post(() =>
+            // Her zaman UI thread'de çalıştır
+            if (Dispatcher.UIThread.CheckAccess())
             {
+                // Zaten UI thread'deyiz
                 LogEntries.Insert(0, $"[{timestamp}] {message}");
 
                 if (LogEntries.Count > 100)
                     LogEntries.RemoveAt(LogEntries.Count - 1);
 
                 _trayIconService?.UpdateToolTip($"KAM NEURAL - {message}");
-            });
+            }
+            else
+            {
+                
+                Dispatcher.UIThread.Post(() =>
+                {
+                    LogEntries.Insert(0, $"[{timestamp}] {message}");
+
+                    if (LogEntries.Count > 100)
+                        LogEntries.RemoveAt(LogEntries.Count - 1);
+
+                    _trayIconService?.UpdateToolTip($"KAM NEURAL - {message}");
+                });
+            }
         }
 
         /* ========================= */
@@ -191,14 +223,22 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public void StartSimulation()
         {
+            
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(StartSimulation);
+                return;
+            }
+
             var random = new Random();
-            var timer = new DispatcherTimer
+            _simulationTimer = new DispatcherTimer
             {
                 Interval = TimeSpan.FromMilliseconds(800)
             };
 
-            timer.Tick += (_, _) =>
+            _simulationTimer.Tick += (sender, args) =>
             {
+                
                 TaskProgress = (TaskProgress + 2) % 100;
 
                 string[] tasks =
@@ -224,7 +264,17 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 }
             };
 
-            timer.Start();
+            _simulationTimer?.Start();
+        }
+
+        /* ========================= */
+        /* CLEANUP */
+        /* ========================= */
+
+        public void Cleanup()
+        {
+            _simulationTimer?.Stop();
+            _simulationTimer = null;
         }
     }
 }
