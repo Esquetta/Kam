@@ -1,0 +1,35 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- General -->
+    <x:String x:Key="Lang.AppName">KAM NEURAL CORE</x:String>
+    <x:String x:Key="Lang.AppDesc">Système d'agent vocal avancé alimenté par l'IA avec une architecture modulaire</x:String>
+    
+    <!-- Coordinator -->
+    <x:String x:Key="Lang.Coordinator.Title">COORDINATEUR</x:String>
+    <x:String x:Key="Lang.Coordinator.Subtitle">KERNEL v3.5 // LIEN NEURAL STABLE</x:String>
+    <x:String x:Key="Lang.Coordinator.Research">RECHERCHE</x:String>
+    <x:String x:Key="Lang.Coordinator.Analyzer">ANALYSEUR</x:String>
+    <x:String x:Key="Lang.Coordinator.Tasks">TÂCHES</x:String>
+    
+    <!-- Settings -->
+    <x:String x:Key="Lang.Settings.Title">PARAMÈTRES</x:String>
+    <x:String x:Key="Lang.Settings.Subtitle">CONFIGURATION SYSTÈME // PRÉFÉRENCES</x:String>
+    
+    <x:String x:Key="Lang.Settings.Appearance">APPARENCE</x:String>
+    <x:String x:Key="Lang.Settings.ThemeMode">Mode Thème</x:String>
+    <x:String x:Key="Lang.Settings.ThemeDesc">Choisir entre le thème clair et sombre</x:String>
+    <x:String x:Key="Lang.Settings.Language">Langue</x:String>
+    <x:String x:Key="Lang.Settings.LanguageDesc">Sélectionner la langue de l'interface</x:String>
+    
+    <x:String x:Key="Lang.Settings.System">SYSTÈME</x:String>
+    <x:String x:Key="Lang.Settings.KernelVersion">Version du Noyau</x:String>
+    <x:String x:Key="Lang.Settings.KernelVersionVal">v3.5.0 // Lien Neural Stable</x:String>
+    
+    <x:String x:Key="Lang.Settings.About">À PROPOS</x:String>
+    
+    <!-- Plugins -->
+    <x:String x:Key="Lang.Plugins.Title">PLUGINS</x:String>
+    <x:String x:Key="Lang.Plugins.Subtitle">GESTIONNAIRE D'EXTENSIONS // SYSTÈME MODULAIRE</x:String>
+    
+</ResourceDictionary>

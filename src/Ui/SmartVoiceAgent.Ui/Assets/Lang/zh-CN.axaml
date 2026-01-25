@@ -1,0 +1,35 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- General -->
+    <x:String x:Key="Lang.AppName">KAM NEURAL CORE</x:String>
+    <x:String x:Key="Lang.AppDesc">具有模块化架构的高级AI语音代理系统</x:String>
+    
+    <!-- Coordinator -->
+    <x:String x:Key="Lang.Coordinator.Title">协调器</x:String>
+    <x:String x:Key="Lang.Coordinator.Subtitle">KERNEL v3.5 // 神经链接稳定</x:String>
+    <x:String x:Key="Lang.Coordinator.Research">研究</x:String>
+    <x:String x:Key="Lang.Coordinator.Analyzer">分析器</x:String>
+    <x:String x:Key="Lang.Coordinator.Tasks">任务</x:String>
+    
+    <!-- Settings -->
+    <x:String x:Key="Lang.Settings.Title">设置</x:String>
+    <x:String x:Key="Lang.Settings.Subtitle">系统配置 // 偏好设置</x:String>
+    
+    <x:String x:Key="Lang.Settings.Appearance">外观</x:String>
+    <x:String x:Key="Lang.Settings.ThemeMode">主题模式</x:String>
+    <x:String x:Key="Lang.Settings.ThemeDesc">选择明亮或黑暗主题</x:String>
+    <x:String x:Key="Lang.Settings.Language">语言</x:String>
+    <x:String x:Key="Lang.Settings.LanguageDesc">选择界面语言</x:String>
+    
+    <x:String x:Key="Lang.Settings.System">系统</x:String>
+    <x:String x:Key="Lang.Settings.KernelVersion">内核版本</x:String>
+    <x:String x:Key="Lang.Settings.KernelVersionVal">v3.5.0 // 神经链接稳定</x:String>
+    
+    <x:String x:Key="Lang.Settings.About">关于</x:String>
+    
+    <!-- Plugins -->
+    <x:String x:Key="Lang.Plugins.Title">插件</x:String>
+    <x:String x:Key="Lang.Plugins.Subtitle">扩展管理器 // 模块化系统</x:String>
+    
+</ResourceDictionary>

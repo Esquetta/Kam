@@ -1,0 +1,35 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- General -->
+    <x:String x:Key="Lang.AppName">KAM NEURAL CORE</x:String>
+    <x:String x:Key="Lang.AppDesc">モジュラーアーキテクチャを備えた高度なAI搭載音声エージェントシステム</x:String>
+    
+    <!-- Coordinator -->
+    <x:String x:Key="Lang.Coordinator.Title">コーディネーター</x:String>
+    <x:String x:Key="Lang.Coordinator.Subtitle">カーネル v3.5 // ニューラルリンク安定</x:String>
+    <x:String x:Key="Lang.Coordinator.Research">研究</x:String>
+    <x:String x:Key="Lang.Coordinator.Analyzer">アナライザー</x:String>
+    <x:String x:Key="Lang.Coordinator.Tasks">タスク</x:String>
+    
+    <!-- Settings -->
+    <x:String x:Key="Lang.Settings.Title">設定</x:String>
+    <x:String x:Key="Lang.Settings.Subtitle">システム構成 // 環境設定</x:String>
+    
+    <x:String x:Key="Lang.Settings.Appearance">外観</x:String>
+    <x:String x:Key="Lang.Settings.ThemeMode">テーマモード</x:String>
+    <x:String x:Key="Lang.Settings.ThemeDesc">ライトテーマとダークテーマを選択</x:String>
+    <x:String x:Key="Lang.Settings.Language">言語</x:String>
+    <x:String x:Key="Lang.Settings.LanguageDesc">インターフェース言語を選択</x:String>
+    
+    <x:String x:Key="Lang.Settings.System">システム</x:String>
+    <x:String x:Key="Lang.Settings.KernelVersion">カーネルバージョン</x:String>
+    <x:String x:Key="Lang.Settings.KernelVersionVal">v3.5.0 // ニューラルリンク安定</x:String>
+    
+    <x:String x:Key="Lang.Settings.About">概要</x:String>
+    
+    <!-- Plugins -->
+    <x:String x:Key="Lang.Plugins.Title">プラグイン</x:String>
+    <x:String x:Key="Lang.Plugins.Subtitle">拡張機能マネージャー // モジュラーシステム</x:String>
+    
+</ResourceDictionary>

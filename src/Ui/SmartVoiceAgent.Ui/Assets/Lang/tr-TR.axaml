@@ -1,0 +1,35 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- General -->
+    <x:String x:Key="Lang.AppName">KAM NÖRAL ÇEKİRDEK</x:String>
+    <x:String x:Key="Lang.AppDesc">Modüler mimariye sahip gelişmiş yapay zeka sesli asistan sistemi</x:String>
+    
+    <!-- Coordinator -->
+    <x:String x:Key="Lang.Coordinator.Title">KOORDİNATÖR</x:String>
+    <x:String x:Key="Lang.Coordinator.Subtitle">ÇEKİRDEK v3.5 // NÖRAL BAĞLANTI STABİL</x:String>
+    <x:String x:Key="Lang.Coordinator.Research">ARAŞTIRMA</x:String>
+    <x:String x:Key="Lang.Coordinator.Analyzer">ANALİZÖR</x:String>
+    <x:String x:Key="Lang.Coordinator.Tasks">GÖREVLER</x:String>
+    
+    <!-- Settings -->
+    <x:String x:Key="Lang.Settings.Title">AYARLAR</x:String>
+    <x:String x:Key="Lang.Settings.Subtitle">SİSTEM YAPILANDIRMASI // TERCİHLER</x:String>
+    
+    <x:String x:Key="Lang.Settings.Appearance">GÖRÜNÜM</x:String>
+    <x:String x:Key="Lang.Settings.ThemeMode">Tema Modu</x:String>
+    <x:String x:Key="Lang.Settings.ThemeDesc">Açık ve koyu tema arasında seçim yapın</x:String>
+    <x:String x:Key="Lang.Settings.Language">Dil</x:String>
+    <x:String x:Key="Lang.Settings.LanguageDesc">Arayüz dilini seçin</x:String>
+    
+    <x:String x:Key="Lang.Settings.System">SİSTEM</x:String>
+    <x:String x:Key="Lang.Settings.KernelVersion">Çekirdek Sürümü</x:String>
+    <x:String x:Key="Lang.Settings.KernelVersionVal">v3.5.0 // Nöral Bağlantı Stabil</x:String>
+    
+    <x:String x:Key="Lang.Settings.About">HAKKINDA</x:String>
+    
+    <!-- Plugins -->
+    <x:String x:Key="Lang.Plugins.Title">EKLENTİLER</x:String>
+    <x:String x:Key="Lang.Plugins.Subtitle">UZANTI YÖNETİCİSİ // MODÜLER SİSTEM</x:String>
+    
+</ResourceDictionary>
