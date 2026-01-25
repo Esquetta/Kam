@@ -7,22 +7,22 @@
 
 	<Grid RowDefinitions="Auto, *">
 
-		<!-- Title Section -->
-		<StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,40,0,40">
-			<TextBlock Text="PLUGINS"
-					   FontSize="48"
-					   LetterSpacing="25"
-					   HorizontalAlignment="Center"
-					   Foreground="{DynamicResource TextPrimaryBrush}"
-					   FontWeight="Light"/>
-			<TextBlock Text="EXTENSION MANAGER // MODULAR SYSTEM"
-					   Foreground="{DynamicResource AccentCyanBrush}"
-					   Opacity="0.6"
-					   HorizontalAlignment="Center"
-					   Margin="0,5,0,0"
-					   FontSize="11"
-					   LetterSpacing="2"/>
-		</StackPanel>
+        <!-- Title Section -->
+        <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,40,0,40">
+            <TextBlock Text="{DynamicResource Lang.Plugins.Title}"
+                       FontSize="48"
+                       LetterSpacing="25"
+                       HorizontalAlignment="Center"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="Light"/>
+            <TextBlock Text="{DynamicResource Lang.Plugins.Subtitle}"
+                       Foreground="{DynamicResource AccentCyanBrush}"
+                       Opacity="0.6"
+                       HorizontalAlignment="Center"
+                       Margin="0,5,0,0"
+                       FontSize="11"
+                       LetterSpacing="2"/>
+        </StackPanel>
 
 		<!-- Plugins Grid -->
 		<ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">

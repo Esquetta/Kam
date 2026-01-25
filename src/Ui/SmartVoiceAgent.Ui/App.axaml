@@ -8,9 +8,9 @@ RequestedThemeVariant="Dark">
 	<Application.Resources>
 		<ResourceDictionary>
 			<ResourceDictionary.MergedDictionaries>
-				<ResourceInclude
-				Source="avares://SmartVoiceAgent.Ui/Themes/AppTheme.axaml"/>
-			</ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://SmartVoiceAgent.Ui/Themes/AppTheme.axaml"/>
+                <ResourceInclude Source="avares://SmartVoiceAgent.Ui/Assets/Lang/en-US.axaml"/>
+            </ResourceDictionary.MergedDictionaries>
 		</ResourceDictionary>
 	</Application.Resources>
 

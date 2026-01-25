@@ -8,13 +8,13 @@
         
         <!-- Title Section -->
         <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,40,0,40">
-            <TextBlock Text="{Binding Title}"
+            <TextBlock Text="{DynamicResource Lang.Settings.Title}"
                        FontSize="48"
                        LetterSpacing="25"
                        HorizontalAlignment="Center"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        FontWeight="Light"/>
-            <TextBlock Text="SYSTEM CONFIGURATION // PREFERENCES"
+            <TextBlock Text="{DynamicResource Lang.Settings.Subtitle}"
                        Foreground="{DynamicResource AccentCyanBrush}"
                        Opacity="0.6"
                        HorizontalAlignment="Center"
@@ -30,20 +30,40 @@
                 <!-- Appearance Section -->
                 <Border Classes="InfoCard">
                     <StackPanel Spacing="15">
-                        <TextBlock Text="APPEARANCE"
+                        <TextBlock Text="{DynamicResource Lang.Settings.Appearance}"
                                    Foreground="{DynamicResource AccentCyanBrush}"
                                    FontWeight="Bold"
                                    FontSize="16"
                                    LetterSpacing="2"/>
                         
                         <StackPanel Spacing="10">
-                            <TextBlock Text="Theme Mode"
+                            <TextBlock Text="{DynamicResource Lang.Settings.ThemeMode}"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                        FontSize="12"/>
-                            <TextBlock Text="Choose between light and dark theme"
+                            <TextBlock Text="{DynamicResource Lang.Settings.ThemeDesc}"
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        FontSize="10"
                                        Margin="0,0,0,5"/>
+
+                             <!-- Language Selector -->
+                            <TextBlock Text="{DynamicResource Lang.Settings.Language}"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       FontSize="12"
+                                       Margin="0,10,0,0"/>
+                            <TextBlock Text="{DynamicResource Lang.Settings.LanguageDesc}"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       FontSize="10"
+                                       Margin="0,0,0,5"/>
+                            <ComboBox SelectedIndex="{Binding SelectedLanguageIndex}"
+                                      HorizontalAlignment="Stretch">
+                                <ComboBoxItem>English</ComboBoxItem>
+                                <ComboBoxItem>Español</ComboBoxItem>
+                                <ComboBoxItem>Français</ComboBoxItem>
+                                <ComboBoxItem>Deutsch</ComboBoxItem>
+                                <ComboBoxItem>中文</ComboBoxItem>
+                                <ComboBoxItem>日本語</ComboBoxItem>
+                                <ComboBoxItem>Türkçe</ComboBoxItem>
+                            </ComboBox>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -51,17 +71,17 @@
                 <!-- System Section -->
                 <Border Classes="InfoCard">
                     <StackPanel Spacing="15">
-                        <TextBlock Text="SYSTEM"
+                        <TextBlock Text="{DynamicResource Lang.Settings.System}"
                                    Foreground="{DynamicResource AccentPurpleBrush}"
                                    FontWeight="Bold"
                                    FontSize="16"
                                    LetterSpacing="2"/>
                         
                         <StackPanel Spacing="10">
-                            <TextBlock Text="Kernel Version"
+                            <TextBlock Text="{DynamicResource Lang.Settings.KernelVersion}"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                        FontSize="12"/>
-                            <TextBlock Text="v3.5.0 // Neural Link Stable"
+                            <TextBlock Text="{DynamicResource Lang.Settings.KernelVersionVal}"
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        FontSize="10"
                                        FontFamily="Consolas"/>
@@ -72,17 +92,17 @@
                 <!-- About Section -->
                 <Border Classes="InfoCard">
                     <StackPanel Spacing="15">
-                        <TextBlock Text="ABOUT"
+                        <TextBlock Text="{DynamicResource Lang.Settings.About}"
                                    Foreground="{DynamicResource AccentOrangeBrush}"
                                    FontWeight="Bold"
                                    FontSize="16"
                                    LetterSpacing="2"/>
                         
                         <StackPanel Spacing="10">
-                            <TextBlock Text="KAM NEURAL CORE"
+                            <TextBlock Text="{DynamicResource Lang.AppName}"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                        FontSize="12"/>
-                            <TextBlock Text="Advanced AI-powered voice agent system with modular architecture"
+                            <TextBlock Text="{DynamicResource Lang.AppDesc}"
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        FontSize="10"
                                        TextWrapping="Wrap"
