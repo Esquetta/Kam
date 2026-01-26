@@ -88,6 +88,17 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /* ========================= */
+        /* LANGUAGE */
+        /* ========================= */
+
+        private int _selectedLanguageIndex;
+        public int SelectedLanguageIndex
+        {
+            get => _selectedLanguageIndex;
+            set => this.RaiseAndSetIfChanged(ref _selectedLanguageIndex, value);
+        }
+
+        /* ========================= */
         /* CONSTRUCTOR */
         /* ========================= */
 
@@ -144,7 +155,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 NavView.Coordinator => new CoordinatorViewModel(),
                 NavView.Plugins => new PluginsViewModel(),
-                NavView.Settings => new SettingsViewModel(),
+                NavView.Settings => new SettingsViewModel(this),
                 _ => null
             };
 

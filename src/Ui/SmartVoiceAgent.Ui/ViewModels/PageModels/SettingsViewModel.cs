@@ -1,16 +1,23 @@
-﻿using ReactiveUI;
+using ReactiveUI;
 using SmartVoiceAgent.Ui.Services;
 
 namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 {
     public class SettingsViewModel : ViewModelBase
     {
+        private readonly MainWindowViewModel? _mainViewModel;
         private int _selectedLanguageIndex;
 
         public SettingsViewModel()
         {
             Title = "SETTINGS";
-            _selectedLanguageIndex = 0; // Default to English
+            _selectedLanguageIndex = 0;
+        }
+
+        public SettingsViewModel(MainWindowViewModel mainViewModel) : this()
+        {
+            _mainViewModel = mainViewModel;
+            _selectedLanguageIndex = mainViewModel.SelectedLanguageIndex;
         }
 
         public int SelectedLanguageIndex
@@ -21,6 +28,13 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 if (_selectedLanguageIndex != value)
                 {
                     this.RaiseAndSetIfChanged(ref _selectedLanguageIndex, value);
+
+                    // Store in main view model for persistence
+                    if (_mainViewModel != null)
+                    {
+                        _mainViewModel.SelectedLanguageIndex = value;
+                    }
+
                     UpdateLanguage();
                 }
             }
