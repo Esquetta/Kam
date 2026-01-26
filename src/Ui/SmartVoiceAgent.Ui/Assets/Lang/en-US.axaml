@@ -13,19 +13,30 @@
     <x:String x:Key="Lang.Coordinator.Tasks">TASKS</x:String>
     
     <!-- Settings -->
-    <x:String x:Key="Lang.Settings.Title">SETTINGS</x:String>
-    <x:String x:Key="Lang.Settings.Subtitle">SYSTEM CONFIGURATION // PREFERENCES</x:String>
-    
+    <x:String x:Key="Lang.Settings.Title">Settings</x:String>
+    <x:String x:Key="Lang.Settings.Subtitle">Manage your kernel configuration and preferences.</x:String>
+
+    <x:String x:Key="Lang.Settings.General">GENERAL</x:String>
     <x:String x:Key="Lang.Settings.Appearance">APPEARANCE</x:String>
     <x:String x:Key="Lang.Settings.ThemeMode">Theme Mode</x:String>
     <x:String x:Key="Lang.Settings.ThemeDesc">Choose between light and dark theme</x:String>
     <x:String x:Key="Lang.Settings.Language">Language</x:String>
     <x:String x:Key="Lang.Settings.LanguageDesc">Select interface language</x:String>
-    
+
+    <x:String x:Key="Lang.Settings.Startup">Startup Behavior</x:String>
+    <x:String x:Key="Lang.Settings.StartupDesc">Auto-initialize neural link on system boot</x:String>
+    <x:String x:Key="Lang.Settings.Security">Security Level</x:String>
+    <x:String x:Key="Lang.Settings.SecurityDesc">Current mode: Passive Monitoring</x:String>
+    <x:String x:Key="Lang.Settings.Change">CHANGE</x:String>
+
+    <x:String x:Key="Lang.Settings.Interface">INTERFACE</x:String>
+    <x:String x:Key="Lang.Settings.ReducedMotion">Reduced Motion</x:String>
+    <x:String x:Key="Lang.Settings.ReducedMotionDesc">Disable advanced particle effects</x:String>
+
     <x:String x:Key="Lang.Settings.System">SYSTEM</x:String>
     <x:String x:Key="Lang.Settings.KernelVersion">Kernel Version</x:String>
     <x:String x:Key="Lang.Settings.KernelVersionVal">v3.5.0 // Neural Link Stable</x:String>
-    
+
     <x:String x:Key="Lang.Settings.About">ABOUT</x:String>
     
     <!-- Plugins -->

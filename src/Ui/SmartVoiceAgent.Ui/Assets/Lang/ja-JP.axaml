@@ -14,18 +14,29 @@
     
     <!-- Settings -->
     <x:String x:Key="Lang.Settings.Title">設定</x:String>
-    <x:String x:Key="Lang.Settings.Subtitle">システム構成 // 環境設定</x:String>
-    
+    <x:String x:Key="Lang.Settings.Subtitle">カーネル構成と環境設定を管理します。</x:String>
+
+    <x:String x:Key="Lang.Settings.General">一般</x:String>
     <x:String x:Key="Lang.Settings.Appearance">外観</x:String>
     <x:String x:Key="Lang.Settings.ThemeMode">テーマモード</x:String>
     <x:String x:Key="Lang.Settings.ThemeDesc">ライトテーマとダークテーマを選択</x:String>
     <x:String x:Key="Lang.Settings.Language">言語</x:String>
     <x:String x:Key="Lang.Settings.LanguageDesc">インターフェース言語を選択</x:String>
-    
+
+    <x:String x:Key="Lang.Settings.Startup">起動動作</x:String>
+    <x:String x:Key="Lang.Settings.StartupDesc">システム起動時にニューラルリンクを自動初期化</x:String>
+    <x:String x:Key="Lang.Settings.Security">セキュリティレベル</x:String>
+    <x:String x:Key="Lang.Settings.SecurityDesc">現在のモード: パッシブモニタリング</x:String>
+    <x:String x:Key="Lang.Settings.Change">変更</x:String>
+
+    <x:String x:Key="Lang.Settings.Interface">インターフェース</x:String>
+    <x:String x:Key="Lang.Settings.ReducedMotion">モーション軽減</x:String>
+    <x:String x:Key="Lang.Settings.ReducedMotionDesc">高度なパーティクルエフェクトを無効化</x:String>
+
     <x:String x:Key="Lang.Settings.System">システム</x:String>
     <x:String x:Key="Lang.Settings.KernelVersion">カーネルバージョン</x:String>
     <x:String x:Key="Lang.Settings.KernelVersionVal">v3.5.0 // ニューラルリンク安定</x:String>
-    
+
     <x:String x:Key="Lang.Settings.About">概要</x:String>
     
     <!-- Plugins -->
