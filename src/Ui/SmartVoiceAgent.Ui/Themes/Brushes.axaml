@@ -1,14 +1,36 @@
 <ResourceDictionary
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    
+
+    <!-- Background brushes -->
     <SolidColorBrush x:Key="PanelBgBrush" Color="{DynamicResource PanelBg}" />
     <SolidColorBrush x:Key="CardBgBrush" Color="{DynamicResource CardBg}" />
+    <SolidColorBrush x:Key="CardBgHoverBrush" Color="{DynamicResource CardBgHover}" />
+    <SolidColorBrush x:Key="SurfaceBgBrush" Color="{DynamicResource SurfaceBg}" />
+
+    <!-- Border brushes -->
+    <SolidColorBrush x:Key="BorderSubtleBrush" Color="{DynamicResource BorderSubtle}" />
+    <SolidColorBrush x:Key="BorderMutedBrush" Color="{DynamicResource BorderMuted}" />
+
+    <!-- Text brushes -->
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="{DynamicResource TextPrimary}" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{DynamicResource TextSecondary}" />
     <SolidColorBrush x:Key="TextMutedBrush" Color="{DynamicResource TextMuted}" />
+
+    <!-- Accent brushes -->
     <SolidColorBrush x:Key="AccentCyanBrush" Color="{DynamicResource AccentCyan}" />
+    <SolidColorBrush x:Key="AccentCyanDimBrush" Color="{DynamicResource AccentCyanDim}" />
+    <SolidColorBrush x:Key="AccentCyanGlowBrush" Color="{DynamicResource AccentCyanGlow}" />
     <SolidColorBrush x:Key="AccentGreenBrush" Color="{DynamicResource AccentGreen}" />
+    <SolidColorBrush x:Key="AccentGreenGlowBrush" Color="{DynamicResource AccentGreenGlow}" />
     <SolidColorBrush x:Key="AccentPurpleBrush" Color="{DynamicResource AccentPurple}" />
+    <SolidColorBrush x:Key="AccentPurpleGlowBrush" Color="{DynamicResource AccentPurpleGlow}" />
     <SolidColorBrush x:Key="AccentOrangeBrush" Color="{DynamicResource AccentOrange}" />
+    <SolidColorBrush x:Key="AccentOrangeGlowBrush" Color="{DynamicResource AccentOrangeGlow}" />
     <SolidColorBrush x:Key="AccentErrorBrush" Color="{DynamicResource AccentError}" />
+    <SolidColorBrush x:Key="AccentErrorGlowBrush" Color="{DynamicResource AccentErrorGlow}" />
+
+    <!-- Log brushes -->
+    <SolidColorBrush x:Key="LogTextBrush" Color="{DynamicResource LogText}" />
+    <SolidColorBrush x:Key="LogTextHighlightBrush" Color="{DynamicResource LogTextHighlight}" />
 </ResourceDictionary>

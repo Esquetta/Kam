@@ -1,14 +1,32 @@
 <ResourceDictionary
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    
-    <Color x:Key="PanelBg">#0A0F14</Color>
-    <Color x:Key="CardBg">#111827</Color>
-    <Color x:Key="TextPrimary">#E5E7EB</Color>
-    <Color x:Key="TextMuted">#9CA3AF</Color>
+
+    <!-- Zinc-based dark palette matching HTML design -->
+    <Color x:Key="PanelBg">#09090B</Color>
+    <Color x:Key="CardBg">#18181B</Color>
+    <Color x:Key="CardBgHover">#27272A</Color>
+    <Color x:Key="SurfaceBg">#0C0C0E</Color>
+    <Color x:Key="BorderSubtle">#1F1F23</Color>
+    <Color x:Key="BorderMuted">#27272A</Color>
+    <Color x:Key="TextPrimary">#FAFAFA</Color>
+    <Color x:Key="TextSecondary">#D4D4D8</Color>
+    <Color x:Key="TextMuted">#71717A</Color>
+
+    <!-- Accent colors -->
     <Color x:Key="AccentCyan">#06B6D4</Color>
+    <Color x:Key="AccentCyanDim">#0891B2</Color>
+    <Color x:Key="AccentCyanGlow">#1606B6D4</Color>
     <Color x:Key="AccentGreen">#10B981</Color>
+    <Color x:Key="AccentGreenGlow">#1610B981</Color>
     <Color x:Key="AccentPurple">#8B5CF6</Color>
-    <Color x:Key="AccentOrange">#FB923C</Color>
+    <Color x:Key="AccentPurpleGlow">#168B5CF6</Color>
+    <Color x:Key="AccentOrange">#F97316</Color>
+    <Color x:Key="AccentOrangeGlow">#16F97316</Color>
     <Color x:Key="AccentError">#EF4444</Color>
+    <Color x:Key="AccentErrorGlow">#16EF4444</Color>
+
+    <!-- Log colors -->
+    <Color x:Key="LogText">#0EA5E9</Color>
+    <Color x:Key="LogTextHighlight">#38BDF8</Color>
 </ResourceDictionary>
