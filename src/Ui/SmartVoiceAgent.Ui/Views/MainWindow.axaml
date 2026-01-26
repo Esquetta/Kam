@@ -1,4 +1,4 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+<Window xmlns="https://github.com/avaloniaui"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 		xmlns:vm="using:SmartVoiceAgent.Ui.ViewModels"
 		xmlns:pagevm="using:SmartVoiceAgent.Ui.ViewModels.PageModels"
@@ -8,108 +8,251 @@
 		Background="{DynamicResource PanelBgBrush}"
 		TransparencyLevelHint="Mica"
 		ExtendClientAreaToDecorationsHint="True"
-		Title="KAM NEURAL // CORE v3.5"
+		Title="COORDINATOR AI KERNEL"
 		Icon="/Assets/favicon.ico"
-		Width="1280" Height="1024">
+		Width="1280" Height="800"
+		MinWidth="1024" MinHeight="700">
 
 	<Window.Styles>
 		<!-- NavBtn Base Style -->
 		<Style Selector="Button.NavBtn">
-			<Setter Property="Width" Value="45"/>
-			<Setter Property="Height" Value="45"/>
-			<Setter Property="Margin" Value="0,10"/>
+			<Setter Property="Width" Value="40"/>
+			<Setter Property="Height" Value="40"/>
+			<Setter Property="Margin" Value="0,4"/>
 			<Setter Property="HorizontalAlignment" Value="Center"/>
 			<Setter Property="Padding" Value="0"/>
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Cursor" Value="Hand"/>
 		</Style>
 
 		<Style Selector="Button.NavBtn /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="CornerRadius" Value="18"/>
+			<Setter Property="CornerRadius" Value="8"/>
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="Transitions">
 				<Transitions>
-					<BrushTransition Property="Background" Duration="0:0:0.3"/>
-					<BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.3"/>
+					<BrushTransition Property="Background" Duration="0:0:0.2"/>
 				</Transitions>
 			</Setter>
 		</Style>
 
 		<Style Selector="Button.NavBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="#0A00F2FF"/>
+			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
 		</Style>
 
 		<!-- Active button style -->
 		<Style Selector="Button.NavBtn.Active /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="#1000F2FF"/>
-            <Setter Property="BorderBrush" Value="#00F2FF"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="14"/>
+			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
 		</Style>
 
 		<Style Selector="Button.NavBtn Path">
 			<Setter Property="Fill" Value="{DynamicResource TextMutedBrush}"/>
 			<Setter Property="Width" Value="20"/>
+			<Setter Property="Height" Value="20"/>
 			<Setter Property="Stretch" Value="Uniform"/>
 			<Setter Property="HorizontalAlignment" Value="Center"/>
 			<Setter Property="VerticalAlignment" Value="Center"/>
 			<Setter Property="Transitions">
 				<Transitions>
-					<BrushTransition Property="Fill" Duration="0:0:0.3"/>
+					<BrushTransition Property="Fill" Duration="0:0:0.2"/>
 				</Transitions>
 			</Setter>
 		</Style>
 
 		<Style Selector="Button.NavBtn:pointerover Path">
-			<Setter Property="Fill" Value="{DynamicResource AccentCyanBrush}"/>
+			<Setter Property="Fill" Value="{DynamicResource TextPrimaryBrush}"/>
 		</Style>
 
 		<Style Selector="Button.NavBtn.Active Path">
 			<Setter Property="Fill" Value="{DynamicResource AccentCyanBrush}"/>
 		</Style>
 
+		<!-- Active Indicator -->
+		<Style Selector="Border.ActiveIndicator">
+			<Setter Property="Width" Value="2"/>
+			<Setter Property="Height" Value="12"/>
+			<Setter Property="Background" Value="{DynamicResource AccentCyanBrush}"/>
+			<Setter Property="CornerRadius" Value="0,1,1,0"/>
+			<Setter Property="HorizontalAlignment" Value="Left"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="Opacity" Value="0"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+				</Transitions>
+			</Setter>
+		</Style>
+
 		<!-- InfoCard Style -->
 		<Style Selector="Border.InfoCard">
 			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource AccentCyanBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
 			<Setter Property="BorderThickness" Value="1"/>
-			<Setter Property="CornerRadius" Value="12"/>
-			<Setter Property="Padding" Value="20"/>
-			<Setter Property="Margin" Value="10"/>
+			<Setter Property="CornerRadius" Value="16"/>
+			<Setter Property="Padding" Value="24"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<BrushTransition Property="BorderBrush" Duration="0:0:0.3"/>
+					<BrushTransition Property="Background" Duration="0:0:0.3"/>
+				</Transitions>
+			</Setter>
+		</Style>
+
+		<Style Selector="Border.InfoCard:pointerover">
+			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+		</Style>
+
+		<!-- Log Entry Style -->
+		<Style Selector="TextBlock.LogEntry">
+			<Setter Property="FontSize" Value="11"/>
+			<Setter Property="FontFamily" Value="Consolas, Cascadia Code, monospace"/>
+			<Setter Property="Foreground" Value="{DynamicResource LogTextBrush}"/>
+			<Setter Property="Opacity" Value="0.7"/>
+			<Setter Property="Margin" Value="0,2"/>
+			<Setter Property="Transitions">
+				<Transitions>
+					<DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+				</Transitions>
+			</Setter>
+		</Style>
+
+		<Style Selector="TextBlock.LogEntry:pointerover">
+			<Setter Property="Opacity" Value="1"/>
+			<Setter Property="Foreground" Value="{DynamicResource LogTextHighlightBrush}"/>
+		</Style>
+
+		<!-- Prompt Input Style -->
+		<Style Selector="TextBox#PromptInput">
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="MinHeight" Value="20"/>
+		</Style>
+
+		<Style Selector="TextBox#PromptInput /template/ Border#PART_BorderElement">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+		</Style>
+
+		<Style Selector="TextBox#PromptInput:focus /template/ Border#PART_BorderElement">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+		</Style>
+
+		<Style Selector="TextBox#PromptInput:pointerover /template/ Border#PART_BorderElement">
+			<Setter Property="Background" Value="Transparent"/>
 		</Style>
 	</Window.Styles>
 
 	<Panel>
-		<Grid ColumnDefinitions="70, *, 300">
+		<Grid RowDefinitions="48, *">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="64"/>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="320"/>
+			</Grid.ColumnDefinitions>
+
+			<!-- Header Bar (Draggable) -->
+			<Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
+					Background="{DynamicResource CardBgBrush}"
+					BorderBrush="{DynamicResource BorderSubtleBrush}"
+					BorderThickness="0,0,0,1"
+					PointerPressed="OnHeaderPointerPressed">
+				<Grid Margin="24,0">
+					<StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left"
+								IsHitTestVisible="False">
+						<Ellipse Width="6" Height="6" Fill="{DynamicResource AccentGreenBrush}" Margin="0,0,8,0">
+							<Ellipse.Effect>
+								<BlurEffect Radius="3"/>
+							</Ellipse.Effect>
+						</Ellipse>
+						<Ellipse Width="6" Height="6" Fill="{DynamicResource AccentGreenBrush}" Margin="-6,0,8,0"/>
+						<TextBlock Text="SYSTEM ONLINE"
+								   FontSize="11"
+								   FontWeight="Medium"
+								   Foreground="{DynamicResource TextMutedBrush}"
+								   LetterSpacing="1"
+								   VerticalAlignment="Center"/>
+					</StackPanel>
+				</Grid>
+			</Border>
 
 			<!-- Left Navbar -->
-			<Border Grid.Column="0"
+			<Border Grid.Row="1" Grid.Column="0"
 					Background="{DynamicResource CardBgBrush}"
-					BorderBrush="{DynamicResource TextMutedBrush}"
+					BorderBrush="{DynamicResource BorderSubtleBrush}"
 					BorderThickness="0,0,1,0">
-				<Grid RowDefinitions="Auto, *, Auto" Margin="0,40,0,25">
+				<Grid RowDefinitions="Auto, *, Auto" Margin="0,24,0,24">
+
+					<!-- Brand/Logo Button -->
+					<Button Grid.Row="0"
+							Classes="NavBtn"
+							Width="40" Height="40"
+							Margin="0,0,0,24"
+							Command="{Binding NavigateToCoordinatorCommand}"
+							ToolTip.Tip="Coordinator AI">
+						<Button.Styles>
+							<Style Selector="Button#BrandBtn /template/ ContentPresenter#PART_ContentPresenter">
+								<Setter Property="Background" Value="{DynamicResource AccentCyanGlowBrush}"/>
+								<Setter Property="BorderBrush" Value="{DynamicResource AccentCyanDimBrush}"/>
+								<Setter Property="BorderThickness" Value="1"/>
+								<Setter Property="CornerRadius" Value="12"/>
+							</Style>
+						</Button.Styles>
+						<Border Background="{DynamicResource AccentCyanGlowBrush}"
+								BorderBrush="{DynamicResource AccentCyanDimBrush}"
+								BorderThickness="1"
+								CornerRadius="12"
+								Width="40" Height="40">
+							<Path Data="M3,11H11V3H3M3,21H11V13H3M13,21H21V13H13M13,3V11H21V3"
+								  Fill="{DynamicResource AccentCyanBrush}"
+								  Width="20" Height="20"
+								  Stretch="Uniform"
+								  HorizontalAlignment="Center"
+								  VerticalAlignment="Center"/>
+						</Border>
+					</Button>
 
 					<!-- Top Navigation -->
-					<StackPanel Grid.Row="0">
+					<StackPanel Grid.Row="1" VerticalAlignment="Top" Margin="12,0">
 						<!-- Dashboard / Coordinator -->
-						<Button Classes.NavBtn="True"
-								Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Coordinator}}"
-								Command="{Binding NavigateToCoordinatorCommand}"
-								ToolTip.Tip="Dashboard">
-							<Path Data="M3,11H11V3H3M3,21H11V13H3M13,21H21V13H13M13,3V11H21V3"/>
-						</Button>
+						<Grid>
+							<Border Classes="ActiveIndicator"
+									Opacity="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Coordinator}}"/>
+							<Button Classes.NavBtn="True"
+									Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Coordinator}}"
+									Command="{Binding NavigateToCoordinatorCommand}"
+									ToolTip.Tip="Dashboard">
+								<Path Data="M22 12h-4l-3 9L9 3l-3 9H2"/>
+							</Button>
+						</Grid>
 
 						<!-- Plugins -->
-						<Button Classes.NavBtn="True"
-								Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Plugins}}"
-								Command="{Binding NavigateToPluginsCommand}"
-								ToolTip.Tip="Plugins">
-							<Path Data="M20.5,11H19V7C19,5.89 18.1,5 17,5H13V3.5A2.5,2.5 0 0,0 10.5,1A2.5,2.5 0 0,0 8,3.5V5H4A2,2 0 0,0 2,7V10.8H3.5C5,10.8 6.2,12 6.2,13.5C6.2,15 5,16.2 3.5,16.2H2V20A2,2 0 0,0 4,22H7.8V20.5C7.8,19 9,17.8 10.5,17.8C12,17.8 13.2,19 13.2,20.5V22H17A2,2 0 0,0 19,20V16H20.5A2.5,2.5 0 0,0 23,13.5A2.5,2.5 0 0,0 20.5,11Z"/>
-						</Button>
+						<Grid>
+							<Border Classes="ActiveIndicator"
+									Opacity="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Plugins}}"/>
+							<Button Classes.NavBtn="True"
+									Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Plugins}}"
+									Command="{Binding NavigateToPluginsCommand}"
+									ToolTip.Tip="Plugins">
+								<Path Data="M20.5,11H19V7C19,5.89 18.1,5 17,5H13V3.5A2.5,2.5 0 0,0 10.5,1A2.5,2.5 0 0,0 8,3.5V5H4A2,2 0 0,0 2,7V10.8H3.5C5,10.8 6.2,12 6.2,13.5C6.2,15 5,16.2 3.5,16.2H2V20A2,2 0 0,0 4,22H7.8V20.5C7.8,19 9,17.8 10.5,17.8C12,17.8 13.2,19 13.2,20.5V22H17A2,2 0 0,0 19,20V16H20.5A2.5,2.5 0 0,0 23,13.5A2.5,2.5 0 0,0 20.5,11Z"/>
+							</Button>
+						</Grid>
+
+						<!-- Settings -->
+						<Grid>
+							<Border Classes="ActiveIndicator"
+									Opacity="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Settings}}"/>
+							<Button Classes.NavBtn="True"
+									Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Settings}}"
+									Command="{Binding NavigateToSettingsCommand}"
+									ToolTip.Tip="Settings">
+								<Path Data="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11.03L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.97 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.97 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11.03C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.95C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.95L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
+							</Button>
+						</Grid>
 					</StackPanel>
 
 					<!-- Bottom Navigation -->
-					<StackPanel Grid.Row="2">
+					<StackPanel Grid.Row="2" Margin="12,0">
 						<!-- Theme Toggle -->
 						<Button Classes="NavBtn"
 								Command="{Binding ToggleThemeCommand}"
@@ -126,59 +269,149 @@
 							</Panel>
 						</Button>
 
-						<!-- Settings -->
-						<Button Classes.NavBtn="True"
-								Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Settings}}"
-								Command="{Binding NavigateToSettingsCommand}"
-								ToolTip.Tip="Settings">
-							<Path Data="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11.03L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.97 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.97 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11.03C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.95C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.95L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
-						</Button>
+						<!-- User Avatar -->
+						<Border Width="32" Height="32"
+								CornerRadius="16"
+								Margin="0,12,0,0"
+								HorizontalAlignment="Center">
+							<Border.Background>
+								<LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+									<GradientStop Color="{DynamicResource BorderMuted}" Offset="0"/>
+									<GradientStop Color="{DynamicResource TextMuted}" Offset="1"/>
+								</LinearGradientBrush>
+							</Border.Background>
+						</Border>
 					</StackPanel>
 				</Grid>
 			</Border>
 
 			<!-- Center Content - View Container -->
-			<ContentControl Grid.Column="1" Content="{Binding CurrentViewModel}" Margin="40">
-				<ContentControl.DataTemplates>
-					<DataTemplate DataType="pagevm:CoordinatorViewModel">
-						<local:CoordinatorView/>
-					</DataTemplate>
+			<Border Grid.Row="1" Grid.Column="1" ClipToBounds="True">
+				<Panel>
+					<!-- Ambient Background Effect -->
+					<Ellipse Width="600" Height="600"
+							 HorizontalAlignment="Center"
+							 VerticalAlignment="Center"
+							 Fill="{DynamicResource AccentCyanGlowBrush}"
+							 Opacity="0.3">
+						<Ellipse.Effect>
+							<BlurEffect Radius="120"/>
+						</Ellipse.Effect>
+					</Ellipse>
 
-					<DataTemplate DataType="pagevm:PluginsViewModel">
-						<local:PluginsView/>
-					</DataTemplate>
+					<!-- Content -->
+					<ContentControl Content="{Binding CurrentViewModel}" Margin="40">
+						<ContentControl.DataTemplates>
+							<DataTemplate DataType="pagevm:CoordinatorViewModel">
+								<local:CoordinatorView/>
+							</DataTemplate>
 
-					<DataTemplate DataType="pagevm:SettingsViewModel">
-						<local:SettingsView/>
-					</DataTemplate>
-				</ContentControl.DataTemplates>
-			</ContentControl>
+							<DataTemplate DataType="pagevm:PluginsViewModel">
+								<local:PluginsView/>
+							</DataTemplate>
+
+							<DataTemplate DataType="pagevm:SettingsViewModel">
+								<local:SettingsView/>
+							</DataTemplate>
+						</ContentControl.DataTemplates>
+					</ContentControl>
+				</Panel>
+			</Border>
 
 			<!-- Right Panel - Kernel Log -->
-			<Border Grid.Column="2" Background="{DynamicResource CardBgBrush}" Padding="25">
-				<Grid RowDefinitions="Auto, *">
-					<TextBlock Grid.Row="0"
-							   Text="KERNEL_LOG"
-							   Foreground="{DynamicResource TextMutedBrush}"
-							   FontSize="11"
-							   FontWeight="Bold"
-							   LetterSpacing="2"
-							   Margin="0,0,0,20"/>
-					<ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+			<Border Grid.Row="1" Grid.Column="2"
+					Background="{DynamicResource CardBgBrush}"
+					BorderBrush="{DynamicResource BorderSubtleBrush}"
+					BorderThickness="1,0,0,0">
+				<Grid RowDefinitions="48, *, Auto">
+
+					<!-- Window Controls -->
+					<Border Grid.Row="0"
+							BorderBrush="{DynamicResource BorderSubtleBrush}"
+							BorderThickness="0,0,0,1">
+						<StackPanel Orientation="Horizontal"
+									HorizontalAlignment="Right"
+									VerticalAlignment="Center"
+									Margin="0,0,16,0"
+									Spacing="8">
+							<Ellipse Width="12" Height="12" Fill="{DynamicResource BorderMutedBrush}"/>
+							<Ellipse Width="12" Height="12" Fill="{DynamicResource BorderMutedBrush}"/>
+							<Ellipse Width="12" Height="12" Fill="{DynamicResource AccentErrorGlowBrush}"
+									 Stroke="{DynamicResource AccentErrorBrush}"
+									 StrokeThickness="0"/>
+						</StackPanel>
+					</Border>
+
+					<!-- Log Header -->
+					<StackPanel Grid.Row="0"
+								Orientation="Horizontal"
+								HorizontalAlignment="Left"
+								VerticalAlignment="Center"
+								Margin="24,0">
+						<TextBlock Text="KERNEL_LOG"
+								   FontSize="11"
+								   FontWeight="SemiBold"
+								   Foreground="{DynamicResource TextMutedBrush}"
+								   LetterSpacing="2"/>
+						<Path Data="M22 12h-4l-3 9L9 3l-3 9H2"
+							  Fill="{DynamicResource AccentCyanBrush}"
+							  Width="12" Height="12"
+							  Stretch="Uniform"
+							  Margin="12,0,0,0"
+							  VerticalAlignment="Center"/>
+					</StackPanel>
+
+					<!-- Log Content -->
+					<ScrollViewer Grid.Row="1"
+								  VerticalScrollBarVisibility="Auto"
+								  Margin="24,16,24,0">
 						<ItemsControl ItemsSource="{Binding LogEntries}">
 							<ItemsControl.ItemTemplate>
 								<DataTemplate>
-									<TextBlock Text="{Binding}"
-											   Foreground="{DynamicResource AccentCyanBrush}"
-											   FontSize="10"
-											   Margin="0,3"
-											   FontFamily="Consolas"
-											   Opacity="0.7"
-											   TextWrapping="Wrap"/>
+									<Grid ColumnDefinitions="*, Auto" Margin="0,2">
+										<TextBlock Grid.Column="0"
+												   Text="{Binding}"
+												   Classes="LogEntry"
+												   TextTrimming="CharacterEllipsis"/>
+										<TextBlock Grid.Column="1"
+												   Text="OK"
+												   FontSize="10"
+												   FontFamily="Consolas"
+												   Foreground="{DynamicResource TextMutedBrush}"
+												   Opacity="0.5"
+												   Margin="8,0,0,0"/>
+									</Grid>
 								</DataTemplate>
 							</ItemsControl.ItemTemplate>
 						</ItemsControl>
 					</ScrollViewer>
+
+					<!-- Input Prompt -->
+					<Border Grid.Row="2"
+							BorderBrush="{DynamicResource BorderSubtleBrush}"
+							BorderThickness="0,1,0,0"
+							Padding="16,8">
+						<Grid ColumnDefinitions="Auto, *">
+							<TextBlock Grid.Column="0"
+									   Text=">"
+									   FontSize="12"
+									   FontFamily="Consolas"
+									   Foreground="{DynamicResource AccentGreenBrush}"
+									   VerticalAlignment="Center"
+									   Margin="0,0,8,0"/>
+							<TextBox Grid.Column="1"
+									 x:Name="PromptInput"
+									 Watermark="Enter command..."
+									 FontSize="12"
+									 FontFamily="Consolas"
+									 Background="Transparent"
+									 BorderThickness="0"
+									 Foreground="{DynamicResource TextSecondaryBrush}"
+									 VerticalAlignment="Center"
+									 AcceptsReturn="False"
+									 TextWrapping="NoWrap"/>
+						</Grid>
+					</Border>
 				</Grid>
 			</Border>
 		</Grid>

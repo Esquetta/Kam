@@ -1,77 +1,184 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:vm="clr-namespace:SmartVoiceAgent.Ui.ViewModels.PageModels"
-			 x:Class="SmartVoiceAgent.Ui.Views.PluginsView"
-			 x:DataType="vm:PluginsViewModel">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SmartVoiceAgent.Ui.ViewModels.PageModels"
+             x:Class="SmartVoiceAgent.Ui.Views.PluginsView"
+             x:DataType="vm:PluginsViewModel">
 
+    <UserControl.Styles>
+        <!-- Plugin Card Style -->
+        <Style Selector="Border.PluginCard">
+            <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="24"/>
+            <Setter Property="Height" Value="220"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.3"/>
+                    <BrushTransition Property="Background" Duration="0:0:0.3"/>
+                </Transitions>
+            </Setter>
+        </Style>
 
-	<Grid RowDefinitions="Auto, *">
+        <Style Selector="Border.PluginCard:pointerover">
+            <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+        </Style>
 
-        <!-- Title Section -->
-        <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,40,0,40">
-            <TextBlock Text="{DynamicResource Lang.Plugins.Title}"
-                       FontSize="48"
-                       LetterSpacing="25"
-                       HorizontalAlignment="Center"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontWeight="Light"/>
-            <TextBlock Text="{DynamicResource Lang.Plugins.Subtitle}"
-                       Foreground="{DynamicResource AccentCyanBrush}"
-                       Opacity="0.6"
-                       HorizontalAlignment="Center"
-                       Margin="0,5,0,0"
-                       FontSize="11"
-                       LetterSpacing="2"/>
-        </StackPanel>
+        <!-- Inactive Plugin Card -->
+        <Style Selector="Border.PluginCardInactive">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="24"/>
+            <Setter Property="Height" Value="220"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.3"/>
+                </Transitions>
+            </Setter>
+        </Style>
 
-		<!-- Plugins Grid -->
-		<ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
-			<ItemsControl ItemsSource="{Binding Plugins}">
-				<ItemsControl.ItemsPanel>
-					<ItemsPanelTemplate>
-						<UniformGrid Columns="3" Margin="0"/>
-					</ItemsPanelTemplate>
-				</ItemsControl.ItemsPanel>
+        <Style Selector="Border.PluginCardInactive:pointerover">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+        </Style>
 
-				<ItemsControl.ItemTemplate>
-					<DataTemplate>
-						<Border Classes="InfoCard" Margin="10">
-                            <!-- Opacity handling could be added via style if needed, removing for stability -->
-							<StackPanel>
-								<StackPanel Orientation="Horizontal" Margin="0,0,0,20">
-									<Canvas Width="40" Height="40" Margin="0,0,15,0">
-										<Ellipse Width="40" Height="40" Fill="{Binding IconColor}">
-											<Ellipse.Effect>
-												<BlurEffect Radius="12"/>
-											</Ellipse.Effect>
-										</Ellipse>
-										<Path Width="24" Height="24" Canvas.Left="8" Canvas.Top="8"
-											  Data="{Binding IconPath}"
-											  Fill="{Binding IconColor}"
-											  Stretch="Uniform"/>
-									</Canvas>
-									<StackPanel VerticalAlignment="Center">
-										<TextBlock Text="{Binding Name}"
-												   Foreground="{Binding IconColor}"
-												   FontWeight="Bold"
-												   FontSize="14"
-												   LetterSpacing="1"/>
-										<TextBlock Text="{Binding Status}"
-												   FontSize="10"
-												   Margin="0,2,0,0"
-                                                   Foreground="{DynamicResource TextMutedBrush}"/>
-									</StackPanel>
-								</StackPanel>
-                                <TextBlock Text="{Binding Description}"
-										   Foreground="{DynamicResource TextMutedBrush}"
-										   FontSize="10"
-										   TextWrapping="Wrap"
-										   LineHeight="16"/>
-                            </StackPanel>
+        <!-- Add Plugin Card -->
+        <Style Selector="Border.AddPluginCard">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Height" Value="220"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.3"/>
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.3"/>
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="Border.AddPluginCard:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+        </Style>
+
+        <!-- Status Badge Active -->
+        <Style Selector="Border.StatusActive">
+            <Setter Property="Background" Value="{DynamicResource AccentGreenGlowBrush}"/>
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+
+        <!-- Status Badge Inactive -->
+        <Style Selector="Border.StatusInactive">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+
+        <!-- Pulsing Dot Animation -->
+        <Style Selector="Ellipse.PulsingDot">
+            <Style.Animations>
+                <Animation Duration="0:0:2" IterationCount="Infinite">
+                    <KeyFrame KeyTime="0:0:0">
+                        <Setter Property="Opacity" Value="1"/>
+                    </KeyFrame>
+                    <KeyFrame KeyTime="0:0:1">
+                        <Setter Property="Opacity" Value="0.4"/>
+                    </KeyFrame>
+                    <KeyFrame KeyTime="0:0:2">
+                        <Setter Property="Opacity" Value="1"/>
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <Grid RowDefinitions="Auto, *" Margin="0,20">
+
+            <!-- Title Section -->
+            <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,20,0,48">
+                <TextBlock Text="{DynamicResource Lang.Plugins.Title}"
+                           FontSize="48"
+                           LetterSpacing="16"
+                           HorizontalAlignment="Center"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           FontWeight="Light"/>
+                <TextBlock Text="{DynamicResource Lang.Plugins.Subtitle}"
+                           Foreground="{DynamicResource AccentCyanBrush}"
+                           HorizontalAlignment="Center"
+                           Margin="0,8,0,0"
+                           FontSize="12"
+                           FontFamily="Consolas"
+                           LetterSpacing="2"/>
+            </StackPanel>
+
+            <!-- Plugins Grid -->
+            <ItemsControl Grid.Row="1" ItemsSource="{Binding Plugins}" Margin="0,0,0,20">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="3"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Classes.PluginCard="{Binding IsActive}"
+                                Classes.PluginCardInactive="{Binding !IsActive}"
+                                Margin="8">
+                            <Grid RowDefinitions="Auto, *, Auto">
+                                <!-- Icon with Glow -->
+                                <Grid Grid.Row="0" Width="40" Height="40" HorizontalAlignment="Left" Margin="0,0,0,24">
+                                    <Ellipse Width="40" Height="40" Fill="{Binding GlowColor}">
+                                        <Ellipse.Effect>
+                                            <BlurEffect Radius="8"/>
+                                        </Ellipse.Effect>
+                                    </Ellipse>
+                                    <Ellipse Width="40" Height="40" Fill="{Binding GlowColor}"/>
+                                    <Ellipse Classes="PulsingDot"
+                                             Width="16" Height="16"
+                                             Fill="{Binding IconColor}"
+                                             IsVisible="{Binding IsActive}"/>
+                                    <Ellipse Width="16" Height="16"
+                                             Fill="{DynamicResource TextMutedBrush}"
+                                             IsVisible="{Binding !IsActive}"/>
+                                </Grid>
+
+                                <!-- Content -->
+                                <StackPanel Grid.Row="2" VerticalAlignment="Bottom">
+                                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+                                        <TextBlock Text="{Binding Name}"
+                                                   FontSize="16"
+                                                   FontWeight="SemiBold"
+                                                   LetterSpacing="1"
+                                                   Foreground="{Binding TextColor}"/>
+                                        <Border Classes.StatusActive="{Binding IsActive}"
+                                                Classes.StatusInactive="{Binding !IsActive}">
+                                            <TextBlock Text="{Binding Status}"
+                                                       FontSize="9"
+                                                       FontFamily="Consolas"
+                                                       Foreground="{Binding StatusColor}"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding Description}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               TextWrapping="Wrap"
+                                               LineHeight="18"
+                                               MaxLines="3"/>
+                                </StackPanel>
+                            </Grid>
                         </Border>
-					</DataTemplate>
-				</ItemsControl.ItemTemplate>
-			</ItemsControl>
-		</ScrollViewer>
-	</Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Grid>
+    </ScrollViewer>
 </UserControl>

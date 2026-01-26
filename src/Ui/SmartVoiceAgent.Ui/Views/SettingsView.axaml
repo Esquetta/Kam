@@ -3,116 +3,264 @@
              xmlns:vm="using:SmartVoiceAgent.Ui.ViewModels.PageModels"
              x:Class="SmartVoiceAgent.Ui.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
-    
-    <Grid RowDefinitions="Auto, *">
-        
-        <!-- Title Section -->
-        <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,40,0,40">
-            <TextBlock Text="{DynamicResource Lang.Settings.Title}"
-                       FontSize="48"
-                       LetterSpacing="25"
-                       HorizontalAlignment="Center"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontWeight="Light"/>
-            <TextBlock Text="{DynamicResource Lang.Settings.Subtitle}"
-                       Foreground="{DynamicResource AccentCyanBrush}"
-                       Opacity="0.6"
-                       HorizontalAlignment="Center"
-                       Margin="0,5,0,0"
-                       FontSize="11"
-                       LetterSpacing="2"/>
-        </StackPanel>
 
-        <!-- Settings Content -->
-        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Margin="20" Spacing="20" MaxWidth="800">
-                
-                <!-- Appearance Section -->
-                <Border Classes="InfoCard">
-                    <StackPanel Spacing="15">
-                        <TextBlock Text="{DynamicResource Lang.Settings.Appearance}"
-                                   Foreground="{DynamicResource AccentCyanBrush}"
-                                   FontWeight="Bold"
-                                   FontSize="16"
-                                   LetterSpacing="2"/>
-                        
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="{DynamicResource Lang.Settings.ThemeMode}"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       FontSize="12"/>
-                            <TextBlock Text="{DynamicResource Lang.Settings.ThemeDesc}"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       FontSize="10"
-                                       Margin="0,0,0,5"/>
+    <UserControl.Styles>
+        <!-- Settings Section Card -->
+        <Style Selector="Border.SettingsCard">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="16"/>
+        </Style>
 
-                             <!-- Language Selector -->
-                            <TextBlock Text="{DynamicResource Lang.Settings.Language}"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       FontSize="12"
-                                       Margin="0,10,0,0"/>
-                            <TextBlock Text="{DynamicResource Lang.Settings.LanguageDesc}"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       FontSize="10"
-                                       Margin="0,0,0,5"/>
-                            <ComboBox SelectedIndex="{Binding SelectedLanguageIndex}"
-                                      HorizontalAlignment="Stretch">
-                                <ComboBoxItem>English</ComboBoxItem>
-                                <ComboBoxItem>Español</ComboBoxItem>
-                                <ComboBoxItem>Français</ComboBoxItem>
-                                <ComboBoxItem>Deutsch</ComboBoxItem>
-                                <ComboBoxItem>中文</ComboBoxItem>
-                                <ComboBoxItem>日本語</ComboBoxItem>
-                                <ComboBoxItem>Türkçe</ComboBoxItem>
-                            </ComboBox>
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
+        <!-- Settings Item -->
+        <Style Selector="Border.SettingsItem">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,8,0,0"/>
+        </Style>
 
-                <!-- System Section -->
-                <Border Classes="InfoCard">
-                    <StackPanel Spacing="15">
-                        <TextBlock Text="{DynamicResource Lang.Settings.System}"
-                                   Foreground="{DynamicResource AccentPurpleBrush}"
-                                   FontWeight="Bold"
-                                   FontSize="16"
-                                   LetterSpacing="2"/>
-                        
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="{DynamicResource Lang.Settings.KernelVersion}"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       FontSize="12"/>
-                            <TextBlock Text="{DynamicResource Lang.Settings.KernelVersionVal}"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       FontSize="10"
-                                       FontFamily="Consolas"/>
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
+        <!-- Icon Container -->
+        <Style Selector="Border.IconContainer">
+            <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="8"/>
+        </Style>
+    </UserControl.Styles>
 
-                <!-- About Section -->
-                <Border Classes="InfoCard">
-                    <StackPanel Spacing="15">
-                        <TextBlock Text="{DynamicResource Lang.Settings.About}"
-                                   Foreground="{DynamicResource AccentOrangeBrush}"
-                                   FontWeight="Bold"
-                                   FontSize="16"
-                                   LetterSpacing="2"/>
-                        
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="{DynamicResource Lang.AppName}"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       FontSize="12"/>
-                            <TextBlock Text="{DynamicResource Lang.AppDesc}"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       FontSize="10"
-                                       TextWrapping="Wrap"
-                                       LineHeight="16"/>
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="0,20,0,40" MaxWidth="700" HorizontalAlignment="Center">
 
+            <!-- Title Section -->
+            <StackPanel Margin="0,20,0,40">
+                <TextBlock Text="{DynamicResource Lang.Settings.Title}"
+                           FontSize="28"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           FontWeight="Light"/>
+                <TextBlock Text="{DynamicResource Lang.Settings.Subtitle}"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           Margin="0,4,0,0"
+                           FontSize="13"/>
             </StackPanel>
-        </ScrollViewer>
-    </Grid>
-</UserControl>
 
+            <!-- Divider -->
+            <Border Height="1"
+                    Background="{DynamicResource BorderSubtleBrush}"
+                    Margin="0,0,0,32"/>
+
+            <!-- General Section -->
+            <StackPanel Spacing="12" Margin="0,0,0,32">
+                <TextBlock Text="{DynamicResource Lang.Settings.Appearance}"
+                           FontSize="12"
+                           FontWeight="Medium"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           LetterSpacing="1"
+                           Margin="0,0,0,8"/>
+
+                <!-- Startup Behavior -->
+                <Border Classes="SettingsItem">
+                    <Grid ColumnDefinitions="Auto, *, Auto">
+                        <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                            <Path Data="M16.56,5.44L15,7L16.8,8.8C14.14,10.65 12.54,13.42 12.54,16.64C12.54,19.86 14.14,22.63 16.8,24.48L15,26.28L16.56,27.84L20.44,23.96C21.5,22.9 22.28,21.56 22.7,20.04L25.22,17.5L22.22,14.5L24.72,12H22.22L20.44,13.8L16.56,9.92L20.44,6.04L16.56,2.16L15,3.72L18.28,7L16.56,5.44M8.5,12C9.33,12 10,12.67 10,13.5C10,14.33 9.33,15 8.5,15C7.67,15 7,14.33 7,13.5C7,12.67 7.67,12 8.5,12M8.5,17C9.33,17 10,17.67 10,18.5C10,19.33 9.33,20 8.5,20C7.67,20 7,19.33 7,18.5C7,17.67 7.67,17 8.5,17M3,12V20C3,21.11 3.89,22 5,22H11V20H5V12H3M19,2H5C3.89,2 3,2.89 3,4V8H5V4H19V8H21V4C21,2.89 20.11,2 19,2M21,12H19V20H21V12Z"
+                                  Fill="{DynamicResource TextMutedBrush}"
+                                  Width="16" Height="16"
+                                  Stretch="Uniform"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Lang.Settings.Startup}"
+                                       FontSize="13"
+                                       FontWeight="Medium"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <TextBlock Text="{DynamicResource Lang.Settings.StartupDesc}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <!-- Toggle Switch -->
+                        <ToggleSwitch Grid.Column="2"
+                                      IsChecked="True"
+                                      OnContent=""
+                                      OffContent=""
+                                      VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+
+                <!-- Security Level -->
+                <Border Classes="SettingsItem">
+                    <Grid ColumnDefinitions="Auto, *, Auto">
+                        <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                            <Path Data="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.1 14.8,9.5V11C15.4,11 16,11.6 16,12.3V15.8C16,16.4 15.4,17 14.7,17H9.2C8.6,17 8,16.4 8,15.7V12.2C8,11.6 8.6,11 9.2,11V9.5C9.2,8.1 10.6,7 12,7M12,8.2C11.2,8.2 10.5,8.7 10.5,9.5V11H13.5V9.5C13.5,8.7 12.8,8.2 12,8.2Z"
+                                  Fill="{DynamicResource TextMutedBrush}"
+                                  Width="16" Height="16"
+                                  Stretch="Uniform"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Lang.Settings.Security}"
+                                       FontSize="13"
+                                       FontWeight="Medium"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <TextBlock Text="{DynamicResource Lang.Settings.SecurityDesc}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <Border Grid.Column="2"
+                                Background="{DynamicResource CardBgHoverBrush}"
+                                CornerRadius="4"
+                                Padding="12,6"
+                                Cursor="Hand"
+                                VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Lang.Settings.Change}"
+                                       FontSize="10"
+                                       FontFamily="Consolas"
+                                       Foreground="{DynamicResource TextMutedBrush}"/>
+                        </Border>
+                    </Grid>
+                </Border>
+            </StackPanel>
+
+            <!-- Interface Section -->
+            <StackPanel Spacing="12" Margin="0,0,0,32">
+                <TextBlock Text="{DynamicResource Lang.Settings.Interface}"
+                           FontSize="12"
+                           FontWeight="Medium"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           LetterSpacing="1"
+                           Margin="0,0,0,8"/>
+
+                <!-- Reduced Motion -->
+                <Border Classes="SettingsItem">
+                    <Grid ColumnDefinitions="Auto, *, Auto">
+                        <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                            <Path Data="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"
+                                  Fill="{DynamicResource TextMutedBrush}"
+                                  Width="16" Height="16"
+                                  Stretch="Uniform"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Lang.Settings.ReducedMotion}"
+                                       FontSize="13"
+                                       FontWeight="Medium"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <TextBlock Text="{DynamicResource Lang.Settings.ReducedMotionDesc}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="2"
+                                      IsChecked="False"
+                                      OnContent=""
+                                      OffContent=""
+                                      VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+
+                <!-- Language Selector -->
+                <Border Classes="SettingsItem">
+                    <Grid RowDefinitions="Auto, Auto">
+                        <Grid Grid.Row="0" ColumnDefinitions="Auto, *">
+                            <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                                <Path Data="M12.87,15.07L10.33,12.56L10.36,12.53C12.1,10.59 13.34,8.36 14.07,6H17V4H10V2H8V4H1V6H12.17C11.5,7.92 10.44,9.75 9,11.35C8.07,10.32 7.3,9.19 6.69,8H4.69C5.42,9.63 6.42,11.17 7.67,12.56L2.58,17.58L4,19L9,14L12.11,17.11L12.87,15.07M18.5,10H16.5L12,22H14L15.12,19H19.87L21,22H23L18.5,10M15.88,17L17.5,12.67L19.12,17H15.88Z"
+                                      Fill="{DynamicResource TextMutedBrush}"
+                                      Width="16" Height="16"
+                                      Stretch="Uniform"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{DynamicResource Lang.Settings.Language}"
+                                           FontSize="13"
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{DynamicResource Lang.Settings.LanguageDesc}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           Margin="0,2,0,0"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Grid>
+                        <ComboBox Grid.Row="1"
+                                  SelectedIndex="{Binding SelectedLanguageIndex}"
+                                  HorizontalAlignment="Stretch"
+                                  Margin="0,12,0,0">
+                            <ComboBoxItem>English</ComboBoxItem>
+                            <ComboBoxItem>Español</ComboBoxItem>
+                            <ComboBoxItem>Français</ComboBoxItem>
+                            <ComboBoxItem>Deutsch</ComboBoxItem>
+                            <ComboBoxItem>中文</ComboBoxItem>
+                            <ComboBoxItem>日本語</ComboBoxItem>
+                            <ComboBoxItem>Türkçe</ComboBoxItem>
+                        </ComboBox>
+                    </Grid>
+                </Border>
+            </StackPanel>
+
+            <!-- System Section -->
+            <StackPanel Spacing="12" Margin="0,0,0,32">
+                <TextBlock Text="{DynamicResource Lang.Settings.System}"
+                           FontSize="12"
+                           FontWeight="Medium"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           LetterSpacing="1"
+                           Margin="0,0,0,8"/>
+
+                <Border Classes="SettingsItem">
+                    <Grid ColumnDefinitions="Auto, *">
+                        <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                            <Path Data="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6M12,8A4,4 0 0,0 8,12A4,4 0 0,0 12,16A4,4 0 0,0 16,12A4,4 0 0,0 12,8Z"
+                                  Fill="{DynamicResource TextMutedBrush}"
+                                  Width="16" Height="16"
+                                  Stretch="Uniform"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Lang.Settings.KernelVersion}"
+                                       FontSize="13"
+                                       FontWeight="Medium"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <TextBlock Text="{DynamicResource Lang.Settings.KernelVersionVal}"
+                                       FontSize="11"
+                                       FontFamily="Consolas"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </StackPanel>
+
+            <!-- About Section -->
+            <StackPanel Spacing="12">
+                <TextBlock Text="{DynamicResource Lang.Settings.About}"
+                           FontSize="12"
+                           FontWeight="Medium"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           LetterSpacing="1"
+                           Margin="0,0,0,8"/>
+
+                <Border Classes="SettingsItem">
+                    <Grid ColumnDefinitions="Auto, *">
+                        <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                            <Path Data="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
+                                  Fill="{DynamicResource TextMutedBrush}"
+                                  Width="16" Height="16"
+                                  Stretch="Uniform"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Lang.AppName}"
+                                       FontSize="13"
+                                       FontWeight="Medium"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <TextBlock Text="{DynamicResource Lang.AppDesc}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       TextWrapping="Wrap"
+                                       LineHeight="18"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
