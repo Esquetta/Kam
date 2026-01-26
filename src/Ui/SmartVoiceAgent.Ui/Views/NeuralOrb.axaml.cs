@@ -11,19 +11,30 @@ public partial class NeuralOrb : UserControl
     {
         InitializeComponent();
         var btn = this.FindControl<ToggleButton>("OrbButton");
-        btn.Click += (s, e) =>
+        if (btn != null)
         {
-            bool? isActive = btn.IsChecked;
-          
-        };
+            btn.Click += (s, e) =>
+            {
+                bool? isActive = btn.IsChecked;
+            };
+        }
     }
 
     public static readonly StyledProperty<IBrush> OrbColorProperty =
-        AvaloniaProperty.Register<NeuralOrb, IBrush>(nameof(OrbColor), Brush.Parse("#00D4FF"));
+        AvaloniaProperty.Register<NeuralOrb, IBrush>(nameof(OrbColor), Brush.Parse("#06B6D4"));
 
     public IBrush OrbColor
     {
         get => GetValue(OrbColorProperty);
         set => SetValue(OrbColorProperty, value);
+    }
+
+    public static readonly StyledProperty<Color> OrbColorValueProperty =
+        AvaloniaProperty.Register<NeuralOrb, Color>(nameof(OrbColorValue), Color.Parse("#06B6D4"));
+
+    public Color OrbColorValue
+    {
+        get => GetValue(OrbColorValueProperty);
+        set => SetValue(OrbColorValueProperty, value);
     }
 }

@@ -13,19 +13,30 @@
     <x:String x:Key="Lang.Coordinator.Tasks">AUFGABEN</x:String>
     
     <!-- Settings -->
-    <x:String x:Key="Lang.Settings.Title">EINSTELLUNGEN</x:String>
-    <x:String x:Key="Lang.Settings.Subtitle">SYSTEMKONFIGURATION // PRÄFERENZEN</x:String>
-    
+    <x:String x:Key="Lang.Settings.Title">Einstellungen</x:String>
+    <x:String x:Key="Lang.Settings.Subtitle">Verwalten Sie Ihre Kernel-Konfiguration und Präferenzen.</x:String>
+
+    <x:String x:Key="Lang.Settings.General">ALLGEMEIN</x:String>
     <x:String x:Key="Lang.Settings.Appearance">ERSCHEINUNGSBILD</x:String>
     <x:String x:Key="Lang.Settings.ThemeMode">Themenmodus</x:String>
     <x:String x:Key="Lang.Settings.ThemeDesc">Wählen Sie zwischen hellem und dunklem Thema</x:String>
     <x:String x:Key="Lang.Settings.Language">Sprache</x:String>
     <x:String x:Key="Lang.Settings.LanguageDesc">Schnittstellensprache auswählen</x:String>
-    
+
+    <x:String x:Key="Lang.Settings.Startup">Startverhalten</x:String>
+    <x:String x:Key="Lang.Settings.StartupDesc">Neurale Verbindung beim Systemstart automatisch initialisieren</x:String>
+    <x:String x:Key="Lang.Settings.Security">Sicherheitsstufe</x:String>
+    <x:String x:Key="Lang.Settings.SecurityDesc">Aktueller Modus: Passive Überwachung</x:String>
+    <x:String x:Key="Lang.Settings.Change">ÄNDERN</x:String>
+
+    <x:String x:Key="Lang.Settings.Interface">OBERFLÄCHE</x:String>
+    <x:String x:Key="Lang.Settings.ReducedMotion">Reduzierte Bewegung</x:String>
+    <x:String x:Key="Lang.Settings.ReducedMotionDesc">Erweiterte Partikeleffekte deaktivieren</x:String>
+
     <x:String x:Key="Lang.Settings.System">SYSTEM</x:String>
     <x:String x:Key="Lang.Settings.KernelVersion">Kernel-Version</x:String>
     <x:String x:Key="Lang.Settings.KernelVersionVal">v3.5.0 // Neurale Verbindung Stabil</x:String>
-    
+
     <x:String x:Key="Lang.Settings.About">ÜBER</x:String>
     
     <!-- Plugins -->

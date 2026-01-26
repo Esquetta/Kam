@@ -4,117 +4,148 @@
              xmlns:local="clr-namespace:SmartVoiceAgent.Ui.Views"
              x:Class="SmartVoiceAgent.Ui.Views.CoordinatorView"
              x:DataType="vm:CoordinatorViewModel">
-    
-    <Grid RowDefinitions="Auto, Auto, *, Auto">
 
-        <!-- Title Section -->
-        <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,40,0,0">
-            <TextBlock Text="{DynamicResource Lang.Coordinator.Title}"
-                       FontSize="48"
-                       LetterSpacing="25"
-                       HorizontalAlignment="Center"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontWeight="Light"/>
-            <TextBlock Text="{DynamicResource Lang.Coordinator.Subtitle}"
-                       Foreground="{DynamicResource AccentCyanBrush}"
-                       Opacity="0.6"
-                       HorizontalAlignment="Center"
-                       Margin="0,5,0,0"
-                       FontSize="11"
-                       LetterSpacing="2"/>
-        </StackPanel>
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <Grid RowDefinitions="Auto, Auto, Auto" Margin="0,20">
 
-        <!-- Neural Orb -->
-        <Viewbox Grid.Row="2" Width="280" Height="280" VerticalAlignment="Center">
-            <local:NeuralOrb/>
-        </Viewbox>
-
-        <!-- Bottom Cards -->
-        <UniformGrid Grid.Row="3" Columns="3" Margin="0,40,0,20">
-
-            <!-- Research Card -->
-            <Border Classes="InfoCard">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                        <Canvas Width="28" Height="28" Margin="0,0,12,0">
-                            <Ellipse Width="28" Height="28" Fill="{DynamicResource AccentPurpleBrush}">
-                                <Ellipse.Effect>
-                                    <BlurEffect Radius="8"/>
-                                </Ellipse.Effect>
-                            </Ellipse>
-                            <Ellipse Width="18" Height="18" Canvas.Left="5" Canvas.Top="5" Fill="{DynamicResource AccentPurpleBrush}"/>
-                        </Canvas>
-                        <TextBlock Text="{DynamicResource Lang.Coordinator.Research}"
-                                   Foreground="{DynamicResource AccentPurpleBrush}"
-                                   FontWeight="Bold"
-                                   FontSize="12"
-                                   LetterSpacing="1"
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <TextBlock Text="19:18:35  Local kernel initialized."
+            <!-- Title Section -->
+            <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,20,0,40">
+                <TextBlock Text="{DynamicResource Lang.Coordinator.Title}"
+                           FontSize="56"
+                           LetterSpacing="12"
+                           HorizontalAlignment="Center"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           FontWeight="Light"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,0" Spacing="12">
+                    <Border Background="{DynamicResource AccentCyanGlowBrush}"
+                            BorderBrush="{DynamicResource AccentCyanDimBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="8,4">
+                        <TextBlock Text="KERNEL v3.5"
+                                   FontSize="11"
+                                   FontFamily="Consolas"
+                                   Foreground="{DynamicResource AccentCyanBrush}"
+                                   LetterSpacing="1"/>
+                    </Border>
+                    <TextBlock Text="//"
+                               FontSize="11"
                                Foreground="{DynamicResource TextMutedBrush}"
-                               FontSize="9"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="{DynamicResource Lang.Coordinator.Subtitle}"
+                               FontSize="11"
                                FontFamily="Consolas"
-                               Margin="0,0,0,3"/>
-                    <TextBlock Text="19:18:39  Passive scanning enabled."
-                               Foreground="{DynamicResource TextMutedBrush}"
-                               FontSize="9"
-                               FontFamily="Consolas"/>
+                               Foreground="{DynamicResource AccentCyanDimBrush}"
+                               LetterSpacing="2"
+                               VerticalAlignment="Center"/>
                 </StackPanel>
-            </Border>
+            </StackPanel>
 
-            <!-- Analyzer Card -->
-            <Border Classes="InfoCard">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                        <Canvas Width="28" Height="28" Margin="0,0,12,0">
-                            <Ellipse Width="28" Height="28" Fill="{DynamicResource AccentGreenBrush}">
-                                <Ellipse.Effect>
-                                    <BlurEffect Radius="8"/>
-                                </Ellipse.Effect>
-                            </Ellipse>
-                            <Ellipse Width="18" Height="18" Canvas.Left="5" Canvas.Top="5" Fill="{DynamicResource AccentGreenBrush}"/>
-                        </Canvas>
-                        <TextBlock Text="{DynamicResource Lang.Coordinator.Analyzer}"
+            <!-- Neural Orb -->
+            <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,20,0,60">
+                <Viewbox Width="260" Height="260">
+                    <local:NeuralOrb/>
+                </Viewbox>
+            </Grid>
+
+            <!-- Bottom Cards -->
+            <UniformGrid Grid.Row="2" Columns="3" Margin="0,0,0,20">
+
+                <!-- Research Card -->
+                <Border Classes="InfoCard" Margin="8">
+                    <Border.Styles>
+                        <Style Selector="Border.InfoCard:pointerover">
+                            <Setter Property="BorderBrush" Value="{DynamicResource AccentPurpleBrush}"/>
+                        </Style>
+                    </Border.Styles>
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                            <Grid Width="8" Height="8" Margin="0,0,12,0">
+                                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentPurpleBrush}">
+                                    <Ellipse.Effect>
+                                        <BlurEffect Radius="4"/>
+                                    </Ellipse.Effect>
+                                </Ellipse>
+                                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentPurpleBrush}"/>
+                            </Grid>
+                            <TextBlock Text="{DynamicResource Lang.Coordinator.Research}"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       FontWeight="Medium"
+                                       FontSize="13"
+                                       LetterSpacing="2"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Text="19:18:35  Local kernel initialized"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   FontSize="10"
+                                   FontFamily="Consolas"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Analyzer Card -->
+                <Border Classes="InfoCard" Margin="8">
+                    <Border.Styles>
+                        <Style Selector="Border.InfoCard:pointerover">
+                            <Setter Property="BorderBrush" Value="{DynamicResource AccentGreenBrush}"/>
+                        </Style>
+                    </Border.Styles>
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                            <Grid Width="8" Height="8" Margin="0,0,12,0">
+                                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentGreenBrush}">
+                                    <Ellipse.Effect>
+                                        <BlurEffect Radius="4"/>
+                                    </Ellipse.Effect>
+                                </Ellipse>
+                                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentGreenBrush}"/>
+                            </Grid>
+                            <TextBlock Text="{DynamicResource Lang.Coordinator.Analyzer}"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       FontWeight="Medium"
+                                       FontSize="13"
+                                       LetterSpacing="2"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Text="19:18:42  Semantic engine active"
                                    Foreground="{DynamicResource AccentGreenBrush}"
-                                   FontWeight="Bold"
-                                   FontSize="12"
-                                   LetterSpacing="1"
-                                   VerticalAlignment="Center"/>
+                                   Opacity="0.8"
+                                   FontSize="10"
+                                   FontFamily="Consolas"/>
                     </StackPanel>
-                    <TextBlock Text="19:18:39  Offline semantic engine active."
-                               Foreground="{DynamicResource TextMutedBrush}"
-                               FontSize="9"
-                               FontFamily="Consolas"/>
-                </StackPanel>
-            </Border>
+                </Border>
 
-            <!-- Tasks Card -->
-            <Border Classes="InfoCard">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                        <Canvas Width="28" Height="28" Margin="0,0,12,0">
-                            <Ellipse Width="28" Height="28" Fill="{DynamicResource AccentOrangeBrush}">
-                                <Ellipse.Effect>
-                                    <BlurEffect Radius="8"/>
-                                </Ellipse.Effect>
-                            </Ellipse>
-                            <Ellipse Width="18" Height="18" Canvas.Left="5" Canvas.Top="5" Fill="{DynamicResource AccentOrangeBrush}"/>
-                        </Canvas>
-                        <TextBlock Text="{DynamicResource Lang.Coordinator.Tasks}"
-                                   Foreground="{DynamicResource AccentOrangeBrush}"
-                                   FontWeight="Bold"
-                                   FontSize="12"
-                                   LetterSpacing="1"
-                                   VerticalAlignment="Center"/>
+                <!-- Tasks Card -->
+                <Border Classes="InfoCard" Margin="8">
+                    <Border.Styles>
+                        <Style Selector="Border.InfoCard:pointerover">
+                            <Setter Property="BorderBrush" Value="{DynamicResource AccentOrangeBrush}"/>
+                        </Style>
+                    </Border.Styles>
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                            <Grid Width="8" Height="8" Margin="0,0,12,0">
+                                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentOrangeBrush}">
+                                    <Ellipse.Effect>
+                                        <BlurEffect Radius="4"/>
+                                    </Ellipse.Effect>
+                                </Ellipse>
+                                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentOrangeBrush}"/>
+                            </Grid>
+                            <TextBlock Text="{DynamicResource Lang.Coordinator.Tasks}"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       FontWeight="Medium"
+                                       FontSize="13"
+                                       LetterSpacing="2"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Text="18:18:38  Scheduler ready"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   FontSize="10"
+                                   FontFamily="Consolas"/>
                     </StackPanel>
-                    <TextBlock Text="18:18:38  Scheduler ready."
-                               Foreground="{DynamicResource TextMutedBrush}"
-                               FontSize="9"
-                               FontFamily="Consolas"/>
-                </StackPanel>
-            </Border>
+                </Border>
 
-        </UniformGrid>
-    </Grid>
+            </UniformGrid>
+        </Grid>
+    </ScrollViewer>
 </UserControl>

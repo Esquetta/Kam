@@ -13,19 +13,30 @@
     <x:String x:Key="Lang.Coordinator.Tasks">TAREAS</x:String>
     
     <!-- Settings -->
-    <x:String x:Key="Lang.Settings.Title">CONFIGURACIÓN</x:String>
-    <x:String x:Key="Lang.Settings.Subtitle">CONFIGURACIÓN DEL SISTEMA // PREFERENCIAS</x:String>
-    
+    <x:String x:Key="Lang.Settings.Title">Configuración</x:String>
+    <x:String x:Key="Lang.Settings.Subtitle">Administre la configuración del kernel y sus preferencias.</x:String>
+
+    <x:String x:Key="Lang.Settings.General">GENERAL</x:String>
     <x:String x:Key="Lang.Settings.Appearance">APARIENCIA</x:String>
     <x:String x:Key="Lang.Settings.ThemeMode">Modo de tema</x:String>
     <x:String x:Key="Lang.Settings.ThemeDesc">Elegir entre tema claro y oscuro</x:String>
     <x:String x:Key="Lang.Settings.Language">Idioma</x:String>
     <x:String x:Key="Lang.Settings.LanguageDesc">Seleccionar idioma de interfaz</x:String>
-    
+
+    <x:String x:Key="Lang.Settings.Startup">Comportamiento de inicio</x:String>
+    <x:String x:Key="Lang.Settings.StartupDesc">Inicializar automáticamente el enlace neuronal al arrancar el sistema</x:String>
+    <x:String x:Key="Lang.Settings.Security">Nivel de seguridad</x:String>
+    <x:String x:Key="Lang.Settings.SecurityDesc">Modo actual: Monitoreo pasivo</x:String>
+    <x:String x:Key="Lang.Settings.Change">CAMBIAR</x:String>
+
+    <x:String x:Key="Lang.Settings.Interface">INTERFAZ</x:String>
+    <x:String x:Key="Lang.Settings.ReducedMotion">Movimiento reducido</x:String>
+    <x:String x:Key="Lang.Settings.ReducedMotionDesc">Desactivar efectos de partículas avanzados</x:String>
+
     <x:String x:Key="Lang.Settings.System">SISTEMA</x:String>
     <x:String x:Key="Lang.Settings.KernelVersion">Versión del Kernel</x:String>
     <x:String x:Key="Lang.Settings.KernelVersionVal">v3.5.0 // Enlace Neuronal Estable</x:String>
-    
+
     <x:String x:Key="Lang.Settings.About">ACERCA DE</x:String>
     
     <!-- Plugins -->

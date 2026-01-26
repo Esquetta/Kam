@@ -13,19 +13,30 @@
     <x:String x:Key="Lang.Coordinator.Tasks">TÂCHES</x:String>
     
     <!-- Settings -->
-    <x:String x:Key="Lang.Settings.Title">PARAMÈTRES</x:String>
-    <x:String x:Key="Lang.Settings.Subtitle">CONFIGURATION SYSTÈME // PRÉFÉRENCES</x:String>
-    
+    <x:String x:Key="Lang.Settings.Title">Paramètres</x:String>
+    <x:String x:Key="Lang.Settings.Subtitle">Gérez la configuration du noyau et vos préférences.</x:String>
+
+    <x:String x:Key="Lang.Settings.General">GÉNÉRAL</x:String>
     <x:String x:Key="Lang.Settings.Appearance">APPARENCE</x:String>
     <x:String x:Key="Lang.Settings.ThemeMode">Mode Thème</x:String>
     <x:String x:Key="Lang.Settings.ThemeDesc">Choisir entre le thème clair et sombre</x:String>
     <x:String x:Key="Lang.Settings.Language">Langue</x:String>
     <x:String x:Key="Lang.Settings.LanguageDesc">Sélectionner la langue de l'interface</x:String>
-    
+
+    <x:String x:Key="Lang.Settings.Startup">Comportement au démarrage</x:String>
+    <x:String x:Key="Lang.Settings.StartupDesc">Initialiser automatiquement le lien neural au démarrage du système</x:String>
+    <x:String x:Key="Lang.Settings.Security">Niveau de sécurité</x:String>
+    <x:String x:Key="Lang.Settings.SecurityDesc">Mode actuel: Surveillance passive</x:String>
+    <x:String x:Key="Lang.Settings.Change">MODIFIER</x:String>
+
+    <x:String x:Key="Lang.Settings.Interface">INTERFACE</x:String>
+    <x:String x:Key="Lang.Settings.ReducedMotion">Mouvement réduit</x:String>
+    <x:String x:Key="Lang.Settings.ReducedMotionDesc">Désactiver les effets de particules avancés</x:String>
+
     <x:String x:Key="Lang.Settings.System">SYSTÈME</x:String>
     <x:String x:Key="Lang.Settings.KernelVersion">Version du Noyau</x:String>
     <x:String x:Key="Lang.Settings.KernelVersionVal">v3.5.0 // Lien Neural Stable</x:String>
-    
+
     <x:String x:Key="Lang.Settings.About">À PROPOS</x:String>
     
     <!-- Plugins -->
