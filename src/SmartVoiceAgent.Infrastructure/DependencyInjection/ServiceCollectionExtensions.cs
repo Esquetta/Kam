@@ -75,6 +75,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<SystemAgentTools>();
         services.AddSingleton<TaskAgentTools>();
         services.AddSingleton<WebSearchAgentTools>();
+        services.AddSingleton<FileAgentTools>();
 
         services.AddHostedService<VoiceAgentHostedService>();
 
