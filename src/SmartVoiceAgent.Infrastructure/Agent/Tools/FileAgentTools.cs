@@ -1,17 +1,19 @@
 ﻿using AgentFrameworkToolkit.Tools;
 using Microsoft.Extensions.AI;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Text;
 
 namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 {
     /// <summary>
-    /// File Agent Tools for file system operations including read, write, create, delete, and search.
+    /// File Agent Tools for file system operations including read, write, create, delete, search, and opening.
     /// </summary>
     public sealed class FileAgentTools
     {
         private readonly string _defaultWorkingDirectory;
         private readonly HashSet<string> _allowedExtensions;
+        private readonly HashSet<string> _executableExtensions;
         private readonly long _maxFileSizeBytes;
 
         public FileAgentTools(
@@ -27,9 +29,260 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             {
                 ".txt", ".md", ".json", ".xml", ".csv", ".log",
                 ".html", ".css", ".js", ".ts", ".py", ".cs",
-                ".java", ".cpp", ".h", ".yml", ".yaml", ".ini"
+                ".java", ".cpp", ".h", ".yml", ".yaml", ".ini",
+                ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+                ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".svg"
+            };
+
+            // Dangerous extensions that should not be auto-opened
+            _executableExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ".exe", ".bat", ".cmd", ".sh", ".msi", ".dll", ".com"
             };
         }
+
+        #region Enhanced Existing Methods
+
+        [AITool("create_file", "Creates a new file with optional initial content and can optionally open it.")]
+        public async Task<string> CreateFileAsync(
+            [Description("Full path to the file to create")]
+            string filePath,
+            [Description("Initial content for the file (optional)")]
+            string content = "",
+            [Description("If true, opens the file with default application after creation")]
+            bool openAfterCreation = false)
+        {
+            try
+            {
+                Console.WriteLine($"FileAgent: Creating file {filePath} (openAfterCreation: {openAfterCreation})");
+
+                if (File.Exists(filePath))
+                {
+                    return $"Hata: '{filePath}' dosyası zaten mevcut.";
+                }
+
+                var fileInfo = new FileInfo(filePath);
+
+                // Check file extension
+                if (!_allowedExtensions.Contains(fileInfo.Extension))
+                {
+                    return $"Hata: '{fileInfo.Extension}' uzantılı dosyalar desteklenmiyor.";
+                }
+
+                // Create directory if it doesn't exist
+                if (fileInfo.Directory != null && !fileInfo.Directory.Exists)
+                {
+                    fileInfo.Directory.Create();
+                }
+
+                await File.WriteAllTextAsync(filePath, content);
+
+                string result = $"Dosya başarıyla oluşturuldu: {filePath}";
+
+                // Auto-open if requested and safe
+                if (openAfterCreation)
+                {
+                    var openResult = await OpenFileAsync(filePath, true);
+                    result += $"\n{openResult}";
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                return $"Dosya oluşturma hatası: {ex.Message}";
+            }
+        }
+
+        [AITool("list_files", "Lists files in a directory with optional filter and can open the folder.")]
+        public async Task<string> ListFilesAsync(
+            [Description("Directory path to list files from")]
+            string directoryPath,
+            [Description("Search pattern (e.g., '*.txt', '*.json')")]
+            string searchPattern = "*.*",
+            [Description("If true, searches subdirectories")]
+            bool recursive = false,
+            [Description("If true, opens the folder in File Explorer after listing")]
+            bool openFolder = false)
+        {
+            try
+            {
+                if (!Directory.Exists(directoryPath))
+                {
+                    return $"Hata: '{directoryPath}' dizini bulunamadı.";
+                }
+
+                var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+                var files = Directory.GetFiles(directoryPath, searchPattern, searchOption);
+
+                var sb = new StringBuilder();
+
+                if (files.Length == 0)
+                {
+                    sb.AppendLine($"'{directoryPath}' dizininde dosya bulunamadı.");
+                }
+                else
+                {
+                    sb.AppendLine($"Dizindeki dosyalar ({files.Length} adet):");
+                    foreach (var file in files)
+                    {
+                        var fileInfo = new FileInfo(file);
+                        sb.AppendLine($"  - {fileInfo.Name} ({FormatFileSize(fileInfo.Length)})");
+                    }
+                }
+
+                // Auto-open folder if requested
+                if (openFolder)
+                {
+                    var openResult = await OpenDirectoryAsync(directoryPath);
+                    sb.AppendLine($"\nKlasör açıldı: {openResult}");
+                }
+
+                return sb.ToString();
+            }
+            catch (Exception ex)
+            {
+                return $"Dosya listeleme hatası: {ex.Message}";
+            }
+        }
+
+        #endregion
+
+        #region New File Opening Tools
+
+        [AITool("open_file", "Opens a file with its default application (Notepad, Word, etc.).")]
+        public async Task<string> OpenFileAsync(
+            [Description("Full path to the file to open")]
+            string filePath,
+            [Description("If true, treats executables as safe (use carefully)")]
+            bool allowExecutables = false)
+        {
+            try
+            {
+                Console.WriteLine($"FileAgent: Opening file {filePath}");
+
+                if (!File.Exists(filePath))
+                {
+                    return $"Hata: '{filePath}' dosyası bulunamadı.";
+                }
+
+                var fileInfo = new FileInfo(filePath);
+                var ext = fileInfo.Extension;
+
+                // Security check for executables
+                if (_executableExtensions.Contains(ext) && !allowExecutables)
+                {
+                    return $"Güvenlik uyarısı: '{ext}' dosyaları otomatik olarak açılamaz. Lütfen manuel olarak çalıştırın.";
+                }
+
+                // Use ProcessStartInfo for better control
+                var psi = new ProcessStartInfo
+                {
+                    FileName = filePath,
+                    UseShellExecute = true, // This opens with default associated application
+                    Verb = "open"
+                };
+
+                using var process = Process.Start(psi);
+
+                await Task.Delay(500); // Brief delay to ensure process starts
+
+                return $"Dosya açıldı: {fileInfo.Name} ({ext})";
+            }
+            catch (Exception ex)
+            {
+                return $"Dosya açılma hatası: {ex.Message}";
+            }
+        }
+
+        [AITool("open_directory", "Opens a folder in File Explorer.")]
+        public async Task<string> OpenDirectoryAsync(
+            [Description("Full path to the directory to open")]
+            string directoryPath,
+            [Description("If true, selects a specific file in that folder (highlights it)")]
+            string selectFile = null)
+        {
+            try
+            {
+                Console.WriteLine($"FileAgent: Opening directory {directoryPath}");
+
+                if (!Directory.Exists(directoryPath))
+                {
+                    return $"Hata: '{directoryPath}' dizini bulunamadı.";
+                }
+
+                ProcessStartInfo psi;
+
+                if (!string.IsNullOrEmpty(selectFile) && File.Exists(Path.Combine(directoryPath, selectFile)))
+                {
+                    // Open folder and highlight specific file
+                    var fullPath = Path.Combine(directoryPath, selectFile);
+                    psi = new ProcessStartInfo
+                    {
+                        FileName = "explorer.exe",
+                        Arguments = $"/select,\"{fullPath}\"",
+                        UseShellExecute = false
+                    };
+                }
+                else
+                {
+                    // Just open the folder
+                    psi = new ProcessStartInfo
+                    {
+                        FileName = directoryPath,
+                        UseShellExecute = true,
+                        Verb = "open"
+                    };
+                }
+
+                using var process = Process.Start(psi);
+                await Task.Delay(100);
+
+                return $"Klasör açıldı: {directoryPath}";
+            }
+            catch (Exception ex)
+            {
+                return $"Klasör açılma hatası: {ex.Message}";
+            }
+        }
+
+        [AITool("show_in_explorer", "Shows a specific file or folder in File Explorer with highlighting.")]
+        public async Task<string> ShowInExplorerAsync(
+            [Description("Full path to the file or folder to show")]
+            string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                {
+                    var directory = Path.GetDirectoryName(path);
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = "explorer.exe",
+                        Arguments = $"/select,\"{path}\"",
+                        UseShellExecute = false
+                    };
+                    Process.Start(psi);
+                    return $"Dosya konumu gösterildi: {Path.GetFileName(path)}";
+                }
+                else if (Directory.Exists(path))
+                {
+                    return await OpenDirectoryAsync(path);
+                }
+                else
+                {
+                    return $"Hata: '{path}' bulunamadı.";
+                }
+            }
+            catch (Exception ex)
+            {
+                return $"Explorer hatası: {ex.Message}";
+            }
+        }
+
+        #endregion
+
+        #region Original Methods (Keep existing implementations)
 
         [AITool("read_file", "Reads the content of a file from the file system.")]
         public async Task<string> ReadFileAsync(
@@ -47,13 +300,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 var fileInfo = new FileInfo(filePath);
 
-                // Check file size
                 if (fileInfo.Length > _maxFileSizeBytes)
                 {
                     return $"Hata: Dosya çok büyük ({fileInfo.Length / 1024 / 1024}MB). Maksimum boyut: {_maxFileSizeBytes / 1024 / 1024}MB";
                 }
 
-                // Check file extension
                 if (!_allowedExtensions.Contains(fileInfo.Extension))
                 {
                     return $"Hata: '{fileInfo.Extension}' uzantılı dosyalar desteklenmiyor.";
@@ -79,7 +330,9 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             [Description("Content to write to the file")]
             string content,
             [Description("If true, appends to existing file; otherwise overwrites")]
-            bool append = false)
+            bool append = false,
+            [Description("If true, opens the file after writing")]
+            bool openAfterWrite = false)
         {
             try
             {
@@ -87,13 +340,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 var fileInfo = new FileInfo(filePath);
 
-                // Check file extension
                 if (!_allowedExtensions.Contains(fileInfo.Extension))
                 {
                     return $"Hata: '{fileInfo.Extension}' uzantılı dosyalara yazma desteklenmiyor.";
                 }
 
-                // Create directory if it doesn't exist
                 if (fileInfo.Directory != null && !fileInfo.Directory.Exists)
                 {
                     fileInfo.Directory.Create();
@@ -108,7 +359,14 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                     await File.WriteAllTextAsync(filePath, content);
                 }
 
-                return $"Dosya başarıyla yazıldı: {filePath}";
+                string result = $"Dosya başarıyla yazıldı: {filePath}";
+
+                if (openAfterWrite)
+                {
+                    result += $"\n{await OpenFileAsync(filePath)}";
+                }
+
+                return result;
             }
             catch (UnauthorizedAccessException)
             {
@@ -120,47 +378,8 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("create_file", "Creates a new file with optional initial content.")]
-        public async Task<string> CreateFileAsync(
-            [Description("Full path to the file to create")]
-            string filePath,
-            [Description("Initial content for the file (optional)")]
-            string content = "")
-        {
-            try
-            {
-                Console.WriteLine($"FileAgent: Creating file {filePath}");
-
-                if (File.Exists(filePath))
-                {
-                    return $"Hata: '{filePath}' dosyası zaten mevcut.";
-                }
-
-                var fileInfo = new FileInfo(filePath);
-
-                // Check file extension
-                if (!_allowedExtensions.Contains(fileInfo.Extension))
-                {
-                    return $"Hata: '{fileInfo.Extension}' uzantılı dosyalar desteklenmiyor.";
-                }
-
-                // Create directory if it doesn't exist
-                if (fileInfo.Directory != null && !fileInfo.Directory.Exists)
-                {
-                    fileInfo.Directory.Create();
-                }
-
-                await File.WriteAllTextAsync(filePath, content);
-                return $"Dosya başarıyla oluşturuldu: {filePath}";
-            }
-            catch (Exception ex)
-            {
-                return $"Dosya oluşturma hatası: {ex.Message}";
-            }
-        }
-
         [AITool("delete_file", "Deletes a file from the file system.")]
-        public Task<string> DeleteFileAsync(
+        public async Task<string> DeleteFileAsync(
             [Description("Full path to the file to delete")]
             string filePath)
         {
@@ -170,30 +389,33 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (!File.Exists(filePath))
                 {
-                    return Task.FromResult($"Hata: '{filePath}' dosyası bulunamadı.");
+                    return $"Hata: '{filePath}' dosyası bulunamadı.";
                 }
 
                 File.Delete(filePath);
-                return Task.FromResult($"Dosya başarıyla silindi: {filePath}");
+                await Task.CompletedTask; // Maintain async signature
+                return $"Dosya başarıyla silindi: {filePath}";
             }
             catch (UnauthorizedAccessException)
             {
-                return Task.FromResult($"Hata: '{filePath}' dosyasını silme izni yok.");
+                return $"Hata: '{filePath}' dosyasını silme izni yok.";
             }
             catch (Exception ex)
             {
-                return Task.FromResult($"Dosya silme hatası: {ex.Message}");
+                return $"Dosya silme hatası: {ex.Message}";
             }
         }
 
         [AITool("copy_file", "Copies a file to a new location.")]
-        public Task<string> CopyFileAsync(
+        public async Task<string> CopyFileAsync(
             [Description("Source file path")]
             string sourcePath,
             [Description("Destination file path")]
             string destinationPath,
             [Description("If true, overwrites existing file")]
-            bool overwrite = false)
+            bool overwrite = false,
+            [Description("If true, opens the destination folder after copy")]
+            bool showInFolder = false)
         {
             try
             {
@@ -201,12 +423,12 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (!File.Exists(sourcePath))
                 {
-                    return Task.FromResult($"Hata: Kaynak dosya '{sourcePath}' bulunamadı.");
+                    return $"Hata: Kaynak dosya '{sourcePath}' bulunamadı.";
                 }
 
                 if (File.Exists(destinationPath) && !overwrite)
                 {
-                    return Task.FromResult($"Hata: Hedef dosya '{destinationPath}' zaten mevcut. overwrite=true kullanın.");
+                    return $"Hata: Hedef dosya '{destinationPath}' zaten mevcut. overwrite=true kullanın.";
                 }
 
                 var destInfo = new FileInfo(destinationPath);
@@ -216,16 +438,24 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 }
 
                 File.Copy(sourcePath, destinationPath, overwrite);
-                return Task.FromResult($"Dosya başarıyla kopyalandı: {sourcePath} -> {destinationPath}");
+
+                string result = $"Dosya başarıyla kopyalandı: {sourcePath} -> {destinationPath}";
+
+                if (showInFolder)
+                {
+                    result += $"\n{await ShowInExplorerAsync(destinationPath)}";
+                }
+
+                return result;
             }
             catch (Exception ex)
             {
-                return Task.FromResult($"Dosya kopyalama hatası: {ex.Message}");
+                return $"Dosya kopyalama hatası: {ex.Message}";
             }
         }
 
         [AITool("move_file", "Moves a file to a new location.")]
-        public Task<string> MoveFileAsync(
+        public async Task<string> MoveFileAsync(
             [Description("Source file path")]
             string sourcePath,
             [Description("Destination file path")]
@@ -239,12 +469,12 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (!File.Exists(sourcePath))
                 {
-                    return Task.FromResult($"Hata: Kaynak dosya '{sourcePath}' bulunamadı.");
+                    return $"Hata: Kaynak dosya '{sourcePath}' bulunamadı.";
                 }
 
                 if (File.Exists(destinationPath) && !overwrite)
                 {
-                    return Task.FromResult($"Hata: Hedef dosya '{destinationPath}' zaten mevcut. overwrite=true kullanın.");
+                    return $"Hata: Hedef dosya '{destinationPath}' zaten mevcut. overwrite=true kullanın.";
                 }
 
                 var destInfo = new FileInfo(destinationPath);
@@ -254,11 +484,13 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 }
 
                 File.Move(sourcePath, destinationPath, overwrite);
-                return Task.FromResult($"Dosya başarıyla taşındı: {sourcePath} -> {destinationPath}");
+                await Task.CompletedTask;
+
+                return $"Dosya başarıyla taşındı: {sourcePath} -> {destinationPath}";
             }
             catch (Exception ex)
             {
-                return Task.FromResult($"Dosya taşıma hatası: {ex.Message}");
+                return $"Dosya taşıma hatası: {ex.Message}";
             }
         }
 
@@ -313,47 +545,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("list_files", "Lists files in a directory with optional filter.")]
-        public Task<string> ListFilesAsync(
-            [Description("Directory path to list files from")]
-            string directoryPath,
-            [Description("Search pattern (e.g., '*.txt', '*.json')")]
-            string searchPattern = "*.*",
-            [Description("If true, searches subdirectories")]
-            bool recursive = false)
-        {
-            try
-            {
-                if (!Directory.Exists(directoryPath))
-                {
-                    return Task.FromResult($"Hata: '{directoryPath}' dizini bulunamadı.");
-                }
-
-                var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-                var files = Directory.GetFiles(directoryPath, searchPattern, searchOption);
-
-                if (files.Length == 0)
-                {
-                    return Task.FromResult($"'{directoryPath}' dizininde dosya bulunamadı.");
-                }
-
-                var sb = new StringBuilder();
-                sb.AppendLine($"Dizindeki dosyalar ({files.Length} adet):");
-
-                foreach (var file in files)
-                {
-                    var fileInfo = new FileInfo(file);
-                    sb.AppendLine($"  - {fileInfo.Name} ({FormatFileSize(fileInfo.Length)})");
-                }
-
-                return Task.FromResult(sb.ToString());
-            }
-            catch (Exception ex)
-            {
-                return Task.FromResult($"Dosya listeleme hatası: {ex.Message}");
-            }
-        }
-
         [AITool("search_files", "Searches for files by name pattern in a directory.")]
         public Task<string> SearchFilesAsync(
             [Description("Directory to search in")]
@@ -381,7 +572,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 var sb = new StringBuilder();
                 sb.AppendLine($"Bulunan dosyalar ({files.Length} adet):");
 
-                foreach (var file in files.Take(20)) // Limit to 20 results
+                foreach (var file in files.Take(20))
                 {
                     var fileInfo = new FileInfo(file);
                     sb.AppendLine($"  - {fileInfo.FullName}");
@@ -401,9 +592,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         }
 
         [AITool("create_directory", "Creates a new directory.")]
-        public Task<string> CreateDirectoryAsync(
+        public async Task<string> CreateDirectoryAsync(
             [Description("Full path of the directory to create")]
-            string directoryPath)
+            string directoryPath,
+            [Description("If true, opens the folder in Explorer after creation")]
+            bool openAfterCreation = false)
         {
             try
             {
@@ -411,15 +604,23 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (Directory.Exists(directoryPath))
                 {
-                    return Task.FromResult($"Dizin zaten mevcut: {directoryPath}");
+                    return $"Dizin zaten mevcut: {directoryPath}";
                 }
 
                 Directory.CreateDirectory(directoryPath);
-                return Task.FromResult($"Dizin başarıyla oluşturuldu: {directoryPath}");
+
+                string result = $"Dizin başarıyla oluşturuldu: {directoryPath}";
+
+                if (openAfterCreation)
+                {
+                    result += $"\n{await OpenDirectoryAsync(directoryPath)}";
+                }
+
+                return result;
             }
             catch (Exception ex)
             {
-                return Task.FromResult($"Dizin oluşturma hatası: {ex.Message}");
+                return $"Dizin oluşturma hatası: {ex.Message}";
             }
         }
 
@@ -473,10 +674,13 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
+        #endregion
+
         public IEnumerable<AIFunction> GetTools()
         {
             return
             [
+                // File Operations (Enhanced)
                 AIFunctionFactory.Create(ReadFileAsync),
                 AIFunctionFactory.Create(WriteFileAsync),
                 AIFunctionFactory.Create(CreateFileAsync),
@@ -488,7 +692,12 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 AIFunctionFactory.Create(ListFilesAsync),
                 AIFunctionFactory.Create(SearchFilesAsync),
                 AIFunctionFactory.Create(CreateDirectoryAsync),
-                AIFunctionFactory.Create(ReadLinesAsync)
+                AIFunctionFactory.Create(ReadLinesAsync),
+                
+                // NEW: File Opening Tools
+                AIFunctionFactory.Create(OpenFileAsync),
+                AIFunctionFactory.Create(OpenDirectoryAsync),
+                AIFunctionFactory.Create(ShowInExplorerAsync)
             ];
         }
 
