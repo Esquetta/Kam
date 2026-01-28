@@ -1,6 +1,7 @@
 using ReactiveUI;
 using SmartVoiceAgent.Ui.Services;
 using System;
+using System.IO;
 
 namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 {
@@ -80,16 +81,40 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /// </summary>
         public bool AutoStart
         {
-            get => _settingsService.AutoStart;
+            get => CheckRegistryAutoStart();
             set
             {
-                if (_settingsService.AutoStart != value)
+                var current = CheckRegistryAutoStart();
+                if (current != value)
                 {
                     _settingsService.AutoStart = value;
                     this.RaisePropertyChanged();
                     ApplyAutoStartSetting(value);
                 }
             }
+        }
+
+        /// <summary>
+        /// Checks if auto-start is enabled in the registry
+        /// </summary>
+        private bool CheckRegistryAutoStart()
+        {
+            try
+            {
+                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                    @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", false);
+                
+                if (key != null)
+                {
+                    // Check both new and old registry value names
+                    var value1 = key.GetValue("KAM Neural Core");
+                    var value2 = key.GetValue("SmartVoiceAgent");
+                    return value1 != null || value2 != null;
+                }
+            }
+            catch { }
+            
+            return _settingsService.AutoStart;
         }
 
         /// <summary>
@@ -167,8 +192,20 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             try
             {
-                var executablePath = Environment.ProcessPath ?? 
-                    System.Reflection.Assembly.GetExecutingAssembly().Location;
+                // Get the correct executable path
+                string? executablePath = GetExecutablePath();
+                
+                if (string.IsNullOrEmpty(executablePath) || !File.Exists(executablePath))
+                {
+                    System.Diagnostics.Debug.WriteLine($"Auto-start: Could not find valid executable path");
+                    return;
+                }
+
+                // Quote the path if it contains spaces (required for Task Manager to recognize it)
+                if (executablePath.Contains(' ') && !executablePath.StartsWith("\""))
+                {
+                    executablePath = $"\"{executablePath}\"";
+                }
                 
                 using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
                     @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
@@ -177,18 +214,98 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 {
                     if (enable)
                     {
-                        key.SetValue("SmartVoiceAgent", executablePath);
+                        // Use a more descriptive name that will appear in Task Manager
+                        key.SetValue("KAM Neural Core", executablePath);
+                        System.Diagnostics.Debug.WriteLine($"Auto-start enabled: {executablePath}");
                     }
                     else
                     {
-                        key.DeleteValue("SmartVoiceAgent", false);
+                        // Try to delete both old and new names for compatibility
+                        try { key.DeleteValue("KAM Neural Core", false); } catch { }
+                        try { key.DeleteValue("SmartVoiceAgent", false); } catch { }
+                        System.Diagnostics.Debug.WriteLine("Auto-start disabled");
                     }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("Auto-start: Could not open registry key");
                 }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to set auto-start: {ex}");
             }
+        }
+
+        /// <summary>
+        /// Gets the actual executable path, prioritizing the .exe over DLL
+        /// </summary>
+        private string? GetExecutablePath()
+        {
+            // Try multiple methods to get the correct EXE path
+            
+            // Method 1: Process.MainModule (most reliable for running app)
+            try
+            {
+                using var process = System.Diagnostics.Process.GetCurrentProcess();
+                var mainModulePath = process.MainModule?.FileName;
+                if (!string.IsNullOrEmpty(mainModulePath) && mainModulePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                {
+                    return mainModulePath;
+                }
+            }
+            catch { }
+
+            // Method 2: Environment.ProcessPath (.NET 6+)
+            try
+            {
+                var path = Environment.ProcessPath;
+                if (!string.IsNullOrEmpty(path) && path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                {
+                    return path;
+                }
+            }
+            catch { }
+
+            // Method 3: Entry assembly location (convert DLL path to EXE)
+            try
+            {
+                var assemblyPath = System.Reflection.Assembly.GetEntryAssembly()?.Location;
+                if (!string.IsNullOrEmpty(assemblyPath))
+                {
+                    // If it's a DLL, try to find the corresponding EXE
+                    if (assemblyPath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var exePath = assemblyPath.Substring(0, assemblyPath.Length - 4) + ".exe";
+                        if (File.Exists(exePath))
+                        {
+                            return exePath;
+                        }
+                    }
+                    else if (assemblyPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return assemblyPath;
+                    }
+                }
+            }
+            catch { }
+
+            // Method 4: Executing assembly with exe substitution
+            try
+            {
+                var assemblyPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                if (!string.IsNullOrEmpty(assemblyPath))
+                {
+                    var exePath = assemblyPath.Substring(0, assemblyPath.Length - 4) + ".exe";
+                    if (File.Exists(exePath))
+                    {
+                        return exePath;
+                    }
+                }
+            }
+            catch { }
+
+            return null;
         }
 
         #endregion
