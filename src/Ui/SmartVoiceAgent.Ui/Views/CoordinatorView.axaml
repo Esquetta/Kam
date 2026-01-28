@@ -22,12 +22,12 @@
                            FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=56}"
                            LetterSpacing="12"
                            HorizontalAlignment="Center"
-                           Foreground="{Binding LabelColor}"
+                           Foreground="{Binding LabelColor, Mode=OneWay}"
                            FontWeight="Light"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,0" Spacing="12">
                     <!-- Status Badge Background -->
-                    <Border Background="{Binding OrbColor, Converter={StaticResource BrushToGlowBrushConverter}}"
-                            BorderBrush="{Binding OrbColor}"
+                    <Border Background="{Binding OrbColor, Mode=OneWay, Converter={StaticResource BrushToGlowBrushConverter}}"
+                            BorderBrush="{Binding OrbColor, Mode=OneWay}"
                             BorderThickness="1"
                             CornerRadius="4"
                             Padding="8,4"
@@ -35,17 +35,17 @@
                         <TextBlock Text="KERNEL v3.5"
                                    FontSize="11"
                                    FontFamily="Consolas"
-                                   Foreground="{Binding OrbColor}"
+                                   Foreground="{Binding OrbColor, Mode=OneWay}"
                                    LetterSpacing="1"/>
                     </Border>
                     <TextBlock Text="//"
                                FontSize="11"
                                Foreground="{DynamicResource TextMutedBrush}"
                                VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding StatusText}"
+                    <TextBlock Text="{Binding StatusText, Mode=OneWay}"
                                FontSize="11"
                                FontFamily="Consolas"
-                               Foreground="{Binding StatusColor}"
+                               Foreground="{Binding StatusColor, Mode=OneWay}"
                                LetterSpacing="2"
                                VerticalAlignment="Center"
                                FontWeight="SemiBold"/>
@@ -57,12 +57,12 @@
                 <Viewbox Width="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveScaleConverter}, ConverterParameter=260}" 
                          Height="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveScaleConverter}, ConverterParameter=260}">
                     <local:NeuralOrb 
-                        IsActive="{Binding IsOnline}"
+                        IsActive="{Binding IsOnline, Mode=TwoWay}"
                         ToggleCommand="{Binding ToggleOnlineStateCommand}"
-                        OrbColor="{Binding OrbColor}"
-                        RingOpacity="{Binding IsOnline, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.3|0.1}"
-                        CoreOpacity="{Binding IsOnline, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.65|0.3}"
-                        BoxShadowValue="{Binding IsOnline, Converter={StaticResource BoolToBoxShadowConverter}, ConverterParameter='0 0 40 0 #4006B6D4|0 0 20 0 #40EF4444'}"/>
+                        OrbColor="{Binding OrbColor, Mode=OneWay}"
+                        RingOpacity="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.3|0.1}"
+                        CoreOpacity="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.65|0.3}"
+                        BoxShadowValue="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToBoxShadowConverter}, ConverterParameter='0 0 40 0 #4006B6D4|0 0 20 0 #40EF4444'}"/>
                 </Viewbox>
             </Grid>
 
@@ -78,28 +78,28 @@
                 <Border Classes="InfoCard" Margin="8">
                     <Border.Styles>
                         <Style Selector="Border.InfoCard:pointerover">
-                            <Setter Property="BorderBrush" Value="{Binding ResearchStatusColor}"/>
+                            <Setter Property="BorderBrush" Value="{Binding ResearchStatusColor, Mode=OneWay}"/>
                         </Style>
                     </Border.Styles>
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                             <Grid Width="8" Height="8" Margin="0,0,12,0">
-                                <Ellipse Width="8" Height="8" Fill="{Binding ResearchStatusColor}">
+                                <Ellipse Width="8" Height="8" Fill="{Binding ResearchStatusColor, Mode=OneWay}">
                                     <Ellipse.Effect>
                                         <BlurEffect Radius="4"/>
                                     </Ellipse.Effect>
                                 </Ellipse>
-                                <Ellipse Width="8" Height="8" Fill="{Binding ResearchStatusColor}"/>
+                                <Ellipse Width="8" Height="8" Fill="{Binding ResearchStatusColor, Mode=OneWay}"/>
                             </Grid>
                             <TextBlock Text="{DynamicResource Lang.Coordinator.Research}"
-                                       Foreground="{Binding LabelColor}"
+                                       Foreground="{Binding LabelColor, Mode=OneWay}"
                                        FontWeight="Medium"
                                        FontSize="13"
                                        LetterSpacing="2"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
-                        <TextBlock Text="{Binding IsOnline, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='19:18:35  Local kernel initialized|19:18:35  Service offline'}"
-                                   Foreground="{Binding ResearchStatusColor}"
+                        <TextBlock Text="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='19:18:35  Local kernel initialized|19:18:35  Service offline'}"
+                                   Foreground="{Binding ResearchStatusColor, Mode=OneWay}"
                                    Opacity="0.8"
                                    FontSize="10"
                                    FontFamily="Consolas"/>
@@ -110,28 +110,28 @@
                 <Border Classes="InfoCard" Margin="8">
                     <Border.Styles>
                         <Style Selector="Border.InfoCard:pointerover">
-                            <Setter Property="BorderBrush" Value="{Binding AnalyzerStatusColor}"/>
+                            <Setter Property="BorderBrush" Value="{Binding AnalyzerStatusColor, Mode=OneWay}"/>
                         </Style>
                     </Border.Styles>
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                             <Grid Width="8" Height="8" Margin="0,0,12,0">
-                                <Ellipse Width="8" Height="8" Fill="{Binding AnalyzerStatusColor}">
+                                <Ellipse Width="8" Height="8" Fill="{Binding AnalyzerStatusColor, Mode=OneWay}">
                                     <Ellipse.Effect>
                                         <BlurEffect Radius="4"/>
                                     </Ellipse.Effect>
                                 </Ellipse>
-                                <Ellipse Width="8" Height="8" Fill="{Binding AnalyzerStatusColor}"/>
+                                <Ellipse Width="8" Height="8" Fill="{Binding AnalyzerStatusColor, Mode=OneWay}"/>
                             </Grid>
                             <TextBlock Text="{DynamicResource Lang.Coordinator.Analyzer}"
-                                       Foreground="{Binding LabelColor}"
+                                       Foreground="{Binding LabelColor, Mode=OneWay}"
                                        FontWeight="Medium"
                                        FontSize="13"
                                        LetterSpacing="2"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
-                        <TextBlock Text="{Binding IsOnline, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='19:18:42  Semantic engine active|19:18:42  Engine offline'}"
-                                   Foreground="{Binding AnalyzerStatusColor}"
+                        <TextBlock Text="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='19:18:42  Semantic engine active|19:18:42  Engine offline'}"
+                                   Foreground="{Binding AnalyzerStatusColor, Mode=OneWay}"
                                    Opacity="0.8"
                                    FontSize="10"
                                    FontFamily="Consolas"/>
@@ -142,28 +142,28 @@
                 <Border Classes="InfoCard" Margin="8">
                     <Border.Styles>
                         <Style Selector="Border.InfoCard:pointerover">
-                            <Setter Property="BorderBrush" Value="{Binding TasksStatusColor}"/>
+                            <Setter Property="BorderBrush" Value="{Binding TasksStatusColor, Mode=OneWay}"/>
                         </Style>
                     </Border.Styles>
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                             <Grid Width="8" Height="8" Margin="0,0,12,0">
-                                <Ellipse Width="8" Height="8" Fill="{Binding TasksStatusColor}">
+                                <Ellipse Width="8" Height="8" Fill="{Binding TasksStatusColor, Mode=OneWay}">
                                     <Ellipse.Effect>
                                         <BlurEffect Radius="4"/>
                                     </Ellipse.Effect>
                                 </Ellipse>
-                                <Ellipse Width="8" Height="8" Fill="{Binding TasksStatusColor}"/>
+                                <Ellipse Width="8" Height="8" Fill="{Binding TasksStatusColor, Mode=OneWay}"/>
                             </Grid>
                             <TextBlock Text="{DynamicResource Lang.Coordinator.Tasks}"
-                                       Foreground="{Binding LabelColor}"
+                                       Foreground="{Binding LabelColor, Mode=OneWay}"
                                        FontWeight="Medium"
                                        FontSize="13"
                                        LetterSpacing="2"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
-                        <TextBlock Text="{Binding IsOnline, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='18:18:38  Scheduler ready|18:18:38  Scheduler offline'}"
-                                   Foreground="{Binding TasksStatusColor}"
+                        <TextBlock Text="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='18:18:38  Scheduler ready|18:18:38  Scheduler offline'}"
+                                   Foreground="{Binding TasksStatusColor, Mode=OneWay}"
                                    Opacity="0.8"
                                    FontSize="10"
                                    FontFamily="Consolas"/>

@@ -190,20 +190,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _hostControl = hostControl;
             
             // Subscribe to state changes
-            _hostControl.StateChanged += (sender, isRunning) =>
-            {
-                Dispatcher.UIThread.Post(() =>
-                {
-                    IsHostRunning = isRunning;
-                    AddLog(isRunning ? "🟢 VoiceAgent Host started" : "🔴 VoiceAgent Host stopped");
-                    
-                    // Also update the CoordinatorViewModel if it's active
-                    if (CurrentViewModel is CoordinatorViewModel coordinator)
-                    {
-                        coordinator.SyncWithHostState(isRunning);
-                    }
-                });
-            };
+            _hostControl.StateChanged += OnHostStateChanged;
             
             // Set initial state
             IsHostRunning = _hostControl.IsRunning;
@@ -213,6 +200,21 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 CurrentViewModel = new CoordinatorViewModel(_hostControl, this);
             }
+        }
+        
+        private void OnHostStateChanged(object? sender, bool isRunning)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                IsHostRunning = isRunning;
+                AddLog(isRunning ? "🟢 VoiceAgent Host started" : "🔴 VoiceAgent Host stopped");
+                
+                // Also update the CoordinatorViewModel if it's active
+                if (CurrentViewModel is CoordinatorViewModel coordinator)
+                {
+                    coordinator.SyncWithHostState(isRunning);
+                }
+            });
         }
 
         /// <summary>

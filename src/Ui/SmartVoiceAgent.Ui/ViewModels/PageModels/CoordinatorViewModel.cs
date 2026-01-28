@@ -64,8 +64,21 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /* ========================= */
 
         public IBrush LabelColor => IsOnline
-            ? Brush.Parse("#F8FAFC") // TextPrimaryBrush
+            ? GetThemeTextBrush() // Theme-aware text color
             : Brush.Parse("#EF4444"); // Red when offline
+        
+        /// <summary>
+        /// Gets the appropriate text color based on current theme (dark/light)
+        /// </summary>
+        private IBrush GetThemeTextBrush()
+        {
+            var app = global::Avalonia.Application.Current;
+            if (app?.ActualThemeVariant == Avalonia.Styling.ThemeVariant.Dark)
+            {
+                return Brush.Parse("#FAFAFA"); // White for dark mode
+            }
+            return Brush.Parse("#18181B"); // Dark for light mode
+        }
 
         /* ========================= */
         /* CARD STATUS COLORS */
@@ -98,6 +111,13 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             Title = "COORDINATOR";
             // Use CreateFromTask for async commands
             ToggleOnlineStateCommand = ReactiveCommand.CreateFromTask(ToggleOnlineStateAsync);
+            
+            // Subscribe to theme changes to update LabelColor (always subscribe, regardless of constructor)
+            var app = global::Avalonia.Application.Current;
+            if (app != null)
+            {
+                app.ActualThemeVariantChanged += OnThemeChanged;
+            }
         }
 
         public CoordinatorViewModel(IVoiceAgentHostControl? hostControl, MainWindowViewModel? mainViewModel) : this()
@@ -110,6 +130,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 IsOnline = _hostControl.IsRunning;
             }
+        }
+        
+        private void OnThemeChanged(object? sender, System.EventArgs e)
+        {
+            // Theme changed - raise property changed for theme-dependent properties
+            this.RaisePropertyChanged(nameof(LabelColor));
         }
 
         /* ========================= */
@@ -144,6 +170,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         public override void OnNavigatedFrom()
         {
+            // Unsubscribe from theme changes to prevent memory leaks
+            var app = global::Avalonia.Application.Current;
+            if (app != null)
+            {
+                app.ActualThemeVariantChanged -= OnThemeChanged;
+            }
         }
     }
 }
