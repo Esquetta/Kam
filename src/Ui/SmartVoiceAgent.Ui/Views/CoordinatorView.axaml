@@ -25,33 +25,13 @@
                            Foreground="{Binding LabelColor}"
                            FontWeight="Light"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,0" Spacing="12">
+                    <!-- Status Badge Background -->
                     <Border Background="{Binding OrbColor, Converter={StaticResource BrushToGlowBrushConverter}}"
                             BorderBrush="{Binding OrbColor}"
                             BorderThickness="1"
                             CornerRadius="4"
                             Padding="8,4"
                             Opacity="0.3">
-                        <Border.Styles>
-                            <Style Selector="Border">
-                                <Style.Resources>
-                                    <converters:BrushToGlowBrushConverter x:Key="BrushToGlowBrushConverter" />
-                                </Style.Resources>
-                            </Style>
-                        </Border.Styles>
-                    </Border>
-                    <Border Background="{Binding OrbColor, Converter={StaticResource BrushToGlowBrushConverter}}"
-                            BorderBrush="{Binding OrbColor}"
-                            BorderThickness="1"
-                            CornerRadius="4"
-                            Padding="8,4"
-                            Opacity="0.3">
-                        <Border.Styles>
-                            <Style Selector="Border">
-                                <Style.Resources>
-                                    <converters:BrushToGlowBrushConverter x:Key="BrushToGlowBrushConverter" />
-                                </Style.Resources>
-                            </Style>
-                        </Border.Styles>
                         <TextBlock Text="KERNEL v3.5"
                                    FontSize="11"
                                    FontFamily="Consolas"
@@ -88,10 +68,6 @@
 
             <!-- Bottom Cards - Responsive Grid -->
             <ItemsControl Grid.Row="2" Margin="0,0,0,20">
-                <ItemsControl.Resources>
-                    <converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter" />
-                    <converters:BoolToBoxShadowConverter x:Key="BoolToBoxShadowConverter" />
-                </ItemsControl.Resources>
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <UniformGrid Columns="{Binding Source={StaticResource WindowStateManager}, Path=GridColumns}"/>
@@ -126,11 +102,7 @@
                                    Foreground="{Binding ResearchStatusColor}"
                                    Opacity="0.8"
                                    FontSize="10"
-                                   FontFamily="Consolas">
-                            <TextBlock.Resources>
-                                <converters:BoolToStatusTextConverter x:Key="BoolToStatusTextConverter" />
-                            </TextBlock.Resources>
-                        </TextBlock>
+                                   FontFamily="Consolas"/>
                     </StackPanel>
                 </Border>
 
@@ -162,11 +134,7 @@
                                    Foreground="{Binding AnalyzerStatusColor}"
                                    Opacity="0.8"
                                    FontSize="10"
-                                   FontFamily="Consolas">
-                            <TextBlock.Resources>
-                                <converters:BoolToStatusTextConverter x:Key="BoolToStatusTextConverter" />
-                            </TextBlock.Resources>
-                        </TextBlock>
+                                   FontFamily="Consolas"/>
                     </StackPanel>
                 </Border>
 
@@ -198,11 +166,7 @@
                                    Foreground="{Binding TasksStatusColor}"
                                    Opacity="0.8"
                                    FontSize="10"
-                                   FontFamily="Consolas">
-                            <TextBlock.Resources>
-                                <converters:BoolToStatusTextConverter x:Key="BoolToStatusTextConverter" />
-                            </TextBlock.Resources>
-                        </TextBlock>
+                                   FontFamily="Consolas"/>
                     </StackPanel>
                 </Border>
             </ItemsControl>
