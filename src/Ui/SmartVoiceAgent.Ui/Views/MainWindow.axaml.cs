@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.ViewModels;
 using System;
 using System.ComponentModel;
@@ -22,6 +23,14 @@ namespace SmartVoiceAgent.Ui.Views
             this.Closing += MainWindow_Closed;
             this.Opened += MainWindow_Opened;
             this.DataContextChanged += OnDataContextChanged;
+        }
+
+        protected override void OnOpened(EventArgs e)
+        {
+            base.OnOpened(e);
+            
+            // Attach WindowStateManager for responsive design
+            WindowStateManager.Instance.AttachToWindow(this);
         }
 
         private void OnDataContextChanged(object? sender, EventArgs e)

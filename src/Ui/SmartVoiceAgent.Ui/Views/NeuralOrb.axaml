@@ -1,14 +1,21 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SmartVoiceAgent.Ui.ViewModels"
+             xmlns:services="clr-namespace:SmartVoiceAgent.Ui.Services"
+             xmlns:converters="clr-namespace:SmartVoiceAgent.Ui.Converters"
              x:Class="SmartVoiceAgent.Ui.Views.NeuralOrb"
              x:Name="neuralOrbControl"
              Width="350" Height="350"
              Background="Transparent"
              ClipToBounds="False">
 
+    <UserControl.Resources>
+        <services:WindowStateManager x:Key="WindowStateManager" />
+        <converters:BooleanNegationConverter x:Key="BooleanNegationConverter" />
+    </UserControl.Resources>
+
     <UserControl.Styles>
-        <!-- Outer ring - subtle border -->
+        <!-- Outer ring - subtle border (disabled with reduced motion) -->
         <Style Selector="Ellipse.OuterRing">
             <Style.Animations>
                 <Animation Duration="0:0:4" IterationCount="Infinite" PlaybackDirection="Alternate" Easing="SineEaseInOut">
@@ -24,7 +31,7 @@
             </Style.Animations>
         </Style>
 
-        <!-- Dashed rotating ring -->
+        <!-- Dashed rotating ring (disabled with reduced motion) -->
         <Style Selector="Ellipse.RotatingRing">
             <Style.Animations>
                 <Animation Duration="0:0:10" IterationCount="Infinite">
@@ -38,7 +45,7 @@
             </Style.Animations>
         </Style>
 
-        <!-- Core glow pulse -->
+        <!-- Core glow pulse (disabled with reduced motion) -->
         <Style Selector="Ellipse.CoreGlow">
             <Style.Animations>
                 <Animation Duration="0:0:4" IterationCount="Infinite" PlaybackDirection="Alternate" Easing="SineEaseInOut">
@@ -77,36 +84,64 @@
 
     <Grid Background="Transparent" ClipToBounds="False">
 
-        <!-- Outer border ring -->
+        <!-- Outer border ring (only animated when ReducedMotion is false) -->
         <Ellipse Classes="OuterRing"
                  Stroke="{Binding #neuralOrbControl.OrbColor}"
                  StrokeThickness="1"
                  Width="250" Height="250"
-                 Opacity="0.15">
+                 Opacity="0.15"
+                 IsVisible="{Binding Source={StaticResource WindowStateManager}, Path=ReducedMotion, Converter={StaticResource BooleanNegationConverter}}">
             <Ellipse.RenderTransform>
                 <ScaleTransform/>
             </Ellipse.RenderTransform>
         </Ellipse>
+        
+        <!-- Static outer ring (shown when ReducedMotion is true) -->
+        <Ellipse Stroke="{Binding #neuralOrbControl.OrbColor}"
+                 StrokeThickness="1"
+                 Width="250" Height="250"
+                 Opacity="0.15"
+                 IsVisible="{Binding Source={StaticResource WindowStateManager}, Path=ReducedMotion}"/>
 
-        <!-- Dashed rotating ring -->
+        <!-- Dashed rotating ring (only animated when ReducedMotion is false) -->
         <Ellipse Classes="RotatingRing"
                  Stroke="{Binding #neuralOrbControl.OrbColor}"
                  StrokeThickness="1"
                  StrokeDashArray="4,4"
                  Width="200" Height="200"
-                 Opacity="0.3">
+                 Opacity="0.3"
+                 IsVisible="{Binding Source={StaticResource WindowStateManager}, Path=ReducedMotion, Converter={StaticResource BooleanNegationConverter}}">
             <Ellipse.RenderTransform>
                 <RotateTransform/>
             </Ellipse.RenderTransform>
         </Ellipse>
+        
+        <!-- Static dashed ring (shown when ReducedMotion is true) -->
+        <Ellipse Stroke="{Binding #neuralOrbControl.OrbColor}"
+                 StrokeThickness="1"
+                 StrokeDashArray="4,4"
+                 Width="200" Height="200"
+                 Opacity="0.3"
+                 IsVisible="{Binding Source={StaticResource WindowStateManager}, Path=ReducedMotion}"/>
 
-        <!-- Core glow (large blur) -->
+        <!-- Core glow (only animated when ReducedMotion is false) -->
         <Ellipse Classes="CoreGlow"
                  Fill="{Binding #neuralOrbControl.OrbColor}"
-                 Width="160" Height="160">
+                 Width="160" Height="160"
+                 IsVisible="{Binding Source={StaticResource WindowStateManager}, Path=ReducedMotion, Converter={StaticResource BooleanNegationConverter}}">
             <Ellipse.RenderTransform>
                 <ScaleTransform/>
             </Ellipse.RenderTransform>
+            <Ellipse.Effect>
+                <BlurEffect Radius="50"/>
+            </Ellipse.Effect>
+        </Ellipse>
+        
+        <!-- Static core glow (shown when ReducedMotion is true) -->
+        <Ellipse Fill="{Binding #neuralOrbControl.OrbColor}"
+                 Width="160" Height="160"
+                 Opacity="0.65"
+                 IsVisible="{Binding Source={StaticResource WindowStateManager}, Path=ReducedMotion}">
             <Ellipse.Effect>
                 <BlurEffect Radius="50"/>
             </Ellipse.Effect>

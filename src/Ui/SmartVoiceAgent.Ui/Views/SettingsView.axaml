@@ -1,8 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SmartVoiceAgent.Ui.ViewModels.PageModels"
+             xmlns:services="clr-namespace:SmartVoiceAgent.Ui.Services"
              x:Class="SmartVoiceAgent.Ui.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
+
+    <UserControl.Resources>
+        <services:WindowStateManager x:Key="WindowStateManager" />
+    </UserControl.Resources>
 
     <UserControl.Styles>
         <!-- Settings Section Card -->
@@ -152,7 +157,7 @@
                                        Margin="0,2,0,0"/>
                         </StackPanel>
                         <ToggleSwitch Grid.Column="2"
-                                      IsChecked="False"
+                                      IsChecked="{Binding Source={StaticResource WindowStateManager}, Path=ReducedMotion, Mode=TwoWay}"
                                       OnContent=""
                                       OffContent=""
                                       VerticalAlignment="Center"/>

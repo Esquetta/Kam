@@ -1,8 +1,15 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:SmartVoiceAgent.Ui.ViewModels.PageModels"
+             xmlns:services="clr-namespace:SmartVoiceAgent.Ui.Services"
+             xmlns:converters="clr-namespace:SmartVoiceAgent.Ui.Converters"
              x:Class="SmartVoiceAgent.Ui.Views.PluginsView"
              x:DataType="vm:PluginsViewModel">
+
+    <UserControl.Resources>
+        <services:WindowStateManager x:Key="WindowStateManager" />
+        <converters:ResponsiveFontSizeConverter x:Key="ResponsiveFontSizeConverter" />
+    </UserControl.Resources>
 
     <UserControl.Styles>
         <!-- Plugin Card Style -->
@@ -12,7 +19,7 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="16"/>
             <Setter Property="Padding" Value="24"/>
-            <Setter Property="Height" Value="220"/>
+            <Setter Property="MinHeight" Value="180"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Transitions">
                 <Transitions>
@@ -33,7 +40,7 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="16"/>
             <Setter Property="Padding" Value="24"/>
-            <Setter Property="Height" Value="220"/>
+            <Setter Property="MinHeight" Value="180"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Transitions">
                 <Transitions>
@@ -52,7 +59,7 @@
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="16"/>
-            <Setter Property="Height" Value="220"/>
+            <Setter Property="MinHeight" Value="180"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Transitions">
                 <Transitions>
@@ -105,7 +112,7 @@
             <!-- Title Section -->
             <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,20,0,48">
                 <TextBlock Text="{DynamicResource Lang.Plugins.Title}"
-                           FontSize="48"
+                           FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=48}"
                            LetterSpacing="16"
                            HorizontalAlignment="Center"
                            Foreground="{DynamicResource TextPrimaryBrush}"
@@ -119,11 +126,11 @@
                            LetterSpacing="2"/>
             </StackPanel>
 
-            <!-- Plugins Grid -->
+            <!-- Plugins Grid - Responsive Columns -->
             <ItemsControl Grid.Row="1" ItemsSource="{Binding Plugins}" Margin="0,0,0,20">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <UniformGrid Columns="3"/>
+                        <UniformGrid Columns="{Binding Source={StaticResource WindowStateManager}, Path=GridColumns}"/>
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
 

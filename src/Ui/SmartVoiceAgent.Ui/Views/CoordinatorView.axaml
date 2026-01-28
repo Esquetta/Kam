@@ -2,8 +2,16 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:SmartVoiceAgent.Ui.ViewModels.PageModels"
              xmlns:local="clr-namespace:SmartVoiceAgent.Ui.Views"
+             xmlns:services="clr-namespace:SmartVoiceAgent.Ui.Services"
+             xmlns:converters="clr-namespace:SmartVoiceAgent.Ui.Converters"
              x:Class="SmartVoiceAgent.Ui.Views.CoordinatorView"
              x:DataType="vm:CoordinatorViewModel">
+
+    <UserControl.Resources>
+        <services:WindowStateManager x:Key="WindowStateManager" />
+        <converters:ResponsiveFontSizeConverter x:Key="ResponsiveFontSizeConverter" />
+        <converters:ResponsiveScaleConverter x:Key="ResponsiveScaleConverter" />
+    </UserControl.Resources>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <Grid RowDefinitions="Auto, Auto, Auto" Margin="0,20">
@@ -11,7 +19,7 @@
             <!-- Title Section -->
             <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,20,0,40">
                 <TextBlock Text="{DynamicResource Lang.Coordinator.Title}"
-                           FontSize="56"
+                           FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=56}"
                            LetterSpacing="12"
                            HorizontalAlignment="Center"
                            Foreground="{DynamicResource TextPrimaryBrush}"
@@ -43,14 +51,20 @@
 
             <!-- Neural Orb -->
             <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,20,0,60">
-                <Viewbox Width="260" Height="260">
+                <Viewbox Width="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveScaleConverter}, ConverterParameter=260}" 
+                         Height="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveScaleConverter}, ConverterParameter=260}">
                     <local:NeuralOrb/>
                 </Viewbox>
             </Grid>
 
-            <!-- Bottom Cards -->
-            <UniformGrid Grid.Row="2" Columns="3" Margin="0,0,0,20">
-
+            <!-- Bottom Cards - Responsive Grid -->
+            <ItemsControl Grid.Row="2" Margin="0,0,0,20">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="{Binding Source={StaticResource WindowStateManager}, Path=GridColumns}"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                
                 <!-- Research Card -->
                 <Border Classes="InfoCard" Margin="8">
                     <Border.Styles>
@@ -144,8 +158,7 @@
                                    FontFamily="Consolas"/>
                     </StackPanel>
                 </Border>
-
-            </UniformGrid>
+            </ItemsControl>
         </Grid>
     </ScrollViewer>
 </UserControl>
