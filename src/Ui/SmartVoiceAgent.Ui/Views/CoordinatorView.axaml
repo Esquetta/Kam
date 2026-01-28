@@ -22,30 +22,53 @@
                            FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=56}"
                            LetterSpacing="12"
                            HorizontalAlignment="Center"
-                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           Foreground="{Binding LabelColor}"
                            FontWeight="Light"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,0" Spacing="12">
-                    <Border Background="{DynamicResource AccentCyanGlowBrush}"
-                            BorderBrush="{DynamicResource AccentCyanDimBrush}"
+                    <Border Background="{Binding OrbColor, Converter={StaticResource BrushToGlowBrushConverter}}"
+                            BorderBrush="{Binding OrbColor}"
                             BorderThickness="1"
                             CornerRadius="4"
-                            Padding="8,4">
+                            Padding="8,4"
+                            Opacity="0.3">
+                        <Border.Styles>
+                            <Style Selector="Border">
+                                <Style.Resources>
+                                    <converters:BrushToGlowBrushConverter x:Key="BrushToGlowBrushConverter" />
+                                </Style.Resources>
+                            </Style>
+                        </Border.Styles>
+                    </Border>
+                    <Border Background="{Binding OrbColor, Converter={StaticResource BrushToGlowBrushConverter}}"
+                            BorderBrush="{Binding OrbColor}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="8,4"
+                            Opacity="0.3">
+                        <Border.Styles>
+                            <Style Selector="Border">
+                                <Style.Resources>
+                                    <converters:BrushToGlowBrushConverter x:Key="BrushToGlowBrushConverter" />
+                                </Style.Resources>
+                            </Style>
+                        </Border.Styles>
                         <TextBlock Text="KERNEL v3.5"
                                    FontSize="11"
                                    FontFamily="Consolas"
-                                   Foreground="{DynamicResource AccentCyanBrush}"
+                                   Foreground="{Binding OrbColor}"
                                    LetterSpacing="1"/>
                     </Border>
                     <TextBlock Text="//"
                                FontSize="11"
                                Foreground="{DynamicResource TextMutedBrush}"
                                VerticalAlignment="Center"/>
-                    <TextBlock Text="{DynamicResource Lang.Coordinator.Subtitle}"
+                    <TextBlock Text="{Binding StatusText}"
                                FontSize="11"
                                FontFamily="Consolas"
-                               Foreground="{DynamicResource AccentCyanDimBrush}"
+                               Foreground="{Binding StatusColor}"
                                LetterSpacing="2"
-                               VerticalAlignment="Center"/>
+                               VerticalAlignment="Center"
+                               FontWeight="SemiBold"/>
                 </StackPanel>
             </StackPanel>
 
@@ -53,12 +76,22 @@
             <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,20,0,60">
                 <Viewbox Width="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveScaleConverter}, ConverterParameter=260}" 
                          Height="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveScaleConverter}, ConverterParameter=260}">
-                    <local:NeuralOrb/>
+                    <local:NeuralOrb 
+                        IsActive="{Binding IsOnline}"
+                        ToggleCommand="{Binding ToggleOnlineStateCommand}"
+                        OrbColor="{Binding OrbColor}"
+                        RingOpacity="{Binding IsOnline, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.3|0.1}"
+                        CoreOpacity="{Binding IsOnline, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.65|0.3}"
+                        BoxShadowValue="{Binding IsOnline, Converter={StaticResource BoolToBoxShadowConverter}, ConverterParameter='0 0 40 0 #4006B6D4|0 0 20 0 #40EF4444'}"/>
                 </Viewbox>
             </Grid>
 
             <!-- Bottom Cards - Responsive Grid -->
             <ItemsControl Grid.Row="2" Margin="0,0,0,20">
+                <ItemsControl.Resources>
+                    <converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter" />
+                    <converters:BoolToBoxShadowConverter x:Key="BoolToBoxShadowConverter" />
+                </ItemsControl.Resources>
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <UniformGrid Columns="{Binding Source={StaticResource WindowStateManager}, Path=GridColumns}"/>
@@ -69,30 +102,35 @@
                 <Border Classes="InfoCard" Margin="8">
                     <Border.Styles>
                         <Style Selector="Border.InfoCard:pointerover">
-                            <Setter Property="BorderBrush" Value="{DynamicResource AccentPurpleBrush}"/>
+                            <Setter Property="BorderBrush" Value="{Binding ResearchStatusColor}"/>
                         </Style>
                     </Border.Styles>
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                             <Grid Width="8" Height="8" Margin="0,0,12,0">
-                                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentPurpleBrush}">
+                                <Ellipse Width="8" Height="8" Fill="{Binding ResearchStatusColor}">
                                     <Ellipse.Effect>
                                         <BlurEffect Radius="4"/>
                                     </Ellipse.Effect>
                                 </Ellipse>
-                                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentPurpleBrush}"/>
+                                <Ellipse Width="8" Height="8" Fill="{Binding ResearchStatusColor}"/>
                             </Grid>
                             <TextBlock Text="{DynamicResource Lang.Coordinator.Research}"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       Foreground="{Binding LabelColor}"
                                        FontWeight="Medium"
                                        FontSize="13"
                                        LetterSpacing="2"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
-                        <TextBlock Text="19:18:35  Local kernel initialized"
-                                   Foreground="{DynamicResource TextMutedBrush}"
+                        <TextBlock Text="{Binding IsOnline, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='19:18:35  Local kernel initialized|19:18:35  Service offline'}"
+                                   Foreground="{Binding ResearchStatusColor}"
+                                   Opacity="0.8"
                                    FontSize="10"
-                                   FontFamily="Consolas"/>
+                                   FontFamily="Consolas">
+                            <TextBlock.Resources>
+                                <converters:BoolToStatusTextConverter x:Key="BoolToStatusTextConverter" />
+                            </TextBlock.Resources>
+                        </TextBlock>
                     </StackPanel>
                 </Border>
 
@@ -100,31 +138,35 @@
                 <Border Classes="InfoCard" Margin="8">
                     <Border.Styles>
                         <Style Selector="Border.InfoCard:pointerover">
-                            <Setter Property="BorderBrush" Value="{DynamicResource AccentGreenBrush}"/>
+                            <Setter Property="BorderBrush" Value="{Binding AnalyzerStatusColor}"/>
                         </Style>
                     </Border.Styles>
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                             <Grid Width="8" Height="8" Margin="0,0,12,0">
-                                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentGreenBrush}">
+                                <Ellipse Width="8" Height="8" Fill="{Binding AnalyzerStatusColor}">
                                     <Ellipse.Effect>
                                         <BlurEffect Radius="4"/>
                                     </Ellipse.Effect>
                                 </Ellipse>
-                                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentGreenBrush}"/>
+                                <Ellipse Width="8" Height="8" Fill="{Binding AnalyzerStatusColor}"/>
                             </Grid>
                             <TextBlock Text="{DynamicResource Lang.Coordinator.Analyzer}"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       Foreground="{Binding LabelColor}"
                                        FontWeight="Medium"
                                        FontSize="13"
                                        LetterSpacing="2"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
-                        <TextBlock Text="19:18:42  Semantic engine active"
-                                   Foreground="{DynamicResource AccentGreenBrush}"
+                        <TextBlock Text="{Binding IsOnline, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='19:18:42  Semantic engine active|19:18:42  Engine offline'}"
+                                   Foreground="{Binding AnalyzerStatusColor}"
                                    Opacity="0.8"
                                    FontSize="10"
-                                   FontFamily="Consolas"/>
+                                   FontFamily="Consolas">
+                            <TextBlock.Resources>
+                                <converters:BoolToStatusTextConverter x:Key="BoolToStatusTextConverter" />
+                            </TextBlock.Resources>
+                        </TextBlock>
                     </StackPanel>
                 </Border>
 
@@ -132,30 +174,35 @@
                 <Border Classes="InfoCard" Margin="8">
                     <Border.Styles>
                         <Style Selector="Border.InfoCard:pointerover">
-                            <Setter Property="BorderBrush" Value="{DynamicResource AccentOrangeBrush}"/>
+                            <Setter Property="BorderBrush" Value="{Binding TasksStatusColor}"/>
                         </Style>
                     </Border.Styles>
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                             <Grid Width="8" Height="8" Margin="0,0,12,0">
-                                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentOrangeBrush}">
+                                <Ellipse Width="8" Height="8" Fill="{Binding TasksStatusColor}">
                                     <Ellipse.Effect>
                                         <BlurEffect Radius="4"/>
                                     </Ellipse.Effect>
                                 </Ellipse>
-                                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentOrangeBrush}"/>
+                                <Ellipse Width="8" Height="8" Fill="{Binding TasksStatusColor}"/>
                             </Grid>
                             <TextBlock Text="{DynamicResource Lang.Coordinator.Tasks}"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       Foreground="{Binding LabelColor}"
                                        FontWeight="Medium"
                                        FontSize="13"
                                        LetterSpacing="2"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
-                        <TextBlock Text="18:18:38  Scheduler ready"
-                                   Foreground="{DynamicResource TextMutedBrush}"
+                        <TextBlock Text="{Binding IsOnline, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='18:18:38  Scheduler ready|18:18:38  Scheduler offline'}"
+                                   Foreground="{Binding TasksStatusColor}"
+                                   Opacity="0.8"
                                    FontSize="10"
-                                   FontFamily="Consolas"/>
+                                   FontFamily="Consolas">
+                            <TextBlock.Resources>
+                                <converters:BoolToStatusTextConverter x:Key="BoolToStatusTextConverter" />
+                            </TextBlock.Resources>
+                        </TextBlock>
                     </StackPanel>
                 </Border>
             </ItemsControl>

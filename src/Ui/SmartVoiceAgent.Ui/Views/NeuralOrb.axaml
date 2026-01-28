@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:SmartVoiceAgent.Ui.ViewModels"
+             xmlns:vm="using:SmartVoiceAgent.Ui.ViewModels.PageModels"
              xmlns:services="clr-namespace:SmartVoiceAgent.Ui.Services"
              xmlns:converters="clr-namespace:SmartVoiceAgent.Ui.Converters"
              x:Class="SmartVoiceAgent.Ui.Views.NeuralOrb"
@@ -80,6 +80,14 @@
         <Style Selector="ToggleButton#OrbButton:pressed">
             <Setter Property="RenderTransform" Value="scale(0.95)"/>
         </Style>
+        
+        <!-- Online state styles -->
+        <Style Selector="ToggleButton#OrbButton:checked">
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <Style Selector="ToggleButton#OrbButton:unchecked">
+            <Setter Property="Opacity" Value="0.7"/>
+        </Style>
     </UserControl.Styles>
 
     <Grid Background="Transparent" ClipToBounds="False">
@@ -109,7 +117,7 @@
                  StrokeThickness="1"
                  StrokeDashArray="4,4"
                  Width="200" Height="200"
-                 Opacity="0.3"
+                 Opacity="{Binding #neuralOrbControl.RingOpacity}"
                  IsVisible="{Binding Source={StaticResource WindowStateManager}, Path=ReducedMotion, Converter={StaticResource BooleanNegationConverter}}">
             <Ellipse.RenderTransform>
                 <RotateTransform/>
@@ -121,7 +129,7 @@
                  StrokeThickness="1"
                  StrokeDashArray="4,4"
                  Width="200" Height="200"
-                 Opacity="0.3"
+                 Opacity="{Binding #neuralOrbControl.RingOpacity}"
                  IsVisible="{Binding Source={StaticResource WindowStateManager}, Path=ReducedMotion}"/>
 
         <!-- Core glow (only animated when ReducedMotion is false) -->
@@ -140,7 +148,7 @@
         <!-- Static core glow (shown when ReducedMotion is true) -->
         <Ellipse Fill="{Binding #neuralOrbControl.OrbColor}"
                  Width="160" Height="160"
-                 Opacity="0.65"
+                 Opacity="{Binding #neuralOrbControl.CoreOpacity}"
                  IsVisible="{Binding Source={StaticResource WindowStateManager}, Path=ReducedMotion}">
             <Ellipse.Effect>
                 <BlurEffect Radius="50"/>
@@ -153,13 +161,15 @@
                 Background="{DynamicResource CardBgBrush}"
                 BorderBrush="{Binding #neuralOrbControl.OrbColor}"
                 BorderThickness="1"
-                BoxShadow="0 0 40 0 #4006B6D4"/>
+                BoxShadow="{Binding #neuralOrbControl.BoxShadowValue}"/>
 
         <!-- Center button with brain-circuit icon -->
         <ToggleButton x:Name="OrbButton"
                       HorizontalAlignment="Center"
                       VerticalAlignment="Center"
-                      Cursor="Hand">
+                      Cursor="Hand"
+                      IsChecked="{Binding #neuralOrbControl.IsActive, Mode=TwoWay}"
+                      Command="{Binding #neuralOrbControl.ToggleCommand}">
             <Canvas Width="40" Height="40">
                 <!-- Brain paths -->
                 <Path Stroke="{Binding #neuralOrbControl.OrbColor}"

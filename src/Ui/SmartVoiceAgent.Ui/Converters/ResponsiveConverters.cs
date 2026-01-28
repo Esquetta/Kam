@@ -245,3 +245,101 @@ public class BooleanNegationConverter : IValueConverter
         return value is bool b ? !b : false;
     }
 }
+
+/// <summary>
+/// Converts bool to opacity value based on parameter format "trueValue|falseValue"
+/// </summary>
+public class BoolToOpacityConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var isTrue = value is bool b && b;
+        
+        if (parameter is string param && param.Contains('|'))
+        {
+            var parts = param.Split('|');
+            var valueToParse = isTrue ? parts[0] : parts[1];
+            if (double.TryParse(valueToParse, out var result))
+                return result;
+        }
+        
+        return isTrue ? 1.0 : 0.0;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts bool to box shadow string based on parameter format "trueValue|falseValue"
+/// </summary>
+public class BoolToBoxShadowConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var isTrue = value is bool b && b;
+        
+        if (parameter is string param && param.Contains('|'))
+        {
+            var parts = param.Split('|');
+            return isTrue ? parts[0] : parts[1];
+        }
+        
+        return "0 0 0 0 transparent";
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts bool to status text based on parameter format "trueText|falseText"
+/// </summary>
+public class BoolToStatusTextConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var isTrue = value is bool b && b;
+        
+        if (parameter is string param && param.Contains('|'))
+        {
+            var parts = param.Split('|');
+            return isTrue ? parts[0] : parts[1];
+        }
+        
+        return isTrue ? "Active" : "Offline";
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts a brush to a glow brush with reduced opacity
+/// </summary>
+public class BrushToGlowBrushConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is ISolidColorBrush solidBrush)
+        {
+            var color = solidBrush.Color;
+            // Create a glow color with reduced alpha
+            var glowColor = new Color(25, color.R, color.G, color.B); // ~10% opacity
+            return new SolidColorBrush(glowColor);
+        }
+        
+        return new SolidColorBrush(new Color(25, 6, 182, 212)); // Default cyan glow
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}

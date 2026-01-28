@@ -176,16 +176,21 @@
 				<Grid Margin="24,0">
 					<StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left"
 								IsHitTestVisible="False">
-						<Ellipse Width="6" Height="6" Fill="{DynamicResource AccentGreenBrush}" Margin="0,0,8,0">
+						<!-- Status Indicator - Green when online, Red when offline -->
+						<Ellipse Width="6" Height="6" 
+								 Fill="{Binding CurrentViewModel.StatusColor, FallbackValue={DynamicResource AccentGreenBrush}}" 
+								 Margin="0,0,8,0">
 							<Ellipse.Effect>
 								<BlurEffect Radius="3"/>
 							</Ellipse.Effect>
 						</Ellipse>
-						<Ellipse Width="6" Height="6" Fill="{DynamicResource AccentGreenBrush}" Margin="-6,0,8,0"/>
-						<TextBlock Text="SYSTEM ONLINE"
+						<Ellipse Width="6" Height="6" 
+								 Fill="{Binding CurrentViewModel.StatusColor, FallbackValue={DynamicResource AccentGreenBrush}}" 
+								 Margin="-6,0,8,0"/>
+						<TextBlock Text="{Binding CurrentViewModel.StatusText, FallbackValue='SYSTEM ONLINE'}"
 								   FontSize="11"
 								   FontWeight="Medium"
-								   Foreground="{DynamicResource TextMutedBrush}"
+								   Foreground="{Binding CurrentViewModel.StatusColor, FallbackValue={DynamicResource TextMutedBrush}}"
 								   LetterSpacing="1"
 								   VerticalAlignment="Center"/>
 					</StackPanel>
