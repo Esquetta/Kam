@@ -1,7 +1,9 @@
 ﻿using Avalonia.Media;
 using ReactiveUI;
+using SolidColorBrush = Avalonia.Media.SolidColorBrush;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Ui.ViewModels;
+using System;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -22,11 +24,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             get => _isOnline;
             set
             {
-                if (this.RaiseAndSetIfChanged(ref _isOnline, value))
-                {
-                    // Update all dependent properties
-                    UpdateStatusProperties();
-                }
+                // Always update and notify, even if value hasn't changed
+                _isOnline = value;
+                this.RaisePropertyChanged(nameof(IsOnline));
+                
+                // Update all dependent properties
+                UpdateStatusProperties();
             }
         }
 
@@ -35,13 +38,13 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /* ========================= */
 
         private string _statusText = "SYSTEM ONLINE";
-        private IBrush _statusColor = Brush.Parse("#10B981");
-        private IBrush _orbColor = Brush.Parse("#06B6D4");
-        private IBrush _orbGlowColor = Brush.Parse("#4006B6D4");
-        private IBrush _labelColor;
-        private IBrush _researchStatusColor = Brush.Parse("#A855F7");
-        private IBrush _analyzerStatusColor = Brush.Parse("#10B981");
-        private IBrush _tasksStatusColor = Brush.Parse("#F97316");
+        private IBrush _statusColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#10B981"));
+        private IBrush _orbColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#06B6D4"));
+        private IBrush _orbGlowColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#4006B6D4"));
+        private IBrush? _labelColor;
+        private IBrush _researchStatusColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#A855F7"));
+        private IBrush _analyzerStatusColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#10B981"));
+        private IBrush _tasksStatusColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#F97316"));
 
         public override string StatusText
         {
@@ -89,9 +92,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             var app = global::Avalonia.Application.Current;
             if (app?.ActualThemeVariant == Avalonia.Styling.ThemeVariant.Dark)
             {
-                return Brush.Parse("#FAFAFA"); // White for dark mode
+                return new SolidColorBrush(Avalonia.Media.Color.Parse("#FAFAFA")); // White for dark mode
             }
-            return Brush.Parse("#18181B"); // Dark for light mode
+            return new SolidColorBrush(Avalonia.Media.Color.Parse("#18181B")); // Dark for light mode
         }
 
         /* ========================= */
@@ -121,14 +124,29 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /// </summary>
         private void UpdateStatusProperties()
         {
-            StatusText = IsOnline ? "SYSTEM ONLINE" : "SYSTEM OFFLINE";
-            StatusColor = IsOnline ? Brush.Parse("#10B981") : Brush.Parse("#EF4444");
-            OrbColor = IsOnline ? Brush.Parse("#06B6D4") : Brush.Parse("#EF4444");
-            OrbGlowColor = IsOnline ? Brush.Parse("#4006B6D4") : Brush.Parse("#40EF4444");
-            LabelColor = IsOnline ? GetThemeTextBrush() : Brush.Parse("#EF4444");
-            ResearchStatusColor = IsOnline ? Brush.Parse("#A855F7") : Brush.Parse("#EF4444");
-            AnalyzerStatusColor = IsOnline ? Brush.Parse("#10B981") : Brush.Parse("#EF4444");
-            TasksStatusColor = IsOnline ? Brush.Parse("#F97316") : Brush.Parse("#EF4444");
+            // Force immediate UI update by using the property setters with null-swap technique
+            // First set to null to force binding refresh, then set to actual value
+            var newStatusText = IsOnline ? "SYSTEM ONLINE" : "SYSTEM OFFLINE";
+            var newStatusColor = IsOnline ? new SolidColorBrush(Avalonia.Media.Color.Parse("#10B981")) : new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
+            var newOrbColor = IsOnline ? new SolidColorBrush(Avalonia.Media.Color.Parse("#06B6D4")) : new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
+            var newOrbGlowColor = IsOnline ? new SolidColorBrush(Avalonia.Media.Color.Parse("#4006B6D4")) : new SolidColorBrush(Avalonia.Media.Color.Parse("#40EF4444"));
+            var newLabelColor = IsOnline ? GetThemeTextBrush() : new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
+            var newResearchColor = IsOnline ? new SolidColorBrush(Avalonia.Media.Color.Parse("#A855F7")) : new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
+            var newAnalyzerColor = IsOnline ? new SolidColorBrush(Avalonia.Media.Color.Parse("#10B981")) : new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
+            var newTasksColor = IsOnline ? new SolidColorBrush(Avalonia.Media.Color.Parse("#F97316")) : new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
+            
+            // Use the property setters which will properly notify
+            StatusText = newStatusText;
+            StatusColor = newStatusColor;
+            OrbColor = newOrbColor;
+            OrbGlowColor = newOrbGlowColor;
+            LabelColor = newLabelColor;
+            ResearchStatusColor = newResearchColor;
+            AnalyzerStatusColor = newAnalyzerColor;
+            TasksStatusColor = newTasksColor;
+            
+            // Also raise for IsOnline to ensure converters re-evaluate
+            this.RaisePropertyChanged(nameof(IsOnline));
         }
 
         /* ========================= */
@@ -182,14 +200,19 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         private async Task ToggleOnlineStateAsync()
         {
+            Console.WriteLine($"[CoordinatorViewModel] ToggleOnlineStateAsync called, _mainViewModel is null: {_mainViewModel == null}");
+            
             if (_mainViewModel != null)
             {
                 // Use the main view model to toggle the host
+                Console.WriteLine("[CoordinatorViewModel] Calling ToggleHostAsync...");
                 await _mainViewModel.ToggleHostAsync();
+                Console.WriteLine("[CoordinatorViewModel] ToggleHostAsync completed");
             }
             else
             {
                 // Fallback: just toggle local state if no host control
+                Console.WriteLine("[CoordinatorViewModel] No main view model, toggling local state only");
                 IsOnline = !IsOnline;
             }
         }
@@ -202,7 +225,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             // Always update and notify, even if value is the same
             // This ensures UI refreshes immediately
             _isOnline = isHostRunning;
+            
+            // Force property change notifications for all status properties
+            // First set to null to force binding refresh, then set actual values
             this.RaisePropertyChanged(nameof(IsOnline));
+            
+            // Update status properties with forced refresh
             UpdateStatusProperties();
         }
 

@@ -1,5 +1,6 @@
 ﻿using Avalonia.Media;
 using ReactiveUI;
+using SolidColorBrush = Avalonia.Media.SolidColorBrush;
 
 namespace SmartVoiceAgent.Ui.ViewModels
 {
@@ -14,7 +15,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         private string _statusText = "SYSTEM ONLINE";
-        private IBrush _statusColor = Brush.Parse("#10B981");
+        private IBrush _statusColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#10B981"));
 
         /// <summary>
         /// Status text for header display (e.g., "SYSTEM ONLINE", "SYSTEM OFFLINE")

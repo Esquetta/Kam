@@ -45,15 +45,16 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /* ========================= */
 
         private bool _isHostRunning = true;
-        private string _statusText = "SYSTEM ONLINE";
-        private IBrush _statusColor = Brush.Parse("#10B981");
+        // Note: StatusText and StatusColor backing fields are inherited from ViewModelBase
 
         public bool IsHostRunning
         {
             get => _isHostRunning;
             private set
             {
+                // Always notify, even if value is the same
                 _isHostRunning = value;
+                this.RaisePropertyChanged(nameof(IsHostRunning));
                 UpdateStatusProperties();
             }
         }
@@ -63,8 +64,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// </summary>
         public override string StatusText
         {
-            get => _statusText;
-            protected set => this.RaiseAndSetIfChanged(ref _statusText, value);
+            get => base.StatusText;
+            protected set => base.StatusText = value;
         }
 
         /// <summary>
@@ -72,40 +73,35 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// </summary>
         public override IBrush StatusColor
         {
-            get => _statusColor;
-            protected set => this.RaiseAndSetIfChanged(ref _statusColor, value);
+            get => base.StatusColor;
+            protected set => base.StatusColor = value;
         }
 
         private void UpdateStatusProperties()
         {
-            // Set the backing fields directly and then raise property changed
+            Console.WriteLine($"[UpdateStatusProperties] IsHostRunning={IsHostRunning}");
+            
+            // Directly set base class properties to ensure proper notification
             var newText = IsHostRunning ? "SYSTEM ONLINE" : "SYSTEM OFFLINE";
-            var newColor = IsHostRunning ? Brush.Parse("#10B981") : Brush.Parse("#EF4444");
+            var newColor = IsHostRunning 
+                ? new SolidColorBrush(Avalonia.Media.Color.Parse("#10B981")) 
+                : new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
             
-            // Only raise if values actually changed
-            if (_statusText != newText)
-            {
-                _statusText = newText;
-                this.RaisePropertyChanged(nameof(StatusText));
-            }
+            Console.WriteLine($"[UpdateStatusProperties] Setting StatusText to: {newText}");
+            Console.WriteLine($"[UpdateStatusProperties] Current StatusText before set: {StatusText}");
             
-            if (_statusColor?.ToString() != newColor?.ToString())
-            {
-                _statusColor = newColor;
-                this.RaisePropertyChanged(nameof(StatusColor));
-            }
+            // Use base class property setters
+            base.StatusText = newText;
+            base.StatusColor = newColor;
             
-            this.RaisePropertyChanged(nameof(IsHostRunning));
+            Console.WriteLine($"[UpdateStatusProperties] StatusText after set: {StatusText}");
             
-            // Force UI refresh for header elements
-            OnPropertyChanged(nameof(StatusText));
-            OnPropertyChanged(nameof(StatusColor));
-        }
-        
-        // Helper method to trigger property changes using ReactiveUI's mechanism
-        private void OnPropertyChanged(string propertyName)
-        {
-            ((ReactiveObject)this).RaisePropertyChanged(propertyName);
+            // Also explicitly raise property changed for this class
+            this.RaisePropertyChanged(nameof(StatusText));
+            this.RaisePropertyChanged(nameof(StatusColor));
+            
+            // Notify view that status changed for immediate visual refresh
+            StatusChanged?.Invoke(this, EventArgs.Empty);
         }
 
         /* ========================= */
@@ -208,8 +204,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     IsDarkMode = global::Avalonia.Application.Current.ActualThemeVariant == ThemeVariant.Dark;
                 }
 
-                // Initialize View
-                CurrentViewModel = new CoordinatorViewModel();
+                // Initialize View - CoordinatorViewModel will be created by SetVoiceAgentHostControl
+                // when the host control is available. For now, leave CurrentViewModel null
+                // or create a placeholder if needed.
                 ActiveView = NavView.Coordinator;
 
                 // Initial system log only - no simulation
@@ -235,29 +232,38 @@ namespace SmartVoiceAgent.Ui.ViewModels
             // Set initial state
             IsHostRunning = _hostControl.IsRunning;
             
-            // Recreate CoordinatorViewModel with host control if currently on Coordinator view
-            if (CurrentViewModel is CoordinatorViewModel)
+            // Always recreate CoordinatorViewModel with host control if on Coordinator view
+            // or if no view model is set yet
+            if (CurrentViewModel is CoordinatorViewModel || CurrentViewModel == null)
             {
+                Console.WriteLine("[SetVoiceAgentHostControl] Recreating CoordinatorViewModel with host control");
                 CurrentViewModel = new CoordinatorViewModel(_hostControl, this);
+                ActiveView = NavView.Coordinator;
             }
         }
         
         private void OnHostStateChanged(object? sender, bool isRunning)
         {
-            // Use InvokeAsync with Render priority to ensure immediate UI update
-            Dispatcher.UIThread.InvokeAsync(() =>
+            Console.WriteLine($"[MainWindowViewModel] OnHostStateChanged called: isRunning={isRunning}");
+            
+            // Update state immediately on UI thread with maximum priority
+            Dispatcher.UIThread.Post(() =>
             {
-                // Use the property setter which will update all dependent properties
+                Console.WriteLine($"[MainWindowViewModel] Updating UI on dispatcher thread: isRunning={isRunning}");
+                
+                // Use the property setter to ensure proper notification
                 IsHostRunning = isRunning;
                 
+                Console.WriteLine($"[MainWindowViewModel] Adding log message");
                 AddLog(isRunning ? "🟢 VoiceAgent Host started" : "🔴 VoiceAgent Host stopped");
                 
                 // Also update the CoordinatorViewModel if it's active
                 if (CurrentViewModel is CoordinatorViewModel coordinator)
                 {
+                    Console.WriteLine($"[MainWindowViewModel] Syncing CoordinatorViewModel");
                     coordinator.SyncWithHostState(isRunning);
                 }
-            }, DispatcherPriority.Render);
+            }, DispatcherPriority.Send);
         }
 
         /// <summary>
@@ -265,15 +271,27 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// </summary>
         public async Task ToggleHostAsync()
         {
-            if (_hostControl == null) return;
+            Console.WriteLine($"[MainWindowViewModel] ToggleHostAsync called, _hostControl is null: {_hostControl == null}");
+            
+            if (_hostControl == null)
+            {
+                Console.WriteLine("[MainWindowViewModel] Host control is null, cannot toggle");
+                return;
+            }
 
+            Console.WriteLine($"[MainWindowViewModel] Host is running: {_hostControl.IsRunning}");
+            
             if (_hostControl.IsRunning)
             {
+                Console.WriteLine("[MainWindowViewModel] Calling StopAsync...");
                 await _hostControl.StopAsync();
+                Console.WriteLine("[MainWindowViewModel] StopAsync completed");
             }
             else
             {
+                Console.WriteLine("[MainWindowViewModel] Calling StartAsync...");
                 await _hostControl.StartAsync();
+                Console.WriteLine("[MainWindowViewModel] StartAsync completed");
             }
         }
 
@@ -380,12 +398,19 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public void AddLog(string message)
         {
+            Console.WriteLine($"[AddLog] Called with message: {message}");
+            
             string timestamp = DateTime.Now.ToString("HH:mm:ss");
+            string logEntry = $"[{timestamp}] {message}";
 
-            if (Dispatcher.UIThread.CheckAccess())
+            // Always use dispatcher to ensure UI updates properly
+            Dispatcher.UIThread.Post(() =>
             {
+                Console.WriteLine($"[AddLog] Adding to LogEntries on UI thread: {logEntry}");
+                Console.WriteLine($"[AddLog] Current LogEntries count: {LogEntries.Count}");
+                
                 // Add to end (chat style - new messages at bottom)
-                LogEntries.Add($"[{timestamp}] {message}");
+                LogEntries.Add(logEntry);
 
                 // Keep only last 100 messages
                 if (LogEntries.Count > 100)
@@ -395,27 +420,20 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 
                 // Notify that log was updated (for auto-scroll)
                 LogUpdated?.Invoke(this, EventArgs.Empty);
-            }
-            else
-            {
-                Dispatcher.UIThread.Post(() =>
-                {
-                    LogEntries.Add($"[{timestamp}] {message}");
-
-                    if (LogEntries.Count > 100)
-                        LogEntries.RemoveAt(0);
-
-                    _trayIconService?.UpdateToolTip($"KAM NEURAL - {message}");
-                    
-                    LogUpdated?.Invoke(this, EventArgs.Empty);
-                });
-            }
+                
+                Console.WriteLine($"[AddLog] LogEntries count after add: {LogEntries.Count}");
+            });
         }
 
         /// <summary>
         /// Event raised when a new log entry is added (for auto-scroll)
         /// </summary>
         public event EventHandler? LogUpdated;
+        
+        /// <summary>
+        /// Event raised when status properties change and UI needs immediate refresh
+        /// </summary>
+        public event EventHandler? StatusChanged;
 
         /* ========================= */
         /* SIMULATION - DISABLED */

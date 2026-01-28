@@ -177,19 +177,19 @@
 					<StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
 						<!-- Status Indicator - Green when online, Red when offline -->
 						<Ellipse Width="6" Height="6" 
-								 Fill="{Binding StatusColor}" 
+								 Fill="{Binding StatusColor, Mode=OneWay}" 
 								 Margin="0,0,8,0">
 							<Ellipse.Effect>
 								<BlurEffect Radius="3"/>
 							</Ellipse.Effect>
 						</Ellipse>
 						<Ellipse Width="6" Height="6" 
-								 Fill="{Binding StatusColor}" 
+								 Fill="{Binding StatusColor, Mode=OneWay}" 
 								 Margin="-6,0,8,0"/>
-						<TextBlock Text="{Binding StatusText}"
+						<TextBlock Text="{Binding StatusText, Mode=OneWay}"
 								   FontSize="11"
 								   FontWeight="Medium"
-								   Foreground="{Binding StatusColor}"
+								   Foreground="{Binding StatusColor, Mode=OneWay}"
 								   LetterSpacing="1"
 								   VerticalAlignment="Center"/>
 					</StackPanel>

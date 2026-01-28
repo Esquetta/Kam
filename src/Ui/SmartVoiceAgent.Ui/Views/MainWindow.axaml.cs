@@ -1,10 +1,14 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
+using Avalonia.Controls.Shapes;
+using Avalonia.VisualTree;
 using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.ViewModels;
 using System;
 using System.ComponentModel;
+using System.Linq;
 
 namespace SmartVoiceAgent.Ui.Views
 {
@@ -39,6 +43,7 @@ namespace SmartVoiceAgent.Ui.Views
             if (_viewModel != null)
             {
                 _viewModel.LogUpdated -= OnLogUpdated;
+                _viewModel.StatusChanged -= OnStatusChanged;
             }
 
             // Subscribe to new view model
@@ -46,6 +51,38 @@ namespace SmartVoiceAgent.Ui.Views
             if (_viewModel != null)
             {
                 _viewModel.LogUpdated += OnLogUpdated;
+                _viewModel.StatusChanged += OnStatusChanged;
+            }
+        }
+
+        private void OnStatusChanged(object? sender, EventArgs e)
+        {
+            // Force immediate visual refresh of header elements
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                ForceHeaderRefresh();
+            }, Avalonia.Threading.DispatcherPriority.Send);
+        }
+
+        /// <summary>
+        /// Forces the header status indicators to refresh
+        /// </summary>
+        private void ForceHeaderRefresh()
+        {
+            // Find all header text blocks and ellipses and invalidate them
+            foreach (var descendant in this.GetVisualDescendants())
+            {
+                if (descendant is TextBlock textBlock)
+                {
+                    if (textBlock.Text?.Contains("SYSTEM") == true)
+                    {
+                        textBlock.InvalidateVisual();
+                    }
+                }
+                else if (descendant is Ellipse ellipse)
+                {
+                    ellipse.InvalidateVisual();
+                }
             }
         }
 

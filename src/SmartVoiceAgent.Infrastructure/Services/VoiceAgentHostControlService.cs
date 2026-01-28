@@ -44,12 +44,17 @@ namespace SmartVoiceAgent.Infrastructure.Services
             lock (_lock)
             {
                 if (!IsRunning)
+                {
+                    Console.WriteLine("[VoiceAgentHostControl] StopAsync called but already stopped");
                     return Task.CompletedTask;
+                }
 
                 // Cancel the token to signal shutdown
                 _cancellationTokenSource.Cancel();
                 IsRunning = false;
+                Console.WriteLine("[VoiceAgentHostControl] Stopping - invoking StateChanged event");
                 StateChanged?.Invoke(this, false);
+                Console.WriteLine("[VoiceAgentHostControl] StateChanged event invoked");
             }
             return Task.CompletedTask;
         }
