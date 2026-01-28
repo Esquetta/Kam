@@ -148,7 +148,7 @@
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="64"/>
 				<ColumnDefinition Width="*"/>
-				<ColumnDefinition Width="320"/>
+				<ColumnDefinition Width="450"/>
 			</Grid.ColumnDefinitions>
 
 			<!-- Header Bar (Draggable) -->
@@ -362,25 +362,13 @@
 					</StackPanel>
 
 					<!-- Log Content -->
-					<ScrollViewer Grid.Row="1"
+					<ScrollViewer x:Name="LogScrollViewer" Grid.Row="1"
 								  VerticalScrollBarVisibility="Auto"
 								  Margin="24,16,24,0">
 						<ItemsControl ItemsSource="{Binding LogEntries}">
 							<ItemsControl.ItemTemplate>
 								<DataTemplate>
-									<Grid ColumnDefinitions="*, Auto" Margin="0,2">
-										<TextBlock Grid.Column="0"
-												   Text="{Binding}"
-												   Classes="LogEntry"
-												   TextTrimming="CharacterEllipsis"/>
-										<TextBlock Grid.Column="1"
-												   Text="OK"
-												   FontSize="10"
-												   FontFamily="Consolas"
-												   Foreground="{DynamicResource TextMutedBrush}"
-												   Opacity="0.5"
-												   Margin="8,0,0,0"/>
-									</Grid>
+									<TextBlock Text="{Binding}" Classes="LogEntry" TextWrapping="Wrap" Margin="0,2"/>
 								</DataTemplate>
 							</ItemsControl.ItemTemplate>
 						</ItemsControl>
@@ -409,7 +397,9 @@
 									 Foreground="{DynamicResource TextSecondaryBrush}"
 									 VerticalAlignment="Center"
 									 AcceptsReturn="False"
-									 TextWrapping="NoWrap"/>
+									 TextWrapping="NoWrap"
+									 Text="{Binding CommandInputText, Mode=TwoWay}"
+									 KeyDown="OnPromptKeyDown"/>
 						</Grid>
 					</Border>
 				</Grid>

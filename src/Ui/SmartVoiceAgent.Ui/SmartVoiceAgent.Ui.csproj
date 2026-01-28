@@ -5,6 +5,10 @@
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UserSecretsId>c596b7d6-7516-451c-b4fc-598ea1e7ddc6</UserSecretsId>
+
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,6 +32,11 @@
   <ItemGroup>
     <Folder Include="Models\" />
     <AvaloniaResource Include="Assets/favicon.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\SmartVoiceAgent.Application\SmartVoiceAgent.Application.csproj" />
+    <ProjectReference Include="..\..\SmartVoiceAgent.Infrastructure\SmartVoiceAgent.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -15,7 +15,7 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
 
         public void Initialize()
         {
-            if (Application.Current?.ApplicationLifetime
+            if (global::Avalonia.Application.Current?.ApplicationLifetime
                 is not IClassicDesktopStyleApplicationLifetime)
                 return;
 
@@ -121,7 +121,7 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
 
         private void OnExitClick(object? sender, EventArgs e)
         {
-            if (Application.Current?.ApplicationLifetime
+            if (global::Avalonia.Application.Current?.ApplicationLifetime
                 is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 desktop.Shutdown();
@@ -130,7 +130,7 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
 
         private void ShowMainWindow()
         {
-            if (Application.Current?.ApplicationLifetime
+            if (global::Avalonia.Application.Current?.ApplicationLifetime
                 is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 if (desktop.MainWindow != null)

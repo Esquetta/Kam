@@ -3,10 +3,13 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using ReactiveUI;
+using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Ui.Services.Concrete;
 using SmartVoiceAgent.Ui.ViewModels.PageModels;
 using System;
 using System.Collections.ObjectModel;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace SmartVoiceAgent.Ui.ViewModels
@@ -14,7 +17,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
     public class MainWindowViewModel : ViewModelBase
     {
         private TrayIconService? _trayIconService;
-        private DispatcherTimer? _simulationTimer; 
+        private DispatcherTimer? _simulationTimer;
+        private ICommandInputService? _commandInput;
+        private CancellationTokenSource? _resultListenerCts;
 
         /* ========================= */
         /* NAVIGATION */
@@ -99,6 +104,19 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /* ========================= */
+        /* COMMAND INPUT */
+        /* ========================= */
+
+        private string _commandInputText = string.Empty;
+        public string CommandInputText
+        {
+            get => _commandInputText;
+            set => this.RaiseAndSetIfChanged(ref _commandInputText, value);
+        }
+
+        public ICommand SubmitCommand { get; }
+
+        /* ========================= */
         /* CONSTRUCTOR */
         /* ========================= */
 
@@ -111,23 +129,24 @@ namespace SmartVoiceAgent.Ui.ViewModels
             NavigateToPluginsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Plugins));
             NavigateToSettingsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Settings));
             ToggleThemeCommand = ReactiveCommand.Create(ToggleTheme);
+            SubmitCommand = ReactiveCommand.Create(SubmitCommandInput);
 
            
             Dispatcher.UIThread.Post(() =>
             {
                 // Initialize theme
-                if (Application.Current != null)
+                if (global::Avalonia.Application.Current != null)
                 {
-                    IsDarkMode = Application.Current.ActualThemeVariant == ThemeVariant.Dark;
+                    IsDarkMode = global::Avalonia.Application.Current.ActualThemeVariant == ThemeVariant.Dark;
                 }
 
                 // Initialize View
                 CurrentViewModel = new CoordinatorViewModel();
                 ActiveView = NavView.Coordinator;
 
-                
-                StartSimulation();
-                AddLog("SYSTEM_INITIALIZED...");
+                // Initial system log only - no simulation
+                AddLog("KERNEL_INITIALIZED... v3.5");
+                AddLog("NEURAL_LINK_STABLE");
             }, DispatcherPriority.Background);
         }
 
@@ -172,7 +191,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             Dispatcher.UIThread.Post(() =>
             {
-                if (Application.Current is not { } app)
+                if (global::Avalonia.Application.Current is not { } app)
                     return;
 
                 app.RequestedThemeVariant = isDark ? ThemeVariant.Dark : ThemeVariant.Light;
@@ -194,6 +213,40 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _trayIconService = service;
         }
 
+        public void SetCommandInputService(ICommandInputService commandInput)
+        {
+            _commandInput = commandInput;
+            _commandInput.OnResult += OnCommandResult;
+            
+            // Start listening for results
+            _resultListenerCts = new CancellationTokenSource();
+        }
+
+        private void SubmitCommandInput()
+        {
+            if (string.IsNullOrWhiteSpace(CommandInputText) || _commandInput == null)
+                return;
+
+            AddLog($"> {CommandInputText}");
+            _commandInput.SubmitCommand(CommandInputText);
+            CommandInputText = string.Empty;
+        }
+
+        private void OnCommandResult(object? sender, CommandResultEventArgs e)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (e.Success)
+                {
+                    AddLog($"✅ {e.Result}");
+                }
+                else
+                {
+                    AddLog($"❌ Error: {e.Result}");
+                }
+            });
+        }
+
         /* ========================= */
         /* LOGGING */
         /* ========================= */
@@ -202,80 +255,49 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             string timestamp = DateTime.Now.ToString("HH:mm:ss");
 
-            // Her zaman UI thread'de çalıştır
             if (Dispatcher.UIThread.CheckAccess())
             {
-                // Zaten UI thread'deyiz
-                LogEntries.Insert(0, $"[{timestamp}] {message}");
+                // Add to end (chat style - new messages at bottom)
+                LogEntries.Add($"[{timestamp}] {message}");
 
+                // Keep only last 100 messages
                 if (LogEntries.Count > 100)
-                    LogEntries.RemoveAt(LogEntries.Count - 1);
+                    LogEntries.RemoveAt(0);
 
                 _trayIconService?.UpdateToolTip($"KAM NEURAL - {message}");
+                
+                // Notify that log was updated (for auto-scroll)
+                LogUpdated?.Invoke(this, EventArgs.Empty);
             }
             else
             {
-                
                 Dispatcher.UIThread.Post(() =>
                 {
-                    LogEntries.Insert(0, $"[{timestamp}] {message}");
+                    LogEntries.Add($"[{timestamp}] {message}");
 
                     if (LogEntries.Count > 100)
-                        LogEntries.RemoveAt(LogEntries.Count - 1);
+                        LogEntries.RemoveAt(0);
 
                     _trayIconService?.UpdateToolTip($"KAM NEURAL - {message}");
+                    
+                    LogUpdated?.Invoke(this, EventArgs.Empty);
                 });
             }
         }
 
+        /// <summary>
+        /// Event raised when a new log entry is added (for auto-scroll)
+        /// </summary>
+        public event EventHandler? LogUpdated;
+
         /* ========================= */
-        /* SIMULATION */
+        /* SIMULATION - DISABLED */
         /* ========================= */
 
         public void StartSimulation()
         {
-            
-            if (!Dispatcher.UIThread.CheckAccess())
-            {
-                Dispatcher.UIThread.Post(StartSimulation);
-                return;
-            }
-
-            var random = new Random();
-            _simulationTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(800)
-            };
-
-            _simulationTimer.Tick += (sender, args) =>
-            {
-                
-                TaskProgress = (TaskProgress + 2) % 100;
-
-                string[] tasks =
-                {
-                    "ANALYZING_NODE",
-                    "SYNCING_CORES",
-                    "CRITICAL_ERROR",
-                    "VOICE_RECOGNITION"
-                };
-
-                string task = tasks[random.Next(tasks.Length)];
-                AddLog($"{task}... OK");
-
-                if (task.Contains("ERROR"))
-                {
-                    CurrentOrbColor = Brush.Parse("#FF3B30");
-                    _trayIconService?.UpdateStatus("Error Detected");
-                }
-                else
-                {
-                    CurrentOrbColor = Brush.Parse("#00D4FF");
-                    _trayIconService?.UpdateStatus("Running");
-                }
-            };
-
-            _simulationTimer?.Start();
+            // Simulation disabled - only real agent logs are shown
+            // This method kept for compatibility but does nothing
         }
 
         /* ========================= */
@@ -286,6 +308,14 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             _simulationTimer?.Stop();
             _simulationTimer = null;
+            
+            _resultListenerCts?.Cancel();
+            _resultListenerCts?.Dispose();
+            
+            if (_commandInput != null)
+            {
+                _commandInput.OnResult -= OnCommandResult;
+            }
         }
     }
 }

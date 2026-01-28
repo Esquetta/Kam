@@ -2,24 +2,62 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using SmartVoiceAgent.Ui.ViewModels;
+using System;
 using System.ComponentModel;
 
 namespace SmartVoiceAgent.Ui.Views
 {
     public partial class MainWindow : Window
     {
+        private MainWindowViewModel? _viewModel;
+        private ScrollViewer? _logScrollViewer;
+
         public MainWindow()
         {
             InitializeComponent();
 
+            // Get reference to ScrollViewer after initialization
+            _logScrollViewer = this.FindControl<ScrollViewer>("LogScrollViewer");
+
             this.Closing += MainWindow_Closed;
-            this.Opened += (s, e) =>
+            this.Opened += MainWindow_Opened;
+            this.DataContextChanged += OnDataContextChanged;
+        }
+
+        private void OnDataContextChanged(object? sender, EventArgs e)
+        {
+            // Unsubscribe from old view model
+            if (_viewModel != null)
             {
-                if (DataContext is MainWindowViewModel vm)
+                _viewModel.LogUpdated -= OnLogUpdated;
+            }
+
+            // Subscribe to new view model
+            _viewModel = DataContext as MainWindowViewModel;
+            if (_viewModel != null)
+            {
+                _viewModel.LogUpdated += OnLogUpdated;
+            }
+        }
+
+        private void OnLogUpdated(object? sender, EventArgs e)
+        {
+            // Auto-scroll to bottom when new log is added
+            if (_logScrollViewer != null)
+            {
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                 {
-                    vm.StartSimulation();
-                }
-            };
+                    _logScrollViewer.ScrollToEnd();
+                });
+            }
+        }
+
+        private void MainWindow_Opened(object? sender, EventArgs e)
+        {
+            if (DataContext is MainWindowViewModel vm)
+            {
+                vm.StartSimulation();
+            }
         }
 
         private void OnHeaderPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -40,6 +78,15 @@ namespace SmartVoiceAgent.Ui.Views
         {
             if (DataContext is MainWindowViewModel vm)
                 vm.ToggleTheme();
+        }
+
+        private void OnPromptKeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && DataContext is MainWindowViewModel vm)
+            {
+                vm.SubmitCommand.Execute(null);
+                e.Handled = true;
+            }
         }
     }
 }

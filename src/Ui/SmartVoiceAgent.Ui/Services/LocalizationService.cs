@@ -17,7 +17,7 @@ namespace SmartVoiceAgent.Ui.Services
 
         public void SetLanguage(string languageCode)
         {
-            var app = Application.Current;
+            var app = global::Avalonia.Application.Current;
             if (app?.Resources?.MergedDictionaries == null)
             {
                 return;
