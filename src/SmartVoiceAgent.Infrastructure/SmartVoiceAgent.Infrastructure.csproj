@@ -28,7 +28,7 @@
     <PackageReference Include="System.Management" Version="10.0.1" />
     <PackageReference Include="Tesseract" Version="5.2.0" />
     <PackageReference Include="Tesseract.Drawing" Version="5.2.0" />
-    <PackageReference Include="Uno.UI" Version="5.6.99" />
+    <!-- <PackageReference Include="Uno.UI" Version="5.6.99" /> -->
     <PackageReference Include="Whisper.net" Version="1.9.0" />
     <PackageReference Include="Whisper.net.Runtime" Version="1.9.0" />
     <PackageReference Include="System.Text.Json" Version="10.0.1" />

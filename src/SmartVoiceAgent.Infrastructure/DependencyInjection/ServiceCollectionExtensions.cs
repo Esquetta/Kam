@@ -30,8 +30,6 @@ public static class ServiceCollectionExtensions
         // Context and analytics services
         services.AddSingleton<ConversationContextManager>();
 
-        services.BuildServiceProvider();
-
         // Configuration options
         services.Configure<GroupChatOptions>(configuration.GetSection("GroupChat"));
 
@@ -69,7 +67,8 @@ public static class ServiceCollectionExtensions
         {
             var registry = sp.GetRequiredService<IAgentRegistry>();
             var logger = sp.GetRequiredService<ILogger<SmartAgentOrchestrator>>();
-            return new SmartAgentOrchestrator(registry, logger);
+            var uiLogService = sp.GetRequiredService<IUiLogService>();
+            return new SmartAgentOrchestrator(registry, logger, uiLogService);
         });
 
         services.AddSingleton<SystemAgentTools>();
