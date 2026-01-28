@@ -96,7 +96,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public CoordinatorViewModel()
         {
             Title = "COORDINATOR";
-            ToggleOnlineStateCommand = ReactiveCommand.Create(ToggleOnlineState);
+            // Use CreateFromTask for async commands
+            ToggleOnlineStateCommand = ReactiveCommand.CreateFromTask(ToggleOnlineStateAsync);
         }
 
         public CoordinatorViewModel(IVoiceAgentHostControl? hostControl, MainWindowViewModel? mainViewModel) : this()
@@ -115,7 +116,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /* METHODS */
         /* ========================= */
 
-        private async void ToggleOnlineState()
+        private async Task ToggleOnlineStateAsync()
         {
             if (_mainViewModel != null)
             {

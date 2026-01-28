@@ -207,6 +207,12 @@ namespace SmartVoiceAgent.Ui.ViewModels
             
             // Set initial state
             IsHostRunning = _hostControl.IsRunning;
+            
+            // Recreate CoordinatorViewModel with host control if currently on Coordinator view
+            if (CurrentViewModel is CoordinatorViewModel)
+            {
+                CurrentViewModel = new CoordinatorViewModel(_hostControl, this);
+            }
         }
 
         /// <summary>
