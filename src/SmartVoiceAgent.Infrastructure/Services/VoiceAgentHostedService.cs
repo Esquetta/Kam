@@ -1,86 +1,120 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Infrastructure.Services;
 
-namespace SmartVoiceAgent.Infrastructure.Services;
-
-public class VoiceAgentHostedService : BackgroundService
+namespace SmartVoiceAgent.Infrastructure.Services
 {
-    private readonly IAgentOrchestrator _orchestrator;
-    private readonly IAgentRegistry _registry;
-    private readonly IAgentFactory _factory;
-    private readonly ILogger<VoiceAgentHostedService> _logger;
-    private readonly ICommandInputService _commandInput;
-
-    public VoiceAgentHostedService(
-        IAgentOrchestrator orchestrator,
-        IAgentRegistry registry,
-        IAgentFactory factory,
-        ILogger<VoiceAgentHostedService> logger,
-        ICommandInputService commandInput)
+    public class VoiceAgentHostedService : BackgroundService
     {
-        _orchestrator = orchestrator;
-        _registry = registry;
-        _factory = factory;
-        _logger = logger;
-        _commandInput = commandInput;
-    }
+        private readonly IAgentOrchestrator _orchestrator;
+        private readonly IAgentRegistry _registry;
+        private readonly IAgentFactory _factory;
+        private readonly ILogger<VoiceAgentHostedService> _logger;
+        private readonly ICommandInputService _commandInput;
+        private readonly VoiceAgentHostControlService _hostControl;
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        _logger.LogInformation("🚀 Voice Agent Service starting...");
-
-        try
+        public VoiceAgentHostedService(
+            IAgentOrchestrator orchestrator,
+            IAgentRegistry registry,
+            IAgentFactory factory,
+            ILogger<VoiceAgentHostedService> logger,
+            ICommandInputService commandInput,
+            VoiceAgentHostControlService hostControl)
         {
-            await InitializeAgentsAsync();
+            _orchestrator = orchestrator;
+            _registry = registry;
+            _factory = factory;
+            _logger = logger;
+            _commandInput = commandInput;
+            _hostControl = hostControl;
+        }
 
-            _logger.LogInformation("🎤 Ready for commands...");
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            _logger.LogInformation("🚀 Voice Agent Service starting...");
 
-            while (!stoppingToken.IsCancellationRequested)
+            try
             {
-                try
+                await InitializeAgentsAsync();
+
+                _logger.LogInformation("🎤 Ready for commands...");
+
+                while (!stoppingToken.IsCancellationRequested)
                 {
-                    // Read command from UI instead of Console
-                    var input = await _commandInput.ReadCommandAsync(stoppingToken);
-                    
-                    _logger.LogInformation("📝 Processing command: {Command}", input);
-                    
-                    var result = await _orchestrator.ExecuteAsync(input);
-                    
-                    _logger.LogInformation("✅ Result: {Result}", result);
-                    
-                    // Publish result back to UI
-                    _commandInput.PublishResult(input, result, true);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "❌ Error processing command");
-                    _commandInput.PublishResult("unknown", ex.Message, false);
-                    await Task.Delay(1000, stoppingToken);
+                    try
+                    {
+                        // Check if host control allows processing
+                        if (!_hostControl.ShouldProcess())
+                        {
+                            // Wait a bit and check again
+                            await Task.Delay(500, stoppingToken);
+                            continue;
+                        }
+
+                        // Create a linked token that combines the service stopping token
+                        // with the host control token
+                        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                            stoppingToken, 
+                            _hostControl.GetCancellationToken());
+
+                        // Read command from UI
+                        var input = await _commandInput.ReadCommandAsync(linkedCts.Token);
+                        
+                        // Check again if we should process (in case state changed while waiting)
+                        if (!_hostControl.ShouldProcess())
+                        {
+                            _logger.LogInformation("⏸️ Voice Agent Host is paused, skipping command");
+                            continue;
+                        }
+                        
+                        _logger.LogInformation("📝 Processing command: {Command}", input);
+                        
+                        var result = await _orchestrator.ExecuteAsync(input);
+                        
+                        _logger.LogInformation("✅ Result: {Result}", result);
+                        
+                        // Publish result back to UI
+                        _commandInput.PublishResult(input, result, true);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Check if the host control was stopped (not the whole service)
+                        if (!_hostControl.ShouldProcess() && !stoppingToken.IsCancellationRequested)
+                        {
+                            _logger.LogInformation("⏸️ Voice Agent Host paused");
+                            continue; // Continue loop to wait for restart
+                        }
+                        
+                        // Otherwise it's a full shutdown
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "❌ Error processing command");
+                        _commandInput.PublishResult("unknown", ex.Message, false);
+                        await Task.Delay(1000, stoppingToken);
+                    }
                 }
             }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "💥 Fatal error");
+                throw;
+            }
         }
-        catch (Exception ex)
+
+        private async Task InitializeAgentsAsync()
         {
-            _logger.LogCritical(ex, "💥 Fatal error");
-            throw;
+            _logger.LogInformation("⚙️ Initializing agents...");
+
+            _registry.RegisterAgent("Coordinator", _factory.CreateCoordinatorAgent());
+            _registry.RegisterAgent("SystemAgent", _factory.CreateSystemAgent());
+            _registry.RegisterAgent("TaskAgent", await _factory.CreateTaskAgentAsync());
+            _registry.RegisterAgent("ResearchAgent", _factory.CreateResearchAgent());
+
+            _logger.LogInformation("✅ All agents ready");
+            await Task.CompletedTask;
         }
-    }
-
-    private async Task InitializeAgentsAsync()
-    {
-        _logger.LogInformation("⚙️ Initializing agents...");
-
-        _registry.RegisterAgent("Coordinator", _factory.CreateCoordinatorAgent());
-        _registry.RegisterAgent("SystemAgent", _factory.CreateSystemAgent());
-        _registry.RegisterAgent("TaskAgent", await _factory.CreateTaskAgentAsync());
-        _registry.RegisterAgent("ResearchAgent", _factory.CreateResearchAgent());
-
-        _logger.LogInformation("✅ All agents ready");
-        await Task.CompletedTask;
     }
 }

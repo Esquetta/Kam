@@ -74,6 +74,10 @@ namespace SmartVoiceAgent.Ui
                 var commandInput = _host.Services.GetRequiredService<ICommandInputService>();
                 _mainViewModel.SetCommandInputService(commandInput);
 
+                // Connect VoiceAgent Host Control to ViewModel
+                var hostControl = _host.Services.GetRequiredService<IVoiceAgentHostControl>();
+                _mainViewModel.SetVoiceAgentHostControl(hostControl);
+
                 // Apply startup behavior settings
                 ApplyStartupBehavior(desktop, settingsService);
 

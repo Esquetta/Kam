@@ -20,6 +20,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private DispatcherTimer? _simulationTimer;
         private ICommandInputService? _commandInput;
         private CancellationTokenSource? _resultListenerCts;
+        private IVoiceAgentHostControl? _hostControl;
 
         /* ========================= */
         /* NAVIGATION */
@@ -38,6 +39,36 @@ namespace SmartVoiceAgent.Ui.ViewModels
             get => _activeView;
             private set => this.RaiseAndSetIfChanged(ref _activeView, value);
         }
+
+        /* ========================= */
+        /* SYSTEM STATUS (HEADER) */
+        /* ========================= */
+
+        private bool _isHostRunning = true;
+        public bool IsHostRunning
+        {
+            get => _isHostRunning;
+            private set
+            {
+                if (this.RaiseAndSetIfChanged(ref _isHostRunning, value))
+                {
+                    this.RaisePropertyChanged(nameof(StatusText));
+                    this.RaisePropertyChanged(nameof(StatusColor));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Status text for header display - reflects VoiceAgent Host state
+        /// </summary>
+        public override string StatusText => IsHostRunning ? "SYSTEM ONLINE" : "SYSTEM OFFLINE";
+
+        /// <summary>
+        /// Status color for header display indicator
+        /// </summary>
+        public override IBrush StatusColor => IsHostRunning
+            ? Brush.Parse("#10B981") // Green
+            : Brush.Parse("#EF4444"); // Red
 
         /* ========================= */
         /* COMMANDS */
@@ -122,8 +153,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public MainWindowViewModel()
         {
-            
-
             // Commands
             NavigateToCoordinatorCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Coordinator));
             NavigateToPluginsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Plugins));
@@ -131,7 +160,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ToggleThemeCommand = ReactiveCommand.Create(ToggleTheme);
             SubmitCommand = ReactiveCommand.Create(SubmitCommandInput);
 
-           
             Dispatcher.UIThread.Post(() =>
             {
                 // Initialize theme
@@ -148,6 +176,54 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 AddLog("KERNEL_INITIALIZED... v3.5");
                 AddLog("NEURAL_LINK_STABLE");
             }, DispatcherPriority.Background);
+        }
+
+        /* ========================= */
+        /* HOST CONTROL */
+        /* ========================= */
+
+        /// <summary>
+        /// Sets the VoiceAgent host control service
+        /// </summary>
+        public void SetVoiceAgentHostControl(IVoiceAgentHostControl hostControl)
+        {
+            _hostControl = hostControl;
+            
+            // Subscribe to state changes
+            _hostControl.StateChanged += (sender, isRunning) =>
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    IsHostRunning = isRunning;
+                    AddLog(isRunning ? "🟢 VoiceAgent Host started" : "🔴 VoiceAgent Host stopped");
+                    
+                    // Also update the CoordinatorViewModel if it's active
+                    if (CurrentViewModel is CoordinatorViewModel coordinator)
+                    {
+                        coordinator.SyncWithHostState(isRunning);
+                    }
+                });
+            };
+            
+            // Set initial state
+            IsHostRunning = _hostControl.IsRunning;
+        }
+
+        /// <summary>
+        /// Toggles the VoiceAgent Host on/off
+        /// </summary>
+        public async Task ToggleHostAsync()
+        {
+            if (_hostControl == null) return;
+
+            if (_hostControl.IsRunning)
+            {
+                await _hostControl.StopAsync();
+            }
+            else
+            {
+                await _hostControl.StartAsync();
+            }
         }
 
         /* ========================= */
@@ -168,11 +244,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             CurrentViewModel?.OnNavigatedFrom();
             ActiveView = view;
-            
 
             CurrentViewModel = view switch
             {
-                NavView.Coordinator => new CoordinatorViewModel(),
+                NavView.Coordinator => new CoordinatorViewModel(_hostControl, this),
                 NavView.Plugins => new PluginsViewModel(),
                 NavView.Settings => new SettingsViewModel(this),
                 _ => null

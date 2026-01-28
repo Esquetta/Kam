@@ -1,11 +1,17 @@
 ﻿using Avalonia.Media;
 using ReactiveUI;
+using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Ui.ViewModels;
+using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 {
     public class CoordinatorViewModel : ViewModelBase
     {
+        private readonly IVoiceAgentHostControl? _hostControl;
+        private readonly MainWindowViewModel? _mainViewModel;
+
         /* ========================= */
         /* ONLINE/OFFLINE STATE */
         /* ========================= */
@@ -18,7 +24,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 if (this.RaiseAndSetIfChanged(ref _isOnline, value))
                 {
-                    // Update all dependent properties when state changes
+                    // Update dependent properties when state changes
                     this.RaisePropertyChanged(nameof(StatusText));
                     this.RaisePropertyChanged(nameof(StatusColor));
                     this.RaisePropertyChanged(nameof(OrbColor));
@@ -93,17 +99,42 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             ToggleOnlineStateCommand = ReactiveCommand.Create(ToggleOnlineState);
         }
 
+        public CoordinatorViewModel(IVoiceAgentHostControl? hostControl, MainWindowViewModel? mainViewModel) : this()
+        {
+            _hostControl = hostControl;
+            _mainViewModel = mainViewModel;
+            
+            // Sync with host state
+            if (_hostControl != null)
+            {
+                IsOnline = _hostControl.IsRunning;
+            }
+        }
+
         /* ========================= */
         /* METHODS */
         /* ========================= */
 
-        private void ToggleOnlineState()
+        private async void ToggleOnlineState()
         {
-            IsOnline = !IsOnline;
-            
-            // Log the state change (this would typically be done via a service)
-            var message = IsOnline ? "VoiceAgent Host started" : "VoiceAgent Host shut down";
-            System.Diagnostics.Debug.WriteLine($"[Coordinator] {message}");
+            if (_mainViewModel != null)
+            {
+                // Use the main view model to toggle the host
+                await _mainViewModel.ToggleHostAsync();
+            }
+            else
+            {
+                // Fallback: just toggle local state if no host control
+                IsOnline = !IsOnline;
+            }
+        }
+
+        /// <summary>
+        /// Syncs the view model state with the host state (called from MainWindowViewModel)
+        /// </summary>
+        public void SyncWithHostState(bool isHostRunning)
+        {
+            IsOnline = isHostRunning;
         }
 
         public override void OnNavigatedTo()
