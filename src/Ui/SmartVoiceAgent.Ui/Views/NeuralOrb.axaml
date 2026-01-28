@@ -85,8 +85,14 @@
         <Style Selector="ToggleButton#OrbButton:checked">
             <Setter Property="Opacity" Value="1"/>
         </Style>
+        <Style Selector="ToggleButton#OrbButton:checked /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
         <Style Selector="ToggleButton#OrbButton:unchecked">
             <Setter Property="Opacity" Value="0.7"/>
+        </Style>
+        <Style Selector="ToggleButton#OrbButton:unchecked /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
         </Style>
     </UserControl.Styles>
 

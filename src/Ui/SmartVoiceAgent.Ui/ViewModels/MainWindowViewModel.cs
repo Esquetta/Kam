@@ -45,30 +45,68 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /* ========================= */
 
         private bool _isHostRunning = true;
+        private string _statusText = "SYSTEM ONLINE";
+        private IBrush _statusColor = Brush.Parse("#10B981");
+
         public bool IsHostRunning
         {
             get => _isHostRunning;
             private set
             {
-                if (this.RaiseAndSetIfChanged(ref _isHostRunning, value))
-                {
-                    this.RaisePropertyChanged(nameof(StatusText));
-                    this.RaisePropertyChanged(nameof(StatusColor));
-                }
+                _isHostRunning = value;
+                UpdateStatusProperties();
             }
         }
 
         /// <summary>
         /// Status text for header display - reflects VoiceAgent Host state
         /// </summary>
-        public override string StatusText => IsHostRunning ? "SYSTEM ONLINE" : "SYSTEM OFFLINE";
+        public override string StatusText
+        {
+            get => _statusText;
+            protected set => this.RaiseAndSetIfChanged(ref _statusText, value);
+        }
 
         /// <summary>
         /// Status color for header display indicator
         /// </summary>
-        public override IBrush StatusColor => IsHostRunning
-            ? Brush.Parse("#10B981") // Green
-            : Brush.Parse("#EF4444"); // Red
+        public override IBrush StatusColor
+        {
+            get => _statusColor;
+            protected set => this.RaiseAndSetIfChanged(ref _statusColor, value);
+        }
+
+        private void UpdateStatusProperties()
+        {
+            // Set the backing fields directly and then raise property changed
+            var newText = IsHostRunning ? "SYSTEM ONLINE" : "SYSTEM OFFLINE";
+            var newColor = IsHostRunning ? Brush.Parse("#10B981") : Brush.Parse("#EF4444");
+            
+            // Only raise if values actually changed
+            if (_statusText != newText)
+            {
+                _statusText = newText;
+                this.RaisePropertyChanged(nameof(StatusText));
+            }
+            
+            if (_statusColor?.ToString() != newColor?.ToString())
+            {
+                _statusColor = newColor;
+                this.RaisePropertyChanged(nameof(StatusColor));
+            }
+            
+            this.RaisePropertyChanged(nameof(IsHostRunning));
+            
+            // Force UI refresh for header elements
+            OnPropertyChanged(nameof(StatusText));
+            OnPropertyChanged(nameof(StatusColor));
+        }
+        
+        // Helper method to trigger property changes using ReactiveUI's mechanism
+        private void OnPropertyChanged(string propertyName)
+        {
+            ((ReactiveObject)this).RaisePropertyChanged(propertyName);
+        }
 
         /* ========================= */
         /* COMMANDS */
@@ -76,6 +114,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public ICommand NavigateToCoordinatorCommand { get; }
         public ICommand NavigateToPluginsCommand { get; }
+        public ICommand NavigateToIntegrationsCommand { get; }
         public ICommand NavigateToSettingsCommand { get; }
         public ICommand ToggleThemeCommand { get; }
 
@@ -156,6 +195,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             // Commands
             NavigateToCoordinatorCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Coordinator));
             NavigateToPluginsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Plugins));
+            NavigateToIntegrationsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Integrations));
             NavigateToSettingsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Settings));
             ToggleThemeCommand = ReactiveCommand.Create(ToggleTheme);
             SubmitCommand = ReactiveCommand.Create(SubmitCommandInput);
@@ -204,9 +244,12 @@ namespace SmartVoiceAgent.Ui.ViewModels
         
         private void OnHostStateChanged(object? sender, bool isRunning)
         {
-            Dispatcher.UIThread.Post(() =>
+            // Use InvokeAsync with Render priority to ensure immediate UI update
+            Dispatcher.UIThread.InvokeAsync(() =>
             {
+                // Use the property setter which will update all dependent properties
                 IsHostRunning = isRunning;
+                
                 AddLog(isRunning ? "🟢 VoiceAgent Host started" : "🔴 VoiceAgent Host stopped");
                 
                 // Also update the CoordinatorViewModel if it's active
@@ -214,7 +257,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 {
                     coordinator.SyncWithHostState(isRunning);
                 }
-            });
+            }, DispatcherPriority.Render);
         }
 
         /// <summary>
@@ -257,6 +300,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 NavView.Coordinator => new CoordinatorViewModel(_hostControl, this),
                 NavView.Plugins => new PluginsViewModel(),
+                NavView.Integrations => new IntegrationsViewModel(),
                 NavView.Settings => new SettingsViewModel(this),
                 _ => null
             };

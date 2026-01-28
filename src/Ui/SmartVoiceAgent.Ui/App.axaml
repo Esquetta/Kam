@@ -17,8 +17,10 @@ RequestedThemeVariant="Dark">
             <converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter" />
             <converters:BoolToBoxShadowConverter x:Key="BoolToBoxShadowConverter" />
             <converters:BoolToStatusTextConverter x:Key="BoolToStatusTextConverter" />
+            <converters:BoolToStatusBrushConverter x:Key="BoolToStatusBrushConverter" />
             <converters:BrushToGlowBrushConverter x:Key="BrushToGlowBrushConverter" />
             <converters:BooleanNegationConverter x:Key="BooleanNegationConverter" />
+            <converters:StringIsNotNullOrEmptyConverter x:Key="StringIsNotNullOrEmptyConverter" />
 		</ResourceDictionary>
 	</Application.Resources>
 

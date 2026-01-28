@@ -24,15 +24,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 if (this.RaiseAndSetIfChanged(ref _isOnline, value))
                 {
-                    // Update dependent properties when state changes
-                    this.RaisePropertyChanged(nameof(StatusText));
-                    this.RaisePropertyChanged(nameof(StatusColor));
-                    this.RaisePropertyChanged(nameof(OrbColor));
-                    this.RaisePropertyChanged(nameof(OrbGlowColor));
-                    this.RaisePropertyChanged(nameof(LabelColor));
-                    this.RaisePropertyChanged(nameof(ResearchStatusColor));
-                    this.RaisePropertyChanged(nameof(AnalyzerStatusColor));
-                    this.RaisePropertyChanged(nameof(TasksStatusColor));
+                    // Update all dependent properties
+                    UpdateStatusProperties();
                 }
             }
         }
@@ -41,31 +34,52 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /* STATUS DISPLAY (OVERRIDE) */
         /* ========================= */
 
-        public override string StatusText => IsOnline ? "SYSTEM ONLINE" : "SYSTEM OFFLINE";
+        private string _statusText = "SYSTEM ONLINE";
+        private IBrush _statusColor = Brush.Parse("#10B981");
+        private IBrush _orbColor = Brush.Parse("#06B6D4");
+        private IBrush _orbGlowColor = Brush.Parse("#4006B6D4");
+        private IBrush _labelColor;
+        private IBrush _researchStatusColor = Brush.Parse("#A855F7");
+        private IBrush _analyzerStatusColor = Brush.Parse("#10B981");
+        private IBrush _tasksStatusColor = Brush.Parse("#F97316");
 
-        public override IBrush StatusColor => IsOnline 
-            ? Brush.Parse("#10B981") // AccentGreenBrush
-            : Brush.Parse("#EF4444"); // Red for offline
+        public override string StatusText
+        {
+            get => _statusText;
+            protected set => this.RaiseAndSetIfChanged(ref _statusText, value);
+        }
+
+        public override IBrush StatusColor
+        {
+            get => _statusColor;
+            protected set => this.RaiseAndSetIfChanged(ref _statusColor, value);
+        }
 
         /* ========================= */
         /* NEURAL ORB COLORS */
         /* ========================= */
 
-        public IBrush OrbColor => IsOnline
-            ? Brush.Parse("#06B6D4") // Cyan when online
-            : Brush.Parse("#EF4444"); // Red when offline
+        public IBrush OrbColor
+        {
+            get => _orbColor;
+            private set => this.RaiseAndSetIfChanged(ref _orbColor, value);
+        }
 
-        public IBrush OrbGlowColor => IsOnline
-            ? Brush.Parse("#4006B6D4") // Cyan glow
-            : Brush.Parse("#40EF4444"); // Red glow
+        public IBrush OrbGlowColor
+        {
+            get => _orbGlowColor;
+            private set => this.RaiseAndSetIfChanged(ref _orbGlowColor, value);
+        }
 
         /* ========================= */
         /* LABEL COLORS */
         /* ========================= */
 
-        public IBrush LabelColor => IsOnline
-            ? GetThemeTextBrush() // Theme-aware text color
-            : Brush.Parse("#EF4444"); // Red when offline
+        public IBrush LabelColor
+        {
+            get => _labelColor ?? GetThemeTextBrush();
+            private set => this.RaiseAndSetIfChanged(ref _labelColor, value);
+        }
         
         /// <summary>
         /// Gets the appropriate text color based on current theme (dark/light)
@@ -84,17 +98,38 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /* CARD STATUS COLORS */
         /* ========================= */
 
-        public IBrush ResearchStatusColor => IsOnline
-            ? Brush.Parse("#A855F7") // AccentPurpleBrush
-            : Brush.Parse("#EF4444"); // Red when offline
+        public IBrush ResearchStatusColor
+        {
+            get => _researchStatusColor;
+            private set => this.RaiseAndSetIfChanged(ref _researchStatusColor, value);
+        }
 
-        public IBrush AnalyzerStatusColor => IsOnline
-            ? Brush.Parse("#10B981") // AccentGreenBrush
-            : Brush.Parse("#EF4444"); // Red when offline
+        public IBrush AnalyzerStatusColor
+        {
+            get => _analyzerStatusColor;
+            private set => this.RaiseAndSetIfChanged(ref _analyzerStatusColor, value);
+        }
 
-        public IBrush TasksStatusColor => IsOnline
-            ? Brush.Parse("#F97316") // AccentOrangeBrush
-            : Brush.Parse("#EF4444"); // Red when offline
+        public IBrush TasksStatusColor
+        {
+            get => _tasksStatusColor;
+            private set => this.RaiseAndSetIfChanged(ref _tasksStatusColor, value);
+        }
+
+        /// <summary>
+        /// Updates all status-dependent properties based on IsOnline value
+        /// </summary>
+        private void UpdateStatusProperties()
+        {
+            StatusText = IsOnline ? "SYSTEM ONLINE" : "SYSTEM OFFLINE";
+            StatusColor = IsOnline ? Brush.Parse("#10B981") : Brush.Parse("#EF4444");
+            OrbColor = IsOnline ? Brush.Parse("#06B6D4") : Brush.Parse("#EF4444");
+            OrbGlowColor = IsOnline ? Brush.Parse("#4006B6D4") : Brush.Parse("#40EF4444");
+            LabelColor = IsOnline ? GetThemeTextBrush() : Brush.Parse("#EF4444");
+            ResearchStatusColor = IsOnline ? Brush.Parse("#A855F7") : Brush.Parse("#EF4444");
+            AnalyzerStatusColor = IsOnline ? Brush.Parse("#10B981") : Brush.Parse("#EF4444");
+            TasksStatusColor = IsOnline ? Brush.Parse("#F97316") : Brush.Parse("#EF4444");
+        }
 
         /* ========================= */
         /* COMMANDS */
@@ -111,6 +146,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             Title = "COORDINATOR";
             // Use CreateFromTask for async commands
             ToggleOnlineStateCommand = ReactiveCommand.CreateFromTask(ToggleOnlineStateAsync);
+            
+            // Initialize status properties
+            UpdateStatusProperties();
             
             // Subscribe to theme changes to update LabelColor (always subscribe, regardless of constructor)
             var app = global::Avalonia.Application.Current;
@@ -161,7 +199,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /// </summary>
         public void SyncWithHostState(bool isHostRunning)
         {
-            IsOnline = isHostRunning;
+            // Always update and notify, even if value is the same
+            // This ensures UI refreshes immediately
+            _isOnline = isHostRunning;
+            this.RaisePropertyChanged(nameof(IsOnline));
+            UpdateStatusProperties();
         }
 
         public override void OnNavigatedTo()

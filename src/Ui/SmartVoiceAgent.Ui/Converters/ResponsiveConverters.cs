@@ -25,6 +25,53 @@ public class ResponsiveColumnConverter : IValueConverter
 }
 
 /// <summary>
+/// Converts bool to a brush from resources based on parameter format "trueResource|falseResource"
+/// </summary>
+public class BoolToStatusBrushConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var isTrue = value is bool b && b;
+        
+        if (parameter is string param && param.Contains('|'))
+        {
+            var parts = param.Split('|');
+            var resourceKey = isTrue ? parts[0] : parts[1];
+            
+            // Try to get brush from application resources
+            if (global::Avalonia.Application.Current?.Resources.TryGetValue(resourceKey, out var resource) == true 
+                && resource is IBrush brush)
+            {
+                return brush;
+            }
+        }
+        
+        return isTrue ? Brushes.Green : Brushes.Red;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts string to bool - returns true if string is not null or empty
+/// </summary>
+public class StringIsNotNullOrEmptyConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        return !string.IsNullOrWhiteSpace(value?.ToString());
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
 /// Returns a value based on whether the window is in compact mode
 /// </summary>
 public class CompactModeConverter : IValueConverter

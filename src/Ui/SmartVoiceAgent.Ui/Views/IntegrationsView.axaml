@@ -1,0 +1,254 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SmartVoiceAgent.Ui.ViewModels.PageModels"
+             xmlns:services="clr-namespace:SmartVoiceAgent.Ui.Services"
+             xmlns:converters="clr-namespace:SmartVoiceAgent.Ui.Converters"
+             x:Class="SmartVoiceAgent.Ui.Views.IntegrationsView"
+             x:DataType="vm:IntegrationsViewModel">
+
+    <UserControl.Resources>
+        <services:WindowStateManager x:Key="WindowStateManager" />
+        <converters:ResponsiveFontSizeConverter x:Key="ResponsiveFontSizeConverter" />
+    </UserControl.Resources>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <Grid RowDefinitions="Auto,*" Margin="20">
+            
+            <!-- Header Section -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,40">
+                <TextBlock Text="{Binding Title}"
+                           FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=48}"
+                           LetterSpacing="8"
+                           HorizontalAlignment="Left"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           FontWeight="Light"/>
+                <TextBlock Text="Manage external service integrations"
+                           FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=14}"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           Margin="0,8,0,0"/>
+            </StackPanel>
+
+            <!-- Integrations Grid -->
+            <Grid Grid.Row="1" RowDefinitions="Auto,Auto">
+                
+                <!-- Todoist Integration Card -->
+                <Border Grid.Row="0" Classes="IntegrationCard">
+                    <Grid RowDefinitions="Auto,Auto,Auto">
+                        <!-- Card Header -->
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto" MinWidth="100"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" 
+                                    Width="48" 
+                                    Height="48" 
+                                    CornerRadius="12"
+                                    Background="{DynamicResource AccentCyanGlowBrush}"
+                                    BorderBrush="{DynamicResource AccentCyanDimBrush}"
+                                    BorderThickness="1">
+                                <Path Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"
+                                      Fill="{DynamicResource AccentCyanBrush}"
+                                      Width="24"
+                                      Height="24"
+                                      Stretch="Uniform"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
+                            </Border>
+                            
+                            <StackPanel Grid.Column="1" Margin="16,0,12,0" VerticalAlignment="Center">
+                                <TextBlock Text="Todoist"
+                                           FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=18}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="Task Management"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                            </StackPanel>
+                            
+                            <!-- Status Badge -->
+                            <Border Grid.Column="2" 
+                                    Background="{Binding IsTaskAgentEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenGlowBrush|AccentErrorGlowBrush'}"
+                                    BorderBrush="{Binding IsTaskAgentEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenDimBrush|AccentErrorDimBrush'}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="8,4"
+                                    Height="28"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Right">
+                                <TextBlock Text="{Binding IntegrationStatusText}"
+                                           FontSize="11"
+                                           FontWeight="Medium"
+                                           Foreground="{Binding IsTaskAgentEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|AccentErrorBrush'}"
+                                           LetterSpacing="1"/>
+                            </Border>
+                        </Grid>
+                        
+                        <!-- Description -->
+                        <TextBlock Grid.Row="1" 
+                                   Text="{Binding TodoistDescription}"
+                                   FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=13}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,16,0,0"/>
+                        
+                        <!-- API Key Input Section -->
+                        <StackPanel Grid.Row="2" Margin="0,24,0,0" Spacing="8">
+                            <TextBlock Text="API Key"
+                                       FontSize="12"
+                                       FontWeight="Medium"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       LetterSpacing="1"/>
+                            
+                            <!-- Responsive Input Layout -->
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBox Grid.Column="0"
+                                         x:Name="ApiKeyTextBox"
+                                         Text="{Binding TodoistApiKey, Mode=TwoWay}"
+                                         Watermark="{Binding ApiKeyPlaceholder}"
+                                         PasswordChar="●"
+                                         Classes="IntegrationInput"
+                                         Height="40"
+                                         VerticalContentAlignment="Center"
+                                         Margin="0,0,12,0"/>
+                                
+                                <!-- Buttons Stack -->
+                                <StackPanel Grid.Column="1" 
+                                            Orientation="Horizontal" 
+                                            Spacing="8"
+                                            VerticalAlignment="Center">
+                                    <!-- Save Button -->
+                                    <Button Command="{Binding SaveApiKeyCommand}"
+                                            Classes="IntegrationButton"
+                                            IsEnabled="{Binding TodoistApiKey, Converter={StaticResource StringIsNotNullOrEmptyConverter}}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Path Data="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"
+                                                  Fill="{DynamicResource TextPrimaryBrush}"
+                                                  Width="16"
+                                                  Height="16"
+                                                  Stretch="Uniform"/>
+                                            <TextBlock Text="Save"/>
+                                        </StackPanel>
+                                    </Button>
+                                    
+                                    <!-- Clear Button -->
+                                    <Button Command="{Binding ClearApiKeyCommand}"
+                                            Classes="IntegrationButton Secondary"
+                                            IsEnabled="{Binding IsTaskAgentEnabled}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Path Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+                                                  Fill="{DynamicResource TextMutedBrush}"
+                                                  Width="16"
+                                                  Height="16"
+                                                  Stretch="Uniform"/>
+                                            <TextBlock Text="Clear"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                
+                <!-- Info Card -->
+                <Border Grid.Row="1" Classes="InfoCard" Margin="0,16,0,0">
+                    <Grid ColumnDefinitions="Auto,*">
+                        <Path Grid.Column="0"
+                              Data="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"
+                              Fill="{DynamicResource AccentCyanBrush}"
+                              Width="20"
+                              Height="20"
+                              Stretch="Uniform"
+                              Margin="0,0,12,0"
+                              VerticalAlignment="Top"/>
+                        <TextBlock Grid.Column="1"
+                                   Text="Integrations allow the voice agent to interact with external services. Without API keys, the corresponding agents will not be created to keep the system modular."
+                                   FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=13}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
+    
+    <UserControl.Styles>
+        <!-- Integration Card Style -->
+        <Style Selector="Border.IntegrationCard">
+            <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="24"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.3"/>
+                    <BrushTransition Property="Background" Duration="0:0:0.3"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        
+        <Style Selector="Border.IntegrationCard:pointerover">
+            <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentCyanDimBrush}"/>
+        </Style>
+        
+        <!-- Integration Input Style -->
+        <Style Selector="TextBox.IntegrationInput">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource AccentCyanBrush}"/>
+            <Setter Property="SelectionBrush" Value="{DynamicResource AccentCyanGlowBrush}"/>
+            <Setter Property="SelectionForegroundBrush" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        
+        <Style Selector="TextBox.IntegrationInput:focus /template/ Border#PART_BorderElement">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentCyanBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+        </Style>
+        
+        <!-- Integration Button Style -->
+        <Style Selector="Button.IntegrationButton">
+            <Setter Property="Background" Value="{DynamicResource AccentCyanBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        
+        <Style Selector="Button.IntegrationButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentCyanDimBrush}"/>
+        </Style>
+        
+        <Style Selector="Button.IntegrationButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Opacity" Value="0.5"/>
+        </Style>
+        
+        <!-- Secondary Button Style -->
+        <Style Selector="Button.IntegrationButton.Secondary">
+            <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        
+        <Style Selector="Button.IntegrationButton.Secondary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}"/>
+        </Style>
+        
+        <!-- Info Card Style -->
+        <Style Selector="Border.InfoCard">
+            <Setter Property="Background" Value="{DynamicResource AccentCyanGlowBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentCyanDimBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="16"/>
+        </Style>
+    </UserControl.Styles>
+</UserControl>

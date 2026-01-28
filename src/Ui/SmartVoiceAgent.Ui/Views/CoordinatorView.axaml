@@ -57,7 +57,7 @@
                 <Viewbox Width="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveScaleConverter}, ConverterParameter=260}" 
                          Height="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveScaleConverter}, ConverterParameter=260}">
                     <local:NeuralOrb 
-                        IsActive="{Binding IsOnline, Mode=TwoWay}"
+                        IsActive="{Binding IsOnline, Mode=OneWay}"
                         ToggleCommand="{Binding ToggleOnlineStateCommand}"
                         OrbColor="{Binding OrbColor, Mode=OneWay}"
                         RingOpacity="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.3|0.1}"

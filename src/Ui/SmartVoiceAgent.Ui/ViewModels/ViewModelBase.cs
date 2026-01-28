@@ -13,15 +13,26 @@ namespace SmartVoiceAgent.Ui.ViewModels
             protected set => this.RaiseAndSetIfChanged(ref _title, value);
         }
 
+        private string _statusText = "SYSTEM ONLINE";
+        private IBrush _statusColor = Brush.Parse("#10B981");
+
         /// <summary>
         /// Status text for header display (e.g., "SYSTEM ONLINE", "SYSTEM OFFLINE")
         /// </summary>
-        public virtual string StatusText => "SYSTEM ONLINE";
+        public virtual string StatusText
+        {
+            get => _statusText;
+            protected set => this.RaiseAndSetIfChanged(ref _statusText, value);
+        }
 
         /// <summary>
         /// Status color for header display indicator
         /// </summary>
-        public virtual IBrush StatusColor => Brush.Parse("#10B981"); // Default green
+        public virtual IBrush StatusColor
+        {
+            get => _statusColor;
+            protected set => this.RaiseAndSetIfChanged(ref _statusColor, value);
+        }
 
         public virtual void OnNavigatedTo() { }
         public virtual void OnNavigatedFrom() { }

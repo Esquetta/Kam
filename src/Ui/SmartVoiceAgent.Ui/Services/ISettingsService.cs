@@ -34,6 +34,11 @@ public interface ISettingsService
     int StartupBehavior { get; set; }
 
     /// <summary>
+    /// Gets or sets the Todoist API key for task management integration
+    /// </summary>
+    string TodoistApiKey { get; set; }
+
+    /// <summary>
     /// Saves all settings to persistent storage
     /// </summary>
     void Save();

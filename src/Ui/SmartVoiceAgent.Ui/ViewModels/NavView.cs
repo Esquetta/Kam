@@ -5,6 +5,7 @@
         Coordinator,
         Network,
         Plugins,
+        Integrations,
         Settings
     }
 }

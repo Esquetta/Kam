@@ -53,6 +53,12 @@ public class JsonSettingsService : ISettingsService, IDisposable
         set => SetProperty(nameof(StartupBehavior), value, v => _data.StartupBehavior = v);
     }
 
+    public string TodoistApiKey
+    {
+        get => _data.TodoistApiKey ?? string.Empty;
+        set => SetProperty(nameof(TodoistApiKey), value, v => _data.TodoistApiKey = v);
+    }
+
     #endregion
 
     public void Save()
@@ -134,6 +140,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
             nameof(StartMinimized) => (T?)(object?)_data.StartMinimized,
             nameof(ShowOnStartup) => (T?)(object?)_data.ShowOnStartup,
             nameof(StartupBehavior) => (T?)(object?)_data.StartupBehavior,
+            nameof(TodoistApiKey) => (T?)(object?)_data.TodoistApiKey,
             _ => default
         };
     }
@@ -189,6 +196,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
         public bool StartMinimized { get; set; }
         public bool ShowOnStartup { get; set; } = true;
         public int StartupBehavior { get; set; }
+        public string? TodoistApiKey { get; set; }
         public DateTime LastModified { get; set; } = DateTime.UtcNow;
     }
 }
