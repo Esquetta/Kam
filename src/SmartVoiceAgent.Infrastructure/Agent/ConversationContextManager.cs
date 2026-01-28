@@ -1,22 +1,47 @@
-﻿using SmartVoiceAgent.Core.Models;
+using SmartVoiceAgent.Core.Models;
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Conversation context manager with memory and state tracking
+/// Includes automatic cleanup to prevent memory leaks
 /// </summary>
-public class ConversationContextManager
+public class ConversationContextManager : IDisposable
 {
     private readonly ConcurrentDictionary<string, ConversationContext> _contexts = new();
     private readonly ConcurrentDictionary<string, ApplicationState> _applicationStates = new();
     private readonly ConcurrentDictionary<string, UserPreference> _userPreferences = new();
     private readonly Queue<ConversationHistory> _conversationHistory = new();
     private readonly object _historyLock = new();
+    private readonly Timer? _cleanupTimer;
+    private readonly ILogger<ConversationContextManager>? _logger;
+    private bool _disposed;
+
+    // Configuration limits
+    private const int MaxHistoryItems = 100;
+    private const int MaxContextAgeHours = 24;
+    private const int MaxAppStateAgeHours = 12;
+    private const int CleanupIntervalMinutes = 30;
+
+    public ConversationContextManager(ILogger<ConversationContextManager>? logger = null)
+    {
+        _logger = logger;
+        
+        // Setup periodic cleanup
+        _cleanupTimer = new Timer(
+            _ => CleanupOldData(),
+            null,
+            TimeSpan.FromMinutes(CleanupIntervalMinutes),
+            TimeSpan.FromMinutes(CleanupIntervalMinutes));
+    }
 
     /// <summary>
     /// Starts a new conversation context
     /// </summary>
     public void StartConversation(string conversationId, string initialMessage)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
         var context = new ConversationContext
         {
             ConversationId = conversationId,
@@ -26,8 +51,7 @@ public class ConversationContextManager
         };
 
         _contexts.TryAdd(conversationId, context);
-
-        Console.WriteLine($"🔄 Context started for: {conversationId}");
+        _logger?.LogDebug("Context started for: {ConversationId}", conversationId);
     }
 
     /// <summary>
@@ -35,6 +59,8 @@ public class ConversationContextManager
     /// </summary>
     public string GetRelevantContext(string userInput)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
         var contextInfo = new List<string>();
 
         // Add application states
@@ -70,6 +96,8 @@ public class ConversationContextManager
     /// </summary>
     public void UpdateContext(string type, string input, string result)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
         lock (_historyLock)
         {
             _conversationHistory.Enqueue(new ConversationHistory
@@ -81,7 +109,7 @@ public class ConversationContextManager
             });
 
             // Keep only recent history
-            while (_conversationHistory.Count > 50)
+            while (_conversationHistory.Count > MaxHistoryItems)
             {
                 _conversationHistory.Dequeue();
             }
@@ -90,7 +118,7 @@ public class ConversationContextManager
         // Learn from user patterns
         LearnUserPreferences(input, result);
 
-        Console.WriteLine($"📝 Context updated: {type}");
+        _logger?.LogDebug("Context updated: {Type}", type);
     }
 
     /// <summary>
@@ -98,6 +126,7 @@ public class ConversationContextManager
     /// </summary>
     public bool IsApplicationOpen(string appName)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         return _applicationStates.TryGetValue(appName.ToLower(), out var state) && state.IsOpen;
     }
 
@@ -106,9 +135,16 @@ public class ConversationContextManager
     /// </summary>
     public void SetApplicationState(string appName, bool isOpen)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
         var key = appName.ToLower();
         _applicationStates.AddOrUpdate(key,
-            new ApplicationState { ApplicationName = appName, IsOpen = isOpen, LastUsed = DateTime.UtcNow },
+            new ApplicationState 
+            { 
+                ApplicationName = appName, 
+                IsOpen = isOpen, 
+                LastUsed = DateTime.UtcNow 
+            },
             (k, existing) =>
             {
                 existing.IsOpen = isOpen;
@@ -116,7 +152,7 @@ public class ConversationContextManager
                 return existing;
             });
 
-        Console.WriteLine($"📱 App state: {appName} = {(isOpen ? "Open" : "Closed")}");
+        _logger?.LogDebug("App state: {AppName} = {State}", appName, isOpen ? "Open" : "Closed");
     }
 
     /// <summary>
@@ -127,7 +163,77 @@ public class ConversationContextManager
         if (_contexts.TryRemove(conversationId, out var context))
         {
             context.EndTime = DateTime.UtcNow;
-            Console.WriteLine($"✅ Context ended for: {conversationId} (Duration: {context.Duration})");
+            _logger?.LogDebug("Context ended for: {ConversationId} (Duration: {Duration})", 
+                conversationId, context.Duration);
+        }
+    }
+
+    /// <summary>
+    /// Cleans up old data to prevent memory leaks
+    /// </summary>
+    public void CleanupOldData()
+    {
+        try
+        {
+            var now = DateTime.UtcNow;
+            var removedContexts = 0;
+            var removedAppStates = 0;
+            var removedPreferences = 0;
+
+            // Clean up old contexts
+            foreach (var key in _contexts.Keys)
+            {
+                if (_contexts.TryGetValue(key, out var context))
+                {
+                    var age = now - context.StartTime;
+                    if (age.TotalHours > MaxContextAgeHours || 
+                        (context.EndTime.HasValue && context.EndTime.Value < now.AddHours(-1)))
+                    {
+                        if (_contexts.TryRemove(key, out _))
+                            removedContexts++;
+                    }
+                }
+            }
+
+            // Clean up old application states
+            foreach (var key in _applicationStates.Keys)
+            {
+                if (_applicationStates.TryGetValue(key, out var state))
+                {
+                    var age = now - state.LastUsed;
+                    if (age.TotalHours > MaxAppStateAgeHours)
+                    {
+                        if (_applicationStates.TryRemove(key, out _))
+                            removedAppStates++;
+                    }
+                }
+            }
+
+            // Clean up old user preferences (keep even if old, they're small)
+            // But remove if older than 30 days
+            var preferenceCutoff = now.AddDays(-30);
+            foreach (var key in _userPreferences.Keys)
+            {
+                if (_userPreferences.TryGetValue(key, out var pref))
+                {
+                    if (pref.LastUpdated < preferenceCutoff)
+                    {
+                        if (_userPreferences.TryRemove(key, out _))
+                            removedPreferences++;
+                    }
+                }
+            }
+
+            if (removedContexts > 0 || removedAppStates > 0 || removedPreferences > 0)
+            {
+                _logger?.LogInformation(
+                    "Cleanup completed: {Contexts} contexts, {AppStates} app states, {Preferences} preferences removed",
+                    removedContexts, removedAppStates, removedPreferences);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error during cleanup");
         }
     }
 
@@ -174,6 +280,7 @@ public class ConversationContextManager
 
         return historyWords.Intersect(currentWords).Any();
     }
+
     /// <summary>
     /// Learns user preferences from interactions
     /// </summary>
@@ -237,7 +344,12 @@ public class ConversationContextManager
     private void UpdateUserPreference(string category, string value)
     {
         _userPreferences.AddOrUpdate(category,
-            new UserPreference { Category = category, Value = value, LastUpdated = DateTime.UtcNow },
+            new UserPreference 
+            { 
+                Category = category, 
+                Value = value, 
+                LastUpdated = DateTime.UtcNow 
+            },
             (k, existing) =>
             {
                 existing.Value = value;
@@ -245,7 +357,7 @@ public class ConversationContextManager
                 return existing;
             });
 
-        Console.WriteLine($"💡 Learned preference: {category} = {value}");
+        _logger?.LogDebug("Learned preference: {Category} = {Value}", category, value);
     }
 
     /// <summary>
@@ -260,5 +372,18 @@ public class ConversationContextManager
             ConversationHistorySize = _conversationHistory.Count,
             ActiveContexts = _contexts.Count
         };
+    }
+
+    /// <summary>
+    /// Disposes resources and stops cleanup timer
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        _cleanupTimer?.Dispose();
+        
+        _logger?.LogInformation("ConversationContextManager disposed");
     }
 }
