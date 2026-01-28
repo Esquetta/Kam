@@ -9,6 +9,7 @@ using SmartVoiceAgent.Application.DependencyInjection;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Infrastructure.DependencyInjection;
 using SmartVoiceAgent.Infrastructure.Extensions;
+using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.Services.Concrete;
 using SmartVoiceAgent.Ui.ViewModels;
 using SmartVoiceAgent.Ui.Views;
@@ -42,6 +43,9 @@ namespace SmartVoiceAgent.Ui
                 // Build the host with backend services
                 _host = BuildHost();
 
+                // Load startup settings
+                var settingsService = new JsonSettingsService();
+                
                 // Initialize ViewModel
                 _mainViewModel = new MainWindowViewModel();
                 desktop.MainWindow = new MainWindow
@@ -62,11 +66,15 @@ namespace SmartVoiceAgent.Ui
                 var commandInput = _host.Services.GetRequiredService<ICommandInputService>();
                 _mainViewModel.SetCommandInputService(commandInput);
 
+                // Apply startup behavior settings
+                ApplyStartupBehavior(desktop, settingsService);
+
                 // Start the host
                 _host.StartAsync();
 
                 desktop.ShutdownRequested += async (s, e) =>
                 {
+                    settingsService.Dispose();
                     _mainViewModel.Cleanup();
                     _trayIconService?.Dispose();
                     
@@ -79,6 +87,50 @@ namespace SmartVoiceAgent.Ui
             }
 
             base.OnFrameworkInitializationCompleted();
+        }
+
+        /// <summary>
+        /// Applies startup behavior settings (minimized, tray only, etc.)
+        /// </summary>
+        private void ApplyStartupBehavior(IClassicDesktopStyleApplicationLifetime desktop, ISettingsService settings)
+        {
+            if (desktop.MainWindow == null) return;
+
+            switch (settings.StartupBehavior)
+            {
+                case 1: // Minimized
+                    desktop.MainWindow.WindowState = Avalonia.Controls.WindowState.Minimized;
+                    desktop.MainWindow.Show();
+                    break;
+                    
+                case 2: // Tray only (hide window)
+                    desktop.MainWindow.Hide();
+                    break;
+                    
+                default: // Normal (0 or any other value)
+                    if (settings.ShowOnStartup)
+                    {
+                        desktop.MainWindow.Show();
+                        desktop.MainWindow.WindowState = Avalonia.Controls.WindowState.Normal;
+                        desktop.MainWindow.Activate();
+                    }
+                    else
+                    {
+                        desktop.MainWindow.Hide();
+                    }
+                    break;
+            }
+
+            // Also check for command line arguments that might indicate startup
+            var args = Environment.GetCommandLineArgs();
+            if (args.Contains("--minimized") || args.Contains("-m"))
+            {
+                desktop.MainWindow.WindowState = Avalonia.Controls.WindowState.Minimized;
+            }
+            else if (args.Contains("--tray") || args.Contains("-t"))
+            {
+                desktop.MainWindow.Hide();
+            }
         }
 
         private IHost BuildHost()

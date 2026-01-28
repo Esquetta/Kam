@@ -87,7 +87,7 @@
                         </StackPanel>
                         <!-- Toggle Switch -->
                         <ToggleSwitch Grid.Column="2"
-                                      IsChecked="True"
+                                      IsChecked="{Binding ShowOnStartup, Mode=TwoWay}"
                                       OnContent=""
                                       OffContent=""
                                       VerticalAlignment="Center"/>
