@@ -114,57 +114,103 @@ public class LogPanelWidthConverter : IValueConverter
 
 /// <summary>
 /// Scales a numeric value based on window width
+/// Usage: Binding with ConverterParameter=baseValue (e.g., 260)
 /// </summary>
 public class ResponsiveScaleConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is not double baseValue)
-            return value ?? 0;
+        // Parse the base value from ConverterParameter
+        if (!TryParseDouble(parameter, out var baseValue) || baseValue <= 0)
+            return 0;
 
         var manager = WindowStateManager.Instance;
+        double scale = 1.0;
         
         // Scale down for compact mode
         if (manager.IsCompact)
-            return baseValue * 0.7;
-        
+            scale = 0.7;
         // Slight scale down for medium
-        if (manager.IsMedium)
-            return baseValue * 0.85;
+        else if (manager.IsMedium)
+            scale = 0.85;
         
-        return baseValue;
+        var result = baseValue * scale;
+        return Math.Max(result, 1); // Minimum 1 to avoid 0 or negative
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         throw new NotImplementedException();
+    }
+
+    private static bool TryParseDouble(object? value, out double result)
+    {
+        result = 0;
+        if (value == null) return false;
+        
+        if (value is double d)
+        {
+            result = d;
+            return true;
+        }
+        
+        if (value is int i)
+        {
+            result = i;
+            return true;
+        }
+        
+        return double.TryParse(value.ToString(), out result);
     }
 }
 
 /// <summary>
 /// Returns a font size based on the current breakpoint
+/// Usage: Binding with ConverterParameter=baseFontSize (e.g., 56)
 /// </summary>
 public class ResponsiveFontSizeConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is not double baseSize)
-            return value ?? 12.0;
+        // Parse the base font size from ConverterParameter
+        if (!TryParseDouble(parameter, out var baseSize) || baseSize <= 0)
+            return 12.0; // Default fallback font size
 
         var manager = WindowStateManager.Instance;
+        double scale = 1.0;
         
         if (manager.IsCompact)
-            return Math.Max(baseSize * 0.75, 10); // Minimum 10pt
+            scale = 0.75;
+        else if (manager.IsMedium)
+            scale = 0.9;
         
-        if (manager.IsMedium)
-            return baseSize * 0.9;
-        
-        return baseSize;
+        var result = baseSize * scale;
+        return Math.Max(result, 10); // Minimum 10pt font size
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         throw new NotImplementedException();
+    }
+
+    private static bool TryParseDouble(object? value, out double result)
+    {
+        result = 0;
+        if (value == null) return false;
+        
+        if (value is double d)
+        {
+            result = d;
+            return true;
+        }
+        
+        if (value is int i)
+        {
+            result = i;
+            return true;
+        }
+        
+        return double.TryParse(value.ToString(), out result);
     }
 }
 

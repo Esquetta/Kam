@@ -12,11 +12,11 @@ namespace SmartVoiceAgent.Ui.Services;
 /// </summary>
 public class WindowStateManager : ReactiveObject
 {
-    private double _windowWidth;
-    private double _windowHeight;
+    private double _windowWidth = 1280; // Default to expanded
+    private double _windowHeight = 800;
     private bool _isCompact;
     private bool _isMedium;
-    private bool _isExpanded;
+    private bool _isExpanded = true; // Default to expanded
     private int _gridColumns = 3;
     private bool _isLogPanelVisible = true;
     private bool _reducedMotion;
