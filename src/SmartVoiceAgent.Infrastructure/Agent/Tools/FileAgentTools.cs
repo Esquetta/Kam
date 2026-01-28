@@ -1,5 +1,6 @@
 ﻿using AgentFrameworkToolkit.Tools;
 using Microsoft.Extensions.AI;
+using SmartVoiceAgent.Infrastructure.Security;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
@@ -55,6 +56,12 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             try
             {
                 Console.WriteLine($"FileAgent: Creating file {filePath} (openAfterCreation: {openAfterCreation})");
+
+                // Security: Validate path to prevent path traversal
+                if (!SecurityUtilities.IsSafeFilePath(filePath, _defaultWorkingDirectory))
+                {
+                    return "Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.";
+                }
 
                 if (File.Exists(filePath))
                 {

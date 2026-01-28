@@ -2,11 +2,12 @@
 using SmartVoiceAgent.Core.Dtos;
 using SmartVoiceAgent.Core.Enums;
 using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Infrastructure.Security;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Management;
+using System.Security;
 using System.Text.RegularExpressions;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace SmartVoiceAgent.Infrastructure.Services.Application
 {
@@ -90,15 +91,26 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
 
         public async Task OpenApplicationAsync(string appName)
         {
+            // Security: Validate application name to prevent command injection
+            if (!SecurityUtilities.IsSafeApplicationName(appName))
+            {
+                throw new ArgumentException("Invalid application name. Potentially dangerous characters detected.");
+            }
+
             var executablePath = await FindApplicationExecutableAsync(appName);
 
             if (!string.IsNullOrEmpty(executablePath))
             {
+                // Security: Validate the executable path
+                if (!SecurityUtilities.IsSafeFilePath(executablePath))
+                {
+                    throw new SecurityException("Invalid executable path detected.");
+                }
                 Process.Start(new ProcessStartInfo(executablePath) { UseShellExecute = true });
             }
             else
             {
-                // Son çare: orijinal isimle dene
+                // Last resort: try with the original name (already validated above)
                 try
                 {
                     Process.Start(new ProcessStartInfo(appName) { UseShellExecute = true });

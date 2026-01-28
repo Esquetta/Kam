@@ -360,16 +360,17 @@ SADECE JSON formatında yanıt ver:
             request.Headers.Add("HTTP-Referer", "https://esquetta.netlify.app/");
             request.Headers.Add("X-Title", "Smart Voice Agent");
 
-            _logger.Info($"OpenRouter'a gönderilen istek: {json}");
-            _logger.Info($"Authorization header: Bearer {_openRouterApiKey.Substring(0, 10)}...");
+            // Security: Never log API keys or sensitive headers
+            _logger.Info($"OpenRouter request prepared (content length: {json.Length})");
+            // Authorization header intentionally not logged
 
             var response = await _httpClient.SendAsync(request);
 
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.Error($"OpenRouter API hatası: {response.StatusCode} - {errorContent}");
-                _logger.Error($"Request Headers: {string.Join(", ", request.Headers.Select(h => $"{h.Key}: {string.Join(", ", h.Value)}"))}");
+                _logger.Error($"OpenRouter API error: {response.StatusCode} - {errorContent}");
+                // Security: Request headers not logged to avoid leaking sensitive data
                 throw new HttpRequestException($"OpenRouter API error: {response.StatusCode} - {errorContent}");
             }
 
