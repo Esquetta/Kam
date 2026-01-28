@@ -39,12 +39,13 @@ public class AgentBuilder : IAgentBuilder
     }
 
     /// <summary>
-    /// Synchronous tool loading - blocks until async initialization completes
-    /// Use this for tools that don't need async initialization or when you can't use async
+    /// Synchronous tool loading - Use WithToolsAsync instead to avoid blocking
+    /// This method blocks if InitializeAsync is found - can cause deadlocks in UI/ASP.NET contexts
     /// </summary>
+    [Obsolete("Use WithToolsAsync<TToolClass>() instead to avoid blocking. This method may cause deadlocks.")]
     public IAgentBuilder WithTools<TToolClass>() where TToolClass : class
     {
-        _logger?.LogDebug("Loading tools from {ToolClass}", typeof(TToolClass).Name);
+        _logger?.LogWarning("Using synchronous WithTools() - consider using WithToolsAsync() to avoid blocking");
 
         try
         {
@@ -59,13 +60,14 @@ public class AgentBuilder : IAgentBuilder
             if (initMethod != null &&
                 typeof(Task).IsAssignableFrom(initMethod.ReturnType))
             {
-                _logger?.LogDebug("Found InitializeAsync on {ToolClass}, calling it",
+                _logger?.LogDebug("Found InitializeAsync on {ToolClass}, calling it synchronously",
                     typeof(TToolClass).Name);
 
                 var task = (Task)initMethod.Invoke(toolInstance, null)!;
 
-                // Block until initialization completes
-                task.GetAwaiter().GetResult();
+                // WARNING: This blocks and can cause deadlocks
+                // Use Task.Run to run on thread pool to reduce deadlock risk
+                Task.Run(async () => await task).GetAwaiter().GetResult();
 
                 _logger?.LogDebug("InitializeAsync completed for {ToolClass}",
                     typeof(TToolClass).Name);

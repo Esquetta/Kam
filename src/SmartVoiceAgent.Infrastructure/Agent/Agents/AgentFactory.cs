@@ -60,7 +60,7 @@ Always:
             .Build();
     }
 
-    public async Task<AIAgent> CreateTaskAgentAsync()
+    public async Task<AIAgent> CreateTaskAgentAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Creating TaskAgent...");
 
@@ -79,11 +79,13 @@ Always:
 - Keep tasks organized and clear
 - Use Turkish for responses when appropriate";
 
-        return await CreateBuilder()
+        var builder = await CreateBuilder()
                 .WithName("TaskAgent")
                 .WithInstructions(instructions)
-                .WithToolsAsync<TaskAgentTools>() 
-                .ContinueWith(builder => builder.Result.Build());
+                .WithToolsAsync<TaskAgentTools>()
+                .ConfigureAwait(false);
+        
+        return builder.Build();
     }
 
     public AIAgent CreateResearchAgent()
