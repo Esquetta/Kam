@@ -1,4 +1,4 @@
-﻿using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Core.Interfaces;
 
 namespace SmartVoiceAgent.Infrastructure.Services;
 
@@ -7,35 +7,30 @@ namespace SmartVoiceAgent.Infrastructure.Services;
 /// </summary>
 public class MusicService : IMusicService
 {
-    public Task PauseMusicAsync()
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task PlayMusicAsync(string trackName)
+    public Task PlayMusicAsync(string filePath, bool loop = false, CancellationToken cancellationToken = default)
     {
         // TODO: Müzik çalma entegrasyonu yapılacak.
         return Task.CompletedTask;
     }
 
-    public Task PlayMusicAsync(string filePath, bool loop = false)
+    public Task PauseMusicAsync(CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return Task.CompletedTask;
     }
 
-    public Task ResumeMusicAsync()
+    public Task ResumeMusicAsync(CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return Task.CompletedTask;
     }
 
-    public Task SetVolumeAsync(float volume)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task StopMusicAsync()
+    public Task StopMusicAsync(CancellationToken cancellationToken = default)
     {
         // TODO: Müzik çalma entegrasyonu yapılacak.
+        return Task.CompletedTask;
+    }
+
+    public Task SetVolumeAsync(float volume, CancellationToken cancellationToken = default)
+    {
         return Task.CompletedTask;
     }
 }

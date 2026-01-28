@@ -1,7 +1,11 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace SmartVoiceAgent.Infrastructure.Services.Music
 {
+    /// <summary>
+    /// macOS implementation of music service using afplay
+    /// </summary>
     public class MacOSMusicService : IMusicService, IDisposable
     {
         private Process? _currentProcess;
@@ -10,19 +14,28 @@ namespace SmartVoiceAgent.Infrastructure.Services.Music
         private string? _currentFilePath;
         private bool _isPaused;
         private Timer? _loopTimer;
+        private bool _disposed;
+        private readonly ILogger<MacOSMusicService>? _logger;
 
-        public Task PlayMusicAsync(string filePath, bool loop = false)
+        public MacOSMusicService(ILogger<MacOSMusicService>? logger = null)
         {
-            StopMusicAsync().Wait();
+            _logger = logger;
+        }
+
+        public async Task PlayMusicAsync(string filePath, bool loop = false, CancellationToken cancellationToken = default)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+
+            await StopMusicAsync(cancellationToken).ConfigureAwait(false);
 
             _currentFilePath = filePath;
             _isLooping = loop;
             _isPaused = false;
 
-            return StartPlayback();
+            await StartPlaybackAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        private Task StartPlayback()
+        private async Task StartPlaybackAsync(CancellationToken cancellationToken)
         {
             try
             {
@@ -44,93 +57,152 @@ namespace SmartVoiceAgent.Infrastructure.Services.Music
                     _currentProcess.Exited += OnProcessExited;
                 }
 
-                return Task.CompletedTask;
+                _logger?.LogDebug("Started playback on macOS");
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Müzik çalınamadı: {ex.Message}", ex);
+                _logger?.LogError(ex, "Failed to start playback");
+                await CleanupAsync().ConfigureAwait(false);
+                throw new InvalidOperationException($"Music playback failed: {ex.Message}", ex);
             }
         }
 
         private void OnProcessExited(object? sender, EventArgs e)
         {
+            if (_disposed) return;
+
+            // Unsubscribe immediately
+            if (sender is Process process)
+            {
+                process.Exited -= OnProcessExited;
+            }
+
             if (_isLooping && !_isPaused && _currentFilePath != null)
             {
-                // Kısa bir gecikme ile tekrar başlat
-                _loopTimer = new Timer(_ => StartPlayback(), null, 100, Timeout.Infinite);
+                _loopTimer?.Dispose();
+                _loopTimer = new Timer(
+                    async _ => await StartPlaybackAsync(CancellationToken.None),
+                    null,
+                    100,
+                    Timeout.Infinite);
             }
         }
 
-        public Task PauseMusicAsync()
+        public Task PauseMusicAsync(CancellationToken cancellationToken = default)
         {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+
             if (_currentProcess != null && !_currentProcess.HasExited)
             {
                 _isPaused = true;
-                // afplay pause desteklemediği için durdurup pozisyonu saklamamız gerekir
-                _currentProcess.Kill();
-                _currentProcess = null;
+                // afplay doesn't support pause, so we kill and restart
+                try
+                {
+                    _currentProcess.Exited -= OnProcessExited;
+                    _currentProcess.Kill();
+                    _currentProcess.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(ex, "Error pausing playback");
+                }
+                finally
+                {
+                    _currentProcess = null;
+                }
             }
             return Task.CompletedTask;
         }
 
-        public Task ResumeMusicAsync()
+        public Task ResumeMusicAsync(CancellationToken cancellationToken = default)
         {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+
             if (_isPaused && _currentFilePath != null)
             {
                 _isPaused = false;
-                return StartPlayback();
+                return StartPlaybackAsync(cancellationToken);
             }
             return Task.CompletedTask;
         }
 
-        public Task StopMusicAsync()
+        public async Task StopMusicAsync(CancellationToken cancellationToken = default)
         {
             _isLooping = false;
             _isPaused = false;
             _loopTimer?.Dispose();
             _loopTimer = null;
 
-            if (_currentProcess != null && !_currentProcess.HasExited)
-            {
-                try
-                {
-                    _currentProcess.Kill();
-                    _currentProcess.WaitForExit(1000);
-                }
-                catch (Exception)
-                {
-                    // Process zaten öldüyse hata vermesin
-                }
-                finally
-                {
-                    _currentProcess?.Dispose();
-                    _currentProcess = null;
-                }
-            }
-
-            return Task.CompletedTask;
+            await CleanupAsync().ConfigureAwait(false);
         }
 
-        public Task SetVolumeAsync(float volume)
+        private async Task CleanupAsync()
         {
+            if (_currentProcess != null)
+            {
+                _currentProcess.Exited -= OnProcessExited;
+
+                if (!_currentProcess.HasExited)
+                {
+                    try
+                    {
+                        _currentProcess.Kill();
+                        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+                        await _currentProcess.WaitForExitAsync(cts.Token);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogWarning(ex, "Error killing process");
+                    }
+                }
+
+                _currentProcess.Dispose();
+                _currentProcess = null;
+            }
+        }
+
+        public async Task SetVolumeAsync(float volume, CancellationToken cancellationToken = default)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
             _volume = Math.Clamp(volume, 0.0f, 1.0f);
 
-            // Eğer şu anda çalıyorsa, yeni volume ile yeniden başlat
+            // Restart with new volume if currently playing
             if (_currentProcess != null && !_currentProcess.HasExited && !_isPaused)
             {
                 var wasLooping = _isLooping;
-                StopMusicAsync().Wait();
+                await StopMusicAsync(cancellationToken).ConfigureAwait(false);
                 _isLooping = wasLooping;
-                return StartPlayback();
+                await StartPlaybackAsync(cancellationToken).ConfigureAwait(false);
             }
-
-            return Task.CompletedTask;
         }
 
         public void Dispose()
         {
-            StopMusicAsync().Wait();
+            if (_disposed) return;
+            _disposed = true;
+
             _loopTimer?.Dispose();
+            _loopTimer = null;
+
+            try
+            {
+                if (_currentProcess != null)
+                {
+                    _currentProcess.Exited -= OnProcessExited;
+                    
+                    if (!_currentProcess.HasExited)
+                    {
+                        try { _currentProcess.Kill(); } catch { /* Ignore */ }
+                    }
+                    
+                    _currentProcess.Dispose();
+                    _currentProcess = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Error during disposal");
+            }
         }
     }
 }
