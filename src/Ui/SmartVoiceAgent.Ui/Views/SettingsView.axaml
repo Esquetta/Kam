@@ -94,7 +94,7 @@
                     </Grid>
                 </Border>
 
-                <!-- Security Level -->
+                <!-- Auto Start with Windows -->
                 <Border Classes="SettingsItem">
                     <Grid ColumnDefinitions="Auto, *, Auto">
                         <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
@@ -104,26 +104,47 @@
                                   Stretch="Uniform"/>
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Lang.Settings.Security}"
+                            <TextBlock Text="Auto Start with Windows"
                                        FontSize="13"
                                        FontWeight="Medium"
                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
-                            <TextBlock Text="{DynamicResource Lang.Settings.SecurityDesc}"
+                            <TextBlock Text="Launch automatically when Windows starts"
                                        FontSize="11"
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        Margin="0,2,0,0"/>
                         </StackPanel>
-                        <Border Grid.Column="2"
-                                Background="{DynamicResource CardBgHoverBrush}"
-                                CornerRadius="4"
-                                Padding="12,6"
-                                Cursor="Hand"
-                                VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Lang.Settings.Change}"
-                                       FontSize="10"
-                                       FontFamily="Consolas"
-                                       Foreground="{DynamicResource TextMutedBrush}"/>
+                        <ToggleSwitch Grid.Column="2"
+                                      IsChecked="{Binding AutoStart, Mode=TwoWay}"
+                                      OnContent=""
+                                      OffContent=""
+                                      VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+
+                <!-- Start Minimized -->
+                <Border Classes="SettingsItem">
+                    <Grid ColumnDefinitions="Auto, *, Auto">
+                        <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                            <Path Data="M4,4H20V18H4V4M6,8V16H18V8H6M8,10H16V14H8V10M2,20H22V22H2V20"
+                                  Fill="{DynamicResource TextMutedBrush}"
+                                  Width="16" Height="16"
+                                  Stretch="Uniform"/>
                         </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="Start Minimized"
+                                       FontSize="13"
+                                       FontWeight="Medium"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <TextBlock Text="Start minimized to system tray"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="2"
+                                      IsChecked="{Binding StartMinimized, Mode=TwoWay}"
+                                      OnContent=""
+                                      OffContent=""
+                                      VerticalAlignment="Center"/>
                     </Grid>
                 </Border>
             </StackPanel>

@@ -16,6 +16,8 @@ using SmartVoiceAgent.Ui.Views;
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration.Json;
 using System.Reflection;
 
@@ -278,10 +280,6 @@ namespace SmartVoiceAgent.Ui
                 Console.WriteLine($"💥 UNOBSERVED TASK ERROR: {e.Exception.Message}");
                 e.SetObserved(); // Prevent crash
             };
-
-            // Handle Avalonia-specific exceptions
-            this.GetObservable(Application.DataContextProperty).Subscribe(_ => { }, 
-                ex => Console.WriteLine($"💥 AVALONIA ERROR: {ex.Message}"));
         }
 
         /// <summary>

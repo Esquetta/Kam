@@ -15,6 +15,16 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             Title = "SETTINGS";
             _selectedLanguageIndex = 0;
             _settingsService = new JsonSettingsService();
+            
+            // Load saved settings
+            _settingsService.Load();
+            RefreshStartupSettings();
+            
+            // Subscribe to setting changes
+            _settingsService.SettingChanged += (s, e) =>
+            {
+                System.Diagnostics.Debug.WriteLine($"Setting changed: {e.SettingName} = {e.NewValue}");
+            };
         }
 
         public SettingsViewModel(MainWindowViewModel mainViewModel) : this()
@@ -137,6 +147,17 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     StartupBehavior = newMinimized ? 1 : 0;
                 }
             }
+        }
+
+        /// <summary>
+        /// Refreshes all startup-related properties (call after settings load)
+        /// </summary>
+        public void RefreshStartupSettings()
+        {
+            this.RaisePropertyChanged(nameof(AutoStart));
+            this.RaisePropertyChanged(nameof(StartMinimized));
+            this.RaisePropertyChanged(nameof(StartupBehavior));
+            this.RaisePropertyChanged(nameof(ShowOnStartup));
         }
 
         /// <summary>
