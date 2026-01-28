@@ -1,0 +1,57 @@
+name: .NET CI
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET 9
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore Kam.sln
+    
+    - name: Build
+      run: dotnet build Kam.sln --configuration Release --no-restore
+    
+    - name: Test
+      run: dotnet test tests/SmartVoiceAgent.Tests/SmartVoiceAgent.Tests.csproj --configuration Release --no-build --verbosity normal
+    
+    - name: Publish UI
+      run: dotnet publish src/Ui/SmartVoiceAgent.Ui/SmartVoiceAgent.Ui.csproj --configuration Release --no-restore --output ./publish
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: smart-voice-agent
+        path: ./publish
+        retention-days: 7
+
+  security-scan:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET 9
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore Kam.sln
+    
+    - name: Run security analysis
+      run: |
+        dotnet tool install --global security-scan --version 5.6.7 || true
+        security-scan Kam.sln --excl-proj="**/SmartVoiceAgent.Tests.csproj" || true

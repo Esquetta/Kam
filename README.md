@@ -74,7 +74,7 @@
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/SmartVoiceAgent.git
+git clone https://github.com/Esquetta/Kam.git
 cd SmartVoiceAgent
 ```
 
@@ -126,7 +126,7 @@ dotnet build
 ### 5. Run the Application
 
 ```bash
-dotnet run --project src/SmartVoiceAgent.Presentation/SmartVoiceAgent.Presentation.csproj
+dotnet run --project src/Ui/SmartVoiceAgent.Ui/SmartVoiceAgent.Ui.csproj
 ```
 
 ## 🏗️ Architecture
@@ -272,16 +272,16 @@ var research = await webResearchService.SearchAndOpenAsync(
 
 ## 🧪 Testing
 
-### Run Unit Tests
+### Run Tests
 
 ```bash
-dotnet test tests/SmartVoiceAgent.UnitTests
+dotnet test tests/SmartVoiceAgent.Tests
 ```
 
-### Run Integration Tests
+### Run Benchmarks
 
 ```bash
-dotnet test tests/SmartVoiceAgent.IntegrationTests
+dotnet run --project src/SmartVoiceAgent.Benchmarks --configuration Release
 ```
 
 ### Test Voice Recognition
@@ -313,10 +313,10 @@ We welcome contributions! Please follow these steps:
 ## 📖 Documentation
 
 - [Architecture Overview](docs/ARCHITECTURE.md)
-- [API Reference](docs/API.md)
 - [Agent System Guide](docs/AGENTS.md)
-- [Intent Detection](docs/INTENT_DETECTION.md)
-- [Deployment Guide](docs/DEPLOYMENT.md)
+- [Responsive Design](RESPONSIVE_DESIGN.md)
+- [Security Policy](SECURITY.md)
+- [Benchmarks](src/SmartVoiceAgent.Benchmarks/README.md)
 
 ## 🐛 Troubleshooting
 
@@ -357,8 +357,10 @@ We welcome contributions! Please follow these steps:
 
 - API keys stored in user secrets or environment variables
 - No sensitive data logging
-- Process isolation for system commands
-- Secure HTTP communication with external APIs
+- Path traversal protection
+- Command injection prevention
+- Input validation and sanitization
+- See [SECURITY.md](SECURITY.md) for details and reporting vulnerabilities
 
 ## 📝 License
 
@@ -366,7 +368,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👥 Authors
 
-- **Your Name** - *Initial work* - [YourGitHub](https://github.com/yourusername)
+- **Esquetta** - *Initial work* - [Esquetta](https://github.com/Esquetta)
 
 ## 🙏 Acknowledgments
 
@@ -378,9 +380,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/SmartVoiceAgent/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/SmartVoiceAgent/discussions)
-- **Email**: your.email@example.com
+- **Issues**: [GitHub Issues](https://github.com/Esquetta/Kam/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Esquetta/Kam/discussions)
 
 ## 🗺️ Roadmap
 

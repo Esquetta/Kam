@@ -35,6 +35,9 @@ namespace SmartVoiceAgent.Ui
 
         public override void OnFrameworkInitializationCompleted()
         {
+            // Setup global exception handlers
+            SetupGlobalExceptionHandling();
+
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
@@ -42,6 +45,9 @@ namespace SmartVoiceAgent.Ui
 
                 // Build the host with backend services
                 _host = BuildHost();
+
+                // Validate critical configuration
+                ValidateConfiguration();
 
                 // Load startup settings
                 var settingsService = new JsonSettingsService();
@@ -247,6 +253,65 @@ namespace SmartVoiceAgent.Ui
             foreach (var plugin in dataValidationPluginsToRemove)
             {
                 BindingPlugins.DataValidators.Remove(plugin);
+            }
+        }
+
+        /// <summary>
+        /// Sets up global exception handling for the application
+        /// </summary>
+        private void SetupGlobalExceptionHandling()
+        {
+            // Handle UI thread exceptions
+            AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
+            {
+                var exception = e.ExceptionObject as Exception;
+                Console.WriteLine($"💥 FATAL ERROR: {exception?.Message}");
+                Console.WriteLine(exception?.StackTrace);
+                
+                // TODO: Show error dialog to user
+                // TODO: Log to persistent storage
+            };
+
+            // Handle task exceptions
+            TaskScheduler.UnobservedTaskException += (sender, e) =>
+            {
+                Console.WriteLine($"💥 UNOBSERVED TASK ERROR: {e.Exception.Message}");
+                e.SetObserved(); // Prevent crash
+            };
+
+            // Handle Avalonia-specific exceptions
+            this.GetObservable(Application.DataContextProperty).Subscribe(_ => { }, 
+                ex => Console.WriteLine($"💥 AVALONIA ERROR: {ex.Message}"));
+        }
+
+        /// <summary>
+        /// Validates critical configuration at startup
+        /// </summary>
+        private void ValidateConfiguration()
+        {
+            if (_host == null) return;
+
+            var configuration = _host.Services.GetRequiredService<IConfiguration>();
+            
+            // Check AIService configuration
+            var aiServiceSection = configuration.GetSection("AIService");
+            if (!aiServiceSection.Exists())
+            {
+                Console.WriteLine("⚠️ WARNING: AIService configuration not found!");
+                Console.WriteLine("   AI features will not work without API configuration.");
+                Console.WriteLine("   Run: dotnet user-secrets set \"AIService:ApiKey\" \"your-key\"");
+            }
+            else if (string.IsNullOrEmpty(aiServiceSection["ApiKey"]))
+            {
+                Console.WriteLine("⚠️ WARNING: AIService:ApiKey is not set!");
+                Console.WriteLine("   AI features will not work without an API key.");
+            }
+
+            // Check Voice Recognition configuration
+            var voiceSection = configuration.GetSection("VoiceRecognition");
+            if (!voiceSection.Exists())
+            {
+                Console.WriteLine("⚠️ WARNING: VoiceRecognition configuration not found. Using defaults.");
             }
         }
     }
