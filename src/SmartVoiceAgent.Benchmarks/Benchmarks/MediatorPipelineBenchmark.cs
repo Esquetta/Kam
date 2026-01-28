@@ -60,27 +60,18 @@ public class MediatorPipelineBenchmark
 
 public class FakeMusicService : IMusicService
 {
-    public Task PauseMusicAsync()
-    {
-        throw new NotImplementedException();
-    }
+    public Task PlayMusicAsync(string filePath, bool loop = false, CancellationToken cancellationToken = default) 
+        => Task.CompletedTask;
 
-    public Task PlayMusicAsync(string song) => Task.CompletedTask;
+    public Task PauseMusicAsync(CancellationToken cancellationToken = default) 
+        => Task.CompletedTask;
 
-    public Task PlayMusicAsync(string filePath, bool loop = false)
-    {
-        throw new NotImplementedException();
-    }
+    public Task ResumeMusicAsync(CancellationToken cancellationToken = default) 
+        => Task.CompletedTask;
 
-    public Task ResumeMusicAsync()
-    {
-        throw new NotImplementedException();
-    }
+    public Task StopMusicAsync(CancellationToken cancellationToken = default) 
+        => Task.CompletedTask;
 
-    public Task SetVolumeAsync(float volume)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task StopMusicAsync() => Task.CompletedTask;
+    public Task SetVolumeAsync(float volume, CancellationToken cancellationToken = default) 
+        => Task.CompletedTask;
 }
