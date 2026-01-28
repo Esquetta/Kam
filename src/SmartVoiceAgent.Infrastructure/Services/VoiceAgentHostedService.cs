@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Interfaces;
 
@@ -10,17 +10,20 @@ public class VoiceAgentHostedService : BackgroundService
     private readonly IAgentRegistry _registry;
     private readonly IAgentFactory _factory;
     private readonly ILogger<VoiceAgentHostedService> _logger;
+    private readonly ICommandInputService _commandInput;
 
     public VoiceAgentHostedService(
         IAgentOrchestrator orchestrator,
         IAgentRegistry registry,
         IAgentFactory factory,
-        ILogger<VoiceAgentHostedService> logger)
+        ILogger<VoiceAgentHostedService> logger,
+        ICommandInputService commandInput)
     {
         _orchestrator = orchestrator;
         _registry = registry;
         _factory = factory;
         _logger = logger;
+        _commandInput = commandInput;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -37,10 +40,17 @@ public class VoiceAgentHostedService : BackgroundService
             {
                 try
                 {
-                    var input = Console.ReadLine();
+                    // Read command from UI instead of Console
+                    var input = await _commandInput.ReadCommandAsync(stoppingToken);
+                    
+                    _logger.LogInformation("📝 Processing command: {Command}", input);
+                    
                     var result = await _orchestrator.ExecuteAsync(input);
-                    Console.WriteLine($"📝 Result: {result}");
-
+                    
+                    _logger.LogInformation("✅ Result: {Result}", result);
+                    
+                    // Publish result back to UI
+                    _commandInput.PublishResult(input, result, true);
                 }
                 catch (OperationCanceledException)
                 {
@@ -48,8 +58,9 @@ public class VoiceAgentHostedService : BackgroundService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "❌ Error");
-                    await Task.Delay(5000, stoppingToken);
+                    _logger.LogError(ex, "❌ Error processing command");
+                    _commandInput.PublishResult("unknown", ex.Message, false);
+                    await Task.Delay(1000, stoppingToken);
                 }
             }
         }

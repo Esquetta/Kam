@@ -11,14 +11,17 @@ public class SmartAgentOrchestrator : IAgentOrchestrator
 {
     private readonly IAgentRegistry _registry;
     private readonly ILogger<SmartAgentOrchestrator> _logger;
+    private readonly IUiLogService _uiLogService;
     private AIAgent? _routerAgent;
 
     public SmartAgentOrchestrator(
         IAgentRegistry registry,
-        ILogger<SmartAgentOrchestrator> logger)
+        ILogger<SmartAgentOrchestrator> logger,
+        IUiLogService uiLogService)
     {
         _registry = registry;
         _logger = logger;
+        _uiLogService = uiLogService;
     }
 
     private AIAgent RouterAgent
@@ -41,6 +44,7 @@ public class SmartAgentOrchestrator : IAgentOrchestrator
     public async Task<string> ExecuteAsync(string userRequest)
     {
         _logger.LogInformation("🎬 Processing: {Request}", userRequest);
+        _uiLogService.LogAgentUpdate("Coordinator", $"Processing request: {userRequest}", false);
 
         // Step 1: Router agent analyzes and decides
         var routingDecision = await GetRoutingDecisionAsync(userRequest);
@@ -48,6 +52,10 @@ public class SmartAgentOrchestrator : IAgentOrchestrator
         _logger.LogInformation("📊 Route: {Agents} ({Mode})",
             string.Join(", ", routingDecision.TargetAgents),
             routingDecision.ExecutionMode);
+        
+        _uiLogService.LogAgentUpdate("Coordinator", 
+            $"Route: {string.Join(", ", routingDecision.TargetAgents)} ({routingDecision.ExecutionMode})", 
+            false);
 
         // Step 2: Execute based on decision
         var results = routingDecision.ExecutionMode == ExecutionMode.Parallel
@@ -55,12 +63,15 @@ public class SmartAgentOrchestrator : IAgentOrchestrator
             : await ExecuteSequentialAsync(routingDecision.TargetAgents, userRequest);
 
         // Step 3: Combine results
-        return CombineResults(results);
+        var combinedResult = CombineResults(results);
+        _uiLogService.LogAgentUpdate("Coordinator", "Request completed", true);
+        return combinedResult;
     }
 
     public async IAsyncEnumerable<AgentExecutionUpdate> ExecuteStreamAsync(string userRequest)
     {
         _logger.LogInformation("🎬 Streaming: {Request}", userRequest);
+        _uiLogService.LogAgentUpdate("Coordinator", $"Streaming: {userRequest}", false);
 
         // Step 1: Get routing decision
         var routingDecision = await GetRoutingDecisionAsync(userRequest);
@@ -71,6 +82,10 @@ public class SmartAgentOrchestrator : IAgentOrchestrator
             Message = $"Routing to: {string.Join(", ", routingDecision.TargetAgents)}",
             IsComplete = true
         };
+        
+        _uiLogService.LogAgentUpdate("Coordinator", 
+            $"Routing to: {string.Join(", ", routingDecision.TargetAgents)}", 
+            true);
 
         // Step 2: Execute agents
         if (routingDecision.ExecutionMode == ExecutionMode.Parallel)
@@ -135,6 +150,7 @@ public class SmartAgentOrchestrator : IAgentOrchestrator
         string userRequest)
     {
         _logger.LogInformation("🔀 Executing {Count} agents in parallel", agentNames.Count);
+        _uiLogService.LogAgentUpdate("Coordinator", $"Executing {agentNames.Count} agents in parallel", false);
 
         var tasks = agentNames.Select(async agentName =>
         {
@@ -154,6 +170,7 @@ public class SmartAgentOrchestrator : IAgentOrchestrator
         string userRequest)
     {
         _logger.LogInformation("➡️ Executing {Count} agents sequentially", agentNames.Count);
+        _uiLogService.LogAgentUpdate("Coordinator", $"Executing {agentNames.Count} agents sequentially", false);
 
         var results = new Dictionary<string, string>();
         var contextMessages = new List<ChatMessage>
@@ -163,11 +180,13 @@ public class SmartAgentOrchestrator : IAgentOrchestrator
 
         foreach (var agentName in agentNames)
         {
+            _uiLogService.LogAgentUpdate(agentName, $"Starting execution...", false);
             var agent = _registry.GetAgent(agentName);
             var response = await agent.RunAsync(contextMessages);
             var resultText = response.Messages.First().Text ?? "";
 
             results[agentName] = resultText;
+            _uiLogService.LogAgentUpdate(agentName, $"Completed", true);
 
             // Add response to context for next agent
             contextMessages.Add(new ChatMessage(ChatRole.Assistant, resultText));
