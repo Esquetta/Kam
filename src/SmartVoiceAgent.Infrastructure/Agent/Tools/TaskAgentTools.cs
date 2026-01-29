@@ -1,52 +1,228 @@
-﻿using Microsoft.Extensions.AI;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using SmartVoiceAgent.Infrastructure.Mcp;
+using System.Diagnostics;
 
 namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 {
+    /// <summary>
+    /// TaskAgentTools for task management via MCP (Model Context Protocol).
+    /// Includes error handling, retry logic, and timeout protection.
+    /// </summary>
     public sealed class TaskAgentTools
     {
         private readonly McpOptions _mcpOptions;
+        private readonly ILogger<TaskAgentTools>? _logger;
         private IEnumerable<AIFunction>? _mcpTools;
-        public TaskAgentTools(IOptions<McpOptions> options)
+        private bool _isInitialized;
+        private readonly SemaphoreSlim _initLock = new(1, 1);
+
+        // Retry configuration
+        private const int MaxRetries = 3;
+        private static readonly TimeSpan InitialRetryDelay = TimeSpan.FromSeconds(1);
+        private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(10);
+        private static readonly TimeSpan InitializationTimeout = TimeSpan.FromSeconds(30);
+
+        public TaskAgentTools(
+            IOptions<McpOptions> options,
+            ILogger<TaskAgentTools>? logger = null)
         {
-            this._mcpOptions = options.Value;
+            _mcpOptions = options.Value ?? throw new ArgumentNullException(nameof(options));
+            _logger = logger;
         }
 
-        private static async Task<McpClient> GetMcpClientAsync(McpOptions mcpOptions)
+        /// <summary>
+        /// Initializes the MCP client with retry logic and timeout.
+        /// </summary>
+        public async Task InitializeAsync(CancellationToken cancellationToken = default)
         {
-            McpClient mcpClient = await McpClient.CreateAsync(
-        clientTransport: new HttpClientTransport(new()
-        {
-            Endpoint = new Uri(mcpOptions.TodoistServerLink),
-            Name = "todoist.mcpverse.dev",
-            AdditionalHeaders = new Dictionary<string, string>
+            if (_isInitialized)
             {
-                ["Authorization"] = $"Bearer {mcpOptions.TodoistApiKey}"
+                _logger?.LogDebug("TaskAgentTools already initialized");
+                return;
             }
-        }),
-        clientOptions: new McpClientOptions
-        {
-            ClientInfo = new Implementation()
+
+            await _initLock.WaitAsync(cancellationToken);
+            try
             {
-                Name = "MCP.Client",
-                Version = "1.0.0"
+                if (_isInitialized) // Double-check after acquiring lock
+                    return;
+
+                _logger?.LogInformation("Initializing TaskAgentTools with MCP server: {Server}",
+                    _mcpOptions.TodoistServerLink);
+
+                var stopwatch = Stopwatch.StartNew();
+
+                try
+                {
+                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    cts.CancelAfter(InitializationTimeout);
+
+                    var client = await InitializeWithRetryAsync(cts.Token);
+                    _mcpTools = await ListToolsWithRetryAsync(client, cts.Token);
+
+                    _isInitialized = true;
+                    stopwatch.Stop();
+
+                    _logger?.LogInformation(
+                        "TaskAgentTools initialized successfully in {ElapsedMs}ms. Loaded {ToolCount} tools",
+                        stopwatch.ElapsedMilliseconds,
+                        _mcpTools?.Count() ?? 0);
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    _logger?.LogError("MCP initialization timed out after {Timeout}s",
+                        InitializationTimeout.TotalSeconds);
+                    _mcpTools = Array.Empty<AIFunction>();
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "Failed to initialize MCP client");
+                    _mcpTools = Array.Empty<AIFunction>();
+                }
             }
-        });
-
-            return mcpClient;
+            finally
+            {
+                _initLock.Release();
+            }
         }
-        public async Task InitializeAsync()
+
+        /// <summary>
+        /// Initializes MCP client with exponential backoff retry.
+        /// </summary>
+        private async Task<McpClient> InitializeWithRetryAsync(CancellationToken cancellationToken)
         {
-            var client = await GetMcpClientAsync(_mcpOptions);
-            _mcpTools = await client.ListToolsAsync();
+            var retryCount = 0;
+            var delay = InitialRetryDelay;
+
+            while (true)
+            {
+                try
+                {
+                    _logger?.LogDebug("Attempting MCP client initialization (attempt {Attempt})", retryCount + 1);
+
+                    var client = await McpClient.CreateAsync(
+                        clientTransport: new HttpClientTransport(new()
+                        {
+                            Endpoint = new Uri(_mcpOptions.TodoistServerLink),
+                            Name = "todoist.mcpverse.dev",
+                            AdditionalHeaders = new Dictionary<string, string>
+                            {
+                                ["Authorization"] = $"Bearer {_mcpOptions.TodoistApiKey}"
+                            }
+                        }),
+                        clientOptions: new McpClientOptions
+                        {
+                            ClientInfo = new Implementation()
+                            {
+                                Name = "SmartVoiceAgent.MCP.Client",
+                                Version = typeof(TaskAgentTools).Assembly.GetName().Version?.ToString() ?? "1.0.0"
+                            }
+                        });
+
+                    return client;
+                }
+                catch (Exception ex) when (retryCount < MaxRetries && IsRetryableException(ex))
+                {
+                    retryCount++;
+                    _logger?.LogWarning(ex,
+                        "MCP initialization failed (attempt {Attempt}/{MaxRetries}), retrying in {DelayMs}ms...",
+                        retryCount, MaxRetries, delay.TotalMilliseconds);
+
+                    await Task.Delay(delay, cancellationToken);
+                    delay = TimeSpan.FromMilliseconds(Math.Min(delay.TotalMilliseconds * 2, MaxRetryDelay.TotalMilliseconds));
+                }
+            }
         }
 
+        /// <summary>
+        /// Lists available tools from MCP server with retry logic.
+        /// </summary>
+        private async Task<IEnumerable<AIFunction>> ListToolsWithRetryAsync(
+            McpClient client,
+            CancellationToken cancellationToken)
+        {
+            var retryCount = 0;
+            var delay = InitialRetryDelay;
+
+            while (true)
+            {
+                try
+                {
+                    _logger?.LogDebug("Listing MCP tools (attempt {Attempt})", retryCount + 1);
+                    var tools = await client.ListToolsAsync();
+                    return tools?.Cast<AIFunction>() ?? Array.Empty<AIFunction>();
+                }
+                catch (Exception ex) when (retryCount < MaxRetries && IsRetryableException(ex))
+                {
+                    retryCount++;
+                    _logger?.LogWarning(ex,
+                        "Failed to list MCP tools (attempt {Attempt}/{MaxRetries}), retrying in {DelayMs}ms...",
+                        retryCount, MaxRetries, delay.TotalMilliseconds);
+
+                    await Task.Delay(delay, cancellationToken);
+                    delay = TimeSpan.FromMilliseconds(Math.Min(delay.TotalMilliseconds * 2, MaxRetryDelay.TotalMilliseconds));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Determines if an exception is retryable.
+        /// </summary>
+        private static bool IsRetryableException(Exception ex)
+        {
+            return ex is HttpRequestException
+                or TimeoutException
+                or IOException
+                or System.Net.Sockets.SocketException;
+        }
+
+        /// <summary>
+        /// Gets the available tools. Initializes if not already done.
+        /// </summary>
+        public async Task<IEnumerable<AIFunction>> GetToolsAsync(CancellationToken cancellationToken = default)
+        {
+            if (!_isInitialized)
+            {
+                await InitializeAsync(cancellationToken);
+            }
+
+            return _mcpTools ?? Array.Empty<AIFunction>();
+        }
+
+        /// <summary>
+        /// Synchronous version for backward compatibility.
+        /// Returns empty if not initialized.
+        /// </summary>
         public IEnumerable<AIFunction> GetTools()
         {
+            if (!_isInitialized)
+            {
+                _logger?.LogWarning("GetTools() called before initialization. Call InitializeAsync() first.");
+                return Array.Empty<AIFunction>();
+            }
+
             return _mcpTools ?? Array.Empty<AIFunction>();
+        }
+
+        /// <summary>
+        /// Health check for MCP connection.
+        /// </summary>
+        public async Task<bool> IsHealthyAsync(CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var tools = await GetToolsAsync(cancellationToken);
+                return tools.Any();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Health check failed");
+                return false;
+            }
         }
     }
 }
