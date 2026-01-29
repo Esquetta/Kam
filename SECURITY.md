@@ -117,6 +117,8 @@ If you discover a security vulnerability:
 
 | Date | Change |
 |------|--------|
+| 2026-01-29 | Added embedded application icon and updated assembly info for Task Manager display |
+| 2026-01-29 | Updated registry auto-start entry naming to "Kam" with backward compatibility |
 | 2026-01-28 | Added SecurityUtilities class with path traversal and command injection protection |
 | 2026-01-28 | Removed sensitive data logging from AI services |
 | 2026-01-28 | Added file extension validation |

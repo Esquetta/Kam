@@ -9,8 +9,8 @@ The application uses three responsive breakpoints:
 | Breakpoint | Width Range | Behavior |
 |------------|-------------|----------|
 | **Compact** | < 1024px | Single column layout, log panel hidden |
-| **Medium** | 1024px - 1440px | Two column layout, log panel visible (320px) |
-| **Expanded** | > 1440px | Three column layout, log panel visible (450px) |
+| **Medium** | 1024px - 1440px | Two column layout, log panel visible (420px) |
+| **Expanded** | > 1440px | Three column layout, log panel visible (600px) |
 
 ## Files Added
 
@@ -43,7 +43,8 @@ XAML converters for responsive bindings:
 **Changes:**
 - Added WindowStateManager resource
 - Added responsive converters
-- Log panel width now adapts: 0px (compact), 320px (medium), 450px (expanded)
+- Log panel width now adapts: 0px (compact), 420px (medium), 600px (expanded)
+- Log panel font size increased: 11px → 13px for better readability
 - Log panel visibility bound to `IsLogPanelVisible`
 - Minimum window size reduced from 1024x700 to 800x600
 
@@ -111,8 +112,8 @@ if (WindowStateManager.Instance.ReducedMotion)
 
 1. **Resize the window** to see layout adapt:
    - < 1024px: Single column, no log panel
-   - 1024-1440px: Two columns, 320px log panel
-   - > 1440px: Three columns, 450px log panel
+   - 1024-1440px: Two columns, 420px log panel
+   - > 1440px: Three columns, 600px log panel
 
 2. **Toggle Reduced Motion** in Settings to see animations disable
 
