@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Interfaces;
 using System.Reflection;
+using System.Threading;
 
 namespace SmartVoiceAgent.Infrastructure.Agent.Agents;
 
@@ -63,7 +64,28 @@ public class AgentBuilder : IAgentBuilder
                 _logger?.LogDebug("Found InitializeAsync on {ToolClass}, calling it synchronously",
                     typeof(TToolClass).Name);
 
-                var task = (Task)initMethod.Invoke(toolInstance, null)!;
+                // Check if method has parameters (e.g., CancellationToken)
+                var parameters = initMethod.GetParameters();
+                object?[]? invokeArgs = null;
+                
+                if (parameters.Length > 0)
+                {
+                    // Method has parameters, provide default values
+                    invokeArgs = new object?[parameters.Length];
+                    for (int i = 0; i < parameters.Length; i++)
+                    {
+                        if (parameters[i].ParameterType == typeof(CancellationToken))
+                        {
+                            invokeArgs[i] = CancellationToken.None;
+                        }
+                        else
+                        {
+                            invokeArgs[i] = parameters[i].DefaultValue ?? null;
+                        }
+                    }
+                }
+
+                var task = (Task)initMethod.Invoke(toolInstance, invokeArgs)!;
 
                 // WARNING: This blocks and can cause deadlocks
                 // Use Task.Run to run on thread pool to reduce deadlock risk
@@ -145,7 +167,28 @@ public class AgentBuilder : IAgentBuilder
                 _logger?.LogDebug("Found InitializeAsync on {ToolClass}, awaiting it",
                     typeof(TToolClass).Name);
 
-                var task = (Task)initMethod.Invoke(toolInstance, null)!;
+                // Check if method has parameters (e.g., CancellationToken)
+                var parameters = initMethod.GetParameters();
+                object?[]? invokeArgs = null;
+                
+                if (parameters.Length > 0)
+                {
+                    // Method has parameters, provide default values
+                    invokeArgs = new object?[parameters.Length];
+                    for (int i = 0; i < parameters.Length; i++)
+                    {
+                        if (parameters[i].ParameterType == typeof(CancellationToken))
+                        {
+                            invokeArgs[i] = CancellationToken.None;
+                        }
+                        else
+                        {
+                            invokeArgs[i] = parameters[i].DefaultValue ?? null;
+                        }
+                    }
+                }
+
+                var task = (Task)initMethod.Invoke(toolInstance, invokeArgs)!;
 
                 // Properly await the initialization
                 await task.ConfigureAwait(false);
