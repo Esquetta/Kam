@@ -106,10 +106,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 
                 if (key != null)
                 {
-                    // Check both new and old registry value names
-                    var value1 = key.GetValue("KAM Neural Core");
-                    var value2 = key.GetValue("SmartVoiceAgent");
-                    return value1 != null || value2 != null;
+                    // Check for "Kam" registry value (previously "KAM Neural Core", "SmartVoiceAgent")
+                    var value1 = key.GetValue("Kam");
+                    var value2 = key.GetValue("KAM Neural Core");
+                    var value3 = key.GetValue("SmartVoiceAgent");
+                    return value1 != null || value2 != null || value3 != null;
                 }
             }
             catch { }
@@ -214,13 +215,14 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 {
                     if (enable)
                     {
-                        // Use a more descriptive name that will appear in Task Manager
-                        key.SetValue("KAM Neural Core", executablePath);
+                        // Use "Kam" as the registry value name (appears in Task Manager Startup Apps)
+                        key.SetValue("Kam", executablePath);
                         System.Diagnostics.Debug.WriteLine($"Auto-start enabled: {executablePath}");
                     }
                     else
                     {
-                        // Try to delete both old and new names for compatibility
+                        // Try to delete current and old names for compatibility
+                        try { key.DeleteValue("Kam", false); } catch { }
                         try { key.DeleteValue("KAM Neural Core", false); } catch { }
                         try { key.DeleteValue("SmartVoiceAgent", false); } catch { }
                         System.Diagnostics.Debug.WriteLine("Auto-start disabled");
