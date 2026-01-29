@@ -121,7 +121,7 @@
 
 		<!-- Log Entry Style -->
 		<Style Selector="TextBlock.LogEntry">
-			<Setter Property="FontSize" Value="11"/>
+			<Setter Property="FontSize" Value="13"/>
 			<Setter Property="FontFamily" Value="Consolas, Cascadia Code, monospace"/>
 			<Setter Property="Foreground" Value="{DynamicResource LogTextBrush}"/>
 			<Setter Property="Opacity" Value="0.7"/>

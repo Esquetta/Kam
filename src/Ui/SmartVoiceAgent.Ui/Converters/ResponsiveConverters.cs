@@ -148,9 +148,9 @@ public class LogPanelWidthConverter : IValueConverter
             return new GridLength(0);
         
         if (manager.IsMedium)
-            return new GridLength(320);
+            return new GridLength(420);
         
-        return new GridLength(450);
+        return new GridLength(600);
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
