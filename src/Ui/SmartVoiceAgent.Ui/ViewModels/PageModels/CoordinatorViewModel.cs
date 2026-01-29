@@ -15,6 +15,22 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private readonly MainWindowViewModel? _mainViewModel;
 
         /* ========================= */
+        /* CACHED BRUSHES */
+        /* ========================= */
+        // Static brushes to avoid repeated allocations and color parsing
+        private static readonly IBrush OnlineStatusColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#10B981"));
+        private static readonly IBrush OfflineStatusColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
+        private static readonly IBrush OnlineOrbColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#06B6D4"));
+        private static readonly IBrush OfflineOrbColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
+        private static readonly IBrush OnlineOrbGlowColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#4006B6D4"));
+        private static readonly IBrush OfflineOrbGlowColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#40EF4444"));
+        private static readonly IBrush ResearchOnlineColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#A855F7"));
+        private static readonly IBrush AnalyzerOnlineColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#10B981"));
+        private static readonly IBrush TasksOnlineColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#F97316"));
+        private static readonly IBrush DarkThemeTextColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#FAFAFA"));
+        private static readonly IBrush LightThemeTextColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#18181B"));
+
+        /* ========================= */
         /* ONLINE/OFFLINE STATE */
         /* ========================= */
 
@@ -86,15 +102,15 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         
         /// <summary>
         /// Gets the appropriate text color based on current theme (dark/light)
+        /// Uses cached brushes to minimize allocations
         /// </summary>
         private IBrush GetThemeTextBrush()
         {
             var app = global::Avalonia.Application.Current;
-            if (app?.ActualThemeVariant == Avalonia.Styling.ThemeVariant.Dark)
-            {
-                return new SolidColorBrush(Avalonia.Media.Color.Parse("#FAFAFA")); // White for dark mode
-            }
-            return new SolidColorBrush(Avalonia.Media.Color.Parse("#18181B")); // Dark for light mode
+            // Return cached brush based on theme
+            return app?.ActualThemeVariant == Avalonia.Styling.ThemeVariant.Dark 
+                ? DarkThemeTextColor 
+                : LightThemeTextColor;
         }
 
         /* ========================= */
@@ -121,31 +137,21 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         /// <summary>
         /// Updates all status-dependent properties based on IsOnline value
+        /// Uses cached brushes to minimize allocations
         /// </summary>
         private void UpdateStatusProperties()
         {
-            // Force immediate UI update by using the property setters with null-swap technique
-            // First set to null to force binding refresh, then set to actual value
-            var newStatusText = IsOnline ? "SYSTEM ONLINE" : "SYSTEM OFFLINE";
-            var newStatusColor = IsOnline ? new SolidColorBrush(Avalonia.Media.Color.Parse("#10B981")) : new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
-            var newOrbColor = IsOnline ? new SolidColorBrush(Avalonia.Media.Color.Parse("#06B6D4")) : new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
-            var newOrbGlowColor = IsOnline ? new SolidColorBrush(Avalonia.Media.Color.Parse("#4006B6D4")) : new SolidColorBrush(Avalonia.Media.Color.Parse("#40EF4444"));
-            var newLabelColor = IsOnline ? GetThemeTextBrush() : new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
-            var newResearchColor = IsOnline ? new SolidColorBrush(Avalonia.Media.Color.Parse("#A855F7")) : new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
-            var newAnalyzerColor = IsOnline ? new SolidColorBrush(Avalonia.Media.Color.Parse("#10B981")) : new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
-            var newTasksColor = IsOnline ? new SolidColorBrush(Avalonia.Media.Color.Parse("#F97316")) : new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
+            // Use cached brushes to avoid repeated allocations
+            StatusText = IsOnline ? "SYSTEM ONLINE" : "SYSTEM OFFLINE";
+            StatusColor = IsOnline ? OnlineStatusColor : OfflineStatusColor;
+            OrbColor = IsOnline ? OnlineOrbColor : OfflineOrbColor;
+            OrbGlowColor = IsOnline ? OnlineOrbGlowColor : OfflineOrbGlowColor;
+            LabelColor = IsOnline ? GetThemeTextBrush() : OfflineStatusColor;
+            ResearchStatusColor = IsOnline ? ResearchOnlineColor : OfflineStatusColor;
+            AnalyzerStatusColor = IsOnline ? AnalyzerOnlineColor : OfflineStatusColor;
+            TasksStatusColor = IsOnline ? TasksOnlineColor : OfflineStatusColor;
             
-            // Use the property setters which will properly notify
-            StatusText = newStatusText;
-            StatusColor = newStatusColor;
-            OrbColor = newOrbColor;
-            OrbGlowColor = newOrbGlowColor;
-            LabelColor = newLabelColor;
-            ResearchStatusColor = newResearchColor;
-            AnalyzerStatusColor = newAnalyzerColor;
-            TasksStatusColor = newTasksColor;
-            
-            // Also raise for IsOnline to ensure converters re-evaluate
+            // Raise property change for IsOnline to ensure converters re-evaluate
             this.RaisePropertyChanged(nameof(IsOnline));
         }
 

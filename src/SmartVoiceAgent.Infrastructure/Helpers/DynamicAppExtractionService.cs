@@ -1,6 +1,7 @@
 ﻿using SmartVoiceAgent.Core.Dtos;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Infrastructure.Services.Application;
+using System.Buffers;
 using System.Text.RegularExpressions;
 
 public class DynamicAppExtractionService
@@ -395,11 +396,13 @@ public class DynamicAppExtractionService
     {
         var matches = _applicationCache.Values
             .Where(app =>
-                app.Name.ToLower().Contains(cleanedText) ||
-                app.ExecutableName.ToLower().Contains(cleanedText) ||
-                cleanedText.Contains(app.Name.ToLower()) ||
-                cleanedText.Contains(app.ExecutableName.ToLower()) ||
-                app.Aliases.Any(alias => alias.ToLower().Contains(cleanedText) || cleanedText.Contains(alias.ToLower()))
+                app.Name.Contains(cleanedText, StringComparison.OrdinalIgnoreCase) ||
+                app.ExecutableName.Contains(cleanedText, StringComparison.OrdinalIgnoreCase) ||
+                cleanedText.Contains(app.Name, StringComparison.OrdinalIgnoreCase) ||
+                cleanedText.Contains(app.ExecutableName, StringComparison.OrdinalIgnoreCase) ||
+                app.Aliases.Any(alias =>
+                    alias.Contains(cleanedText, StringComparison.OrdinalIgnoreCase) ||
+                    cleanedText.Contains(alias, StringComparison.OrdinalIgnoreCase))
             )
             .OrderByDescending(app => app.Priority)
             .ThenByDescending(app => CalculateMatchScore(app, cleanedText))
@@ -465,11 +468,11 @@ public class DynamicAppExtractionService
     {
         int score = 0;
 
-        if (app.Name.ToLower().Contains(cleanedText)) score += 10;
-        if (app.ExecutableName.ToLower().Contains(cleanedText)) score += 8;
-        if (app.Aliases.Any(a => a.ToLower().Contains(cleanedText))) score += 6;
-        if (cleanedText.Contains(app.Name.ToLower())) score += 5;
-        if (cleanedText.Contains(app.ExecutableName.ToLower())) score += 4;
+        if (app.Name.Contains(cleanedText, StringComparison.OrdinalIgnoreCase)) score += 10;
+        if (app.ExecutableName.Contains(cleanedText, StringComparison.OrdinalIgnoreCase)) score += 8;
+        if (app.Aliases.Any(a => a.Contains(cleanedText, StringComparison.OrdinalIgnoreCase))) score += 6;
+        if (cleanedText.Contains(app.Name, StringComparison.OrdinalIgnoreCase)) score += 5;
+        if (cleanedText.Contains(app.ExecutableName, StringComparison.OrdinalIgnoreCase)) score += 4;
 
         return score;
     }
@@ -479,6 +482,10 @@ public class DynamicAppExtractionService
         if (string.IsNullOrEmpty(s1) || string.IsNullOrEmpty(s2))
             return 0;
 
+        // Early exit for identical strings
+        if (s1.Length == s2.Length && string.Equals(s1, s2, StringComparison.Ordinal))
+            return 1.0;
+
         int distance = LevenshteinDistance(s1, s2);
         int maxLength = Math.Max(s1.Length, s2.Length);
 
@@ -487,27 +494,61 @@ public class DynamicAppExtractionService
 
     private int LevenshteinDistance(string s1, string s2)
     {
-        int[,] matrix = new int[s1.Length + 1, s2.Length + 1];
+        int n = s1.Length;
+        int m = s2.Length;
 
-        for (int i = 0; i <= s1.Length; i++)
-            matrix[i, 0] = i;
+        // Early exit for empty strings
+        if (n == 0) return m;
+        if (m == 0) return n;
 
-        for (int j = 0; j <= s2.Length; j++)
-            matrix[0, j] = j;
+        // Early exit for identical strings
+        if (n == m && string.Equals(s1, s2, StringComparison.Ordinal))
+            return 0;
 
-        for (int i = 1; i <= s1.Length; i++)
+        // Ensure s1 is the shorter string to minimize array allocations
+        if (n > m)
         {
-            for (int j = 1; j <= s2.Length; j++)
-            {
-                int cost = s1[i - 1] == s2[j - 1] ? 0 : 1;
-                matrix[i, j] = Math.Min(
-                    Math.Min(matrix[i - 1, j] + 1, matrix[i, j - 1] + 1),
-                    matrix[i - 1, j - 1] + cost
-                );
-            }
+            (s1, s2) = (s2, s1);
+            (n, m) = (m, n);
         }
 
-        return matrix[s1.Length, s2.Length];
+        // Rent arrays from pool to avoid allocations
+        int[] previousRow = ArrayPool<int>.Shared.Rent(n + 1);
+        int[] currentRow = ArrayPool<int>.Shared.Rent(n + 1);
+
+        try
+        {
+            // Initialize first row
+            for (int i = 0; i <= n; i++)
+                previousRow[i] = i;
+
+            for (int j = 1; j <= m; j++)
+            {
+                currentRow[0] = j;
+                char s2Char = s2[j - 1];
+
+                for (int i = 1; i <= n; i++)
+                {
+                    int cost = s1[i - 1] == s2Char ? 0 : 1;
+                    int deletion = previousRow[i] + 1;
+                    int insertion = currentRow[i - 1] + 1;
+                    int substitution = previousRow[i - 1] + cost;
+
+                    currentRow[i] = Math.Min(Math.Min(deletion, insertion), substitution);
+                }
+
+                // Swap rows
+                (previousRow, currentRow) = (currentRow, previousRow);
+            }
+
+            return previousRow[n];
+        }
+        finally
+        {
+            // Return arrays to pool
+            ArrayPool<int>.Shared.Return(previousRow);
+            ArrayPool<int>.Shared.Return(currentRow);
+        }
     }
 
     private string ExtractExecutableNameFromPath(string fullPath)

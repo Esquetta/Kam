@@ -1,15 +1,66 @@
-﻿using MediatR;
+using MediatR;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Commands;
 using SmartVoiceAgent.Core.Entities;
 using SmartVoiceAgent.Core.Enums;
 using SmartVoiceAgent.Core.Interfaces;
+using System.Text.RegularExpressions;
 
 public class CommandHandlerService : ICommandHandlerService
 {
     private readonly IMediator _mediator;
     private readonly DynamicAppExtractionService _appExtractionService;
     private readonly Dictionary<CommandType, Func<DynamicCommandRequest, Task<object>>> _commandMappings;
+
+    // Pre-compiled regex patterns for performance
+    private static readonly Regex[] MusicPatterns = new[]
+    {
+        new Regex(@"çal\s+(.+?)(?:\s+şarkısını|\s+müziğini|$)", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+        new Regex(@"play\s+(.+?)(?:\s+song|\s+music|$)", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+        new Regex(@"(.+?)\s+çal", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+        new Regex(@"(.+?)\s+play", RegexOptions.Compiled | RegexOptions.IgnoreCase)
+    };
+
+    private static readonly Regex WhitespaceRegex = new Regex(@"\s+", RegexOptions.Compiled);
+    
+    private static readonly HashSet<string> StopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "ara", "aratır", "search", "google", "web", "internet", "bul", "find"
+    };
+
+    private static readonly Dictionary<string, string[]> DeviceMappings = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["bluetooth"] = new[] { "bluetooth", "bt" },
+        ["wifi"] = new[] { "wifi", "wi-fi", "internet", "ağ" },
+        ["screen"] = new[] { "ekran", "screen", "monitor", "display" },
+        ["volume"] = new[] { "ses", "volume", "sesli", "hoparlör", "speaker" },
+        ["microphone"] = new[] { "mikrofon", "microphone", "mic" },
+        ["camera"] = new[] { "kamera", "camera", "webcam" },
+        ["keyboard"] = new[] { "klavye", "keyboard" },
+        ["mouse"] = new[] { "fare", "mouse" }
+    };
+
+    private static readonly Dictionary<string, string[]> ActionMappings = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["open"] = new[] { "aç", "open", "başlat", "start", "çalıştır", "run" },
+        ["close"] = new[] { "kapat", "close", "durdur", "stop", "sonlandır", "end" },
+        ["increase"] = new[] { "artır", "yükselt", "increase", "up", "arttır" },
+        ["decrease"] = new[] { "azalt", "düşür", "decrease", "down", "alçalt" },
+        ["mute"] = new[] { "sustur", "mute", "sessiz" },
+        ["unmute"] = new[] { "sesli", "unmute", "aç" },
+        ["enable"] = new[] { "etkinleştir", "enable", "açık" },
+        ["disable"] = new[] { "devre dışı", "disable", "kapalı" }
+    };
+
+    private static readonly Regex RecipientPattern1 = new Regex(@"(?:to|için)\s+(.+?)(?:\s+mesaj|\s+message|$)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex RecipientPattern2 = new Regex(@"(.+?)(?:\s+için|\s+to)\s+mesaj", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex RecipientPattern3 = new Regex(@"(.+?)(?:'ye|'ya|'e|'a)\s+mesaj", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex[] RecipientPatterns = new[] { RecipientPattern1, RecipientPattern2, RecipientPattern3 };
+
+    private static readonly HashSet<string> CommandWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "mesaj", "message", "gönder", "send", "yaz", "write"
+    };
 
     public CommandHandlerService(IMediator mediator, IApplicationServiceFactory applicationServiceFactory)
     {
@@ -161,20 +212,10 @@ public class CommandHandlerService : ICommandHandlerService
 
     private string ExtractMusicFromText(string text)
     {
-        var lower = text.ToLowerInvariant();
-
-        // Extract song/artist name patterns
-        var patterns = new[]
+        // Use pre-compiled regex patterns
+        foreach (var pattern in MusicPatterns)
         {
-            @"çal\s+(.+?)(?:\s+şarkısını|\s+müziğini|$)",
-            @"play\s+(.+?)(?:\s+song|\s+music|$)",
-            @"(.+?)\s+çal",
-            @"(.+?)\s+play"
-        };
-
-        foreach (var pattern in patterns)
-        {
-            var match = System.Text.RegularExpressions.Regex.Match(lower, pattern);
+            var match = pattern.Match(text);
             if (match.Success && match.Groups[1].Value.Trim().Length > 0)
             {
                 return match.Groups[1].Value.Trim();
@@ -187,45 +228,29 @@ public class CommandHandlerService : ICommandHandlerService
 
     private string ExtractQueryFromText(string text)
     {
-        var lower = text.ToLowerInvariant();
-
-        // Remove common search command words
-        var stopWords = new[] { "ara", "aratır", "search", "google", "web", "internet", "bul", "find" };
-
-        string cleanedText = lower;
-        foreach (var stopWord in stopWords)
+        // Remove common search command words using pre-defined HashSet
+        string cleanedText = text;
+        foreach (var stopWord in StopWords)
         {
-            cleanedText = System.Text.RegularExpressions.Regex.Replace(
+            cleanedText = Regex.Replace(
                 cleanedText,
-                $@"\b{System.Text.RegularExpressions.Regex.Escape(stopWord)}\b",
+                $@"\b{Regex.Escape(stopWord)}\b",
                 "",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                RegexOptions.IgnoreCase
             );
         }
 
-        cleanedText = System.Text.RegularExpressions.Regex.Replace(cleanedText, @"\s+", " ").Trim();
+        // Use pre-compiled whitespace regex
+        cleanedText = WhitespaceRegex.Replace(cleanedText, " ").Trim();
         return string.IsNullOrEmpty(cleanedText) ? text : cleanedText;
     }
 
     private string ExtractDeviceFromText(string text)
     {
-        var lower = text.ToLowerInvariant();
-
-        var deviceMappings = new Dictionary<string, string[]>
+        // Use static device mappings with ordinal ignore case comparison
+        foreach (var device in DeviceMappings)
         {
-            ["bluetooth"] = new[] { "bluetooth", "bt" },
-            ["wifi"] = new[] { "wifi", "wi-fi", "internet", "ağ" },
-            ["screen"] = new[] { "ekran", "screen", "monitor", "display" },
-            ["volume"] = new[] { "ses", "volume", "sesli", "hoparlör", "speaker" },
-            ["microphone"] = new[] { "mikrofon", "microphone", "mic" },
-            ["camera"] = new[] { "kamera", "camera", "webcam" },
-            ["keyboard"] = new[] { "klavye", "keyboard" },
-            ["mouse"] = new[] { "fare", "mouse" }
-        };
-
-        foreach (var device in deviceMappings)
-        {
-            if (device.Value.Any(keyword => lower.Contains(keyword)))
+            if (device.Value.Any(keyword => text.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
             {
                 return device.Key;
             }
@@ -236,23 +261,10 @@ public class CommandHandlerService : ICommandHandlerService
 
     private string ExtractActionFromText(string text)
     {
-        var lower = text.ToLowerInvariant();
-
-        var actionMappings = new Dictionary<string, string[]>
+        // Use static action mappings with ordinal ignore case comparison
+        foreach (var action in ActionMappings)
         {
-            ["open"] = new[] { "aç", "open", "başlat", "start", "çalıştır", "run" },
-            ["close"] = new[] { "kapat", "close", "durdur", "stop", "sonlandır", "end" },
-            ["increase"] = new[] { "artır", "yükselt", "increase", "up", "arttır" },
-            ["decrease"] = new[] { "azalt", "düşür", "decrease", "down", "alçalt" },
-            ["mute"] = new[] { "sustur", "mute", "sessiz" },
-            ["unmute"] = new[] { "sesli", "unmute", "aç" },
-            ["enable"] = new[] { "etkinleştir", "enable", "açık" },
-            ["disable"] = new[] { "devre dışı", "disable", "kapalı" }
-        };
-
-        foreach (var action in actionMappings)
-        {
-            if (action.Value.Any(keyword => lower.Contains(keyword)))
+            if (action.Value.Any(keyword => text.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
             {
                 return action.Key;
             }
@@ -263,19 +275,10 @@ public class CommandHandlerService : ICommandHandlerService
 
     private string ExtractRecipientFromText(string text)
     {
-        var lower = text.ToLowerInvariant();
-
-        // Pattern to extract recipient after words like "to", "için", etc.
-        var patterns = new[]
+        // Use pre-compiled regex patterns
+        foreach (var pattern in RecipientPatterns)
         {
-            @"(?:to|için)\s+(.+?)(?:\s+mesaj|\s+message|$)",
-            @"(.+?)(?:\s+için|\s+to)\s+mesaj",
-            @"(.+?)(?:'ye|'ya|'e|'a)\s+mesaj"
-        };
-
-        foreach (var pattern in patterns)
-        {
-            var match = System.Text.RegularExpressions.Regex.Match(lower, pattern);
+            var match = pattern.Match(text);
             if (match.Success && match.Groups[1].Value.Trim().Length > 0)
             {
                 return match.Groups[1].Value.Trim();
@@ -287,19 +290,15 @@ public class CommandHandlerService : ICommandHandlerService
 
     private string ExtractMessageFromText(string text)
     {
-        var lower = text.ToLowerInvariant();
-
-        // Remove command words and extract the actual message
-        var commandWords = new[] { "mesaj", "message", "gönder", "send", "yaz", "write" };
-
+        // Remove command words and extract the actual message using pre-defined HashSet
         string cleanedText = text;
-        foreach (var word in commandWords)
+        foreach (var word in CommandWords)
         {
-            cleanedText = System.Text.RegularExpressions.Regex.Replace(
+            cleanedText = Regex.Replace(
                 cleanedText,
-                $@"\b{System.Text.RegularExpressions.Regex.Escape(word)}\b",
+                $@"\b{Regex.Escape(word)}\b",
                 "",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                RegexOptions.IgnoreCase
             );
         }
 

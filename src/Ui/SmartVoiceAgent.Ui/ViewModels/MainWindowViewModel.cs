@@ -23,6 +23,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private IVoiceAgentHostControl? _hostControl;
 
         /* ========================= */
+        /* CACHED BRUSHES */
+        /* ========================= */
+        // Static brushes to avoid repeated allocations
+        private static readonly IBrush OnlineStatusColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#10B981"));
+        private static readonly IBrush OfflineStatusColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
+
+        /* ========================= */
         /* NAVIGATION */
         /* ========================= */
 
@@ -81,11 +88,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             Console.WriteLine($"[UpdateStatusProperties] IsHostRunning={IsHostRunning}");
             
-            // Directly set base class properties to ensure proper notification
+            // Use cached brushes to avoid repeated allocations
             var newText = IsHostRunning ? "SYSTEM ONLINE" : "SYSTEM OFFLINE";
-            var newColor = IsHostRunning 
-                ? new SolidColorBrush(Avalonia.Media.Color.Parse("#10B981")) 
-                : new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
+            var newColor = IsHostRunning ? OnlineStatusColor : OfflineStatusColor;
             
             Console.WriteLine($"[UpdateStatusProperties] Setting StatusText to: {newText}");
             Console.WriteLine($"[UpdateStatusProperties] Current StatusText before set: {StatusText}");
