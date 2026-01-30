@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 namespace SmartVoiceAgent.Infrastructure.Services.Music
 {
     /// <summary>
-    /// macOS implementation of music service using afplay
+    /// macOS implementation of music service with file search capability
     /// </summary>
     public class MacOSMusicService : IMusicService, IDisposable
     {
@@ -16,23 +16,146 @@ namespace SmartVoiceAgent.Infrastructure.Services.Music
         private Timer? _loopTimer;
         private bool _disposed;
         private readonly ILogger<MacOSMusicService>? _logger;
+        private readonly string[] _musicExtensions = { ".mp3", ".wav", ".flac", ".ogg", ".aac", ".m4a", ".wma" };
 
         public MacOSMusicService(ILogger<MacOSMusicService>? logger = null)
         {
             _logger = logger;
         }
 
-        public async Task PlayMusicAsync(string filePath, bool loop = false, CancellationToken cancellationToken = default)
+        public async Task PlayMusicAsync(string fileNameOrPath, bool loop = false, CancellationToken cancellationToken = default)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
 
+            // Resolve file path (search if only name provided)
+            var resolvedPath = ResolveMusicFilePath(fileNameOrPath);
+            if (resolvedPath == null)
+            {
+                throw new FileNotFoundException($"Music file not found: {fileNameOrPath}");
+            }
+
             await StopMusicAsync(cancellationToken).ConfigureAwait(false);
 
-            _currentFilePath = filePath;
+            _currentFilePath = resolvedPath;
             _isLooping = loop;
             _isPaused = false;
 
             await StartPlaybackAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Resolves a music file path. If a full path is provided, it checks if it exists.
+        /// If just a filename is provided, searches common music directories.
+        /// </summary>
+        private string? ResolveMusicFilePath(string fileNameOrPath)
+        {
+            // If it's a full path, check if it exists directly
+            if (Path.IsPathRooted(fileNameOrPath) || fileNameOrPath.Contains('/'))
+            {
+                if (File.Exists(fileNameOrPath))
+                {
+                    _logger?.LogDebug("Using provided full path: {Path}", fileNameOrPath);
+                    return fileNameOrPath;
+                }
+                return null;
+            }
+
+            // It's just a filename, search in common music directories
+            var searchName = fileNameOrPath;
+            var nameWithoutExt = Path.GetFileNameWithoutExtension(searchName);
+            var providedExt = Path.GetExtension(searchName).ToLowerInvariant();
+            
+            _logger?.LogDebug("Searching for music file: {Name}", searchName);
+
+            // Build list of directories to search
+            var searchDirectories = new List<string>();
+            
+            // User's home directory Music folder
+            var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (!string.IsNullOrEmpty(homeDir))
+            {
+                var userMusic = Path.Combine(homeDir, "Music");
+                if (Directory.Exists(userMusic))
+                {
+                    searchDirectories.Add(userMusic);
+                    try
+                    {
+                        searchDirectories.AddRange(Directory.GetDirectories(userMusic));
+                    }
+                    catch { /* Ignore access errors */ }
+                }
+                
+                // Also check Music/iTunes/iTunes Media/Music (common iTunes location)
+                var itunesMusic = Path.Combine(homeDir, "Music", "iTunes", "iTunes Media", "Music");
+                if (Directory.Exists(itunesMusic))
+                {
+                    searchDirectories.Add(itunesMusic);
+                    try
+                    {
+                        // Add artist directories (one level deep in iTunes structure)
+                        searchDirectories.AddRange(Directory.GetDirectories(itunesMusic));
+                    }
+                    catch { /* Ignore access errors */ }
+                }
+                
+                // Downloads folder
+                var downloads = Path.Combine(homeDir, "Downloads");
+                if (Directory.Exists(downloads))
+                {
+                    searchDirectories.Add(downloads);
+                }
+            }
+
+            // Common macOS music locations
+            var commonPaths = new[]
+            {
+                "/Users/Shared/Music",
+                "/Library/Music"
+            };
+
+            foreach (var path in commonPaths)
+            {
+                if (Directory.Exists(path) && !searchDirectories.Contains(path))
+                {
+                    searchDirectories.Add(path);
+                }
+            }
+
+            // Search for the file
+            foreach (var directory in searchDirectories)
+            {
+                try
+                {
+                    // If extension was provided, search for exact match first
+                    if (!string.IsNullOrEmpty(providedExt))
+                    {
+                        var exactPath = Path.Combine(directory, searchName);
+                        if (File.Exists(exactPath))
+                        {
+                            _logger?.LogInformation("Found music file: {Path}", exactPath);
+                            return exactPath;
+                        }
+                    }
+
+                    // Search with any supported extension
+                    foreach (var ext in _musicExtensions)
+                    {
+                        var filePath = Path.Combine(directory, nameWithoutExt + ext);
+                        if (File.Exists(filePath))
+                        {
+                            _logger?.LogInformation("Found music file: {Path}", filePath);
+                            return filePath;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogDebug(ex, "Error searching directory: {Directory}", directory);
+                }
+            }
+
+            _logger?.LogWarning("Music file not found: {Name}", searchName);
+            return null;
         }
 
         private async Task StartPlaybackAsync(CancellationToken cancellationToken)

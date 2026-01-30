@@ -56,7 +56,11 @@ async Task RunMusicServiceTestAsync(IServiceProvider services)
     Console.WriteLine($"Platform: {GetPlatformName()}");
     Console.WriteLine($"Service Implementation: {serviceType}");
     Console.WriteLine();
-    Console.WriteLine("Supported audio formats: MP3, WAV, FLAC, OGG, AAC (platform dependent)");
+    Console.WriteLine("Supported audio formats: MP3, WAV, FLAC, OGG, AAC, M4A, WMA");
+Console.WriteLine();
+Console.WriteLine("💡 Tip: You can provide either:");
+Console.WriteLine("   - Full path: C:\\Music\\song.mp3");
+Console.WriteLine("   - Just filename: song (will search in Music folder and subfolders)");
     Console.WriteLine();
 
     string? currentFilePath = null;
@@ -66,12 +70,12 @@ async Task RunMusicServiceTestAsync(IServiceProvider services)
     {
         Console.WriteLine("\n┌─────────────────────────────────────────────────────────┐");
         Console.WriteLine("│ Commands:                                               │");
-        Console.WriteLine("│   [P]lay <filepath>  - Play audio file                  │");
+        Console.WriteLine("│   [P]lay <name/path> - Play audio file (name or path)   │");
         Console.WriteLine("│   [PA]use            - Pause playback                   │");
         Console.WriteLine("│   [R]esume           - Resume playback                  │");
         Console.WriteLine("│   [S]top             - Stop playback                    │");
         Console.WriteLine("│   [V]olume <0-100>   - Set volume percentage            │");
-        Console.WriteLine("│   [L]oop <filepath>  - Play audio file in loop          │");
+        Console.WriteLine("│   [L]oop <name/path> - Play audio file in loop          │");
         Console.WriteLine("│   [I]nfo             - Show current status              │");
         Console.WriteLine("│   [T]est             - Quick test with sample commands  │");
         Console.WriteLine("│   [Q]uit             - Exit test mode                   │");
