@@ -10,6 +10,7 @@ using SmartVoiceAgent.Infrastructure.DependencyInjection;
 using SmartVoiceAgent.Infrastructure.Extensions;
 using SmartVoiceAgent.Mailing.Entities;
 using SmartVoiceAgent.Mailing.Interfaces;
+using SmartVoiceAgent.Mailing.Extensions;
 using MediatR;
 #endregion
 
@@ -30,6 +31,9 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddApplicationServices();
         services.AddSmartVoiceAgent(configuration);
         services.AddInfrastructureServices(configuration);
+        
+        // Add mailing services (Email and SMS)
+        services.AddMailingServices(configuration);
     })
     .Build();
 

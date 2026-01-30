@@ -33,10 +33,77 @@ public interface ISettingsService
     /// </summary>
     int StartupBehavior { get; set; }
 
+    #region Integration Settings
+
     /// <summary>
     /// Gets or sets the Todoist API key for task management integration
     /// </summary>
     string TodoistApiKey { get; set; }
+
+    #region Email (SMTP) Settings
+
+    /// <summary>
+    /// Gets or sets the SMTP server host
+    /// </summary>
+    string SmtpHost { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SMTP server port
+    /// </summary>
+    int SmtpPort { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SMTP username
+    /// </summary>
+    string SmtpUsername { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SMTP password
+    /// </summary>
+    string SmtpPassword { get; set; }
+
+    /// <summary>
+    /// Gets or sets the sender email address
+    /// </summary>
+    string SenderEmail { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to use SSL/TLS for SMTP
+    /// </summary>
+    bool SmtpEnableSsl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the email provider type (Gmail, Outlook, Yahoo, Custom)
+    /// </summary>
+    string EmailProvider { get; set; }
+
+    #endregion
+
+    #region SMS (Twilio) Settings
+
+    /// <summary>
+    /// Gets or sets the Twilio Account SID
+    /// </summary>
+    string TwilioAccountSid { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Twilio Auth Token
+    /// </summary>
+    string TwilioAuthToken { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Twilio phone number
+    /// </summary>
+    string TwilioPhoneNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether SMS service is enabled
+    /// </summary>
+    bool SmsEnabled { get; set; }
+
+    #endregion
+
+    #endregion
 
     /// <summary>
     /// Saves all settings to persistent storage

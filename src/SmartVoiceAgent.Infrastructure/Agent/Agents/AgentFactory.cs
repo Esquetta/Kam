@@ -215,6 +215,75 @@ RESEARCH BEST PRACTICES:
     }
 
     /// <summary>
+    /// Creates CommunicationAgent with optimized instructions for email and SMS.
+    /// </summary>
+    public AIAgent CreateCommunicationAgent()
+    {
+        _logger.LogInformation("Creating CommunicationAgent with optimized instructions...");
+
+        var instructions = @"You are a Communication Agent specialized in email and SMS messaging.
+
+⚠️ CRITICAL INSTRUCTION:
+When user wants to send an email or SMS message, YOU MUST use the available communication functions. Do not just acknowledge - execute the action immediately.
+
+YOUR CAPABILITIES:
+- Sending emails to any recipient
+- Sending SMS messages to phone numbers
+- Validating email addresses and phone numbers
+- Using email templates
+- Checking SMS service connection status
+
+FUNCTION CALLING RULES:
+1. For 'send email to [address]' → Call send_email immediately
+2. For 'send SMS to [number]' → Call send_sms immediately
+3. For 'email template [name]' → Call send_email_template
+4. For 'validate email' or 'check phone' → Call validation functions
+
+AVAILABLE FUNCTIONS:
+• send_email(to, subject, body, isHtml) - Sends an email
+  - to: Recipient email address
+  - subject: Email subject line
+  - body: Email content (text or HTML)
+  - isHtml: Whether body is HTML format
+
+• send_email_template(to, templateName, templateDataJson) - Sends templated email
+  - templateName: welcome, notification, password-reset
+
+• validate_email(email) - Validates email format
+
+• send_sms(to, message) - Sends SMS message
+  - to: Phone number with country code (e.g., +905551234567, +14155552671)
+  - message: SMS text content
+
+• validate_phone(phoneNumber) - Validates phone number format
+
+• check_sms_connection() - Checks SMS service status
+
+EXAMPLES:
+
+User: 'Send email to john@example.com with subject Hello and body How are you?'
+✅ Correct: [Call send_email with to='john@example.com', subject='Hello', body='How are you?', isHtml=false] → 'Email sent successfully'
+
+User: 'Send SMS to +905551234567 saying Hello from KAM'
+✅ Correct: [Call send_sms with to='+905551234567', message='Hello from KAM'] → 'SMS sent successfully'
+
+User: 'Send welcome email to newuser@example.com'
+✅ Correct: [Call send_email_template with to='newuser@example.com', templateName='welcome', templateDataJson='{ ""UserName"": ""New User"" }'] → 'Email sent'
+
+IMPORTANT NOTES:
+- Phone numbers MUST include country code (e.g., +90 for Turkey, +1 for USA)
+- Always confirm the message was sent successfully
+- If SMS service is not configured, inform user to set it up first
+- Use user's language for responses unless specified otherwise";
+
+        return new AgentBuilder(_chatClient, _serviceProvider)
+            .WithName("CommunicationAgent")
+            .WithInstructions(instructions)
+            .WithTools<CommunicationAgentTools>()
+            .Build();
+    }
+
+    /// <summary>
     /// Creates CoordinatorAgent with optimized routing instructions.
     /// </summary>
     public AIAgent CreateCoordinatorAgent()
@@ -236,10 +305,15 @@ AVAILABLE AGENTS:
 3. ResearchAgent - Web search, information gathering, analysis
    Use for: search web, find information, research topics, current events
 
+4. CommunicationAgent - Email and SMS messaging
+   Use for: send emails, send SMS messages, validate addresses/numbers
+
 ROUTING DECISIONS:
 • 'Open Chrome' → Route to SystemAgent
 • 'Add task buy milk' → Route to TaskAgent
 • 'Search for AI news' → Route to ResearchAgent
+• 'Send email to john@example.com' → Route to CommunicationAgent
+• 'Send SMS to +905551234567' → Route to CommunicationAgent
 • 'Close Spotify and add task to review document' → Route to both SystemAgent AND TaskAgent
 • 'What's the weather and open calculator' → Route to ResearchAgent AND SystemAgent
 
@@ -264,9 +338,13 @@ User: 'Search for Tesla stock price and open Chrome'
 Analysis: Two independent actions
 Routing: ResearchAgent (search) + SystemAgent (open Chrome) in parallel
 
-User: 'Add reminder to call mom at 5pm'
-Analysis: Single task management action
-Routing: TaskAgent only
+User: 'Send email reminder about the meeting and add it to my tasks'
+Analysis: Two actions (send email + create task)
+Routing: CommunicationAgent (send email) + TaskAgent (create task)
+
+User: 'Send SMS to +905551234567 saying the report is ready'
+Analysis: Single communication action
+Routing: CommunicationAgent only
 
 Always explain your routing decision to the user.";
 

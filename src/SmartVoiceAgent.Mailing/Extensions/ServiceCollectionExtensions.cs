@@ -35,7 +35,7 @@ public static class ServiceCollectionExtensions
 
         // Register Email services
         services.AddSingleton<IEmailTemplateService, EmailTemplateService>();
-        services.AddScoped<IEmailService, EmailService>();
+        services.AddSingleton<IEmailService, EmailService>();
         
         // Register SMS services (if configured)
         var smsSection = configuration.GetSection("Sms");
@@ -72,7 +72,7 @@ public static class ServiceCollectionExtensions
 
         // Register services
         services.AddSingleton<IEmailTemplateService, EmailTemplateService>();
-        services.AddScoped<IEmailService, EmailService>();
+        services.AddSingleton<IEmailService, EmailService>();
 
         return services;
     }

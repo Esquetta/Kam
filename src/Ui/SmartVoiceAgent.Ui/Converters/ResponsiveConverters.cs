@@ -368,6 +368,22 @@ public class BoolToStatusTextConverter : IValueConverter
 }
 
 /// <summary>
+/// Compares a string value to a parameter and returns true if they are equal
+/// </summary>
+public class StringEqualsConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        return value?.ToString()?.Equals(parameter?.ToString(), StringComparison.OrdinalIgnoreCase) ?? false;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
 /// Converts a brush to a glow brush with reduced opacity
 /// </summary>
 public class BrushToGlowBrushConverter : IValueConverter

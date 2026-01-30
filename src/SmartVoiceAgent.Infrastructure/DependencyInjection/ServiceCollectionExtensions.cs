@@ -75,6 +75,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<TaskAgentTools>();
         services.AddSingleton<WebSearchAgentTools>();
         services.AddSingleton<FileAgentTools>();
+        services.AddSingleton<CommunicationAgentTools>();
 
         // Host control service (must be registered before hosted service)
         services.AddSingleton<VoiceAgentHostControlService>();

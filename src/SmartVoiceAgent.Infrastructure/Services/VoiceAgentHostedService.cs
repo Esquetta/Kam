@@ -112,6 +112,7 @@ namespace SmartVoiceAgent.Infrastructure.Services
             _registry.RegisterAgent("SystemAgent", _factory.CreateSystemAgent());
             _registry.RegisterAgent("TaskAgent", await _factory.CreateTaskAgentAsync());
             _registry.RegisterAgent("ResearchAgent", _factory.CreateResearchAgent());
+            _registry.RegisterAgent("CommunicationAgent", _factory.CreateCommunicationAgent());
 
             _logger.LogInformation("✅ All agents ready");
             await Task.CompletedTask;

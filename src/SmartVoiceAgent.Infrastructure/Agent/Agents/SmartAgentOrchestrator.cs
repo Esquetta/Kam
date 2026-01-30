@@ -123,6 +123,7 @@ public class SmartAgentOrchestrator : IAgentOrchestrator
         if (response.Contains("systemagent")) agents.Add("SystemAgent");
         if (response.Contains("taskagent")) agents.Add("TaskAgent");
         if (response.Contains("researchagent")) agents.Add("ResearchAgent");
+        if (response.Contains("communicationagent")) agents.Add("CommunicationAgent");
 
         // Determine execution mode
         if (response.Contains("parallel") || response.Contains("simultaneously") ||

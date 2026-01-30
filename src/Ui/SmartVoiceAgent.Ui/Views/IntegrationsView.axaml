@@ -9,6 +9,7 @@
     <UserControl.Resources>
         <services:WindowStateManager x:Key="WindowStateManager" />
         <converters:ResponsiveFontSizeConverter x:Key="ResponsiveFontSizeConverter" />
+        <converters:StringEqualsConverter x:Key="StringEqualsConverter" />
     </UserControl.Resources>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
@@ -29,10 +30,10 @@
             </StackPanel>
 
             <!-- Integrations Grid -->
-            <Grid Grid.Row="1" RowDefinitions="Auto,Auto">
+            <StackPanel Grid.Row="1" Spacing="16">
                 
                 <!-- Todoist Integration Card -->
-                <Border Grid.Row="0" Classes="IntegrationCard">
+                <Border Classes="IntegrationCard">
                     <Grid RowDefinitions="Auto,Auto,Auto">
                         <!-- Card Header -->
                         <Grid Grid.Row="0">
@@ -77,7 +78,7 @@
                                     Height="28"
                                     VerticalAlignment="Center"
                                     HorizontalAlignment="Right">
-                                <TextBlock Text="{Binding IntegrationStatusText}"
+                                <TextBlock Text="{Binding TodoistStatusText}"
                                            FontSize="11"
                                            FontWeight="Medium"
                                            Foreground="{Binding IsTaskAgentEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|AccentErrorBrush'}"
@@ -104,9 +105,8 @@
                             <!-- Responsive Input Layout -->
                             <Grid ColumnDefinitions="*,Auto">
                                 <TextBox Grid.Column="0"
-                                         x:Name="ApiKeyTextBox"
                                          Text="{Binding TodoistApiKey, Mode=TwoWay}"
-                                         Watermark="{Binding ApiKeyPlaceholder}"
+                                         Watermark="Enter your Todoist API key..."
                                          PasswordChar="●"
                                          Classes="IntegrationInput"
                                          Height="40"
@@ -119,7 +119,7 @@
                                             Spacing="8"
                                             VerticalAlignment="Center">
                                     <!-- Save Button -->
-                                    <Button Command="{Binding SaveApiKeyCommand}"
+                                    <Button Command="{Binding SaveTodoistCommand}"
                                             Classes="IntegrationButton"
                                             IsEnabled="{Binding TodoistApiKey, Converter={StaticResource StringIsNotNullOrEmptyConverter}}">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -133,7 +133,7 @@
                                     </Button>
                                     
                                     <!-- Clear Button -->
-                                    <Button Command="{Binding ClearApiKeyCommand}"
+                                    <Button Command="{Binding ClearTodoistCommand}"
                                             Classes="IntegrationButton Secondary"
                                             IsEnabled="{Binding IsTaskAgentEnabled}">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -150,9 +150,366 @@
                         </StackPanel>
                     </Grid>
                 </Border>
+
+                <!-- Email (SMTP) Integration Card -->
+                <Border Classes="IntegrationCard">
+                    <Grid RowDefinitions="Auto,Auto,Auto">
+                        <!-- Card Header -->
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto" MinWidth="100"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" 
+                                    Width="48" 
+                                    Height="48" 
+                                    CornerRadius="12"
+                                    Background="{DynamicResource AccentPurpleGlowBrush}"
+                                    BorderBrush="{DynamicResource AccentPurpleDimBrush}"
+                                    BorderThickness="1">
+                                <Path Data="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"
+                                      Fill="{DynamicResource AccentPurpleBrush}"
+                                      Width="24"
+                                      Height="24"
+                                      Stretch="Uniform"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
+                            </Border>
+                            
+                            <StackPanel Grid.Column="1" Margin="16,0,12,0" VerticalAlignment="Center">
+                                <TextBlock Text="Email (SMTP)"
+                                           FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=18}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="Email Communication"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                            </StackPanel>
+                            
+                            <!-- Status Badge -->
+                            <Border Grid.Column="2" 
+                                    Background="{Binding IsEmailEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenGlowBrush|AccentErrorGlowBrush'}"
+                                    BorderBrush="{Binding IsEmailEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenDimBrush|AccentErrorDimBrush'}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="8,4"
+                                    Height="28"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Right">
+                                <TextBlock Text="{Binding EmailStatusText}"
+                                           FontSize="11"
+                                           FontWeight="Medium"
+                                           Foreground="{Binding IsEmailEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|AccentErrorBrush'}"
+                                           LetterSpacing="1"/>
+                            </Border>
+                        </Grid>
+                        
+                        <!-- Description -->
+                        <TextBlock Grid.Row="1" 
+                                   Text="{Binding EmailDescription}"
+                                   FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=13}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,16,0,0"/>
+                        
+                        <!-- Email Configuration -->
+                        <StackPanel Grid.Row="2" Margin="0,24,0,0" Spacing="16">
+                            
+                            <!-- Provider Selection -->
+                            <Grid ColumnDefinitions="Auto,*">
+                                <TextBlock Grid.Column="0" 
+                                           Text="Provider"
+                                           FontSize="12"
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           LetterSpacing="1"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,16,0"/>
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding EmailProviders}"
+                                          SelectedItem="{Binding EmailProvider, Mode=TwoWay}"
+                                          HorizontalAlignment="Stretch"/>
+                            </Grid>
+
+                            <!-- SMTP Username / Email -->
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Email Address / Username"
+                                           FontSize="12"
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           LetterSpacing="1"/>
+                                <TextBox Text="{Binding SmtpUsername, Mode=TwoWay}"
+                                         Watermark="your.email@gmail.com"
+                                         Classes="IntegrationInput"
+                                         Height="40"
+                                         VerticalContentAlignment="Center"/>
+                            </StackPanel>
+
+                            <!-- SMTP Password -->
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Password / App Password"
+                                           FontSize="12"
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           LetterSpacing="1"/>
+                                <TextBox Text="{Binding SmtpPassword, Mode=TwoWay}"
+                                         Watermark="Your app-specific password"
+                                         PasswordChar="●"
+                                         Classes="IntegrationInput"
+                                         Height="40"
+                                         VerticalContentAlignment="Center"/>
+                                <TextBlock Text="Tip: For Gmail, use an App Password instead of your regular password"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           TextWrapping="Wrap"
+                                           IsVisible="{Binding EmailProvider, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Gmail}"/>
+                            </StackPanel>
+
+                            <!-- Sender Email (Optional) -->
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Sender Display Email (Optional)"
+                                           FontSize="12"
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           LetterSpacing="1"/>
+                                <TextBox Text="{Binding SenderEmail, Mode=TwoWay}"
+                                         Watermark="noreply@yourdomain.com (defaults to username if empty)"
+                                         Classes="IntegrationInput"
+                                         Height="40"
+                                         VerticalContentAlignment="Center"/>
+                            </StackPanel>
+
+                            <!-- Advanced Settings Toggle -->
+                            <ToggleButton IsChecked="{Binding ShowEmailAdvanced, Mode=TwoWay}"
+                                          Content="Advanced Settings"
+                                          FontSize="12"
+                                          Foreground="{DynamicResource AccentCyanBrush}"
+                                          HorizontalAlignment="Left"
+                                          Background="Transparent"
+                                          BorderThickness="0"/>
+
+                            <!-- Advanced Settings -->
+                            <StackPanel IsVisible="{Binding ShowEmailAdvanced}" Spacing="16">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <StackPanel Grid.Column="0" Spacing="8">
+                                        <TextBlock Text="SMTP Host"
+                                                   FontSize="12"
+                                                   FontWeight="Medium"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                   LetterSpacing="1"/>
+                                        <TextBox Text="{Binding SmtpHost, Mode=TwoWay}"
+                                                 Watermark="smtp.gmail.com"
+                                                 Classes="IntegrationInput"
+                                                 Height="40"
+                                                 VerticalContentAlignment="Center"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="8" Width="100">
+                                        <TextBlock Text="Port"
+                                                   FontSize="12"
+                                                   FontWeight="Medium"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                   LetterSpacing="1"/>
+                                        <TextBox Text="{Binding SmtpPort, Mode=TwoWay}"
+                                                 Watermark="587"
+                                                 Classes="IntegrationInput"
+                                                 Height="40"
+                                                 VerticalContentAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- SSL Toggle -->
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0"
+                                               Text="Enable SSL/TLS"
+                                               FontSize="12"
+                                               FontWeight="Medium"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               VerticalAlignment="Center"/>
+                                    <ToggleSwitch Grid.Column="1"
+                                                  IsChecked="{Binding SmtpEnableSsl, Mode=TwoWay}"
+                                                  OnContent=""
+                                                  OffContent=""/>
+                                </Grid>
+                            </StackPanel>
+                            
+                            <!-- Buttons Stack -->
+                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                <!-- Save Button -->
+                                <Button Command="{Binding SaveEmailCommand}"
+                                        Classes="IntegrationButton">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Path Data="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"
+                                              Fill="{DynamicResource TextPrimaryBrush}"
+                                              Width="16"
+                                              Height="16"
+                                              Stretch="Uniform"/>
+                                        <TextBlock Text="Save"/>
+                                    </StackPanel>
+                                </Button>
+                                
+                                <!-- Clear Button -->
+                                <Button Command="{Binding ClearEmailCommand}"
+                                        Classes="IntegrationButton Secondary">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Path Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+                                              Fill="{DynamicResource TextMutedBrush}"
+                                              Width="16"
+                                              Height="16"
+                                              Stretch="Uniform"/>
+                                        <TextBlock Text="Clear"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- SMS (Twilio) Integration Card -->
+                <Border Classes="IntegrationCard">
+                    <Grid RowDefinitions="Auto,Auto,Auto">
+                        <!-- Card Header -->
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto" MinWidth="100"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" 
+                                    Width="48" 
+                                    Height="48" 
+                                    CornerRadius="12"
+                                    Background="{DynamicResource AccentOrangeGlowBrush}"
+                                    BorderBrush="{DynamicResource AccentOrangeDimBrush}"
+                                    BorderThickness="1">
+                                <Path Data="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14zm-4.2-5.78v1.75l3.2-2.99L12.8 9v1.73c-3.44.47-4.79 3.04-5.08 5.78.94-2.93 3.13-4.97 5.08-5.49z"
+                                      Fill="{DynamicResource AccentOrangeBrush}"
+                                      Width="24"
+                                      Height="24"
+                                      Stretch="Uniform"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
+                            </Border>
+                            
+                            <StackPanel Grid.Column="1" Margin="16,0,12,0" VerticalAlignment="Center">
+                                <TextBlock Text="SMS (Twilio)"
+                                           FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=18}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="SMS Messaging"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                            </StackPanel>
+                            
+                            <!-- Status Badge -->
+                            <Border Grid.Column="2" 
+                                    Background="{Binding IsSmsEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenGlowBrush|AccentErrorGlowBrush'}"
+                                    BorderBrush="{Binding IsSmsEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenDimBrush|AccentErrorDimBrush'}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="8,4"
+                                    Height="28"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Right">
+                                <TextBlock Text="{Binding SmsStatusText}"
+                                           FontSize="11"
+                                           FontWeight="Medium"
+                                           Foreground="{Binding IsSmsEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|AccentErrorBrush'}"
+                                           LetterSpacing="1"/>
+                            </Border>
+                        </Grid>
+                        
+                        <!-- Description -->
+                        <TextBlock Grid.Row="1" 
+                                   Text="{Binding SmsDescription}"
+                                   FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=13}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,16,0,0"/>
+                        
+                        <!-- Twilio Configuration -->
+                        <StackPanel Grid.Row="2" Margin="0,24,0,0" Spacing="16">
+                            
+                            <!-- Account SID -->
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Account SID"
+                                           FontSize="12"
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           LetterSpacing="1"/>
+                                <TextBox Text="{Binding TwilioAccountSid, Mode=TwoWay}"
+                                         Watermark="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                                         Classes="IntegrationInput"
+                                         Height="40"
+                                         VerticalContentAlignment="Center"/>
+                            </StackPanel>
+
+                            <!-- Auth Token -->
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Auth Token"
+                                           FontSize="12"
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           LetterSpacing="1"/>
+                                <TextBox Text="{Binding TwilioAuthToken, Mode=TwoWay}"
+                                         Watermark="Your Twilio Auth Token"
+                                         PasswordChar="●"
+                                         Classes="IntegrationInput"
+                                         Height="40"
+                                         VerticalContentAlignment="Center"/>
+                            </StackPanel>
+
+                            <!-- Phone Number -->
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Twilio Phone Number"
+                                           FontSize="12"
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           LetterSpacing="1"/>
+                                <TextBox Text="{Binding TwilioPhoneNumber, Mode=TwoWay}"
+                                         Watermark="+1234567890"
+                                         Classes="IntegrationInput"
+                                         Height="40"
+                                         VerticalContentAlignment="Center"/>
+                                <TextBlock Text="Format: +1234567890 (with country code)"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                            </StackPanel>
+                            
+                            <!-- Buttons Stack -->
+                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                <!-- Save Button -->
+                                <Button Command="{Binding SaveSmsCommand}"
+                                        Classes="IntegrationButton">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Path Data="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"
+                                              Fill="{DynamicResource TextPrimaryBrush}"
+                                              Width="16"
+                                              Height="16"
+                                              Stretch="Uniform"/>
+                                        <TextBlock Text="Save"/>
+                                    </StackPanel>
+                                </Button>
+                                
+                                <!-- Clear Button -->
+                                <Button Command="{Binding ClearSmsCommand}"
+                                        Classes="IntegrationButton Secondary">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Path Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+                                              Fill="{DynamicResource TextMutedBrush}"
+                                              Width="16"
+                                              Height="16"
+                                              Stretch="Uniform"/>
+                                        <TextBlock Text="Clear"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Border>
                 
                 <!-- Info Card -->
-                <Border Grid.Row="1" Classes="InfoCard" Margin="0,16,0,0">
+                <Border Classes="InfoCard" Margin="0,16,0,0">
                     <Grid ColumnDefinitions="Auto,*">
                         <Path Grid.Column="0"
                               Data="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"
@@ -163,13 +520,13 @@
                               Margin="0,0,12,0"
                               VerticalAlignment="Top"/>
                         <TextBlock Grid.Column="1"
-                                   Text="Integrations allow the voice agent to interact with external services. Without API keys, the corresponding agents will not be created to keep the system modular."
+                                   Text="Integrations allow the voice agent to interact with external services. Configure Email to send messages, SMS for text messaging, and Todoist for task management. Without API keys, the corresponding agents will not be created to keep the system modular."
                                    FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=13}"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"/>
                     </Grid>
                 </Border>
-            </Grid>
+            </StackPanel>
         </Grid>
     </ScrollViewer>
     
