@@ -11,6 +11,7 @@ using SmartVoiceAgent.Infrastructure.Services.Language;
 using SmartVoiceAgent.Infrastructure.Services.Stt;
 using SmartVoiceAgent.Infrastructure.Services.System;
 using SmartVoiceAgent.Infrastructure.Services.UiLog;
+using SmartVoiceAgent.Infrastructure.Services.Message;
 using SmartVoiceAgent.Infrastructure.Services.WebResearch;
 
 namespace SmartVoiceAgent.Infrastructure.DependencyInjection;
@@ -84,6 +85,9 @@ public static class ServiceRegistration
 
         // Register Command Input Service for UI-to-Agent communication
         services.AddSingleton<ICommandInputService, CommandInputService>();
+        
+        // Register Message Services (Email, SMS, etc.)
+        services.AddScoped<IMessageServiceFactory, MessageServiceFactory>();
 
         return services;
     }
