@@ -62,7 +62,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Music
 
         /// <summary>
         /// Resolves a music file path. If a full path is provided, it checks if it exists.
-        /// If just a filename is provided, searches common music directories.
+        /// If just a filename is provided, searches common music directories recursively.
         /// </summary>
         private string? ResolveMusicFilePath(string fileNameOrPath)
         {
@@ -84,22 +84,17 @@ namespace SmartVoiceAgent.Infrastructure.Services.Music
             var nameWithoutExt = Path.GetFileNameWithoutExtension(searchName);
             var providedExt = Path.GetExtension(searchName).ToLowerInvariant();
             
-            _logger?.LogDebug("Searching for music file: {Name}", searchName);
+            _logger?.LogInformation("🔍 Searching for music file: {Name}", searchName);
 
-            // Build list of directories to search
-            var searchDirectories = new List<string>();
+            // Build list of root directories to search
+            var rootDirectories = new List<string>();
             
             // User's Music folder
             var userMusic = Environment.GetFolderPath(Environment.SpecialFolder.MyMusic);
             if (!string.IsNullOrEmpty(userMusic) && Directory.Exists(userMusic))
             {
-                searchDirectories.Add(userMusic);
-                // Also add subdirectories (one level deep)
-                try
-                {
-                    searchDirectories.AddRange(Directory.GetDirectories(userMusic));
-                }
-                catch { /* Ignore access errors */ }
+                rootDirectories.Add(userMusic);
+                _logger?.LogDebug("Added search directory: {Dir}", userMusic);
             }
 
             // Common Windows music locations
@@ -114,46 +109,105 @@ namespace SmartVoiceAgent.Infrastructure.Services.Music
 
             foreach (var path in commonPaths)
             {
-                if (!string.IsNullOrEmpty(path) && Directory.Exists(path) && !searchDirectories.Contains(path))
+                if (!string.IsNullOrEmpty(path) && Directory.Exists(path) && !rootDirectories.Contains(path))
                 {
-                    searchDirectories.Add(path);
+                    rootDirectories.Add(path);
+                    _logger?.LogDebug("Added search directory: {Dir}", path);
                 }
             }
 
-            // Search for the file
-            foreach (var directory in searchDirectories)
+            // Search each root directory recursively (up to 3 levels deep for performance)
+            foreach (var rootDir in rootDirectories)
             {
                 try
                 {
-                    // If extension was provided, search for exact match first
-                    if (!string.IsNullOrEmpty(providedExt))
+                    var result = SearchDirectoryRecursive(rootDir, searchName, nameWithoutExt, providedExt, 0, 3);
+                    if (result != null)
                     {
-                        var exactPath = Path.Combine(directory, searchName);
-                        if (File.Exists(exactPath))
-                        {
-                            _logger?.LogInformation("Found music file: {Path}", exactPath);
-                            return exactPath;
-                        }
-                    }
-
-                    // Search with any supported extension
-                    foreach (var ext in _musicExtensions)
-                    {
-                        var filePath = Path.Combine(directory, nameWithoutExt + ext);
-                        if (File.Exists(filePath))
-                        {
-                            _logger?.LogInformation("Found music file: {Path}", filePath);
-                            return filePath;
-                        }
+                        _logger?.LogInformation("✅ Found music file: {Path}", result);
+                        return result;
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogDebug(ex, "Error searching directory: {Directory}", directory);
+                    _logger?.LogDebug(ex, "Error searching directory: {Directory}", rootDir);
                 }
             }
 
-            _logger?.LogWarning("Music file not found: {Name}", searchName);
+            _logger?.LogWarning("❌ Music file not found: {Name}", searchName);
+            _logger?.LogInformation("💡 Searched in: {Dirs}", string.Join(", ", rootDirectories));
+            return null;
+        }
+
+        /// <summary>
+        /// Recursively searches a directory for a music file
+        /// </summary>
+        private string? SearchDirectoryRecursive(string directory, string searchName, string nameWithoutExt, string providedExt, int currentDepth, int maxDepth)
+        {
+            if (currentDepth > maxDepth)
+                return null;
+
+            try
+            {
+                // Check files in current directory
+                // If extension was provided, search for exact match first
+                if (!string.IsNullOrEmpty(providedExt))
+                {
+                    var exactPath = Path.Combine(directory, searchName);
+                    if (File.Exists(exactPath))
+                    {
+                        return exactPath;
+                    }
+
+                    // Also try case-insensitive comparison
+                    var files = Directory.GetFiles(directory);
+                    foreach (var file in files)
+                    {
+                        if (string.Equals(Path.GetFileName(file), searchName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return file;
+                        }
+                    }
+                }
+
+                // Search with any supported extension
+                foreach (var ext in _musicExtensions)
+                {
+                    var filePath = Path.Combine(directory, nameWithoutExt + ext);
+                    if (File.Exists(filePath))
+                    {
+                        return filePath;
+                    }
+
+                    // Also try case-insensitive
+                    var files = Directory.GetFiles(directory, "*" + ext, SearchOption.TopDirectoryOnly);
+                    foreach (var file in files)
+                    {
+                        if (string.Equals(Path.GetFileNameWithoutExtension(file), nameWithoutExt, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return file;
+                        }
+                    }
+                }
+
+                // Search subdirectories
+                var subDirs = Directory.GetDirectories(directory);
+                foreach (var subDir in subDirs)
+                {
+                    var result = SearchDirectoryRecursive(subDir, searchName, nameWithoutExt, providedExt, currentDepth + 1, maxDepth);
+                    if (result != null)
+                        return result;
+                }
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Skip directories we can't access
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogDebug(ex, "Error searching directory: {Directory}", directory);
+            }
+
             return null;
         }
 

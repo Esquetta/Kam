@@ -95,22 +95,24 @@ Console.WriteLine("   - Just filename: song (will search in Music folder and sub
                 case "PLAY":
                     if (string.IsNullOrWhiteSpace(argument))
                     {
-                        Console.Write("Enter audio file path: ");
+                        Console.Write("Enter audio file name or path: ");
                         argument = Console.ReadLine()?.Trim();
                     }
                     
                     if (!string.IsNullOrWhiteSpace(argument))
                     {
-                        if (!File.Exists(argument))
+                        try
+                        {
+                            Console.WriteLine($"🔍 Looking for: {argument}");
+                            currentFilePath = argument;
+                            await musicService.PlayMusicAsync(currentFilePath, loop: false);
+                            Console.WriteLine($"✅ Now playing: {Path.GetFileName(currentFilePath)}");
+                        }
+                        catch (FileNotFoundException)
                         {
                             Console.WriteLine($"❌ File not found: {argument}");
-                            continue;
+                            Console.WriteLine("💡 Make sure the file is in your Music folder or provide the full path.");
                         }
-                        
-                        currentFilePath = argument;
-                        Console.WriteLine($"▶️ Playing: {Path.GetFileName(currentFilePath)}");
-                        await musicService.PlayMusicAsync(currentFilePath, loop: false);
-                        Console.WriteLine("✅ Playback started");
                     }
                     break;
 
