@@ -2,11 +2,14 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using SmartVoiceAgent.Application.DependencyInjection;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Infrastructure.DependencyInjection;
 using SmartVoiceAgent.Infrastructure.Extensions;
+using SmartVoiceAgent.Mailing.Entities;
+using SmartVoiceAgent.Mailing.Interfaces;
 using MediatR;
 #endregion
 
@@ -314,7 +317,17 @@ async Task RunMessageServiceTestAsync(IServiceProvider services)
     Console.WriteLine("  - Email: user@example.com");
     Console.WriteLine("  - More coming soon (SMS, Slack, etc.)");
     Console.WriteLine();
+    Console.WriteLine("📧 Supported Email Providers:");
+    Console.WriteLine("  • Gmail (App Password required - see SETUP_GUIDE.md)");
+    Console.WriteLine("  • Outlook/Hotmail (App Password required)");
+    Console.WriteLine("  • Yahoo Mail (App Password required)");
+    Console.WriteLine("  • Office 365 (App Password required)");
+    Console.WriteLine("  • SendGrid (API Key)");
+    Console.WriteLine("  • Mailgun (SMTP credentials)");
+    Console.WriteLine("  • Amazon SES (SMTP credentials)");
+    Console.WriteLine();
     Console.WriteLine("💡 Note: Email requires SMTP configuration in appsettings.json");
+    Console.WriteLine("   or User Secrets: dotnet user-secrets set \"Email:AppPassword\" \"your-password\"");
     Console.WriteLine();
 
     bool running = true;
@@ -326,6 +339,8 @@ async Task RunMessageServiceTestAsync(IServiceProvider services)
         Console.WriteLine("│   [S]end <email> <message>  - Send message to recipient│");
         Console.WriteLine("│   [T]est                    - Run email validation test│");
         Console.WriteLine("│   [V]alidate <email>        - Check if email is valid  │");
+        Console.WriteLine("│   [D]iagnose                - Show SMTP configuration  │");
+        Console.WriteLine("│   [C]onnect                 - Test SMTP connection     │");
         Console.WriteLine("│   [Q]uit                    - Exit test mode           │");
         Console.WriteLine("└─────────────────────────────────────────────────────────┘");
         Console.Write("\nEnter command: ");
@@ -366,6 +381,16 @@ async Task RunMessageServiceTestAsync(IServiceProvider services)
                     }
                     break;
 
+                case "D":
+                case "DIAGNOSE":
+                    ShowSmtpDiagnostics(services);
+                    break;
+
+                case "C":
+                case "CONNECT":
+                    await TestSmtpConnectionAsync(services);
+                    break;
+
                 case "Q":
                 case "QUIT":
                 case "EXIT":
@@ -374,7 +399,7 @@ async Task RunMessageServiceTestAsync(IServiceProvider services)
                     break;
 
                 default:
-                    Console.WriteLine("❌ Unknown command. Type 'S', 'T', 'V', or 'Q'.");
+                    Console.WriteLine("❌ Unknown command. Type 'S', 'T', 'V', 'D', 'C', or 'Q'.");
                     break;
             }
         }
@@ -539,6 +564,125 @@ async Task RunQuickMessageTestAsync(IMessageServiceFactory messageFactory)
     }
     
     Console.WriteLine($"─── Results: {passed} passed, {failed} failed ───\n");
+}
+
+void ShowSmtpDiagnostics(IServiceProvider services)
+{
+    try
+    {
+        var settingsOptions = services.GetService<IOptions<SmtpSettings>>();
+        
+        if (settingsOptions?.Value == null)
+        {
+            Console.WriteLine("\n❌ SMTP settings not configured!");
+            Console.WriteLine("   Run: dotnet user-secrets set \"Email:Provider\" \"Gmail\"");
+            Console.WriteLine("   Run: dotnet user-secrets set \"Email:Username\" \"your-email@gmail.com\"");
+            Console.WriteLine("   Run: dotnet user-secrets set \"Email:AppPassword\" \"your-app-password\"");
+            return;
+        }
+        
+        var settings = settingsOptions.Value;
+        settings.ApplyProviderDefaults();
+        
+        Console.WriteLine("\n┌─ SMTP Configuration Diagnostics ───────────────────────┐");
+        Console.WriteLine($"│ Provider:        {settings.Provider,-40} │");
+        Console.WriteLine($"│ Host:            {settings.Host,-40} │");
+        Console.WriteLine($"│ Port:            {settings.Port,-40} │");
+        Console.WriteLine($"│ EnableSsl:       {settings.EnableSsl,-40} │");
+        Console.WriteLine($"│ UseStartTls:     {settings.UseStartTls,-40} │");
+        Console.WriteLine($"│ AuthMethod:      {settings.AuthMethod,-40} │");
+        Console.WriteLine($"│ Username:        {(settings.Username ?? "NOT SET"),-40} │");
+        Console.WriteLine($"│ Password Set:    {(!string.IsNullOrEmpty(settings.Password) ? "YES" : "NO"),-40} │");
+        Console.WriteLine($"│ AppPassword Set: {(!string.IsNullOrEmpty(settings.AppPassword) ? "YES" : "NO"),-40} │");
+        Console.WriteLine($"│ FromAddress:     {(settings.FromAddress ?? "NOT SET"),-40} │");
+        Console.WriteLine($"│ FromName:        {(settings.FromName ?? "NOT SET"),-40} │");
+        Console.WriteLine($"│ SkipAuth:        {settings.SkipAuthentication,-40} │");
+        Console.WriteLine("└────────────────────────────────────────────────────────┘");
+        
+        // Check for common issues
+        var issues = new List<string>();
+        
+        if (string.IsNullOrEmpty(settings.Username))
+            issues.Add("❌ Username/Email is not set");
+        
+        if (!settings.SkipAuthentication && 
+            string.IsNullOrEmpty(settings.AppPassword) && 
+            string.IsNullOrEmpty(settings.Password))
+            issues.Add("❌ No password or AppPassword configured");
+        
+        if (settings.Provider == SmtpProvider.Gmail && 
+            string.IsNullOrEmpty(settings.AppPassword) && 
+            !string.IsNullOrEmpty(settings.Password))
+            issues.Add("⚠️ Gmail requires App Password, not regular password");
+        
+        if (string.IsNullOrEmpty(settings.FromAddress))
+            issues.Add("❌ From address is not set");
+        
+        if (!settings.EnableSsl && !settings.UseStartTls)
+            issues.Add("⚠️ SSL/TLS is disabled - most providers require it");
+        
+        if (issues.Count > 0)
+        {
+            Console.WriteLine("\n⚠️ Configuration Issues Found:");
+            foreach (var issue in issues)
+            {
+                Console.WriteLine($"   {issue}");
+            }
+        }
+        else
+        {
+            Console.WriteLine("\n✅ Basic configuration looks good!");
+        }
+        
+        Console.WriteLine("\n💡 To fix configuration:");
+        Console.WriteLine("   dotnet user-secrets set \"Email:Provider\" \"Gmail\"");
+        Console.WriteLine("   dotnet user-secrets set \"Email:Username\" \"your-email@gmail.com\"");
+        Console.WriteLine("   dotnet user-secrets set \"Email:AppPassword\" \"your-16-char-app-password\"");
+        Console.WriteLine();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"\n❌ Error reading configuration: {ex.Message}");
+    }
+}
+
+async Task TestSmtpConnectionAsync(IServiceProvider services)
+{
+    Console.WriteLine("\n🔌 Testing SMTP connection...");
+    
+    try
+    {
+        var emailService = services.GetService<IEmailService>();
+        
+        if (emailService == null)
+        {
+            Console.WriteLine("❌ Email service not available!");
+            return;
+        }
+        
+        var result = await emailService.TestConnectionAsync();
+        
+        if (result)
+        {
+            Console.WriteLine("✅ SMTP connection successful!");
+            Console.WriteLine("   Connected and authenticated successfully.");
+        }
+        else
+        {
+            Console.WriteLine("❌ SMTP connection failed!");
+            Console.WriteLine("   Check your credentials and try again.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Connection test failed: {ex.Message}");
+        if (ex.InnerException != null)
+        {
+            Console.WriteLine($"   Details: {ex.InnerException.Message}");
+        }
+    }
+    
+    Console.WriteLine();
 }
 #endregion
 
