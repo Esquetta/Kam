@@ -1,11 +1,16 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿#region Using Statements
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SmartVoiceAgent.Application.DependencyInjection;
+using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Infrastructure.DependencyInjection;
 using SmartVoiceAgent.Infrastructure.Extensions;
+using MediatR;
+#endregion
 
+#region Main Entry Point
 Console.WriteLine("╔═══════════════════════════════════════════════════════════╗");
 Console.WriteLine("║         KAM Neural Core - Console Test Application        ║");
 Console.WriteLine("╚═══════════════════════════════════════════════════════════╝");
@@ -28,22 +33,29 @@ var host = Host.CreateDefaultBuilder(args)
 // Test mode selector
 Console.WriteLine("Select test mode:");
 Console.WriteLine("1. Music Service Test (Play/Pause/Stop/Volume)");
-Console.WriteLine("2. Run Voice Agent Host (default)");
+Console.WriteLine("2. Message Service Test (Send Email/SMS)");
+Console.WriteLine("3. Run Voice Agent Host (default)");
 Console.WriteLine();
-Console.Write("Enter choice (1-2) [2]: ");
+Console.Write("Enter choice (1-3) [3]: ");
 
-var choice = Console.ReadLine()?.Trim() ?? "2";
+var choice = Console.ReadLine()?.Trim() ?? "3";
 
-if (choice == "1")
+switch (choice)
 {
-    await RunMusicServiceTestAsync(host.Services);
+    case "1":
+        await RunMusicServiceTestAsync(host.Services);
+        break;
+    case "2":
+        await RunMessageServiceTestAsync(host.Services);
+        break;
+    default:
+        Console.WriteLine("\nStarting Voice Agent Host...");
+        await host.RunAsync();
+        break;
 }
-else
-{
-    Console.WriteLine("\nStarting Voice Agent Host...");
-    await host.RunAsync();
-}
+#endregion
 
+#region Music Service Test
 async Task RunMusicServiceTestAsync(IServiceProvider services)
 {
     Console.WriteLine("\n═══════════════════════════════════════════════════════════");
@@ -57,10 +69,10 @@ async Task RunMusicServiceTestAsync(IServiceProvider services)
     Console.WriteLine($"Service Implementation: {serviceType}");
     Console.WriteLine();
     Console.WriteLine("Supported audio formats: MP3, WAV, FLAC, OGG, AAC, M4A, WMA");
-Console.WriteLine();
-Console.WriteLine("💡 Tip: You can provide either:");
-Console.WriteLine("   - Full path: C:\\Music\\song.mp3");
-Console.WriteLine("   - Just filename: song (will search in Music folder and subfolders)");
+    Console.WriteLine();
+    Console.WriteLine("💡 Tip: You can provide either:");
+    Console.WriteLine("   - Full path: C:\\Music\\song.mp3");
+    Console.WriteLine("   - Just filename: song (will search in Music folder and subfolders)");
     Console.WriteLine();
 
     string? currentFilePath = null;
@@ -126,16 +138,17 @@ Console.WriteLine("   - Just filename: song (will search in Music folder and sub
                     
                     if (!string.IsNullOrWhiteSpace(argument))
                     {
-                        if (!File.Exists(argument))
+                        try
+                        {
+                            Console.WriteLine($"🔍 Looking for: {argument}");
+                            currentFilePath = argument;
+                            await musicService.PlayMusicAsync(currentFilePath, loop: true);
+                            Console.WriteLine($"🔁 Looped playback started: {Path.GetFileName(currentFilePath)}");
+                        }
+                        catch (FileNotFoundException)
                         {
                             Console.WriteLine($"❌ File not found: {argument}");
-                            continue;
                         }
-                        
-                        currentFilePath = argument;
-                        Console.WriteLine($"🔁 Playing in loop: {Path.GetFileName(currentFilePath)}");
-                        await musicService.PlayMusicAsync(currentFilePath, loop: true);
-                        Console.WriteLine("✅ Looped playback started");
                     }
                     break;
 
@@ -192,7 +205,7 @@ Console.WriteLine("   - Just filename: song (will search in Music folder and sub
 
                 case "T":
                 case "TEST":
-                    await RunQuickTestAsync(musicService);
+                    await RunQuickMusicTestAsync(musicService);
                     break;
 
                 case "Q":
@@ -221,9 +234,9 @@ Console.WriteLine("   - Just filename: song (will search in Music folder and sub
     }
 }
 
-async Task RunQuickTestAsync(IMusicService musicService)
+async Task RunQuickMusicTestAsync(IMusicService musicService)
 {
-    Console.WriteLine("\n─── Quick Test Sequence ───");
+    Console.WriteLine("\n─── Quick Music Test Sequence ───");
     Console.WriteLine("This test will verify all music service operations.");
     Console.WriteLine("Note: Audio playback tests require a valid audio file.");
     Console.WriteLine();
@@ -283,9 +296,253 @@ async Task RunQuickTestAsync(IMusicService musicService)
         Console.WriteLine("⏭️ Skipped playback test (no file provided)\n");
     }
     
-    Console.WriteLine("─── Quick Test Complete ───\n");
+    Console.WriteLine("─── Quick Music Test Complete ───\n");
+}
+#endregion
+
+#region Message Service Test
+async Task RunMessageServiceTestAsync(IServiceProvider services)
+{
+    Console.WriteLine("\n═══════════════════════════════════════════════════════════");
+    Console.WriteLine("                MESSAGE SERVICE TEST MODE                  ");
+    Console.WriteLine("═══════════════════════════════════════════════════════════\n");
+
+    var mediator = services.GetRequiredService<IMediator>();
+    var messageFactory = services.GetRequiredService<IMessageServiceFactory>();
+    
+    Console.WriteLine("Supported message types:");
+    Console.WriteLine("  - Email: user@example.com");
+    Console.WriteLine("  - More coming soon (SMS, Slack, etc.)");
+    Console.WriteLine();
+    Console.WriteLine("💡 Note: Email requires SMTP configuration in appsettings.json");
+    Console.WriteLine();
+
+    bool running = true;
+
+    while (running)
+    {
+        Console.WriteLine("\n┌─────────────────────────────────────────────────────────┐");
+        Console.WriteLine("│ Commands:                                               │");
+        Console.WriteLine("│   [S]end <email> <message>  - Send message to recipient│");
+        Console.WriteLine("│   [T]est                    - Run email validation test│");
+        Console.WriteLine("│   [V]alidate <email>        - Check if email is valid  │");
+        Console.WriteLine("│   [Q]uit                    - Exit test mode           │");
+        Console.WriteLine("└─────────────────────────────────────────────────────────┘");
+        Console.Write("\nEnter command: ");
+        
+        var input = Console.ReadLine()?.Trim() ?? "";
+        var parts = input.Split(new[] { ' ' }, 3, StringSplitOptions.RemoveEmptyEntries);
+        var command = parts[0].ToUpperInvariant();
+
+        try
+        {
+            switch (command)
+            {
+                case "S":
+                case "SEND":
+                    await HandleSendMessageCommand(parts, mediator);
+                    break;
+
+                case "T":
+                case "TEST":
+                    await RunQuickMessageTestAsync(messageFactory);
+                    break;
+
+                case "V":
+                case "VALIDATE":
+                    if (parts.Length > 1)
+                    {
+                        var email = parts[1];
+                        ValidateEmailAddress(email, messageFactory);
+                    }
+                    else
+                    {
+                        Console.Write("Enter email to validate: ");
+                        var email = Console.ReadLine()?.Trim();
+                        if (!string.IsNullOrWhiteSpace(email))
+                        {
+                            ValidateEmailAddress(email, messageFactory);
+                        }
+                    }
+                    break;
+
+                case "Q":
+                case "QUIT":
+                case "EXIT":
+                    running = false;
+                    Console.WriteLine("\n✅ Message service test ended.");
+                    break;
+
+                default:
+                    Console.WriteLine("❌ Unknown command. Type 'S', 'T', 'V', or 'Q'.");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error: {ex.Message}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"   Inner: {ex.InnerException.Message}");
+            }
+        }
+    }
 }
 
+async Task HandleSendMessageCommand(string[] parts, IMediator mediator)
+{
+    string recipient;
+    string message;
+
+    if (parts.Length >= 3)
+    {
+        recipient = parts[1];
+        message = parts[2];
+    }
+    else
+    {
+        Console.Write("Enter recipient (email): ");
+        recipient = Console.ReadLine()?.Trim() ?? "";
+        
+        if (string.IsNullOrWhiteSpace(recipient))
+        {
+            Console.WriteLine("❌ Recipient cannot be empty.");
+            return;
+        }
+
+        Console.Write("Enter message: ");
+        message = Console.ReadLine()?.Trim() ?? "";
+        
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            Console.WriteLine("❌ Message cannot be empty.");
+            return;
+        }
+    }
+
+    Console.WriteLine($"\n📤 Sending message to: {recipient}");
+    Console.WriteLine($"   Content: {message}");
+    
+    try
+    {
+        var command = new SendMessageCommand(recipient, message);
+        var result = await mediator.Send(command);
+        
+        if (result.Success)
+        {
+            Console.WriteLine($"✅ {result.Message}");
+        }
+        else
+        {
+            Console.WriteLine($"❌ {result.Message}");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Failed to send: {ex.Message}");
+    }
+}
+
+void ValidateEmailAddress(string email, IMessageServiceFactory factory)
+{
+    Console.WriteLine($"\n🔍 Validating: {email}");
+    
+    try
+    {
+        var service = factory.GetService(email);
+        var serviceType = service.GetType().Name;
+        Console.WriteLine($"✅ Valid email format!");
+        Console.WriteLine($"   Handler: {serviceType}");
+    }
+    catch (NotSupportedException)
+    {
+        Console.WriteLine($"❌ Invalid email format or unsupported recipient type.");
+    }
+    catch (ArgumentException ex)
+    {
+        Console.WriteLine($"❌ {ex.Message}");
+    }
+}
+
+async Task RunQuickMessageTestAsync(IMessageServiceFactory messageFactory)
+{
+    Console.WriteLine("\n─── Quick Message Test Sequence ───");
+    Console.WriteLine("Testing email validation...\n");
+    
+    var testEmails = new[]
+    {
+        ("test@example.com", true),
+        ("user.name@domain.co.uk", true),
+        ("user+tag@example.com", true),
+        ("invalid-email", false),
+        ("@example.com", false),
+        ("user@", false),
+        ("", false)
+    };
+    
+    int passed = 0;
+    int failed = 0;
+    
+    foreach (var (email, shouldBeValid) in testEmails)
+    {
+        if (string.IsNullOrEmpty(email))
+        {
+            Console.WriteLine("Test: (empty string)");
+        }
+        else
+        {
+            Console.WriteLine($"Test: {email}");
+        }
+        
+        try
+        {
+            var service = messageFactory.GetService(email);
+            var isValid = true;
+            
+            if (isValid == shouldBeValid)
+            {
+                Console.WriteLine($"✅ PASS - Detected as {(isValid ? "valid" : "invalid")}\n");
+                passed++;
+            }
+            else
+            {
+                Console.WriteLine($"❌ FAIL - Expected {(shouldBeValid ? "valid" : "invalid")}, got {(isValid ? "valid" : "invalid")}\n");
+                failed++;
+            }
+        }
+        catch (ArgumentException)
+        {
+            if (!shouldBeValid)
+            {
+                Console.WriteLine($"✅ PASS - Correctly rejected as invalid\n");
+                passed++;
+            }
+            else
+            {
+                Console.WriteLine($"❌ FAIL - Should be valid but was rejected\n");
+                failed++;
+            }
+        }
+        catch (NotSupportedException)
+        {
+            if (!shouldBeValid)
+            {
+                Console.WriteLine($"✅ PASS - Correctly rejected as invalid\n");
+                passed++;
+            }
+            else
+            {
+                Console.WriteLine($"❌ FAIL - Should be valid but was rejected\n");
+                failed++;
+            }
+        }
+    }
+    
+    Console.WriteLine($"─── Results: {passed} passed, {failed} failed ───\n");
+}
+#endregion
+
+#region Helper Methods
 string GetPlatformName()
 {
     if (OperatingSystem.IsWindows()) return "Windows";
@@ -293,3 +550,4 @@ string GetPlatformName()
     if (OperatingSystem.IsMacOS()) return "macOS";
     return "Unknown";
 }
+#endregion
