@@ -15,6 +15,7 @@ public static class ServiceCollectionExtensions
     
     /// <summary>
     /// Add mailing services to the DI container with configuration
+    /// Includes both Email and SMS services
     /// </summary>
     public static IServiceCollection AddMailingServices(
         this IServiceCollection services,
@@ -32,9 +33,16 @@ public static class ServiceCollectionExtensions
             configuration.GetSection("Email:Options").Bind(options);
         });
 
-        // Register services
+        // Register Email services
         services.AddSingleton<IEmailTemplateService, EmailTemplateService>();
         services.AddScoped<IEmailService, EmailService>();
+        
+        // Register SMS services (if configured)
+        var smsSection = configuration.GetSection("Sms");
+        if (smsSection.Exists())
+        {
+            services.AddSmsServices(configuration);
+        }
 
         return services;
     }
