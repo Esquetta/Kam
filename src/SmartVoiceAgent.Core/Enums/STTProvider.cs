@@ -2,6 +2,7 @@
 {
     public enum STTProvider
     {
+        Whisper,
         HuggingFace,
         OpenAI,
         Azure,

@@ -13,6 +13,8 @@ using SmartVoiceAgent.Infrastructure.Services.System;
 using SmartVoiceAgent.Infrastructure.Services.UiLog;
 using SmartVoiceAgent.Infrastructure.Services.Message;
 using SmartVoiceAgent.Infrastructure.Services.WebResearch;
+using SmartVoiceAgent.Infrastructure.Services.Voice;
+using SmartVoiceAgent.Infrastructure.Services.Audio;
 
 namespace SmartVoiceAgent.Infrastructure.DependencyInjection;
 
@@ -88,6 +90,15 @@ public static class ServiceRegistration
         
         // Register Message Services (Email, SMS, etc.)
         services.AddScoped<IMessageServiceFactory, MessageServiceFactory>();
+
+        // Register Wake Word Detection Service
+        services.AddSingleton<IWakeWordDetectionService, WakeWordDetectionService>();
+
+        // Register Multi-STT Service with Fallback
+        services.AddSingleton<IMultiSTTService, MultiSTTService>();
+
+        // Register Noise Suppression Service
+        services.AddSingleton<INoiseSuppressionService, NoiseSuppressionService>();
 
         return services;
     }
