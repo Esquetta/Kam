@@ -81,7 +81,9 @@ namespace SmartVoiceAgent.Infrastructure.Helpers
 
         public void Dispose()
         {
-            _sttService?.Dispose();
+            // Note: We don't dispose _sttService here because it's a singleton
+            // managed by the DI container. Disposing it would break subsequent uses.
+            // The DI container will dispose it when the application shuts down.
         }
     }
 }
