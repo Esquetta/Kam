@@ -42,11 +42,12 @@ Console.WriteLine("Select test mode:");
 Console.WriteLine("1. Music Service Test (Play/Pause/Stop/Volume)");
 Console.WriteLine("2. Message Service Test (Send Email/SMS)");
 Console.WriteLine("3. Device Control Test (Volume/WiFi/Bluetooth/Brightness/Power)");
-Console.WriteLine("4. Run Voice Agent Host (default)");
+Console.WriteLine("4. Application Scanner Test (List/Find installed apps)");
+Console.WriteLine("5. Run Voice Agent Host (default)");
 Console.WriteLine();
-Console.Write("Enter choice (1-4) [4]: ");
+Console.Write("Enter choice (1-5) [5]: ");
 
-var choice = Console.ReadLine()?.Trim() ?? "4";
+var choice = Console.ReadLine()?.Trim() ?? "5";
 
 switch (choice)
 {
@@ -58,6 +59,9 @@ switch (choice)
         break;
     case "3":
         await RunDeviceControlTestAsync(host.Services);
+        break;
+    case "4":
+        await RunApplicationScannerTestAsync(host.Services);
         break;
     default:
         Console.WriteLine("\nStarting Voice Agent Host...");
@@ -857,6 +861,276 @@ async Task ExecuteDeviceCommandAsync(IMediator mediator, string device, string a
     catch (Exception ex)
     {
         Console.WriteLine($"❌ Failed to execute command: {ex.Message}");
+    }
+}
+#endregion
+
+#region Application Scanner Test
+async Task RunApplicationScannerTestAsync(IServiceProvider services)
+{
+    Console.WriteLine("\n═══════════════════════════════════════════════════════════");
+    Console.WriteLine("              APPLICATION SCANNER TEST MODE                ");
+    Console.WriteLine("═══════════════════════════════════════════════════════════\n");
+
+    var mediator = services.GetRequiredService<IMediator>();
+    var scannerFactory = services.GetRequiredService<IApplicationScannerServiceFactory>();
+    var scanner = scannerFactory.Create();
+    
+    Console.WriteLine($"Platform: {GetPlatformName()}");
+    Console.WriteLine($"Scanner Implementation: {scanner.GetType().Name}");
+    Console.WriteLine();
+
+    bool running = true;
+
+    while (running)
+    {
+        Console.WriteLine("\n┌─────────────────────────────────────────────────────────┐");
+        Console.WriteLine("│ Commands:                                               │");
+        Console.WriteLine("│   [L]ist [system]         - List installed applications│");
+        Console.WriteLine("│   [F]ind <app name>       - Find specific application  │");
+        Console.WriteLine("│   [P]ath <app name>       - Get executable path        │");
+        Console.WriteLine("│   [S]can quick            - Quick scan (top 20 apps)   │");
+        Console.WriteLine("│   [Q]uit                  - Exit test mode             │");
+        Console.WriteLine("└─────────────────────────────────────────────────────────┘");
+        Console.Write("\nEnter command: ");
+        
+        var input = Console.ReadLine()?.Trim() ?? "";
+        var parts = input.Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
+        var command = parts[0].ToUpperInvariant();
+        var argument = parts.Length > 1 ? parts[1] : null;
+
+        try
+        {
+            switch (command)
+            {
+                case "L":
+                case "LIST":
+                    await ListApplicationsAsync(mediator, argument);
+                    break;
+
+                case "F":
+                case "FIND":
+                    if (string.IsNullOrWhiteSpace(argument))
+                    {
+                        Console.Write("Enter application name to find: ");
+                        argument = Console.ReadLine()?.Trim();
+                    }
+                    if (!string.IsNullOrWhiteSpace(argument))
+                    {
+                        await FindApplicationAsync(scanner, argument);
+                    }
+                    break;
+
+                case "P":
+                case "PATH":
+                    if (string.IsNullOrWhiteSpace(argument))
+                    {
+                        Console.Write("Enter application name to get path: ");
+                        argument = Console.ReadLine()?.Trim();
+                    }
+                    if (!string.IsNullOrWhiteSpace(argument))
+                    {
+                        await GetApplicationPathAsync(scanner, argument);
+                    }
+                    break;
+
+                case "S":
+                case "SCAN":
+                    await QuickScanAsync(scanner);
+                    break;
+
+                case "Q":
+                case "QUIT":
+                case "EXIT":
+                    running = false;
+                    Console.WriteLine("\n✅ Application scanner test ended.");
+                    break;
+
+                default:
+                    Console.WriteLine("❌ Unknown command. Type 'L', 'F', 'P', 'S', or 'Q'.");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error: {ex.Message}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"   Inner: {ex.InnerException.Message}");
+            }
+        }
+    }
+}
+
+async Task ListApplicationsAsync(IMediator mediator, string? argument)
+{
+    bool includeSystemApps = argument?.ToLower() == "system";
+    
+    Console.WriteLine($"\n🔍 Scanning for installed applications (System apps: {(includeSystemApps ? "included" : "excluded")})...");
+    Console.WriteLine("This may take a few seconds...\n");
+    
+    try
+    {
+        var command = new ListInstalledApplicationsCommand(includeSystemApps);
+        var result = await mediator.Send(command);
+        
+        if (result.Success)
+        {
+            Console.WriteLine($"✅ {result.Message}");
+            if (result.Data != null)
+            {
+                var dataString = result.Data.ToString();
+                if (!string.IsNullOrEmpty(dataString))
+                {
+                    // Pretty print the JSON
+                    try
+                    {
+                        var apps = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(dataString);
+                        Console.WriteLine("\n📋 Installed Applications:");
+                        Console.WriteLine("─────────────────────────────────────────────────────────");
+                        
+                        int count = 0;
+                        foreach (var app in apps.EnumerateArray())
+                        {
+                            count++;
+                            var name = app.GetProperty("name").GetString();
+                            var path = app.GetProperty("path").GetString();
+                            var isRunning = app.GetProperty("isRunning").GetBoolean();
+                            
+                            var statusIcon = isRunning ? "🟢" : "⚪";
+                            var truncatedPath = path?.Length > 50 ? path.Substring(0, 47) + "..." : path;
+                            
+                            Console.WriteLine($"{statusIcon} {count}. {name}");
+                            if (!string.IsNullOrEmpty(truncatedPath))
+                            {
+                                Console.WriteLine($"   📁 {truncatedPath}");
+                            }
+                            
+                            // Limit output to avoid console flooding
+                            if (count >= 50 && apps.GetArrayLength() > 50)
+                            {
+                                Console.WriteLine($"\n... and {apps.GetArrayLength() - count} more applications");
+                                break;
+                            }
+                        }
+                        
+                        Console.WriteLine("─────────────────────────────────────────────────────────");
+                        Console.WriteLine($"📝 Total: {count} applications shown");
+                        Console.WriteLine("🟢 = Running | ⚪ = Not running");
+                    }
+                    catch
+                    {
+                        // Fallback to raw JSON
+                        Console.WriteLine(dataString);
+                    }
+                }
+            }
+        }
+        else
+        {
+            Console.WriteLine($"❌ {result.Message}");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Failed to list applications: {ex.Message}");
+    }
+}
+
+async Task FindApplicationAsync(IApplicationScanner scanner, string appName)
+{
+    Console.WriteLine($"\n🔍 Searching for: {appName}...");
+    
+    try
+    {
+        var result = await scanner.FindApplicationAsync(appName);
+        
+        if (result.IsInstalled)
+        {
+            Console.WriteLine($"✅ Application found: {result.DisplayName}");
+            Console.WriteLine($"   📁 Path: {result.ExecutablePath}");
+            if (!string.IsNullOrEmpty(result.Version))
+            {
+                Console.WriteLine($"   📌 Version: {result.Version}");
+            }
+            if (result.InstallDate.HasValue)
+            {
+                Console.WriteLine($"   📅 Install Date: {result.InstallDate.Value:yyyy-MM-dd}");
+            }
+        }
+        else
+        {
+            Console.WriteLine($"❌ Application '{appName}' not found.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error finding application: {ex.Message}");
+    }
+}
+
+async Task GetApplicationPathAsync(IApplicationScanner scanner, string appName)
+{
+    Console.WriteLine($"\n🔍 Getting path for: {appName}...");
+    
+    try
+    {
+        var path = await scanner.GetApplicationPathAsync(appName);
+        
+        if (!string.IsNullOrEmpty(path))
+        {
+            Console.WriteLine($"✅ Path found: {path}");
+            
+            // Check if file exists
+            if (File.Exists(path))
+            {
+                Console.WriteLine("   ✅ Executable file exists");
+                
+                var fileInfo = new FileInfo(path);
+                Console.WriteLine($"   📊 Size: {fileInfo.Length / 1024 / 1024} MB");
+                Console.WriteLine($"   📅 Last Modified: {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm}");
+            }
+            else
+            {
+                Console.WriteLine("   ⚠️ Executable file not found at path");
+            }
+        }
+        else
+        {
+            Console.WriteLine($"❌ Path not found for '{appName}'");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error getting path: {ex.Message}");
+    }
+}
+
+async Task QuickScanAsync(IApplicationScanner scanner)
+{
+    Console.WriteLine("\n🔍 Quick scanning for installed applications...");
+    Console.WriteLine("Showing first 20 applications:\n");
+    
+    try
+    {
+        var apps = await scanner.GetInstalledApplicationsAsync();
+        var topApps = apps.Take(20).ToList();
+        
+        Console.WriteLine("─────────────────────────────────────────────────────────");
+        int count = 0;
+        foreach (var app in topApps)
+        {
+            count++;
+            var statusIcon = app.IsRunning ? "🟢" : "⚪";
+            Console.WriteLine($"{statusIcon} {count,2}. {app.Name}");
+        }
+        Console.WriteLine("─────────────────────────────────────────────────────────");
+        Console.WriteLine($"📊 Showing {count} of {apps.Count()} applications");
+        Console.WriteLine("🟢 = Running | ⚪ = Not running");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error during quick scan: {ex.Message}");
     }
 }
 #endregion
