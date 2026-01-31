@@ -208,6 +208,16 @@ Write-Output ('FINAL RESULT: Success=' + $success)
         {
             Console.WriteLine("🔍 Searching for WiFi adapters to disable...");
             
+            // First check what adapters exist
+            var checkScript = @"
+Write-Output '=== All Network Adapters ==='
+Get-NetAdapter | Select-Object Name, InterfaceDescription, Status | ForEach-Object { Write-Output ($_.Name + ' | ' + $_.InterfaceDescription + ' | ' + $_.Status) }
+Write-Output '=== WiFi-like Adapters ==='
+Get-NetAdapter | Where-Object { $_.Name -like '*Wi*' -or $_.Name -like '*Wireless*' -or $_.InterfaceDescription -like '*Wireless*' -or $_.InterfaceDescription -like '*Wi*Fi*' } | ForEach-Object { Write-Output ($_.Name + ' | ' + $_.Status) }
+";
+            var adapterInfo = await ExecutePowerShellCommandWithOutput(checkScript);
+            Console.WriteLine($"📡 Adapters found:\n{adapterInfo}");
+
             var script = @"
 $success = $false
 $wifiAdapter = Get-NetAdapter | Where-Object { 
@@ -218,29 +228,41 @@ $wifiAdapter = Get-NetAdapter | Where-Object {
 } | Select-Object -First 1
 
 if ($wifiAdapter) {
-    Write-Output ('Found adapter: ' + $wifiAdapter.Name)
-    try {
-        Disable-NetAdapter -Name $wifiAdapter.Name -Confirm:$false -ErrorAction Stop
-        Write-Output ('SUCCESS: Disabled ' + $wifiAdapter.Name)
+    Write-Output ('Found adapter: ' + $wifiAdapter.Name + ' | Status: ' + $wifiAdapter.Status)
+    
+    # Check if already disabled
+    if ($wifiAdapter.Status -eq 'Disabled') {
+        Write-Output 'Adapter is already disabled'
         $success = $true
-    } catch {
-        Write-Output ('ERROR disabling: ' + $_.Exception.Message)
+    } else {
+        try {
+            Disable-NetAdapter -Name $wifiAdapter.Name -Confirm:$false -ErrorAction Stop
+            Write-Output ('SUCCESS: Disabled ' + $wifiAdapter.Name)
+            $success = $true
+        } catch {
+            Write-Output ('ERROR disabling with Disable-NetAdapter: ' + $_.Exception.Message)
+        }
     }
 } else {
-    Write-Output 'ERROR: No WiFi adapter found'
+    Write-Output 'WARNING: No WiFi adapter found via Get-NetAdapter, trying netsh...'
 }
 
 if (-not $success) {
     # Fallback to netsh
     $interfaces = @('Wi-Fi', 'WiFi', 'Wireless Network Connection', 'WLAN', 'Wireless')
     foreach ($intf in $interfaces) {
-        $output = netsh interface set interface name=""$intf"" admin=disable 2>&1
-        if ($LASTEXITCODE -eq 0) {
-            Write-Output ('SUCCESS: Disabled via netsh: ' + $intf)
-            $success = $true
-            break
-        } else {
-            Write-Output ('netsh failed for ' + $intf + ': ' + $output)
+        try {
+            $output = netsh interface set interface name=""$intf"" admin=disable 2>&1
+            $exitCode = $LASTEXITCODE
+            if ($exitCode -eq 0 -or $output -like '*already*') {
+                Write-Output ('SUCCESS: Disabled via netsh: ' + $intf)
+                $success = $true
+                break
+            } else {
+                Write-Output ('netsh failed for ' + $intf + ' (exit ' + $exitCode + '): ' + $output)
+            }
+        } catch {
+            Write-Output ('netsh exception for ' + $intf + ': ' + $_.Exception.Message)
         }
     }
 }
@@ -251,7 +273,17 @@ Write-Output ('FINAL RESULT: Success=' + $success)
             var result = await ExecutePowerShellCommandWithOutput(script);
             Console.WriteLine($"📄 Disable WiFi Result:\n{result}");
             
-            var success = result?.Contains("SUCCESS:") == true;
+            var success = result?.Contains("SUCCESS:") == true || result?.Contains("already disabled") == true;
+            
+            if (!success)
+            {
+                Console.WriteLine("⚠️ WiFi disable failed. Common causes:");
+                Console.WriteLine("   1. No WiFi adapter detected");
+                Console.WriteLine("   2. Running without Administrator privileges");
+                Console.WriteLine("   3. WiFi adapter driver issues");
+                Console.WriteLine("   4. Adapter is managed by external software (e.g., OEM utility)");
+            }
+            
             return success;
         }
         catch (Exception ex)
