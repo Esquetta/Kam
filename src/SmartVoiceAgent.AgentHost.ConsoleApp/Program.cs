@@ -41,11 +41,12 @@ var host = Host.CreateDefaultBuilder(args)
 Console.WriteLine("Select test mode:");
 Console.WriteLine("1. Music Service Test (Play/Pause/Stop/Volume)");
 Console.WriteLine("2. Message Service Test (Send Email/SMS)");
-Console.WriteLine("3. Run Voice Agent Host (default)");
+Console.WriteLine("3. Device Control Test (Volume/WiFi/Bluetooth/Brightness/Power)");
+Console.WriteLine("4. Run Voice Agent Host (default)");
 Console.WriteLine();
-Console.Write("Enter choice (1-3) [3]: ");
+Console.Write("Enter choice (1-4) [4]: ");
 
-var choice = Console.ReadLine()?.Trim() ?? "3";
+var choice = Console.ReadLine()?.Trim() ?? "4";
 
 switch (choice)
 {
@@ -54,6 +55,9 @@ switch (choice)
         break;
     case "2":
         await RunMessageServiceTestAsync(host.Services);
+        break;
+    case "3":
+        await RunDeviceControlTestAsync(host.Services);
         break;
     default:
         Console.WriteLine("\nStarting Voice Agent Host...");
@@ -687,6 +691,173 @@ async Task TestSmtpConnectionAsync(IServiceProvider services)
     }
     
     Console.WriteLine();
+}
+#endregion
+
+#region Device Control Test
+async Task RunDeviceControlTestAsync(IServiceProvider services)
+{
+    Console.WriteLine("\n═══════════════════════════════════════════════════════════");
+    Console.WriteLine("               DEVICE CONTROL TEST MODE                    ");
+    Console.WriteLine("═══════════════════════════════════════════════════════════\n");
+
+    var mediator = services.GetRequiredService<IMediator>();
+    var factory = services.GetRequiredService<ISystemControlServiceFactory>();
+    var systemControl = factory.CreateSystemService();
+    
+    Console.WriteLine($"Platform: {GetPlatformName()}");
+    Console.WriteLine($"Service Implementation: {systemControl.GetType().Name}");
+    Console.WriteLine();
+    Console.WriteLine("Supported devices:");
+    Console.WriteLine("  • Volume: increase, decrease, mute, unmute");
+    Console.WriteLine("  • Brightness: increase, decrease");
+    Console.WriteLine("  • WiFi: on, off, status");
+    Console.WriteLine("  • Bluetooth: on, off, status");
+    Console.WriteLine("  • Power: shutdown, restart, sleep, lock, status");
+    Console.WriteLine();
+
+    bool running = true;
+
+    while (running)
+    {
+        Console.WriteLine("\n┌─────────────────────────────────────────────────────────┐");
+        Console.WriteLine("│ Commands:                                               │");
+        Console.WriteLine("│   [V]olume <action>       - Control volume              │");
+        Console.WriteLine("│   [B]rightness <action>   - Control screen brightness   │");
+        Console.WriteLine("│   [W]iFi <action>         - Control WiFi                │");
+        Console.WriteLine("│   BL[T]ooth <action>      - Control Bluetooth           │");
+        Console.WriteLine("│   [P]ower <action>        - Control power (shutdown...) │");
+        Console.WriteLine("│   [S]tatus                - Show system status          │");
+        Console.WriteLine("│   [Q]uit                  - Exit test mode              │");
+        Console.WriteLine("└─────────────────────────────────────────────────────────┘");
+        Console.Write("\nEnter command: ");
+        
+        var input = Console.ReadLine()?.Trim() ?? "";
+        var parts = input.Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
+        var command = parts[0].ToUpperInvariant();
+        var argument = parts.Length > 1 ? parts[1].ToLowerInvariant() : null;
+
+        try
+        {
+            switch (command)
+            {
+                case "V":
+                case "VOLUME":
+                    if (string.IsNullOrWhiteSpace(argument))
+                    {
+                        Console.Write("Enter action (increase/decrease/mute/unmute): ");
+                        argument = Console.ReadLine()?.Trim().ToLowerInvariant();
+                    }
+                    await ExecuteDeviceCommandAsync(mediator, "volume", argument!);
+                    break;
+
+                case "B":
+                case "BRIGHTNESS":
+                    if (string.IsNullOrWhiteSpace(argument))
+                    {
+                        Console.Write("Enter action (increase/decrease): ");
+                        argument = Console.ReadLine()?.Trim().ToLowerInvariant();
+                    }
+                    await ExecuteDeviceCommandAsync(mediator, "brightness", argument!);
+                    break;
+
+                case "W":
+                case "WIFI":
+                    if (string.IsNullOrWhiteSpace(argument))
+                    {
+                        Console.Write("Enter action (on/off/status): ");
+                        argument = Console.ReadLine()?.Trim().ToLowerInvariant();
+                    }
+                    await ExecuteDeviceCommandAsync(mediator, "wifi", argument!);
+                    break;
+
+                case "T":
+                case "BLUETOOTH":
+                    if (string.IsNullOrWhiteSpace(argument))
+                    {
+                        Console.Write("Enter action (on/off/status): ");
+                        argument = Console.ReadLine()?.Trim().ToLowerInvariant();
+                    }
+                    await ExecuteDeviceCommandAsync(mediator, "bluetooth", argument!);
+                    break;
+
+                case "P":
+                case "POWER":
+                    if (string.IsNullOrWhiteSpace(argument))
+                    {
+                        Console.Write("Enter action (shutdown/restart/sleep/lock/status): ");
+                        argument = Console.ReadLine()?.Trim().ToLowerInvariant();
+                    }
+                    // Confirm destructive actions
+                    if (argument == "shutdown" || argument == "restart" || argument == "sleep" || argument == "kapat" || argument == "yeniden başlat")
+                    {
+                        Console.Write($"⚠️ Are you sure you want to {argument} the system? (yes/no): ");
+                        var confirm = Console.ReadLine()?.Trim().ToLowerInvariant();
+                        if (confirm != "yes" && confirm != "y")
+                        {
+                            Console.WriteLine("Cancelled.");
+                            break;
+                        }
+                    }
+                    await ExecuteDeviceCommandAsync(mediator, "power", argument!);
+                    break;
+
+                case "S":
+                case "STATUS":
+                    await ExecuteDeviceCommandAsync(mediator, "power", "status");
+                    break;
+
+                case "Q":
+                case "QUIT":
+                case "EXIT":
+                    running = false;
+                    Console.WriteLine("\n✅ Device control test ended.");
+                    break;
+
+                default:
+                    Console.WriteLine("❌ Unknown command. Type 'V', 'B', 'W', 'T', 'P', 'S', or 'Q'.");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error: {ex.Message}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"   Inner: {ex.InnerException.Message}");
+            }
+        }
+    }
+}
+
+async Task ExecuteDeviceCommandAsync(IMediator mediator, string device, string action)
+{
+    if (string.IsNullOrWhiteSpace(action))
+    {
+        Console.WriteLine("❌ Action cannot be empty.");
+        return;
+    }
+
+    Console.WriteLine($"\n🎛️ Executing: {action} on {device}...");
+    
+    try
+    {
+        var command = new ControlDeviceCommand(device, action);
+        var result = await mediator.Send(command);
+        
+        if (result.Success)
+        {
+            Console.WriteLine($"✅ {result.Message}");
+        }
+        else
+        {
+            Console.WriteLine($"❌ {result.Message}");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Failed to execute command: {ex.Message}");
+    }
 }
 #endregion
 
