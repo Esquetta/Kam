@@ -38,6 +38,13 @@ public class NoiseSuppressionService : INoiseSuppressionService
         if (audioData == null || audioData.Length < 2)
             return audioData ?? Array.Empty<byte>();
 
+        // Ensure even number of bytes (16-bit PCM)
+        if (audioData.Length % 2 != 0)
+        {
+            _logger.LogWarning("Audio data has odd length ({Length}), truncating to even", audioData.Length);
+            Array.Resize(ref audioData, audioData.Length - 1);
+        }
+
         try
         {
             lock (_lock)
@@ -88,6 +95,12 @@ public class NoiseSuppressionService : INoiseSuppressionService
         if (audioData == null || audioData.Length < 2)
             return 0f;
 
+        // Ensure even number of bytes
+        if (audioData.Length % 2 != 0)
+        {
+            Array.Resize(ref audioData, audioData.Length - 1);
+        }
+
         var samples = PcmBytesToShorts(audioData);
         
         // Calculate RMS energy
@@ -107,6 +120,12 @@ public class NoiseSuppressionService : INoiseSuppressionService
         if (audioData == null || audioData.Length < 2)
             return audioData ?? Array.Empty<byte>();
 
+        // Ensure even number of bytes
+        if (audioData.Length % 2 != 0)
+        {
+            Array.Resize(ref audioData, audioData.Length - 1);
+        }
+
         var samples = PcmBytesToShorts(audioData);
         samples = ApplyAutomaticGainControl(samples, targetLevel);
         return ShortsToPcmBytes(samples);
@@ -117,6 +136,16 @@ public class NoiseSuppressionService : INoiseSuppressionService
         // Simple echo cancellation using adaptive filter (LMS algorithm)
         if (audioData == null || referenceData == null || audioData.Length < 2)
             return audioData ?? Array.Empty<byte>();
+
+        // Ensure even number of bytes
+        if (audioData.Length % 2 != 0)
+        {
+            Array.Resize(ref audioData, audioData.Length - 1);
+        }
+        if (referenceData.Length % 2 != 0)
+        {
+            Array.Resize(ref referenceData, referenceData.Length - 1);
+        }
 
         try
         {
@@ -167,8 +196,10 @@ public class NoiseSuppressionService : INoiseSuppressionService
 
     private static short[] PcmBytesToShorts(byte[] bytes)
     {
-        var shorts = new short[bytes.Length / 2];
-        for (int i = 0; i < shorts.Length; i++)
+        // Handle odd-length arrays by truncating to even length
+        int length = bytes.Length / 2;
+        var shorts = new short[length];
+        for (int i = 0; i < length; i++)
         {
             shorts[i] = (short)(bytes[i * 2] | (bytes[i * 2 + 1] << 8));
         }
