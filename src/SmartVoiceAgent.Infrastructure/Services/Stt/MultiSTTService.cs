@@ -105,8 +105,8 @@ public class MultiSTTService : IMultiSTTService
                 return null;
             }
 
-            var logger = _serviceProvider.GetRequiredService<ILogger<WhisperSTTService>>();
-            return new WhisperSTTService(logger, _configuration);
+            // Use the DI-registered service
+            return _serviceProvider.GetRequiredService<WhisperSTTService>();
         }
         catch (Exception ex)
         {
@@ -126,9 +126,8 @@ public class MultiSTTService : IMultiSTTService
                 return null;
             }
 
-            var logger = _serviceProvider.GetRequiredService<LoggerServiceBase>();
-            var httpClient = new HttpClient();
-            return new HuggingFaceSTTService(logger, httpClient, _configuration);
+            // Use the DI-registered service instead of creating a new one
+            return _serviceProvider.GetRequiredService<HuggingFaceSTTService>();
         }
         catch (Exception ex)
         {
@@ -148,9 +147,8 @@ public class MultiSTTService : IMultiSTTService
                 return null;
             }
 
-            var logger = _serviceProvider.GetRequiredService<ILogger<OllamaSTTService>>();
-            var httpClient = new HttpClient();
-            return new OllamaSTTService(httpClient, logger, _configuration);
+            // Use the DI-registered service
+            return _serviceProvider.GetRequiredService<OllamaSTTService>();
         }
         catch (Exception ex)
         {
