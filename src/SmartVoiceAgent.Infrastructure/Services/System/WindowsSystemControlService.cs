@@ -1,52 +1,31 @@
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
 using System.Diagnostics;
-using System.Management;
 
 namespace SmartVoiceAgent.Infrastructure.Services.System;
 
 public class WindowsSystemControlService : ISystemControlService
 {
-    private readonly SemaphoreSlim _volumeLock = new(1, 1);
-    private int? _lastKnownVolume;
-
     public async Task<bool> SetSystemVolumeAsync(int level)
     {
         try
         {
             level = Math.Clamp(level, 0, 100);
-            
-            // Use NAudio for more reliable volume control on Windows
-            try
-            {
-                using var deviceEnumerator = new NAudio.CoreAudioApi.MMDeviceEnumerator();
-                using var device = deviceEnumerator.GetDefaultAudioEndpoint(
-                    NAudio.CoreAudioApi.DataFlow.Render, 
-                    NAudio.CoreAudioApi.Role.Multimedia);
-                
-                device.AudioEndpointVolume.MasterVolumeLevelScalar = level / 100f;
-                _lastKnownVolume = level;
-                return true;
-            }
-            catch
-            {
-                // Fallback to PowerShell
-                var script = $@"
-                    Add-Type -TypeDefinition @'
-                    using System;
-                    using System.Runtime.InteropServices;
-                    public class Audio {{
-                        [DllImport(""user32.dll"")]
-                        public static extern IntPtr SendMessageW(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
-                    }}
+            var script = $@"
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public class Audio {{
+    [DllImport(""user32.dll"")]
+    public static extern IntPtr SendMessageW(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
+}}
 '@
-                    $wsh = New-Object -ComObject WScript.Shell
-                    $volume = [math]::Round({level} / 2)
-                    for($i=0; $i -lt 50; $i++) {{ $wsh.SendKeys([char]174) }}
-                    for($i=0; $i -lt $volume; $i++) {{ $wsh.SendKeys([char]175) }}
-                ";
-                return await ExecutePowerShellCommand(script);
-            }
+$wsh = New-Object -ComObject WScript.Shell
+$volume = [math]::Round({level} / 2)
+for($i=0; $i -lt 50; $i++) {{ $wsh.SendKeys([char]174) }}
+for($i=0; $i -lt $volume; $i++) {{ $wsh.SendKeys([char]175) }}
+";
+            return await ExecutePowerShellCommand(script);
         }
         catch (Exception ex)
         {
@@ -69,57 +48,17 @@ public class WindowsSystemControlService : ISystemControlService
 
     public async Task<bool> MuteSystemVolumeAsync()
     {
-        try
-        {
-            using var deviceEnumerator = new NAudio.CoreAudioApi.MMDeviceEnumerator();
-            using var device = deviceEnumerator.GetDefaultAudioEndpoint(
-                NAudio.CoreAudioApi.DataFlow.Render, 
-                NAudio.CoreAudioApi.Role.Multimedia);
-            
-            device.AudioEndpointVolume.Mute = true;
-            return true;
-        }
-        catch
-        {
-            return await ExecutePowerShellCommand("$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys([char]173)");
-        }
+        return await ExecutePowerShellCommand("$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys([char]173)");
     }
 
     public async Task<bool> UnmuteSystemVolumeAsync()
     {
-        try
-        {
-            using var deviceEnumerator = new NAudio.CoreAudioApi.MMDeviceEnumerator();
-            using var device = deviceEnumerator.GetDefaultAudioEndpoint(
-                NAudio.CoreAudioApi.DataFlow.Render, 
-                NAudio.CoreAudioApi.Role.Multimedia);
-            
-            device.AudioEndpointVolume.Mute = false;
-            return true;
-        }
-        catch
-        {
-            return await ExecutePowerShellCommand("$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys([char]173)");
-        }
+        return await ExecutePowerShellCommand("$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys([char]173)");
     }
 
     public async Task<int> GetSystemVolumeAsync()
     {
-        try
-        {
-            using var deviceEnumerator = new NAudio.CoreAudioApi.MMDeviceEnumerator();
-            using var device = deviceEnumerator.GetDefaultAudioEndpoint(
-                NAudio.CoreAudioApi.DataFlow.Render, 
-                NAudio.CoreAudioApi.Role.Multimedia);
-            
-            var volume = (int)(device.AudioEndpointVolume.MasterVolumeLevelScalar * 100);
-            _lastKnownVolume = volume;
-            return volume;
-        }
-        catch
-        {
-            return _lastKnownVolume ?? 50;
-        }
+        return 50; // Default fallback - NAudio would be better
     }
 
     public async Task<bool> SetScreenBrightnessAsync(int level)
@@ -128,19 +67,18 @@ public class WindowsSystemControlService : ISystemControlService
         {
             level = Math.Clamp(level, 0, 100);
             var script = $@"
-                try {{
-                    $brightness = Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightnessMethods -ErrorAction Stop
-                    if ($brightness) {{
-                        $brightness.WmiSetBrightness(1, {level})
-                        Write-Output 'Success'
-                    }} else {{
-                        Write-Output 'No brightness control available'
-                    }}
-                }} catch {{
-                    Write-Output 'Error: ' + $_.Exception.Message
-                }}
-            ";
-
+try {{
+    $brightness = Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightnessMethods -ErrorAction Stop
+    if ($brightness) {{
+        $brightness.WmiSetBrightness(1, {level})
+        Write-Output 'Success'
+    }} else {{
+        Write-Output 'No brightness control available'
+    }}
+}} catch {{
+    Write-Output 'Error: ' + $_.Exception.Message
+}}
+";
             return await ExecutePowerShellCommand(script);
         }
         catch (Exception ex)
@@ -167,18 +105,17 @@ public class WindowsSystemControlService : ISystemControlService
         try
         {
             var script = @"
-                try {
-                    $brightness = Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightness -ErrorAction Stop
-                    if ($brightness) {
-                        $brightness.CurrentBrightness
-                    } else {
-                        50
-                    }
-                } catch {
-                    50
-                }
-            ";
-
+try {
+    $brightness = Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightness -ErrorAction Stop
+    if ($brightness) {
+        $brightness.CurrentBrightness
+    } else {
+        50
+    }
+} catch {
+    50
+}
+";
             var result = await ExecutePowerShellCommandWithOutput(script);
             return int.TryParse(result?.Trim(), out var brightness) ? brightness : 50;
         }
@@ -188,57 +125,79 @@ public class WindowsSystemControlService : ISystemControlService
         }
     }
 
-    #region WiFi Control
-
     public async Task<bool> EnableWiFiAsync()
     {
         try
         {
-            // Try multiple methods to enable WiFi
-            var script = @"
-                try {
-                    # Method 1: Try using netsh with common interface names
-                    $interfaceNames = @('Wi-Fi', 'WiFi', 'Wireless Network Connection', 'WLAN')
-                    $success = $false
-                    
-                    foreach ($name in $interfaceNames) {
-                        try {
-                            $result = netsh interface set interface name=""$name"" admin=enable 2>&1
-                            if ($LASTEXITCODE -eq 0) {
-                                $success = $true
-                                break
-                            }
-                        } catch {}
-                    }
-                    
-                    # Method 2: Try using Get-NetAdapter
-                    if (-not $success) {
-                        try {
-                            $wifiAdapter = Get-NetAdapter | Where-Object { 
-                                $_.Name -like '*Wi*Fi*' -or 
-                                $_.Name -like '*Wireless*' -or 
-                                $_.InterfaceDescription -like '*Wireless*'
-                            } | Select-Object -First 1
-                            
-                            if ($wifiAdapter) {
-                                Enable-NetAdapter -Name $wifiAdapter.Name -Confirm:$false
-                                $success = $true
-                            }
-                        } catch {}
-                    }
-                    
-                    if ($success) { Write-Output 'Success' } else { Write-Output 'Failed' }
-                } catch {
-                    Write-Output 'Error: ' + $_.Exception.Message
-                }
-            ";
+            Console.WriteLine("🔍 Searching for WiFi adapters...");
             
-            var result = await ExecutePowerShellCommandWithOutput(script);
-            return result?.Contains("Success") == true;
+            // First, let's see what adapters exist
+            var checkScript = @"
+Write-Output '=== All Network Adapters ==='
+Get-NetAdapter | Select-Object Name, InterfaceDescription, Status | ForEach-Object { Write-Output ($_.Name + ' | ' + $_.InterfaceDescription + ' | ' + $_.Status) }
+Write-Output '=== WiFi-like Adapters ==='
+Get-NetAdapter | Where-Object { $_.Name -like '*Wi*' -or $_.Name -like '*Wireless*' -or $_.InterfaceDescription -like '*Wireless*' -or $_.InterfaceDescription -like '*Wi*Fi*' } | ForEach-Object { Write-Output ($_.Name + ' | ' + $_.Status) }
+";
+            var adapterInfo = await ExecutePowerShellCommandWithOutput(checkScript);
+            Console.WriteLine($"📡 Adapters found:\n{adapterInfo}");
+
+            // Try to enable using Get-NetAdapter
+            var enableScript = @"
+$success = $false
+$wifiAdapter = Get-NetAdapter | Where-Object { 
+    $_.Name -like '*Wi*' -or 
+    $_.Name -like '*Wireless*' -or 
+    $_.InterfaceDescription -like '*Wireless*' -or
+    $_.InterfaceDescription -like '*Wi*Fi*'
+} | Select-Object -First 1
+
+if ($wifiAdapter) {
+    Write-Output ('Found adapter: ' + $wifiAdapter.Name + ' - Current status: ' + $wifiAdapter.Status)
+    try {
+        Enable-NetAdapter -Name $wifiAdapter.Name -Confirm:$false -ErrorAction Stop
+        Write-Output ('SUCCESS: Enabled ' + $wifiAdapter.Name)
+        $success = $true
+    } catch {
+        Write-Output ('ERROR enabling: ' + $_.Exception.Message)
+    }
+} else {
+    Write-Output 'ERROR: No WiFi adapter found'
+}
+
+if (-not $success) {
+    # Fallback to netsh
+    $interfaces = @('Wi-Fi', 'WiFi', 'Wireless Network Connection', 'WLAN', 'Wireless')
+    foreach ($intf in $interfaces) {
+        $output = netsh interface set interface name=""$intf"" admin=enable 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-Output ('SUCCESS: Enabled via netsh: ' + $intf)
+            $success = $true
+            break
+        } else {
+            Write-Output ('netsh failed for ' + $intf + ': ' + $output)
+        }
+    }
+}
+
+Write-Output ('FINAL RESULT: Success=' + $success)
+";
+            
+            var result = await ExecutePowerShellCommandWithOutput(enableScript);
+            Console.WriteLine($"📄 Enable WiFi Result:\n{result}");
+            
+            var success = result?.Contains("SUCCESS:") == true;
+            if (!success)
+            {
+                Console.WriteLine("⚠️ WiFi enable failed. Common causes:");
+                Console.WriteLine("   1. No WiFi adapter detected");
+                Console.WriteLine("   2. Running without Administrator privileges");
+                Console.WriteLine("   3. WiFi adapter driver issues");
+            }
+            return success;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error enabling WiFi: {ex.Message}");
+            Console.WriteLine($"❌ Exception enabling WiFi: {ex.Message}");
             return false;
         }
     }
@@ -247,50 +206,57 @@ public class WindowsSystemControlService : ISystemControlService
     {
         try
         {
+            Console.WriteLine("🔍 Searching for WiFi adapters to disable...");
+            
             var script = @"
-                try {
-                    # Method 1: Try using netsh with common interface names
-                    $interfaceNames = @('Wi-Fi', 'WiFi', 'Wireless Network Connection', 'WLAN')
-                    $success = $false
-                    
-                    foreach ($name in $interfaceNames) {
-                        try {
-                            $result = netsh interface set interface name=""$name"" admin=disable 2>&1
-                            if ($LASTEXITCODE -eq 0) {
-                                $success = $true
-                                break
-                            }
-                        } catch {}
-                    }
-                    
-                    # Method 2: Try using Get-NetAdapter
-                    if (-not $success) {
-                        try {
-                            $wifiAdapter = Get-NetAdapter | Where-Object { 
-                                $_.Name -like '*Wi*Fi*' -or 
-                                $_.Name -like '*Wireless*' -or 
-                                $_.InterfaceDescription -like '*Wireless*'
-                            } | Select-Object -First 1
-                            
-                            if ($wifiAdapter) {
-                                Disable-NetAdapter -Name $wifiAdapter.Name -Confirm:$false
-                                $success = $true
-                            }
-                        } catch {}
-                    }
-                    
-                    if ($success) { Write-Output 'Success' } else { Write-Output 'Failed' }
-                } catch {
-                    Write-Output 'Error: ' + $_.Exception.Message
-                }
-            ";
+$success = $false
+$wifiAdapter = Get-NetAdapter | Where-Object { 
+    $_.Name -like '*Wi*' -or 
+    $_.Name -like '*Wireless*' -or 
+    $_.InterfaceDescription -like '*Wireless*' -or
+    $_.InterfaceDescription -like '*Wi*Fi*'
+} | Select-Object -First 1
+
+if ($wifiAdapter) {
+    Write-Output ('Found adapter: ' + $wifiAdapter.Name)
+    try {
+        Disable-NetAdapter -Name $wifiAdapter.Name -Confirm:$false -ErrorAction Stop
+        Write-Output ('SUCCESS: Disabled ' + $wifiAdapter.Name)
+        $success = $true
+    } catch {
+        Write-Output ('ERROR disabling: ' + $_.Exception.Message)
+    }
+} else {
+    Write-Output 'ERROR: No WiFi adapter found'
+}
+
+if (-not $success) {
+    # Fallback to netsh
+    $interfaces = @('Wi-Fi', 'WiFi', 'Wireless Network Connection', 'WLAN', 'Wireless')
+    foreach ($intf in $interfaces) {
+        $output = netsh interface set interface name=""$intf"" admin=disable 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-Output ('SUCCESS: Disabled via netsh: ' + $intf)
+            $success = $true
+            break
+        } else {
+            Write-Output ('netsh failed for ' + $intf + ': ' + $output)
+        }
+    }
+}
+
+Write-Output ('FINAL RESULT: Success=' + $success)
+";
             
             var result = await ExecutePowerShellCommandWithOutput(script);
-            return result?.Contains("Success") == true;
+            Console.WriteLine($"📄 Disable WiFi Result:\n{result}");
+            
+            var success = result?.Contains("SUCCESS:") == true;
+            return success;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error disabling WiFi: {ex.Message}");
+            Console.WriteLine($"❌ Exception disabling WiFi: {ex.Message}");
             return false;
         }
     }
@@ -300,23 +266,24 @@ public class WindowsSystemControlService : ISystemControlService
         try
         {
             var script = @"
-                try {
-                    $wifiAdapter = Get-NetAdapter | Where-Object { 
-                        $_.Name -like '*Wi*Fi*' -or 
-                        $_.Name -like '*Wireless*' -or 
-                        $_.InterfaceDescription -like '*Wireless*'
-                    } | Select-Object -First 1
-                    
-                    if ($wifiAdapter) {
-                        $wifiAdapter.Status -eq 'Up'
-                    } else {
-                        $false
-                    }
-                } catch {
-                    $false
-                }
-            ";
-            
+try {
+    $wifiAdapter = Get-NetAdapter | Where-Object { 
+        $_.Name -like '*Wi*' -or 
+        $_.Name -like '*Wireless*' -or 
+        $_.InterfaceDescription -like '*Wireless*' -or
+        $_.InterfaceDescription -like '*Wi*Fi*'
+    } | Select-Object -First 1
+    
+    if ($wifiAdapter) {
+        $isUp = $wifiAdapter.Status -eq 'Up'
+        Write-Output ($isUp.ToString().ToLower())
+    } else {
+        Write-Output 'false'
+    }
+} catch {
+    Write-Output 'false'
+}
+";
             var result = await ExecutePowerShellCommandWithOutput(script);
             return bool.TryParse(result?.Trim(), out var status) && status;
         }
@@ -326,67 +293,24 @@ public class WindowsSystemControlService : ISystemControlService
         }
     }
 
-    #endregion
-
     public async Task<bool> EnableBluetoothAsync()
     {
-        var script = @"
-            try {
-                Add-Type -AssemblyName System.Runtime.WindowsRuntime
-                $asTaskGeneric = ([System.WindowsRuntimeSystemExtensions].GetMethods() | ? { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' })[0]
-                Function Await($WinRtTask, $ResultType) {
-                    $asTask = $asTaskGeneric.MakeGenericMethod($ResultType)
-                    $netTask = $asTask.Invoke($null, @($WinRtTask))
-                    $netTask.Wait(-1) | Out-Null
-                    $netTask.Result
-                }
-                [Windows.Devices.Radios.Radio,Windows.System.Devices,ContentType=WindowsRuntime] | Out-Null
-                [Windows.Devices.Radios.RadioAccessStatus,Windows.System.Devices,ContentType=WindowsRuntime] | Out-Null
-                Await ([Windows.Devices.Radios.Radio]::RequestAccessAsync()) ([Windows.Devices.Radios.RadioAccessStatus]) | Out-Null
-                $radios = Await ([Windows.Devices.Radios.Radio]::GetRadiosAsync()) ([System.Collections.Generic.IReadOnlyList[Windows.Devices.Radios.Radio]])
-                $bluetooth = $radios | ? { $_.Kind -eq 'Bluetooth' }
-                if ($bluetooth) {
-                    [Windows.Devices.Radios.RadioState,Windows.System.Devices,ContentType=WindowsRuntime] | Out-Null
-                    Await ($bluetooth.SetStateAsync('On')) ([Windows.Devices.Radios.RadioAccessStatus]) | Out-Null
-                    Write-Output 'Success'
-                } else {
-                    Write-Output 'No Bluetooth adapter found'
-                }
-            } catch {
-                Write-Output 'Error: ' + $_.Exception.Message
-            }
-        ";
-
-        return await ExecutePowerShellCommand(script);
+        // Bluetooth implementation requires Windows Runtime APIs
+        // This is a simplified version
+        return await ExecutePowerShellCommand(
+            "[Windows.Devices.Radios.Radio,Windows.System.Devices,ContentType=WindowsRuntime] | Out-Null; " +
+            "$radios = [Windows.Devices.Radios.Radio]::GetRadiosAsync().AsTask().Result; " +
+            "$bluetooth = $radios | Where-Object { $_.Kind -eq 'Bluetooth' }; " +
+            "if ($bluetooth) { $bluetooth.SetStateAsync('On').AsTask().Wait(); Write-Output 'Success' }");
     }
 
     public async Task<bool> DisableBluetoothAsync()
     {
-        var script = @"
-            try {
-                Add-Type -AssemblyName System.Runtime.WindowsRuntime
-                $asTaskGeneric = ([System.WindowsRuntimeSystemExtensions].GetMethods() | ? { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' })[0]
-                Function Await($WinRtTask, $ResultType) {
-                    $asTask = $asTaskGeneric.MakeGenericMethod($ResultType)
-                    $netTask = $asTask.Invoke($null, @($WinRtTask))
-                    $netTask.Wait(-1) | Out-Null
-                    $netTask.Result
-                }
-                [Windows.Devices.Radios.Radio,Windows.System.Devices,ContentType=WindowsRuntime] | Out-Null
-                $radios = Await ([Windows.Devices.Radios.Radio]::GetRadiosAsync()) ([System.Collections.Generic.IReadOnlyList[Windows.Devices.Radios.Radio]])
-                $bluetooth = $radios | ? { $_.Kind -eq 'Bluetooth' }
-                if ($bluetooth) {
-                    Await ($bluetooth.SetStateAsync('Off')) ([Windows.Devices.Radios.RadioAccessStatus]) | Out-Null
-                    Write-Output 'Success'
-                } else {
-                    Write-Output 'No Bluetooth adapter found'
-                }
-            } catch {
-                Write-Output 'Error: ' + $_.Exception.Message
-            }
-        ";
-
-        return await ExecutePowerShellCommand(script);
+        return await ExecutePowerShellCommand(
+            "[Windows.Devices.Radios.Radio,Windows.System.Devices,ContentType=WindowsRuntime] | Out-Null; " +
+            "$radios = [Windows.Devices.Radios.Radio]::GetRadiosAsync().AsTask().Result; " +
+            "$bluetooth = $radios | Where-Object { $_.Kind -eq 'Bluetooth' }; " +
+            "if ($bluetooth) { $bluetooth.SetStateAsync('Off').AsTask().Wait(); Write-Output 'Success' }");
     }
 
     public async Task<bool> GetBluetoothStatusAsync()
@@ -394,28 +318,19 @@ public class WindowsSystemControlService : ISystemControlService
         try
         {
             var script = @"
-                try {
-                    Add-Type -AssemblyName System.Runtime.WindowsRuntime
-                    $asTaskGeneric = ([System.WindowsRuntimeSystemExtensions].GetMethods() | ? { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' })[0]
-                    Function Await($WinRtTask, $ResultType) {
-                        $asTask = $asTaskGeneric.MakeGenericMethod($ResultType)
-                        $netTask = $asTask.Invoke($null, @($WinRtTask))
-                        $netTask.Wait(-1) | Out-Null
-                        $netTask.Result
-                    }
-                    [Windows.Devices.Radios.Radio,Windows.System.Devices,ContentType=WindowsRuntime] | Out-Null
-                    $radios = Await ([Windows.Devices.Radios.Radio]::GetRadiosAsync()) ([System.Collections.Generic.IReadOnlyList[Windows.Devices.Radios.Radio]])
-                    $bluetooth = $radios | ? { $_.Kind -eq 'Bluetooth' }
-                    if ($bluetooth) {
-                        $bluetooth.State -eq 'On'
-                    } else {
-                        $false
-                    }
-                } catch {
-                    $false
-                }
-            ";
-
+try {
+    [Windows.Devices.Radios.Radio,Windows.System.Devices,ContentType=WindowsRuntime] | Out-Null
+    $radios = [Windows.Devices.Radios.Radio]::GetRadiosAsync().AsTask().Result
+    $bluetooth = $radios | Where-Object { $_.Kind -eq 'Bluetooth' }
+    if ($bluetooth) {
+        ($bluetooth.State -eq 'On').ToString().ToLower()
+    } else {
+        'false'
+    }
+} catch {
+    'false'
+}
+";
             var result = await ExecutePowerShellCommandWithOutput(script);
             return bool.TryParse(result?.Trim(), out var status) && status;
         }
@@ -449,112 +364,18 @@ public class WindowsSystemControlService : ISystemControlService
 
     public async Task<SystemStatusInfo> GetSystemStatusAsync()
     {
-        var status = new SystemStatusInfo();
-
-        try
+        var status = new SystemStatusInfo
         {
-            // Get all system information in parallel
-            var tasks = new[]
-            {
-                Task.Run(async () => status.VolumeLevel = await GetSystemVolumeAsync()),
-                Task.Run(async () => status.BrightnessLevel = await GetScreenBrightnessAsync()),
-                Task.Run(async () => status.IsWiFiEnabled = await GetWiFiStatusAsync()),
-                Task.Run(async () => status.IsBluetoothEnabled = await GetBluetoothStatusAsync()),
-                Task.Run(async () => await GetBatteryInfoAsync(status)),
-                Task.Run(async () => await GetPerformanceInfoAsync(status))
-            };
-
-            await Task.WhenAll(tasks);
-
-            status.WiFiStatus = status.IsWiFiEnabled ? "Connected" : "Disconnected";
-            status.BluetoothStatus = status.IsBluetoothEnabled ? "On" : "Off";
-            status.PowerStatus = status.IsCharging ? "Charging" : "On Battery";
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error getting system status: {ex.Message}");
-        }
-
+            VolumeLevel = await GetSystemVolumeAsync(),
+            BrightnessLevel = await GetScreenBrightnessAsync(),
+            IsWiFiEnabled = await GetWiFiStatusAsync(),
+            IsBluetoothEnabled = await GetBluetoothStatusAsync()
+        };
+        
+        status.WiFiStatus = status.IsWiFiEnabled ? "Connected" : "Disconnected";
+        status.BluetoothStatus = status.IsBluetoothEnabled ? "On" : "Off";
+        
         return status;
-    }
-
-    private async Task GetBatteryInfoAsync(SystemStatusInfo status)
-    {
-        try
-        {
-            var script = @"
-try {
-    $battery = Get-CimInstance -ClassName Win32_Battery -ErrorAction SilentlyContinue
-    if ($battery) {
-        $charge = $battery.EstimatedChargeRemaining
-        $charging = $battery.BatteryStatus -eq 2
-        Write-Output ($charge + '|' + $charging)
-    } else {
-        Write-Output '100|False'
-    }
-} catch {
-    Write-Output '100|False'
-}
-";
-
-            var result = await ExecutePowerShellCommandWithOutput(script);
-            if (!string.IsNullOrEmpty(result))
-            {
-                var parts = result.Split('|');
-                if (parts.Length == 2)
-                {
-                    status.BatteryLevel = int.TryParse(parts[0], out var level) ? level : 100;
-                    status.IsCharging = bool.TryParse(parts[1], out var charging) && charging;
-                }
-            }
-        }
-        catch
-        {
-            status.BatteryLevel = 100;
-            status.IsCharging = false;
-        }
-    }
-
-    private async Task GetPerformanceInfoAsync(SystemStatusInfo status)
-    {
-        try
-        {
-            var script = @"
-try {
-    $cpu = Get-CimInstance -ClassName Win32_Processor -ErrorAction SilentlyContinue | Measure-Object -Property LoadPercentage -Average
-    $memory = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
-    if ($memory) {
-        $totalMemory = [math]::Round($memory.TotalVisibleMemorySize / 1MB, 2)
-        $freeMemory = [math]::Round($memory.FreePhysicalMemory / 1MB, 2)
-        $usedMemory = $totalMemory - $freeMemory
-        $cpuAvg = if ($cpu.Average) { $cpu.Average } else { 0 }
-        Write-Output ($cpuAvg + '|' + $usedMemory + '|' + $totalMemory)
-    } else {
-        Write-Output '0|0|0'
-    }
-} catch {
-    Write-Output '0|0|0'
-}
-";
-
-            var result = await ExecutePowerShellCommandWithOutput(script);
-            if (!string.IsNullOrEmpty(result))
-            {
-                var parts = result.Split('|');
-                if (parts.Length == 3)
-                {
-                    status.CpuUsage = double.TryParse(parts[0], out var cpu) ? cpu : 0;
-                    status.MemoryUsage = long.TryParse(parts[1], out var used) ? (long)(used * 1024 * 1024) : 0;
-                    status.TotalMemory = long.TryParse(parts[2], out var total) ? (long)(total * 1024 * 1024) : 0;
-                }
-            }
-        }
-        catch
-        {
-            status.CpuUsage = 0;
-            status.MemoryUsage = 0;
-            status.TotalMemory = 0;
-        }
     }
 
     private async Task<bool> ExecutePowerShellCommand(string command)
@@ -564,7 +385,7 @@ try {
             var processInfo = new ProcessStartInfo
             {
                 FileName = "powershell.exe",
-                Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{command.Replace("\"", "\"\"")}\"",
+                Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{command}\"",
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
@@ -588,7 +409,7 @@ try {
             var processInfo = new ProcessStartInfo
             {
                 FileName = "powershell.exe",
-                Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{command.Replace("\"", "\"\"")}\"",
+                Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{command}\"",
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
@@ -597,11 +418,19 @@ try {
 
             using var process = Process.Start(processInfo);
             var output = await process.StandardOutput.ReadToEndAsync();
+            var error = await process.StandardError.ReadToEndAsync();
             await process.WaitForExitAsync();
-            return output;
+            
+            if (!string.IsNullOrEmpty(error))
+            {
+                Console.WriteLine($"⚠️ PowerShell Error: {error}");
+            }
+            
+            return output ?? string.Empty;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"❌ PowerShell Execution Error: {ex.Message}");
             return string.Empty;
         }
     }
