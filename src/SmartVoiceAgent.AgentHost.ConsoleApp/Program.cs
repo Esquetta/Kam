@@ -43,11 +43,12 @@ Console.WriteLine("1. Music Service Test (Play/Pause/Stop/Volume)");
 Console.WriteLine("2. Message Service Test (Send Email/SMS)");
 Console.WriteLine("3. Device Control Test (Volume/WiFi/Bluetooth/Brightness/Power)");
 Console.WriteLine("4. Application Scanner Test (List/Find installed apps)");
-Console.WriteLine("5. Run Voice Agent Host (default)");
+Console.WriteLine("5. Voice Recognition Test (Wake Word/Multi-STT/Noise Suppression)");
+Console.WriteLine("6. Run Voice Agent Host (default)");
 Console.WriteLine();
-Console.Write("Enter choice (1-5) [5]: ");
+Console.Write("Enter choice (1-6) [6]: ");
 
-var choice = Console.ReadLine()?.Trim() ?? "5";
+var choice = Console.ReadLine()?.Trim() ?? "6";
 
 switch (choice)
 {
@@ -62,6 +63,9 @@ switch (choice)
         break;
     case "4":
         await RunApplicationScannerTestAsync(host.Services);
+        break;
+    case "5":
+        await RunVoiceRecognitionTestAsync(host.Services);
         break;
     default:
         Console.WriteLine("\nStarting Voice Agent Host...");
@@ -1132,6 +1136,393 @@ async Task QuickScanAsync(IApplicationScanner scanner)
     {
         Console.WriteLine($"❌ Error during quick scan: {ex.Message}");
     }
+}
+#endregion
+
+#region Voice Recognition Test
+async Task RunVoiceRecognitionTestAsync(IServiceProvider services)
+{
+    Console.WriteLine("\n═══════════════════════════════════════════════════════════");
+    Console.WriteLine("            VOICE RECOGNITION TEST MODE                    ");
+    Console.WriteLine("═══════════════════════════════════════════════════════════\n");
+
+    Console.WriteLine("Available Tests:");
+    Console.WriteLine("  1. Wake Word Detection - Test keyword activation");
+    Console.WriteLine("  2. Multi-STT Provider  - Test speech-to-text with fallback");
+    Console.WriteLine("  3. Noise Suppression   - Test audio enhancement");
+    Console.WriteLine("  4. Voice Recording     - Record and process audio");
+    Console.WriteLine();
+
+    bool running = true;
+
+    while (running)
+    {
+        Console.WriteLine("\n┌─────────────────────────────────────────────────────────┐");
+        Console.WriteLine("│ Commands:                                               │");
+        Console.WriteLine("│   [W]ake               - Test wake word detection       │");
+        Console.WriteLine("│   [S]TT                - Test STT with fallback         │");
+        Console.WriteLine("│   [N]oise              - Test noise suppression         │");
+        Console.WriteLine("│   [R]ecord             - Record and transcribe audio    │");
+        Console.WriteLine("│   [H]ealth             - Check STT provider health      │");
+        Console.WriteLine("│   [Q]uit               - Exit test mode                 │");
+        Console.WriteLine("└─────────────────────────────────────────────────────────┘");
+        Console.Write("\nEnter command: ");
+        
+        var input = Console.ReadLine()?.Trim() ?? "";
+        var command = input.ToUpperInvariant();
+
+        try
+        {
+            switch (command)
+            {
+                case "W":
+                case "WAKE":
+                    await TestWakeWordDetectionAsync(services);
+                    break;
+
+                case "S":
+                case "STT":
+                    await TestMultiSTTAsync(services);
+                    break;
+
+                case "N":
+                case "NOISE":
+                    await TestNoiseSuppressionAsync(services);
+                    break;
+
+                case "R":
+                case "RECORD":
+                    await TestVoiceRecordingAsync(services);
+                    break;
+
+                case "H":
+                case "HEALTH":
+                    await CheckSTTProviderHealthAsync(services);
+                    break;
+
+                case "Q":
+                case "QUIT":
+                case "EXIT":
+                    running = false;
+                    Console.WriteLine("\n✅ Voice recognition test ended.");
+                    break;
+
+                default:
+                    Console.WriteLine("❌ Unknown command. Type 'W', 'S', 'N', 'R', 'H', or 'Q'.");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error: {ex.Message}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"   Inner: {ex.InnerException.Message}");
+            }
+        }
+    }
+}
+
+async Task TestWakeWordDetectionAsync(IServiceProvider services)
+{
+    Console.WriteLine("\n🎤 Wake Word Detection Test");
+    Console.WriteLine("─────────────────────────────────────────────────────────");
+    
+    var wakeWordService = services.GetRequiredService<IWakeWordDetectionService>();
+    
+    Console.WriteLine($"Current wake word: '{wakeWordService.WakeWord}'");
+    Console.WriteLine($"Sensitivity: {wakeWordService.Sensitivity:P0}");
+    Console.WriteLine();
+    
+    using var cts = new CancellationTokenSource();
+    var detectionTask = new TaskCompletionSource<bool>();
+    
+    wakeWordService.OnWakeWordDetected += (s, e) =>
+    {
+        Console.WriteLine($"\n🎯 WAKE WORD DETECTED!");
+        Console.WriteLine($"   Word: {e.WakeWord}");
+        Console.WriteLine($"   Confidence: {e.Confidence:P2}");
+        Console.WriteLine($"   Time: {e.DetectedAt:HH:mm:ss.fff}");
+        detectionTask.TrySetResult(true);
+    };
+    
+    wakeWordService.OnError += (s, ex) =>
+    {
+        Console.WriteLine($"\n❌ Error: {ex.Message}");
+        detectionTask.TrySetResult(false);
+    };
+    
+    Console.WriteLine("Starting wake word detection...");
+    Console.WriteLine($"Say '{wakeWordService.WakeWord}' to trigger detection.");
+    Console.WriteLine("Press any key to stop listening...\n");
+    
+    wakeWordService.StartListening();
+    
+    // Wait for either detection or key press
+    var keyPressTask = Task.Run(() => Console.ReadKey(true));
+    var completedTask = await Task.WhenAny(detectionTask.Task, keyPressTask);
+    
+    wakeWordService.StopListening();
+    
+    if (completedTask == detectionTask.Task && detectionTask.Task.Result)
+    {
+        Console.WriteLine("\n✅ Wake word detection successful!");
+    }
+    else
+    {
+        Console.WriteLine("\n⏹️ Detection stopped by user.");
+    }
+}
+
+async Task TestMultiSTTAsync(IServiceProvider services)
+{
+    Console.WriteLine("\n🗣️ Multi-STT Provider Test");
+    Console.WriteLine("─────────────────────────────────────────────────────────");
+    
+    var multiSTT = services.GetRequiredService<IMultiSTTService>();
+    
+    Console.WriteLine("Testing STT providers with automatic fallback...");
+    Console.WriteLine();
+    
+    // Check provider health first
+    var healthStatus = multiSTT.GetProviderHealthStatus();
+    Console.WriteLine("Provider Health Status:");
+    foreach (var status in healthStatus)
+    {
+        var healthIcon = status.Value.IsHealthy ? "🟢" : "🔴";
+        Console.WriteLine($"  {healthIcon} {status.Key}: {(status.Value.IsHealthy ? "Healthy" : "Unhealthy")} (Success rate: {status.Value.SuccessRate:P0})");
+    }
+    Console.WriteLine();
+    
+    // Simulate STT test with a warning
+    Console.WriteLine("⚠️  Note: This test requires audio input.");
+    Console.WriteLine("For a full test, use option [R] Record instead.");
+    Console.WriteLine();
+    Console.WriteLine("Testing connection to providers...");
+    
+    try
+    {
+        var results = await multiSTT.TestAllProvidersAsync();
+        
+        Console.WriteLine("\nConnection Test Results:");
+        foreach (var result in results)
+        {
+            var icon = result.IsConnected ? "✅" : "❌";
+            Console.WriteLine($"  {icon} {result.Provider}: {(result.IsConnected ? "Connected" : "Failed")} ({result.ResponseTime.TotalMilliseconds:F0}ms)");
+            if (!result.IsConnected && !string.IsNullOrEmpty(result.ErrorMessage))
+            {
+                Console.WriteLine($"     Error: {result.ErrorMessage}");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error testing providers: {ex.Message}");
+    }
+}
+
+async Task TestNoiseSuppressionAsync(IServiceProvider services)
+{
+    Console.WriteLine("\n🔇 Noise Suppression Test");
+    Console.WriteLine("─────────────────────────────────────────────────────────");
+    
+    var noiseSuppression = services.GetRequiredService<INoiseSuppressionService>();
+    
+    Console.WriteLine($"Service Initialized: {(noiseSuppression.IsInitialized ? "✅ Yes" : "❌ No")}");
+    Console.WriteLine();
+    
+    // Generate a test audio signal with noise
+    Console.WriteLine("Generating test audio signal...");
+    var testAudio = GenerateTestAudioWithNoise();
+    
+    // Estimate noise level
+    var noiseLevel = noiseSuppression.EstimateNoiseLevel(testAudio);
+    Console.WriteLine($"Estimated noise level: {noiseLevel:P2}");
+    
+    // Apply noise suppression
+    Console.WriteLine("Applying noise suppression...");
+    var options = new NoiseSuppressionOptions
+    {
+        SuppressionStrength = 0.7f,
+        ApplyAGC = true,
+        ApplyHighPassFilter = true
+    };
+    
+    var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+    var processedAudio = noiseSuppression.SuppressNoise(testAudio, options);
+    stopwatch.Stop();
+    
+    var processedNoiseLevel = noiseSuppression.EstimateNoiseLevel(processedAudio);
+    
+    Console.WriteLine($"✅ Processing complete in {stopwatch.ElapsedMilliseconds}ms");
+    Console.WriteLine($"   Original size: {testAudio.Length} bytes");
+    Console.WriteLine($"   Processed size: {processedAudio.Length} bytes");
+    Console.WriteLine($"   Noise reduction: {noiseLevel - processedNoiseLevel:P2}");
+    Console.WriteLine();
+    Console.WriteLine("Note: This is a simulated test with synthetic audio.");
+    Console.WriteLine("For real audio testing, use option [R] Record.");
+}
+
+async Task TestVoiceRecordingAsync(IServiceProvider services)
+{
+    Console.WriteLine("\n🎙️ Voice Recording Test");
+    Console.WriteLine("─────────────────────────────────────────────────────────");
+    
+    var voiceRecognitionFactory = services.GetRequiredService<IVoiceRecognitionFactory>();
+    var voiceRecognition = voiceRecognitionFactory.Create();
+    var multiSTT = services.GetRequiredService<IMultiSTTService>();
+    var noiseSuppression = services.GetRequiredService<INoiseSuppressionService>();
+    
+    Console.WriteLine("This test will:");
+    Console.WriteLine("  1. Record audio for 5 seconds");
+    Console.WriteLine("  2. Apply noise suppression");
+    Console.WriteLine("  3. Transcribe using Multi-STT with fallback");
+    Console.WriteLine();
+    
+    Console.Write("Press Enter to start recording (or type 'skip' to cancel)...");
+    var input = Console.ReadLine()?.Trim().ToLower();
+    if (input == "skip")
+    {
+        Console.WriteLine("⏭️ Test skipped.");
+        return;
+    }
+    
+    try
+    {
+        var tcs = new TaskCompletionSource<byte[]>();
+        
+        voiceRecognition.OnVoiceCaptured += (s, data) =>
+        {
+            Console.WriteLine($"\n🎤 Audio captured: {data.Length} bytes");
+            tcs.TrySetResult(data);
+        };
+        
+        voiceRecognition.OnError += (s, ex) =>
+        {
+            Console.WriteLine($"\n❌ Recording error: {ex.Message}");
+            tcs.TrySetException(ex);
+        };
+        
+        Console.WriteLine("\n🔴 Recording... Speak now!");
+        voiceRecognition.StartListening();
+        
+        // Record for 5 seconds or until voice is captured
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        try
+        {
+            await tcs.Task.WaitAsync(cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            Console.WriteLine("\n⏹️ Recording timeout (5 seconds).");
+            voiceRecognition.StopListening();
+            return;
+        }
+        
+        voiceRecognition.StopListening();
+        
+        var audioData = await tcs.Task;
+        
+        // Apply noise suppression
+        Console.WriteLine("🔇 Applying noise suppression...");
+        var cleanAudio = noiseSuppression.SuppressNoise(audioData);
+        Console.WriteLine($"   Noise suppression: {audioData.Length} → {cleanAudio.Length} bytes");
+        
+        // Transcribe
+        Console.WriteLine("📝 Transcribing audio...");
+        var result = await multiSTT.ConvertToTextAsync(cleanAudio);
+        
+        Console.WriteLine("\n📊 Transcription Result:");
+        Console.WriteLine($"   Text: {result.Text}");
+        Console.WriteLine($"   Confidence: {result.Confidence:P2}");
+        Console.WriteLine($"   Provider: {result.UsedProvider}");
+        Console.WriteLine($"   Fallback used: {(result.WasFallbackUsed ? "Yes" : "No")}");
+        if (result.ProvidersTried.Count > 0)
+        {
+            Console.WriteLine($"   Providers tried: {string.Join(", ", result.ProvidersTried)}");
+        }
+        Console.WriteLine($"   Processing time: {result.ProcessingTime.TotalMilliseconds:F0}ms");
+        
+        if (!string.IsNullOrEmpty(result.ErrorMessage))
+        {
+            Console.WriteLine($"   Error: {result.ErrorMessage}");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"\n❌ Test failed: {ex.Message}");
+    }
+}
+
+async Task CheckSTTProviderHealthAsync(IServiceProvider services)
+{
+    Console.WriteLine("\n🏥 STT Provider Health Check");
+    Console.WriteLine("─────────────────────────────────────────────────────────");
+    
+    var multiSTT = services.GetRequiredService<IMultiSTTService>();
+    var healthStatus = multiSTT.GetProviderHealthStatus();
+    
+    Console.WriteLine("Current Provider Status:\n");
+    
+    foreach (var status in healthStatus)
+    {
+        var icon = status.Value.IsHealthy ? "🟢" : "🔴";
+        Console.WriteLine($"{icon} {status.Key}");
+        Console.WriteLine($"   Health: {(status.Value.IsHealthy ? "Healthy" : "Unhealthy")}");
+        Console.WriteLine($"   Success Rate: {status.Value.SuccessRate:P1}");
+        Console.WriteLine($"   Success Count: {status.Value.SuccessCount}");
+        Console.WriteLine($"   Failure Count: {status.Value.FailureCount}");
+        Console.WriteLine($"   Avg Response: {status.Value.AverageResponseTime.TotalMilliseconds:F0}ms");
+        Console.WriteLine($"   Last Checked: {status.Value.LastChecked:HH:mm:ss}");
+        if (!string.IsNullOrEmpty(status.Value.LastError))
+        {
+            Console.WriteLine($"   Last Error: {status.Value.LastError}");
+        }
+        Console.WriteLine();
+    }
+    
+    Console.WriteLine("Press any key to test connections...");
+    Console.ReadKey(true);
+    
+    Console.WriteLine("\nTesting connections...");
+    var results = await multiSTT.TestAllProvidersAsync();
+    
+    Console.WriteLine("\nConnection Test Results:");
+    foreach (var result in results)
+    {
+        var icon = result.IsConnected ? "✅" : "❌";
+        Console.WriteLine($"  {icon} {result.Provider}: {(result.IsConnected ? "Connected" : "Failed")} ({result.ResponseTime.TotalMilliseconds:F0}ms)");
+    }
+}
+
+byte[] GenerateTestAudioWithNoise()
+{
+    // Generate 1 second of 16-bit mono audio at 16kHz with synthetic speech + noise
+    int sampleRate = 16000;
+    int durationMs = 1000;
+    int sampleCount = sampleRate * durationMs / 1000;
+    var audio = new short[sampleCount];
+    
+    var random = new Random();
+    
+    for (int i = 0; i < sampleCount; i++)
+    {
+        // Add synthetic "speech" signal (sine wave)
+        double time = (double)i / sampleRate;
+        double speechSignal = Math.Sin(2 * Math.PI * 440 * time) * 5000; // 440 Hz tone
+        
+        // Add noise
+        double noise = (random.NextDouble() - 0.5) * 2000;
+        
+        // Combine
+        double sample = speechSignal + noise;
+        audio[i] = (short)Math.Clamp(sample, short.MinValue, short.MaxValue);
+    }
+    
+    // Convert to bytes
+    var bytes = new byte[sampleCount * 2];
+    Buffer.BlockCopy(audio, 0, bytes, 0, bytes.Length);
+    return bytes;
 }
 #endregion
 
