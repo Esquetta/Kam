@@ -1280,6 +1280,24 @@ async Task TestMultiSTTAsync(IServiceProvider services)
     Console.WriteLine("─────────────────────────────────────────────────────────");
     
     var multiSTT = services.GetRequiredService<IMultiSTTService>();
+    var configuration = services.GetRequiredService<IConfiguration>();
+    
+    // Show HuggingFace configuration
+    var hfConfig = configuration.GetSection("HuggingFaceConfig");
+    var hfApiKey = hfConfig["ApiKey"];
+    var hfModelName = hfConfig["ModelName"] ?? "openai/whisper-large-v3";
+    
+    Console.WriteLine("HuggingFace Configuration:");
+    Console.WriteLine($"  API Key: {(string.IsNullOrEmpty(hfApiKey) ? "❌ NOT SET" : "✅ SET")}");
+    Console.WriteLine($"  Model: {hfModelName}");
+    Console.WriteLine();
+    
+    if (string.IsNullOrEmpty(hfApiKey))
+    {
+        Console.WriteLine("⚠️  HuggingFace API Key not found!");
+        Console.WriteLine("   Set it using: dotnet user-secrets set \"HuggingFaceConfig:ApiKey\" \"your-api-key\"");
+        Console.WriteLine();
+    }
     
     Console.WriteLine("Testing STT providers with automatic fallback...");
     Console.WriteLine();
@@ -1460,7 +1478,24 @@ async Task CheckSTTProviderHealthAsync(IServiceProvider services)
     Console.WriteLine("─────────────────────────────────────────────────────────");
     
     var multiSTT = services.GetRequiredService<IMultiSTTService>();
+    var configuration = services.GetRequiredService<IConfiguration>();
     var healthStatus = multiSTT.GetProviderHealthStatus();
+    
+    // Show configuration summary
+    Console.WriteLine("Configuration:\n");
+    
+    var hfApiKey = configuration["HuggingFaceConfig:ApiKey"];
+    var hfModel = configuration["HuggingFaceConfig:ModelName"] ?? "openai/whisper-large-v3";
+    Console.WriteLine($"  HuggingFace: {(string.IsNullOrEmpty(hfApiKey) ? "❌ API Key not set" : "✅ Configured")}");
+    Console.WriteLine($"  Model: {hfModel}");
+    Console.WriteLine();
+    
+    if (string.IsNullOrEmpty(hfApiKey))
+    {
+        Console.WriteLine("💡 To set HuggingFace API Key:");
+        Console.WriteLine("   dotnet user-secrets set \"HuggingFaceConfig:ApiKey\" \"your-hf-api-key\"");
+        Console.WriteLine();
+    }
     
     Console.WriteLine("Current Provider Status:\n");
     
