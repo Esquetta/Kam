@@ -16,25 +16,34 @@ public class CircularAudioBuffer
     private int _count;
     private readonly object _lock = new();
 
-    public CircularAudioBuffer(int capacityInSeconds, int sampleRate = 16000, int channels = 1, int bitsPerSample = 16)
-    {
-        _capacity = Math.Max(1024, capacityInSeconds * sampleRate * channels * (bitsPerSample / 8)); // Minimum 1KB buffer
-        _buffer = GC.AllocateUninitializedArray<byte>(_capacity);
-    }
-
     /// <summary>
     /// Creates a buffer with exact byte capacity
     /// </summary>
     public CircularAudioBuffer(int capacityBytes)
     {
-        _capacity = Math.Max(1024, capacityBytes); // Minimum 1KB buffer
+        _capacity = Math.Max(1, capacityBytes); // Minimum 1 byte buffer
         _buffer = GC.AllocateUninitializedArray<byte>(_capacity);
     }
 
     /// <summary>
-    /// Current number of bytes in buffer (thread-safe read)
+    /// Creates a buffer for audio with specified duration and format
     /// </summary>
-    public int Count => Interlocked.CompareExchange(ref _count, 0, 0);
+    public static CircularAudioBuffer ForAudio(int seconds, int sampleRate = 16000, int channels = 1, int bitsPerSample = 16)
+    {
+        var capacity = Math.Max(1024, seconds * sampleRate * channels * (bitsPerSample / 8));
+        return new CircularAudioBuffer(capacity);
+    }
+
+    /// <summary>
+    /// Current number of bytes in buffer
+    /// </summary>
+    public int Count 
+    { 
+        get 
+        { 
+            lock (_lock) return _count; 
+        } 
+    }
 
     /// <summary>
     /// Buffer capacity in bytes
@@ -79,8 +88,8 @@ public class CircularAudioBuffer
             if (dataLength > _capacity)
             {
                 data = data.Slice(dataLength - _capacity);
-                dataLength = _capacity;
             }
+            dataLength = data.Length;
             
             // Calculate how much we can write before wrapping
             int spaceToEnd = _capacity - _writeIndex;

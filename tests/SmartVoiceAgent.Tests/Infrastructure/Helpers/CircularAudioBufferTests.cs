@@ -373,7 +373,7 @@ namespace SmartVoiceAgent.Tests.Infrastructure.Helpers
             var expectedBytes = seconds * sampleRate * channels * (bitsPerSample / 8);
 
             // Act
-            var buffer = new CircularAudioBuffer(seconds, sampleRate, channels, bitsPerSample);
+            var buffer = CircularAudioBuffer.ForAudio(seconds, sampleRate, channels, bitsPerSample);
 
             // Assert
             buffer.Capacity.Should().Be(expectedBytes);
