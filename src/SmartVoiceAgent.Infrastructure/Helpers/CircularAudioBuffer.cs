@@ -18,7 +18,7 @@ public class CircularAudioBuffer
 
     public CircularAudioBuffer(int capacityInSeconds, int sampleRate = 16000, int channels = 1, int bitsPerSample = 16)
     {
-        _capacity = capacityInSeconds * sampleRate * channels * (bitsPerSample / 8);
+        _capacity = Math.Max(1024, capacityInSeconds * sampleRate * channels * (bitsPerSample / 8)); // Minimum 1KB buffer
         _buffer = GC.AllocateUninitializedArray<byte>(_capacity);
     }
 
@@ -27,7 +27,7 @@ public class CircularAudioBuffer
     /// </summary>
     public CircularAudioBuffer(int capacityBytes)
     {
-        _capacity = capacityBytes;
+        _capacity = Math.Max(1024, capacityBytes); // Minimum 1KB buffer
         _buffer = GC.AllocateUninitializedArray<byte>(_capacity);
     }
 
@@ -65,11 +65,22 @@ public class CircularAudioBuffer
     /// </summary>
     public void Write(ReadOnlySpan<byte> data)
     {
-        if (data.IsEmpty) return;
+        if (data.IsEmpty || _capacity == 0) return;
 
         lock (_lock)
         {
+            // Ensure indices are valid
+            _writeIndex = Math.Max(0, Math.Min(_writeIndex, _capacity - 1));
+            _readIndex = Math.Max(0, Math.Min(_readIndex, _capacity - 1));
+            
             int dataLength = data.Length;
+            
+            // Handle data larger than capacity - only keep the last _capacity bytes
+            if (dataLength > _capacity)
+            {
+                data = data.Slice(dataLength - _capacity);
+                dataLength = _capacity;
+            }
             
             // Calculate how much we can write before wrapping
             int spaceToEnd = _capacity - _writeIndex;
@@ -77,7 +88,10 @@ public class CircularAudioBuffer
             int secondChunkLength = dataLength - firstChunkLength;
 
             // First chunk: write from current position to end of buffer
-            data.Slice(0, firstChunkLength).CopyTo(_buffer.AsSpan(_writeIndex, firstChunkLength));
+            if (firstChunkLength > 0)
+            {
+                data.Slice(0, firstChunkLength).CopyTo(_buffer.AsSpan(_writeIndex, firstChunkLength));
+            }
 
             // Second chunk: wrap around and write remaining data
             if (secondChunkLength > 0)
