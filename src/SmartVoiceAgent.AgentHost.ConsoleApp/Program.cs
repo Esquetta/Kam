@@ -1249,6 +1249,12 @@ async Task TestWakeWordDetectionAsync(IServiceProvider services)
     wakeWordService.OnError += (s, ex) =>
     {
         Console.WriteLine($"\n❌ Error: {ex.Message}");
+        Console.WriteLine($"   Stack trace: {ex.StackTrace}");
+        if (ex.InnerException != null)
+        {
+            Console.WriteLine($"   Inner exception: {ex.InnerException.Message}");
+            Console.WriteLine($"   Inner stack trace: {ex.InnerException.StackTrace}");
+        }
         detectionTask.TrySetResult(false);
     };
     
@@ -1418,6 +1424,12 @@ async Task TestVoiceRecordingAsync(IServiceProvider services)
         voiceRecognition.OnError += (s, ex) =>
         {
             Console.WriteLine($"\n❌ Recording error: {ex.Message}");
+            Console.WriteLine($"   Stack trace: {ex.StackTrace}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"   Inner exception: {ex.InnerException.Message}");
+                Console.WriteLine($"   Inner stack trace: {ex.InnerException.StackTrace}");
+            }
             tcs.TrySetException(ex);
         };
         
@@ -1443,8 +1455,18 @@ async Task TestVoiceRecordingAsync(IServiceProvider services)
         
         // Apply noise suppression
         Console.WriteLine("🔇 Applying noise suppression...");
-        var cleanAudio = noiseSuppression.SuppressNoise(audioData);
-        Console.WriteLine($"   Noise suppression: {audioData.Length} → {cleanAudio.Length} bytes");
+        byte[] cleanAudio;
+        try
+        {
+            cleanAudio = noiseSuppression.SuppressNoise(audioData);
+            Console.WriteLine($"   Noise suppression: {audioData.Length} → {cleanAudio.Length} bytes");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Noise suppression failed: {ex.Message}");
+            Console.WriteLine($"   Stack trace: {ex.StackTrace}");
+            cleanAudio = audioData; // Use original audio if suppression fails
+        }
         
         // Transcribe
         Console.WriteLine("📝 Transcribing audio...");

@@ -442,19 +442,24 @@ internal sealed class CircularByteBuffer : IDisposable
 
         int index = _count < _capacity ? _count : _head;
 
-        // Eski buffer'ı pool'a geri ver
-        if (_buffers[index] != null && _buffers[index].Length < data.Length)
+        // If we're overwriting an existing buffer, return it first
+        if (_count >= _capacity && _buffers[index] != null)
         {
             VoiceRecognitionServiceBase.ByteArrayPool.Return(_buffers[index]);
             _buffers[index] = null;
         }
 
-        // Yeni buffer al ve kopyala
+        // Rent a new buffer if needed
         if (_buffers[index] == null || _buffers[index].Length < data.Length)
         {
+            if (_buffers[index] != null)
+            {
+                VoiceRecognitionServiceBase.ByteArrayPool.Return(_buffers[index]);
+            }
             _buffers[index] = VoiceRecognitionServiceBase.ByteArrayPool.Rent(data.Length);
         }
 
+        // Copy data and update length
         Buffer.BlockCopy(data, 0, _buffers[index], 0, data.Length);
         _lengths[index] = data.Length;
 
@@ -475,8 +480,9 @@ internal sealed class CircularByteBuffer : IDisposable
             int index = (_head + i) % _capacity;
             if (_buffers[index] != null)
             {
-                var result = new byte[_lengths[index]];
-                Buffer.BlockCopy(_buffers[index], 0, result, 0, _lengths[index]);
+                int length = Math.Min(_lengths[index], _buffers[index].Length);
+                var result = new byte[length];
+                Buffer.BlockCopy(_buffers[index], 0, result, 0, length);
                 yield return result;
             }
         }
@@ -491,6 +497,7 @@ internal sealed class CircularByteBuffer : IDisposable
                 VoiceRecognitionServiceBase.ByteArrayPool.Return(_buffers[i]);
                 _buffers[i] = null;
             }
+            _lengths[i] = 0;
         }
         _head = 0;
         _count = 0;
