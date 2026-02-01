@@ -41,9 +41,14 @@ public class WindowsVoiceRecognitionService : VoiceRecognitionServiceBase
         {
             if (e.BytesRecorded > 0)
             {
-                var buffer = new byte[e.BytesRecorded];
-                Array.Copy(e.Buffer, buffer, e.BytesRecorded);
-                AddAudioData(buffer);
+                // Safety check: ensure we don't read past the buffer length
+                int bytesToCopy = Math.Min(e.BytesRecorded, e.Buffer.Length);
+                if (bytesToCopy > 0)
+                {
+                    var buffer = new byte[bytesToCopy];
+                    Buffer.BlockCopy(e.Buffer, 0, buffer, 0, bytesToCopy);
+                    AddAudioData(buffer);
+                }
             }
         }
         catch (Exception ex)

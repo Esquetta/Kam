@@ -173,8 +173,11 @@ public class WakeWordDetectionService : IWakeWordDetectionService
     {
         try
         {
+            // Safety check: ensure we don't read past the buffer length
+            int bytesToProcess = Math.Min(e.BytesRecorded, e.Buffer.Length);
+            
             // Convert byte array to short samples (16-bit PCM)
-            for (int i = 0; i < e.BytesRecorded; i += 2)
+            for (int i = 0; i < bytesToProcess - 1; i += 2)  // -1 to ensure we have pairs
             {
                 short sample = (short)(e.Buffer[i] | (e.Buffer[i + 1] << 8));
                 _audioBuffer.Enqueue(sample);
