@@ -1233,6 +1233,13 @@ async Task TestWakeWordDetectionAsync(IServiceProvider services)
     Console.WriteLine($"Current wake word: '{wakeWordService.WakeWord}'");
     Console.WriteLine($"Sensitivity: {wakeWordService.Sensitivity:P0}");
     Console.WriteLine();
+    Console.WriteLine("💡 Tips for best results:");
+    Console.WriteLine("   • Speak clearly and at normal volume");
+    Console.WriteLine("   • Say the wake word as a complete phrase");
+    Console.WriteLine("   • Avoid background noise");
+    Console.WriteLine("   • You'll see 🎤 when voice is detected");
+    Console.WriteLine("   • You'll see 🎯 when wake word is matched");
+    Console.WriteLine();
     
     using var cts = new CancellationTokenSource();
     var detectionTask = new TaskCompletionSource<bool>();
@@ -1259,7 +1266,7 @@ async Task TestWakeWordDetectionAsync(IServiceProvider services)
     };
     
     Console.WriteLine("Starting wake word detection...");
-    Console.WriteLine($"Say '{wakeWordService.WakeWord}' to trigger detection.");
+    Console.WriteLine($"Say '{wakeWordService.WakeWord}' clearly to trigger detection.");
     Console.WriteLine("Press any key to stop listening...\n");
     
     wakeWordService.StartListening();

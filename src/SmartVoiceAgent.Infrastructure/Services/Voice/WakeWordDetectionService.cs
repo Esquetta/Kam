@@ -291,20 +291,35 @@ public class WakeWordDetectionService : IWakeWordDetectionService
         float dominantFreq = EstimateDominantFrequency(frame);
         
         // Pattern matching for wake word detection
-        // A real implementation would use MFCCs or a neural network
-        // This is a simplified heuristic-based approach
-        
         bool isPatternMatch = DetectPattern(energy, zcr, dominantFreq);
+        
+        // Always show detection attempt info
+        float confidence = CalculateConfidence(energy, zcr);
+        var volumeBar = GetVolumeBar(energy);
         
         if (isPatternMatch)
         {
             _lastDetectionTime = DateTime.UtcNow;
-            float confidence = CalculateConfidence(energy, zcr);
             
             InvokeOnWakeWordDetected(new WakeWordDetectedEventArgs(WakeWord, confidence));
             
             _logger.LogInformation("🎯 Wake word '{WakeWord}' detected! (Confidence: {Confidence:P0})", 
                 WakeWord, confidence);
+            Console.WriteLine($"\n🎯🎯🎯 WAKE WORD DETECTED! 🎯🎯🎯");
+            Console.WriteLine($"   Wake Word: '{WakeWord}'");
+            Console.WriteLine($"   Confidence: {confidence:P1}");
+            Console.WriteLine($"   Energy: {energy:F0} {volumeBar}");
+            Console.WriteLine($"   Zero Crossing Rate: {zcr:F3}");
+            Console.WriteLine($"   Dominant Frequency: {dominantFreq:F0} Hz");
+        }
+        else
+        {
+            // Show what was detected (near miss)
+            if (confidence > 0.3f) // Show only if somewhat close
+            {
+                Debug.WriteLine($"[WakeWord] Near match: Confidence={confidence:P2}, Energy={energy:F0}, ZCR={zcr:F3}, Freq={dominantFreq:F0}Hz");
+                Console.WriteLine($"🎤 Voice activity detected (not wake word) - Confidence: {confidence:P1}, Say '{WakeWord}' louder/clearer");
+            }
         }
     }
 
@@ -351,9 +366,19 @@ public class WakeWordDetectionService : IWakeWordDetectionService
         bool hasSpeechZCR = zcr > 0.05f && zcr < 0.3f;
         bool hasSpeechFreq = dominantFreq > 80f && dominantFreq < 400f;
         
-        // All criteria must match for a detection
-        // In a real implementation, this would be a trained classifier
-        return hasSpeechEnergy && hasSpeechZCR && hasSpeechFreq;
+        bool isMatch = hasSpeechEnergy && hasSpeechZCR && hasSpeechFreq;
+        
+        // Log why detection failed (for debugging)
+        if (!isMatch && energy > _backgroundNoiseLevel * 1.5f)
+        {
+            var reasons = new List<string>();
+            if (!hasSpeechEnergy) reasons.Add($"energy too low ({energy:F0} < {_backgroundNoiseLevel * 2f:F0})");
+            if (!hasSpeechZCR) reasons.Add($"ZCR out of range ({zcr:F3})");
+            if (!hasSpeechFreq) reasons.Add($"freq out of range ({dominantFreq:F0}Hz)");
+            Debug.WriteLine($"[WakeWord] Pattern rejected: {string.Join(", ", reasons)}");
+        }
+        
+        return isMatch;
     }
 
     private float CalculateConfidence(float energy, float zcr)
