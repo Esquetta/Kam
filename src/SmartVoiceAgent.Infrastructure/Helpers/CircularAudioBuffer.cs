@@ -77,12 +77,12 @@ public class CircularAudioBuffer
             int secondChunkLength = dataLength - firstChunkLength;
 
             // First chunk: write from current position to end of buffer
-            data.Slice(0, firstChunkLength).CopyTo(_buffer.AsSpan(_writeIndex));
+            data.Slice(0, firstChunkLength).CopyTo(_buffer.AsSpan(_writeIndex, firstChunkLength));
 
             // Second chunk: wrap around and write remaining data
             if (secondChunkLength > 0)
             {
-                data.Slice(firstChunkLength, secondChunkLength).CopyTo(_buffer.AsSpan(0));
+                data.Slice(firstChunkLength, secondChunkLength).CopyTo(_buffer.AsSpan(0, secondChunkLength));
                 _writeIndex = secondChunkLength;
             }
             else
