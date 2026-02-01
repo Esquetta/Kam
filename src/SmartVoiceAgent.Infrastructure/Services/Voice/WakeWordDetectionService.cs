@@ -4,6 +4,7 @@ using NAudio.Wave;
 using SmartVoiceAgent.Core.Config;
 using SmartVoiceAgent.Core.Interfaces;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace SmartVoiceAgent.Infrastructure.Services.Voice;
 
@@ -33,6 +34,11 @@ public class WakeWordDetectionService : IWakeWordDetectionService
     private float _backgroundNoiseLevel = 100f;
     private DateTime _lastDetectionTime = DateTime.MinValue;
     private readonly TimeSpan _minDetectionInterval = TimeSpan.FromMilliseconds(2000); // Debounce
+    
+    // Debug output
+    private int _frameCount = 0;
+    private DateTime _lastDebugOutput = DateTime.MinValue;
+    private readonly TimeSpan _debugOutputInterval = TimeSpan.FromMilliseconds(500); // Show levels every 500ms
 
     public bool IsListening 
     { 
@@ -91,7 +97,15 @@ public class WakeWordDetectionService : IWakeWordDetectionService
                 _waveIn.StartRecording();
                 _isListening = true;
                 
+                // Reset debug counters
+                _frameCount = 0;
+                _lastDebugOutput = DateTime.UtcNow;
+                
                 _logger.LogInformation("🎤 Wake word detection started. Say '{WakeWord}' to activate.", WakeWord);
+                Console.WriteLine($"   Sample Rate: {_sampleRate}Hz");
+                Console.WriteLine($"   Frame Size: {_frameSize} samples ({_frameSize * 1000 / _sampleRate}ms)");
+                Console.WriteLine($"   Initial Threshold: {_energyThreshold:F0}");
+                Console.WriteLine("   (Audio levels will show when voice is detected)");
             }
             catch (Exception ex)
             {
@@ -209,12 +223,36 @@ public class WakeWordDetectionService : IWakeWordDetectionService
         // Update background noise estimate
         UpdateNoiseLevel(energy);
         
+        // Debug output - show audio levels periodically
+        _frameCount++;
+        var now = DateTime.UtcNow;
+        if (now - _lastDebugOutput >= _debugOutputInterval)
+        {
+            _lastDebugOutput = now;
+            var isVoiceActive = energy > _energyThreshold * Sensitivity && energy > _backgroundNoiseLevel * _adaptiveThresholdMultiplier;
+            var volumeBar = GetVolumeBar(energy);
+            Debug.WriteLine($"[WakeWord] Energy: {energy,8:F1} | Threshold: {_energyThreshold * Sensitivity,8:F1} | BG: {_backgroundNoiseLevel,8:F1} | Voice: {(isVoiceActive ? "YES" : "NO")} | {volumeBar}");
+            
+            // Also write to console for visibility in test mode
+            if (isVoiceActive)
+            {
+                Console.WriteLine($"🎤 Voice detected! Level: {energy:F0} {volumeBar}");
+            }
+        }
+        
         // Check for voice activity
         if (energy > _energyThreshold * Sensitivity && energy > _backgroundNoiseLevel * _adaptiveThresholdMultiplier)
         {
             // Voice detected - analyze pattern
             AnalyzeVoicePattern(frame, energy);
         }
+    }
+    
+    private string GetVolumeBar(float energy)
+    {
+        // Create a simple volume bar (0-50 scale)
+        int level = Math.Min((int)(energy / 100), 50);
+        return "[" + new string('█', level) + new string('░', 50 - level) + "]";
     }
 
     private float CalculateEnergy(short[] samples)
