@@ -45,47 +45,65 @@ public class NoiseSuppressionService : INoiseSuppressionService
             Array.Resize(ref audioData, audioData.Length - 1);
         }
 
+        var stopwatch = global::System.Diagnostics.Stopwatch.StartNew();
+        
         try
         {
             lock (_lock)
             {
+                _logger.LogDebug("Starting noise suppression on {Length} bytes ({Samples} samples)", 
+                    audioData.Length, audioData.Length / 2);
+
                 // Convert bytes to short samples
                 var samples = PcmBytesToShorts(audioData);
+                _logger.LogDebug("Converted to {Count} samples", samples.Length);
                 
                 // Apply pre-emphasis filter
                 samples = ApplyPreEmphasis(samples);
+                _logger.LogDebug("Pre-emphasis applied ({ElapsedMs}ms)", stopwatch.ElapsedMilliseconds);
 
                 // Apply high-pass filter if enabled
                 if (options.ApplyHighPassFilter)
                 {
                     samples = ApplyHighPassFilter(samples, options.SampleRate, options.HighPassCutoff);
+                    _logger.LogDebug("High-pass filter applied ({ElapsedMs}ms)", stopwatch.ElapsedMilliseconds);
                 }
 
-                // Apply noise suppression using spectral subtraction
-                samples = ApplySpectralSubtraction(samples, options.SampleRate, options.SuppressionStrength);
+                // Apply noise suppression using spectral subtraction (or noise gate for large buffers)
+                samples = ApplySpectralSubtraction(samples, options.SampleRate, options.SuppressionStrength, _logger);
+                _logger.LogDebug("Noise suppression applied ({ElapsedMs}ms)", stopwatch.ElapsedMilliseconds);
 
                 // Apply AGC if enabled
                 if (options.ApplyAGC)
                 {
                     samples = ApplyAutomaticGainControl(samples, options.TargetLevel);
+                    _logger.LogDebug("AGC applied ({ElapsedMs}ms)", stopwatch.ElapsedMilliseconds);
                 }
 
                 // Remove silence if enabled
                 if (options.RemoveSilence)
                 {
                     samples = RemoveSilentParts(samples, options.SilenceThreshold);
+                    _logger.LogDebug("Silence removal applied ({ElapsedMs}ms)", stopwatch.ElapsedMilliseconds);
                 }
 
                 // De-emphasis (restore natural sound)
                 samples = ApplyDeEmphasis(samples);
+                _logger.LogDebug("De-emphasis applied ({ElapsedMs}ms)", stopwatch.ElapsedMilliseconds);
 
                 // Convert back to bytes
-                return ShortsToPcmBytes(samples);
+                var result = ShortsToPcmBytes(samples);
+                stopwatch.Stop();
+                _logger.LogInformation("Noise suppression complete: {InputBytes} → {OutputBytes} bytes in {ElapsedMs}ms", 
+                    audioData.Length, result.Length, stopwatch.ElapsedMilliseconds);
+                
+                return result;
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during noise suppression");
+            stopwatch.Stop();
+            _logger.LogError(ex, "Error during noise suppression after {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
             return audioData; // Return original on error
         }
     }
@@ -299,8 +317,16 @@ public class NoiseSuppressionService : INoiseSuppressionService
         return output;
     }
 
-    private static short[] ApplySpectralSubtraction(short[] samples, int sampleRate, float suppressionStrength)
+    private static short[] ApplySpectralSubtraction(short[] samples, int sampleRate, float suppressionStrength, ILogger? logger = null)
     {
+        // For large audio files, skip spectral subtraction and use simpler noise gate
+        // Spectral subtraction is too slow for real-time processing
+        if (samples.Length > sampleRate * 2) // More than 2 seconds
+        {
+            logger?.LogDebug("Audio too long ({Length} samples), using simple noise gate instead of spectral subtraction", samples.Length);
+            return ApplySimpleNoiseGate(samples, suppressionStrength);
+        }
+
         // Estimate noise from first 200ms (assumed to be silence/noise)
         int noiseSamples = Math.Min(samples.Length, sampleRate / 5); // 200ms
         var noiseProfile = EstimateNoiseProfile(samples, noiseSamples);
@@ -310,6 +336,8 @@ public class NoiseSuppressionService : INoiseSuppressionService
         Array.Clear(output, 0, output.Length);
         
         var window = CreateHannWindow(FftSize);
+        int totalFrames = (samples.Length - FftSize) / HopSize + 1;
+        int processedFrames = 0;
 
         for (int i = 0; i < samples.Length - FftSize; i += HopSize)
         {
@@ -351,8 +379,40 @@ public class NoiseSuppressionService : INoiseSuppressionService
                     output[i + j] = (short)Math.Clamp(output[i + j] + value, short.MinValue, short.MaxValue);
                 }
             }
+            
+            processedFrames++;
         }
 
+        return output;
+    }
+    
+    private static short[] ApplySimpleNoiseGate(short[] samples, float threshold)
+    {
+        // Simple noise gate - faster than spectral subtraction for large buffers
+        var output = new short[samples.Length];
+        
+        // Calculate RMS to determine noise floor
+        double sumSquares = 0;
+        foreach (var sample in samples)
+        {
+            sumSquares += sample * sample;
+        }
+        double rms = Math.Sqrt(sumSquares / samples.Length);
+        double noiseFloor = rms * threshold * 0.5; // Conservative noise floor
+        
+        for (int i = 0; i < samples.Length; i++)
+        {
+            if (Math.Abs(samples[i]) < noiseFloor)
+            {
+                output[i] = 0; // Silence below threshold
+            }
+            else
+            {
+                // Attenuate slightly
+                output[i] = (short)(samples[i] * 0.9);
+            }
+        }
+        
         return output;
     }
 

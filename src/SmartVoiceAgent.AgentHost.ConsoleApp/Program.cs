@@ -1460,19 +1460,40 @@ async Task TestVoiceRecordingAsync(IServiceProvider services)
         
         var audioData = await tcs.Task;
         
-        // Apply noise suppression
-        Console.WriteLine("🔇 Applying noise suppression...");
+        // Ask if user wants noise suppression (can be slow)
+        Console.WriteLine();
+        Console.Write($"🔇 Apply noise suppression? (y/n) [n]: ");
+        var applyNoiseSuppression = Console.ReadLine()?.Trim().ToLower() == "y";
+        
         byte[] cleanAudio;
-        try
+        if (applyNoiseSuppression)
         {
-            cleanAudio = noiseSuppression.SuppressNoise(audioData);
-            Console.WriteLine($"   Noise suppression: {audioData.Length} → {cleanAudio.Length} bytes");
+            Console.WriteLine("   Applying noise suppression (this may take a few seconds)...");
+            try
+            {
+                // Use a timeout for noise suppression
+                var noiseTask = Task.Run(() => noiseSuppression.SuppressNoise(audioData));
+                if (await Task.WhenAny(noiseTask, Task.Delay(TimeSpan.FromSeconds(5))) == noiseTask)
+                {
+                    cleanAudio = await noiseTask;
+                    Console.WriteLine($"   Noise suppression: {audioData.Length} → {cleanAudio.Length} bytes");
+                }
+                else
+                {
+                    Console.WriteLine("   ⚠️ Noise suppression timed out, using original audio");
+                    cleanAudio = audioData;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"   ❌ Noise suppression failed: {ex.Message}");
+                cleanAudio = audioData; // Use original audio if suppression fails
+            }
         }
-        catch (Exception ex)
+        else
         {
-            Console.WriteLine($"❌ Noise suppression failed: {ex.Message}");
-            Console.WriteLine($"   Stack trace: {ex.StackTrace}");
-            cleanAudio = audioData; // Use original audio if suppression fails
+            Console.WriteLine("   Skipping noise suppression, using original audio");
+            cleanAudio = audioData;
         }
         
         // Transcribe
