@@ -1,17 +1,20 @@
-﻿using BenchmarkDotNet.Attributes;
-using Core.CrossCuttingConcerns.Logging.Serilog;
-using Core.CrossCuttingConcerns.Logging.Serilog.Logger;
+using BenchmarkDotNet.Attributes;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SmartVoiceAgent.Application.Commands;
+using SmartVoiceAgent.Application.Handlers.CommandHandlers;
 using SmartVoiceAgent.Application.Behaviors.Logging;
-using SmartVoiceAgent.Application.Behaviors.Performance;
+using SmartVoiceAgent.Application.Behaviors.Validation;
 using SmartVoiceAgent.Application.Pipelines.Caching;
-using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Application.Pipelines.Performance;
+using SmartVoiceAgent.Core.Config;
+using Core.CrossCuttingConcerns.Logging.Serilog;
 
-namespace SmartVoiceAgent.Benchmarks;
+namespace SmartVoiceAgent.Benchmarks.Benchmarks;
 
 [MemoryDiagnoser]
+[MinColumn, MaxColumn, MeanColumn, MedianColumn]
 public class MediatorPipelineBenchmark
 {
     private IMediator _mediator = null!;
@@ -21,31 +24,35 @@ public class MediatorPipelineBenchmark
     {
         var services = new ServiceCollection();
 
+        // Register MediatR
         services.AddMediatR(cfg =>
         {
-            cfg.RegisterServicesFromAssembly(typeof(PlayMusicCommand).Assembly);
-            cfg.AddOpenBehavior(typeof(PerformanceBehavior<,>));
-            cfg.AddOpenBehavior(typeof(CachingBehavior<,>));
-            cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
-            
+            cfg.RegisterServicesFromAssemblyContaining<PlayMusicCommand>();
+            cfg.RegisterServicesFromAssemblyContaining<PlayMusicCommandHandler>();
         });
 
-        services.AddScoped<IMusicService, FakeMusicService>();
-        services.AddDistributedMemoryCache();
-        services.AddSingleton(new CacheSettings { SlidingExpiration = 1 });
-        
+        // Register pipelines
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(RequestValidationBehavior<,>));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PerformanceBehavior<,>));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(CachingBehavior<,>));
 
+        // Register services
+        services.AddSingleton<LoggerServiceBase, DummyLogger>();
+        services.AddSingleton<ICacheService, DummyCacheService>();
+        
+        // Configuration - use environment variables or empty config for benchmarks
         var configuration = new ConfigurationBuilder()
-    .AddInMemoryCollection(new Dictionary<string, string?>
-    {
-        { "MongoDbConfiguration:ConnectionString",  "mongodb+srv://sa:5PeqEeVgPHMjRJfB@cluster0.swru2ne.mongodb.net/?retryWrites=true&w=majority" },
-        { "MongoDbConfiguration:Collection",  "logs" },
-    })
-    .Build();
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                // MongoDB config removed - should be set via environment variables for benchmarks
+                { "MongoDbConfiguration:Collection", "logs" },
+            })
+            .AddEnvironmentVariables()
+            .Build();
 
         services.AddSingleton<IConfiguration>(configuration);
 
-        services.AddSingleton<LoggerServiceBase, MongoDbLogger>();
         var provider = services.BuildServiceProvider();
         _mediator = provider.GetRequiredService<IMediator>();
     }
@@ -58,20 +65,28 @@ public class MediatorPipelineBenchmark
     }
 }
 
-public class FakeMusicService : IMusicService
+// Dummy logger for benchmarks - does nothing
+public class DummyLogger : LoggerServiceBase
 {
-    public Task PlayMusicAsync(string filePath, bool loop = false, CancellationToken cancellationToken = default) 
-        => Task.CompletedTask;
+    public DummyLogger() : base() { }
+}
 
-    public Task PauseMusicAsync(CancellationToken cancellationToken = default) 
-        => Task.CompletedTask;
+// Cache interface
+public interface ICacheService
+{
+    Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default);
+    Task SetAsync<T>(string key, T value, int slidingExpirationSeconds = 60, CancellationToken cancellationToken = default);
+    Task RemoveAsync(string key, CancellationToken cancellationToken = default);
+    Task RemoveGroupAsync(string groupKey, CancellationToken cancellationToken = default);
+    Task<bool> AnyAsync(string key, CancellationToken cancellationToken = default);
+}
 
-    public Task ResumeMusicAsync(CancellationToken cancellationToken = default) 
-        => Task.CompletedTask;
-
-    public Task StopMusicAsync(CancellationToken cancellationToken = default) 
-        => Task.CompletedTask;
-
-    public Task SetVolumeAsync(float volume, CancellationToken cancellationToken = default) 
-        => Task.CompletedTask;
+// Dummy cache for benchmarks
+public class DummyCacheService : ICacheService
+{
+    public Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default) => Task.FromResult<T?>(default);
+    public Task SetAsync<T>(string key, T value, int slidingExpirationSeconds = 60, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task RemoveAsync(string key, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task RemoveGroupAsync(string groupKey, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task<bool> AnyAsync(string key, CancellationToken cancellationToken = default) => Task.FromResult(false);
 }

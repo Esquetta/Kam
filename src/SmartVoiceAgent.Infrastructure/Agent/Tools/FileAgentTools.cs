@@ -168,6 +168,12 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             {
                 Console.WriteLine($"FileAgent: Opening file {filePath}");
 
+                // Security: Validate path to prevent path traversal
+                if (!SecurityUtilities.IsSafeFilePath(filePath, _defaultWorkingDirectory))
+                {
+                    return "Güvenlik hatası: Dosya yolu güvenli değil. Yol dışarı çıkma veya geçersiz karakterler içeriyor.";
+                }
+
                 if (!File.Exists(filePath))
                 {
                     return $"Hata: '{filePath}' dosyası bulunamadı.";
@@ -212,6 +218,12 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             try
             {
                 Console.WriteLine($"FileAgent: Opening directory {directoryPath}");
+
+                // Security: Validate path to prevent path traversal
+                if (!SecurityUtilities.IsSafeFilePath(directoryPath, _defaultWorkingDirectory))
+                {
+                    return "Güvenlik hatası: Dizin yolu güvenli değil. Yol dışarı çıkma veya geçersiz karakterler içeriyor.";
+                }
 
                 if (!Directory.Exists(directoryPath))
                 {
@@ -260,6 +272,12 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         {
             try
             {
+                // Security: Validate path to prevent path traversal
+                if (!SecurityUtilities.IsSafeFilePath(path, _defaultWorkingDirectory))
+                {
+                    return "Güvenlik hatası: Yol güvenli değil. Yol dışarı çıkma veya geçersiz karakterler içeriyor.";
+                }
+
                 if (File.Exists(path))
                 {
                     var directory = Path.GetDirectoryName(path);

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
+using SmartVoiceAgent.Infrastructure.Security;
 using System.Diagnostics;
 using System.Text.Json;
 
@@ -150,6 +151,13 @@ public class WebResearchService : IWebResearchService
     {
         try
         {
+            // SECURITY: Validate URL before opening to prevent injection attacks
+            if (!SecurityUtilities.IsSafeUrl(url))
+            {
+                _logger.Warn($"Blocked attempt to open unsafe URL: {SecurityUtilities.MaskSensitiveData(url, 8)}");
+                return;
+            }
+
             var processStartInfo = new ProcessStartInfo();
 
             if (OperatingSystem.IsWindows())
