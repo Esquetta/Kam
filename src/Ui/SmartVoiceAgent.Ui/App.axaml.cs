@@ -13,6 +13,7 @@ using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.Services.Concrete;
 using SmartVoiceAgent.Ui.ViewModels;
 using SmartVoiceAgent.Ui.Views;
+using SmartVoiceAgent.Core.Interfaces;
 using System;
 using System.IO;
 using System.Linq;
@@ -77,6 +78,9 @@ namespace SmartVoiceAgent.Ui
                 // Connect VoiceAgent Host Control to ViewModel
                 var hostControl = _host.Services.GetRequiredService<IVoiceAgentHostControl>();
                 _mainViewModel.SetVoiceAgentHostControl(hostControl);
+
+                // Setup Voice Command Service
+                SetupVoiceCommandService(_mainViewModel);
 
                 // Apply startup behavior settings
                 ApplyStartupBehavior(desktop, settingsService);
@@ -289,6 +293,36 @@ namespace SmartVoiceAgent.Ui
         /// <summary>
         /// Validates critical configuration at startup
         /// </summary>
+        private void SetupVoiceCommandService(MainWindowViewModel viewModel)
+        {
+            if (_host == null) return;
+
+            try
+            {
+                var wakeWordService = _host.Services.GetRequiredService<IWakeWordDetectionService>();
+                var voiceRecognitionFactory = _host.Services.GetRequiredService<IVoiceRecognitionFactory>();
+                var sttService = _host.Services.GetRequiredService<IMultiSTTService>();
+                var noiseSuppression = _host.Services.GetRequiredService<INoiseSuppressionService>();
+                var commandInput = _host.Services.GetRequiredService<ICommandInputService>();
+                var uiLogService = _host.Services.GetRequiredService<IUiLogService>();
+
+                var voiceCommandService = new VoiceCommandService(
+                    wakeWordService,
+                    voiceRecognitionFactory,
+                    sttService,
+                    noiseSuppression,
+                    commandInput,
+                    uiLogService);
+
+                viewModel.SetVoiceCommandService(voiceCommandService);
+                Console.WriteLine("✅ Voice Command Service initialized");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ Failed to initialize Voice Command Service: {ex.Message}");
+            }
+        }
+
         private void ValidateConfiguration()
         {
             if (_host == null) return;
@@ -314,6 +348,15 @@ namespace SmartVoiceAgent.Ui
             if (!voiceSection.Exists())
             {
                 Console.WriteLine("⚠️ WARNING: VoiceRecognition configuration not found. Using defaults.");
+            }
+
+            // Check HuggingFace configuration for STT
+            var hfSection = configuration.GetSection("HuggingFaceConfig");
+            if (!hfSection.Exists() || string.IsNullOrEmpty(hfSection["ApiKey"]))
+            {
+                Console.WriteLine("⚠️ WARNING: HuggingFaceConfig:ApiKey not found!");
+                Console.WriteLine("   Voice transcription will not work without API key.");
+                Console.WriteLine("   Run: dotnet user-secrets set \"HuggingFaceConfig:ApiKey\" \"your-hf-key\"");
             }
         }
     }

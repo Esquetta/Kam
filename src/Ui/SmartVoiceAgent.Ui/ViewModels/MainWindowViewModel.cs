@@ -4,6 +4,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using ReactiveUI;
 using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.Services.Concrete;
 using SmartVoiceAgent.Ui.ViewModels.PageModels;
 using System;
@@ -188,6 +189,50 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public ICommand SubmitCommand { get; }
 
         /* ========================= */
+        /* VOICE COMMAND */
+        /* ========================= */
+
+        private VoiceCommandService? _voiceCommandService;
+        
+        private bool _isVoiceEnabled = false;
+        public bool IsVoiceEnabled
+        {
+            get => _isVoiceEnabled;
+            private set => this.RaiseAndSetIfChanged(ref _isVoiceEnabled, value);
+        }
+
+        private bool _isListeningForWakeWord = false;
+        public bool IsListeningForWakeWord
+        {
+            get => _isListeningForWakeWord;
+            private set => this.RaiseAndSetIfChanged(ref _isListeningForWakeWord, value);
+        }
+
+        private bool _isRecordingVoice = false;
+        public bool IsRecordingVoice
+        {
+            get => _isRecordingVoice;
+            private set => this.RaiseAndSetIfChanged(ref _isRecordingVoice, value);
+        }
+
+        private string _voiceStatusText = "Voice: Off";
+        public string VoiceStatusText
+        {
+            get => _voiceStatusText;
+            private set => this.RaiseAndSetIfChanged(ref _voiceStatusText, value);
+        }
+
+        private IBrush _voiceStatusColor = Brush.Parse("#6B7280"); // Gray
+        public IBrush VoiceStatusColor
+        {
+            get => _voiceStatusColor;
+            private set => this.RaiseAndSetIfChanged(ref _voiceStatusColor, value);
+        }
+
+        public ICommand ToggleVoiceCommand { get; }
+        public ICommand StartVoiceRecordingCommand { get; }
+
+        /* ========================= */
         /* CONSTRUCTOR */
         /* ========================= */
 
@@ -200,6 +245,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
             NavigateToSettingsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Settings));
             ToggleThemeCommand = ReactiveCommand.Create(ToggleTheme);
             SubmitCommand = ReactiveCommand.Create(SubmitCommandInput);
+            ToggleVoiceCommand = ReactiveCommand.Create(ToggleVoiceEnabled);
+            StartVoiceRecordingCommand = ReactiveCommand.CreateFromTask(StartVoiceRecordingAsync);
 
             Dispatcher.UIThread.Post(() =>
             {
@@ -441,6 +488,104 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public event EventHandler? StatusChanged;
 
         /* ========================= */
+        /* VOICE COMMAND METHODS */
+        /* ========================= */
+
+        /// <summary>
+        /// Sets the voice command service
+        /// </summary>
+        public void SetVoiceCommandService(VoiceCommandService voiceCommandService)
+        {
+            _voiceCommandService = voiceCommandService;
+            
+            // Subscribe to voice events
+            _voiceCommandService.StatusChanged += OnVoiceStatusChanged;
+            _voiceCommandService.OnTranscriptionResult += OnVoiceTranscriptionResult;
+            _voiceCommandService.OnError += OnVoiceError;
+            
+            // Auto-start wake word detection
+            ToggleVoiceEnabled();
+        }
+
+        private void OnVoiceStatusChanged(object? sender, VoiceStatusEventArgs e)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                IsListeningForWakeWord = e.Status == VoiceStatus.ListeningForWakeWord;
+                IsRecordingVoice = e.Status == VoiceStatus.Recording;
+                VoiceStatusText = e.Message;
+                
+                // Update status color based on state
+                VoiceStatusColor = e.Status switch
+                {
+                    VoiceStatus.ListeningForWakeWord => Brush.Parse("#10B981"), // Green
+                    VoiceStatus.WakeWordDetected => Brush.Parse("#F59E0B"), // Orange
+                    VoiceStatus.Recording => Brush.Parse("#EF4444"), // Red
+                    VoiceStatus.Processing or VoiceStatus.Transcribing => Brush.Parse("#3B82F6"), // Blue
+                    VoiceStatus.Error => Brush.Parse("#EF4444"), // Red
+                    _ => Brush.Parse("#6B7280") // Gray
+                };
+                
+                // Add to log for important states
+                if (e.Status is VoiceStatus.WakeWordDetected or VoiceStatus.Error)
+                {
+                    AddLog(e.Message);
+                }
+            });
+        }
+
+        private void OnVoiceTranscriptionResult(object? sender, string text)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                AddLog($"🎤 Voice: '{text}'");
+            });
+        }
+
+        private void OnVoiceError(object? sender, string error)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                AddLog($"❌ Voice Error: {error}");
+            });
+        }
+
+        private void ToggleVoiceEnabled()
+        {
+            if (_voiceCommandService == null)
+            {
+                AddLog("⚠️ Voice service not available");
+                return;
+            }
+
+            if (IsVoiceEnabled)
+            {
+                _voiceCommandService.StopWakeWordDetection();
+                IsVoiceEnabled = false;
+                VoiceStatusText = "Voice: Off";
+                VoiceStatusColor = Brush.Parse("#6B7280");
+                AddLog("🛑 Voice control disabled");
+            }
+            else
+            {
+                _voiceCommandService.StartWakeWordDetection();
+                IsVoiceEnabled = true;
+                AddLog("🎤 Voice control enabled - Say 'Hey Kam'");
+            }
+        }
+
+        private async Task StartVoiceRecordingAsync()
+        {
+            if (_voiceCommandService == null)
+            {
+                AddLog("⚠️ Voice service not available");
+                return;
+            }
+
+            await _voiceCommandService.StartVoiceRecordingAsync();
+        }
+
+        /* ========================= */
         /* SIMULATION - DISABLED */
         /* ========================= */
 
@@ -466,6 +611,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 _commandInput.OnResult -= OnCommandResult;
             }
+
+            _voiceCommandService?.Dispose();
         }
     }
 }
