@@ -43,7 +43,7 @@ Console.WriteLine("1. Music Service Test (Play/Pause/Stop/Volume)");
 Console.WriteLine("2. Message Service Test (Send Email/SMS)");
 Console.WriteLine("3. Device Control Test (Volume/WiFi/Bluetooth/Brightness/Power)");
 Console.WriteLine("4. Application Scanner Test (List/Find installed apps)");
-Console.WriteLine("5. Voice Recognition Test (Wake Word/Multi-STT/Noise Suppression)");
+Console.WriteLine("5. Voice Recognition Test (Wake Word/HuggingFace STT/Noise Suppression)");
 Console.WriteLine("6. Run Voice Agent Host (default)");
 Console.WriteLine();
 Console.Write("Enter choice (1-6) [6]: ");
@@ -1160,10 +1160,10 @@ async Task RunVoiceRecognitionTestAsync(IServiceProvider services)
         Console.WriteLine("\n┌─────────────────────────────────────────────────────────┐");
         Console.WriteLine("│ Commands:                                               │");
         Console.WriteLine("│   [W]ake               - Test wake word detection       │");
-        Console.WriteLine("│   [S]TT                - Test STT with fallback         │");
+        Console.WriteLine("│   [S]TT                - Test HuggingFace STT           │");
         Console.WriteLine("│   [N]oise              - Test noise suppression         │");
         Console.WriteLine("│   [R]ecord             - Record and transcribe audio    │");
-        Console.WriteLine("│   [H]ealth             - Check STT provider health      │");
+        Console.WriteLine("│   [C]onfig             - Show STT configuration         │");
         Console.WriteLine("│   [Q]uit               - Exit test mode                 │");
         Console.WriteLine("└─────────────────────────────────────────────────────────┘");
         Console.Write("\nEnter command: ");
@@ -1182,7 +1182,7 @@ async Task RunVoiceRecognitionTestAsync(IServiceProvider services)
 
                 case "S":
                 case "STT":
-                    await TestMultiSTTAsync(services);
+                    await TestHuggingFaceSTTAsync(services);
                     break;
 
                 case "N":
@@ -1195,9 +1195,9 @@ async Task RunVoiceRecognitionTestAsync(IServiceProvider services)
                     await TestVoiceRecordingAsync(services);
                     break;
 
-                case "H":
-                case "HEALTH":
-                    await CheckSTTProviderHealthAsync(services);
+                case "C":
+                case "CONFIG":
+                    await ShowSTTConfigurationAsync(services);
                     break;
 
                 case "Q":
@@ -1208,7 +1208,7 @@ async Task RunVoiceRecognitionTestAsync(IServiceProvider services)
                     break;
 
                 default:
-                    Console.WriteLine("❌ Unknown command. Type 'W', 'S', 'N', 'R', 'H', or 'Q'.");
+                    Console.WriteLine("❌ Unknown command. Type 'W', 'S', 'N', 'R', 'C', or 'Q'.");
                     break;
             }
         }
@@ -1287,18 +1287,18 @@ async Task TestWakeWordDetectionAsync(IServiceProvider services)
     }
 }
 
-async Task TestMultiSTTAsync(IServiceProvider services)
+async Task TestHuggingFaceSTTAsync(IServiceProvider services)
 {
-    Console.WriteLine("\n🗣️ Multi-STT Provider Test");
+    Console.WriteLine("\n🗣️ HuggingFace STT Test");
     Console.WriteLine("─────────────────────────────────────────────────────────");
     
-    var multiSTT = services.GetRequiredService<IMultiSTTService>();
+    var sttService = services.GetRequiredService<HuggingFaceSTTService>();
     var configuration = services.GetRequiredService<IConfiguration>();
     
     // Show HuggingFace configuration
     var hfConfig = configuration.GetSection("HuggingFaceConfig");
     var hfApiKey = hfConfig["ApiKey"];
-    var hfModelName = hfConfig["ModelName"] ?? "openai/whisper-large-v3";
+    var hfModelName = hfConfig["ModelName"] ?? "openai/whisper-base";
     
     Console.WriteLine("HuggingFace Configuration:");
     Console.WriteLine($"  API Key: {(string.IsNullOrEmpty(hfApiKey) ? "❌ NOT SET" : "✅ SET")}");
@@ -1310,45 +1310,38 @@ async Task TestMultiSTTAsync(IServiceProvider services)
         Console.WriteLine("⚠️  HuggingFace API Key not found!");
         Console.WriteLine("   Set it using: dotnet user-secrets set \"HuggingFaceConfig:ApiKey\" \"your-api-key\"");
         Console.WriteLine();
+        return;
     }
     
-    Console.WriteLine("Testing STT providers with automatic fallback...");
+    Console.WriteLine("Testing HuggingFace STT connection...");
     Console.WriteLine();
-    
-    // Check provider health first
-    var healthStatus = multiSTT.GetProviderHealthStatus();
-    Console.WriteLine("Provider Health Status:");
-    foreach (var status in healthStatus)
-    {
-        var healthIcon = status.Value.IsHealthy ? "🟢" : "🔴";
-        Console.WriteLine($"  {healthIcon} {status.Key}: {(status.Value.IsHealthy ? "Healthy" : "Unhealthy")} (Success rate: {status.Value.SuccessRate:P0})");
-    }
-    Console.WriteLine();
-    
-    // Simulate STT test with a warning
-    Console.WriteLine("⚠️  Note: This test requires audio input.");
-    Console.WriteLine("For a full test, use option [R] Record instead.");
-    Console.WriteLine();
-    Console.WriteLine("Testing connection to providers...");
     
     try
     {
-        var results = await multiSTT.TestAllProvidersAsync();
+        // Test connection by checking if we can reach the API
+        using var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Authorization = 
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", hfApiKey);
+        httpClient.Timeout = TimeSpan.FromSeconds(10);
         
-        Console.WriteLine("\nConnection Test Results:");
-        foreach (var result in results)
+        var response = await httpClient.GetAsync("https://api-inference.huggingface.co/status");
+        
+        if (response.IsSuccessStatusCode)
         {
-            var icon = result.IsConnected ? "✅" : "❌";
-            Console.WriteLine($"  {icon} {result.Provider}: {(result.IsConnected ? "Connected" : "Failed")} ({result.ResponseTime.TotalMilliseconds:F0}ms)");
-            if (!result.IsConnected && !string.IsNullOrEmpty(result.ErrorMessage))
-            {
-                Console.WriteLine($"     Error: {result.ErrorMessage}");
-            }
+            Console.WriteLine("✅ HuggingFace API is accessible");
         }
+        else
+        {
+            Console.WriteLine($"⚠️  HuggingFace API returned: {response.StatusCode}");
+        }
+        
+        Console.WriteLine();
+        Console.WriteLine("💡 To test actual speech-to-text:");
+        Console.WriteLine("   Use option [R] Record to record audio and transcribe");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"❌ Error testing providers: {ex.Message}");
+        Console.WriteLine($"❌ Error connecting to HuggingFace: {ex.Message}");
     }
 }
 
@@ -1401,13 +1394,13 @@ async Task TestVoiceRecordingAsync(IServiceProvider services)
     
     var voiceRecognitionFactory = services.GetRequiredService<IVoiceRecognitionFactory>();
     var voiceRecognition = voiceRecognitionFactory.Create();
-    var multiSTT = services.GetRequiredService<IMultiSTTService>();
+    var sttService = services.GetRequiredService<HuggingFaceSTTService>();
     var noiseSuppression = services.GetRequiredService<INoiseSuppressionService>();
     
     Console.WriteLine("This test will:");
     Console.WriteLine("  1. Record audio for 5 seconds");
-    Console.WriteLine("  2. Apply noise suppression");
-    Console.WriteLine("  3. Transcribe using Multi-STT with fallback");
+    Console.WriteLine("  2. Apply noise suppression (optional)");
+    Console.WriteLine("  3. Transcribe using HuggingFace STT");
     Console.WriteLine();
     
     Console.Write("Press Enter to start recording (or type 'skip' to cancel)...");
@@ -1497,18 +1490,12 @@ async Task TestVoiceRecordingAsync(IServiceProvider services)
         }
         
         // Transcribe
-        Console.WriteLine("📝 Transcribing audio...");
-        var result = await multiSTT.ConvertToTextAsync(cleanAudio);
+        Console.WriteLine("📝 Transcribing audio with HuggingFace...");
+        var result = await sttService.ConvertToTextAsync(cleanAudio);
         
         Console.WriteLine("\n📊 Transcription Result:");
         Console.WriteLine($"   Text: {result.Text}");
         Console.WriteLine($"   Confidence: {result.Confidence:P2}");
-        Console.WriteLine($"   Provider: {result.UsedProvider}");
-        Console.WriteLine($"   Fallback used: {(result.WasFallbackUsed ? "Yes" : "No")}");
-        if (result.ProvidersTried.Count > 0)
-        {
-            Console.WriteLine($"   Providers tried: {string.Join(", ", result.ProvidersTried)}");
-        }
         Console.WriteLine($"   Processing time: {result.ProcessingTime.TotalMilliseconds:F0}ms");
         
         if (!string.IsNullOrEmpty(result.ErrorMessage))
@@ -1522,22 +1509,23 @@ async Task TestVoiceRecordingAsync(IServiceProvider services)
     }
 }
 
-async Task CheckSTTProviderHealthAsync(IServiceProvider services)
+async Task ShowSTTConfigurationAsync(IServiceProvider services)
 {
-    Console.WriteLine("\n🏥 STT Provider Health Check");
+    Console.WriteLine("\n⚙️ STT Configuration");
     Console.WriteLine("─────────────────────────────────────────────────────────");
     
-    var multiSTT = services.GetRequiredService<IMultiSTTService>();
     var configuration = services.GetRequiredService<IConfiguration>();
-    var healthStatus = multiSTT.GetProviderHealthStatus();
-    
-    // Show configuration summary
-    Console.WriteLine("Configuration:\n");
     
     var hfApiKey = configuration["HuggingFaceConfig:ApiKey"];
-    var hfModel = configuration["HuggingFaceConfig:ModelName"] ?? "openai/whisper-large-v3";
-    Console.WriteLine($"  HuggingFace: {(string.IsNullOrEmpty(hfApiKey) ? "❌ API Key not set" : "✅ Configured")}");
+    var hfModel = configuration["HuggingFaceConfig:ModelName"] ?? "openai/whisper-base";
+    var maxConcurrent = configuration["HuggingFaceConfig:MaxConcurrentRequests"] ?? "3";
+    var maxAudioSize = configuration["HuggingFaceConfig:MaxAudioSizeBytes"] ?? "25000000";
+    
+    Console.WriteLine("HuggingFace STT Configuration:");
+    Console.WriteLine($"  API Key: {(string.IsNullOrEmpty(hfApiKey) ? "❌ NOT SET" : "✅ SET")}");
     Console.WriteLine($"  Model: {hfModel}");
+    Console.WriteLine($"  Max Concurrent Requests: {maxConcurrent}");
+    Console.WriteLine($"  Max Audio Size: {int.Parse(maxAudioSize) / 1024 / 1024} MB");
     Console.WriteLine();
     
     if (string.IsNullOrEmpty(hfApiKey))
@@ -1545,38 +1533,12 @@ async Task CheckSTTProviderHealthAsync(IServiceProvider services)
         Console.WriteLine("💡 To set HuggingFace API Key:");
         Console.WriteLine("   dotnet user-secrets set \"HuggingFaceConfig:ApiKey\" \"your-hf-api-key\"");
         Console.WriteLine();
+        Console.WriteLine("💡 To set model (optional):");
+        Console.WriteLine("   dotnet user-secrets set \"HuggingFaceConfig:ModelName\" \"openai/whisper-base\"");
     }
-    
-    Console.WriteLine("Current Provider Status:\n");
-    
-    foreach (var status in healthStatus)
+    else
     {
-        var icon = status.Value.IsHealthy ? "🟢" : "🔴";
-        Console.WriteLine($"{icon} {status.Key}");
-        Console.WriteLine($"   Health: {(status.Value.IsHealthy ? "Healthy" : "Unhealthy")}");
-        Console.WriteLine($"   Success Rate: {status.Value.SuccessRate:P1}");
-        Console.WriteLine($"   Success Count: {status.Value.SuccessCount}");
-        Console.WriteLine($"   Failure Count: {status.Value.FailureCount}");
-        Console.WriteLine($"   Avg Response: {status.Value.AverageResponseTime.TotalMilliseconds:F0}ms");
-        Console.WriteLine($"   Last Checked: {status.Value.LastChecked:HH:mm:ss}");
-        if (!string.IsNullOrEmpty(status.Value.LastError))
-        {
-            Console.WriteLine($"   Last Error: {status.Value.LastError}");
-        }
-        Console.WriteLine();
-    }
-    
-    Console.WriteLine("Press any key to test connections...");
-    Console.ReadKey(true);
-    
-    Console.WriteLine("\nTesting connections...");
-    var results = await multiSTT.TestAllProvidersAsync();
-    
-    Console.WriteLine("\nConnection Test Results:");
-    foreach (var result in results)
-    {
-        var icon = result.IsConnected ? "✅" : "❌";
-        Console.WriteLine($"  {icon} {result.Provider}: {(result.IsConnected ? "Connected" : "Failed")} ({result.ResponseTime.TotalMilliseconds:F0}ms)");
+        Console.WriteLine("✅ HuggingFace is configured and ready to use");
     }
 }
 
