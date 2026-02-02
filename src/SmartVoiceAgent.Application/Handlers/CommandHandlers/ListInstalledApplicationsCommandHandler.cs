@@ -1,4 +1,3 @@
-﻿
 using MediatR;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Entities;
@@ -10,6 +9,20 @@ namespace SmartVoiceAgent.Application.Handlers.CommandHandlers;
 public sealed class ListInstalledApplicationsCommandHandler : IRequestHandler<ListInstalledApplicationsCommand, CommandResult>
 {
     private readonly IApplicationScannerServiceFactory _scannerFactory;
+
+    // Performance: Reuse JsonSerializerOptions instance instead of creating per request
+    private static readonly JsonSerializerOptions s_jsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true
+    };
+
+    // Performance: Static readonly HashSet for O(1) lookup instead of array scan
+    private static readonly HashSet<string> s_systemAppKeywords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Microsoft", "Windows", "System", "Runtime", "Framework",
+        "Redistributable", "Update", "Security", "Driver", "Service"
+    };
 
     public ListInstalledApplicationsCommandHandler(IApplicationScannerServiceFactory scannerFactory)
     {
@@ -25,28 +38,30 @@ public sealed class ListInstalledApplicationsCommandHandler : IRequestHandler<Li
 
             if (installedApps?.Any() == true)
             {
+                // Performance: Use IEnumerable deferred execution instead of ToList()
                 var filteredApps = request.IncludeSystemApps
                     ? installedApps
-                    : installedApps.Where(app => !IsSystemApplication(app.Name)).ToList();
+                    : installedApps.Where(app => !IsSystemApplication(app.Name));
 
-                var appNames = filteredApps.Select(app => new
-                {
-                    Name = app.Name,
-                    Path = app.Path,
-                    IsRunning = app.IsRunning
-                }).ToList();
+                // Performance: Avoid anonymous type allocation - use ValueTuple
+                var appNames = filteredApps.Select(app => (
+                    Name: app.Name,
+                    Path: app.Path,
+                    IsRunning: app.IsRunning
+                ));
 
-                var message = $"{filteredApps.Count()} uygulama bulundu.";
+                var count = request.IncludeSystemApps 
+                    ? installedApps.Count() 
+                    : installedApps.Count(app => !IsSystemApplication(app.Name));
+
+                var message = $"{count} uygulama bulundu.";
 
                 return new CommandResult
                 {
                     Success = true,
                     Message = message,
-                    Data = JsonSerializer.Serialize(appNames, new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        WriteIndented = true
-                    })
+                    // Performance: Use cached JsonSerializerOptions
+                    Data = JsonSerializer.Serialize(appNames, s_jsonOptions)
                 };
             }
 
@@ -68,15 +83,9 @@ public sealed class ListInstalledApplicationsCommandHandler : IRequestHandler<Li
         }
     }
 
+    // Performance: O(1) HashSet lookup instead of O(n) array scan
     private static bool IsSystemApplication(string appName)
     {
-        var systemApps = new[]
-        {
-            "Microsoft", "Windows", "System", "Runtime", "Framework",
-            "Redistributable", "Update", "Security", "Driver", "Service"
-        };
-
-        return systemApps.Any(systemApp =>
-            appName.Contains(systemApp, StringComparison.OrdinalIgnoreCase));
+        return s_systemAppKeywords.Any(keyword => appName.Contains(keyword, StringComparison.OrdinalIgnoreCase));
     }
 }

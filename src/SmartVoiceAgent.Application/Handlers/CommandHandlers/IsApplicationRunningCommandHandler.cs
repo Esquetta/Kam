@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Dtos;
 using SmartVoiceAgent.Core.Interfaces;
@@ -62,23 +62,56 @@ public sealed class IsApplicationRunningCommandHandler : IRequestHandler<IsAppli
     {
         try
         {
-            var processes = Process.GetProcesses();
-            var appNameLower = applicationName.ToLower();
-
-            return processes.Any(process =>
+            // Performance: Use Process.GetProcessesByName when possible to reduce allocations
+            // First try exact match with GetProcessesByName
+            var processesByName = Process.GetProcessesByName(applicationName);
+            if (processesByName.Length > 0)
             {
-                try
+                foreach (var proc in processesByName)
                 {
-                    return process.ProcessName.ToLower().Contains(appNameLower) ||
-                           (!string.IsNullOrEmpty(process.MainWindowTitle) &&
-                            process.MainWindowTitle.ToLower().Contains(appNameLower));
+                    proc.Dispose();
                 }
-                catch
+                return true;
+            }
+
+            // Performance: Get all processes once and use OrdinalIgnoreCase comparison
+            // instead of ToLower() which allocates new strings
+            var processes = Process.GetProcesses();
+            try
+            {
+                foreach (var process in processes)
                 {
-                    // Some processes may throw exceptions when accessing properties
-                    return false;
+                    try
+                    {
+                        // Performance: Use StringComparison.OrdinalIgnoreCase instead of ToLower()
+                        if (process.ProcessName.Contains(applicationName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return true;
+                        }
+
+                        if (!string.IsNullOrEmpty(process.MainWindowTitle) &&
+                            process.MainWindowTitle.Contains(applicationName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return true;
+                        }
+                    }
+                    catch
+                    {
+                        // Some processes may throw exceptions when accessing properties
+                        continue;
+                    }
                 }
-            });
+            }
+            finally
+            {
+                // Dispose all process handles
+                foreach (var process in processes)
+                {
+                    try { process.Dispose(); } catch { }
+                }
+            }
+
+            return false;
         }
         catch (Exception)
         {

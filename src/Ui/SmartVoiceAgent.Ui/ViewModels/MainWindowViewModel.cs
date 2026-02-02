@@ -195,6 +195,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /* ========================= */
 
         private VoiceCommandService? _voiceCommandService;
+
+        // Performance: Cache brushes to avoid parsing on every status change
+        private static readonly IBrush s_voiceListeningColor = Brush.Parse("#10B981"); // Green
+        private static readonly IBrush s_voiceWakeWordColor = Brush.Parse("#F59E0B"); // Orange
+        private static readonly IBrush s_voiceRecordingColor = Brush.Parse("#EF4444"); // Red
+        private static readonly IBrush s_voiceProcessingColor = Brush.Parse("#3B82F6"); // Blue
+        private static readonly IBrush s_voiceIdleColor = Brush.Parse("#6B7280"); // Gray
         
         private bool _isVoiceEnabled = false;
         public bool IsVoiceEnabled
@@ -552,15 +559,15 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 IsRecordingVoice = e.Status == VoiceStatus.Recording;
                 VoiceStatusText = e.Message;
                 
-                // Update status color based on state
+                // Update status color based on state (using cached brushes)
                 VoiceStatusColor = e.Status switch
                 {
-                    VoiceStatus.ListeningForWakeWord => Brush.Parse("#10B981"), // Green
-                    VoiceStatus.WakeWordDetected => Brush.Parse("#F59E0B"), // Orange
-                    VoiceStatus.Recording => Brush.Parse("#EF4444"), // Red
-                    VoiceStatus.Processing or VoiceStatus.Transcribing => Brush.Parse("#3B82F6"), // Blue
-                    VoiceStatus.Error => Brush.Parse("#EF4444"), // Red
-                    _ => Brush.Parse("#6B7280") // Gray
+                    VoiceStatus.ListeningForWakeWord => s_voiceListeningColor,
+                    VoiceStatus.WakeWordDetected => s_voiceWakeWordColor,
+                    VoiceStatus.Recording => s_voiceRecordingColor,
+                    VoiceStatus.Processing or VoiceStatus.Transcribing => s_voiceProcessingColor,
+                    VoiceStatus.Error => s_voiceRecordingColor, // Red (reuse)
+                    _ => s_voiceIdleColor
                 };
                 
                 // Add to log for important states

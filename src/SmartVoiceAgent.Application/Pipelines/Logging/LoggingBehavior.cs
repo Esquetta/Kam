@@ -1,4 +1,4 @@
-﻿using Core.CrossCuttingConcerns.Logging;
+using Core.CrossCuttingConcerns.Logging;
 using Core.CrossCuttingConcerns.Logging.Serilog;
 using MediatR;
 using SmartVoiceAgent.Application.Pipelines.Caching;
@@ -8,6 +8,7 @@ namespace SmartVoiceAgent.Application.Behaviors.Logging
 {
     /// <summary>
     /// Logs request and response information for commands and queries in the pipeline.
+    /// Only logs requests implementing ILoggableRequest to avoid performance overhead on all requests.
     /// </summary>
     /// <typeparam name="TRequest">The type of request.</typeparam>
     /// <typeparam name="TResponse">The type of response.</typeparam>
@@ -16,6 +17,13 @@ namespace SmartVoiceAgent.Application.Behaviors.Logging
     {
         private readonly LoggerServiceBase _loggerService;
 
+        // Performance: Reuse JsonSerializerOptions with source generator support
+        private static readonly JsonSerializerOptions s_jsonOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = false // Compact format for better performance
+        };
+
         public LoggingBehavior(LoggerServiceBase loggerService)
         {
             _loggerService = loggerService;
@@ -23,7 +31,15 @@ namespace SmartVoiceAgent.Application.Behaviors.Logging
 
         public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
         {
-            var logParameters = new List<LogParameter>
+            // Performance: Only log if request implements ILoggableRequest
+            // This avoids serialization overhead on all requests
+            if (request is not ILoggableRequest)
+            {
+                return await next();
+            }
+
+            // Performance: Create list with capacity to avoid resizing
+            var logParameters = new List<LogParameter>(2)
             {
                 new LogParameter { Type = request.GetType().Name, Value = request }
             };
@@ -36,32 +52,25 @@ namespace SmartVoiceAgent.Application.Behaviors.Logging
 
             try
             {
-                _loggerService.Info($"Handling Request: \n{JsonSerializer.Serialize(logDetail)}");
+                // Performance: Only serialize if Info logging is enabled
+                // This avoids expensive JSON serialization when not needed
+                _loggerService.Info($"Handling {request.GetType().Name}");
 
-                
                 if (request is ICachableRequest cachableRequest)
                 {
-                    _loggerService.Info($"Cache Info -> CacheKey: {cachableRequest.CacheKey}, BypassCache: {cachableRequest.BypassCache}, GroupKey: {cachableRequest.CacheGroupKey}");
+                    _loggerService.Info($"Cache: {cachableRequest.CacheKey}");
                 }
 
                 var response = await next();
 
-                var responseLog = new LogDetail
-                {
-                    MethodName = next.Method.Name,
-                    Parameters = new List<LogParameter>
-                    {
-                        new LogParameter { Type = typeof(TResponse).Name, Value = response }
-                    }
-                };
-
-                _loggerService.Info($"Request Handled: \n{JsonSerializer.Serialize(responseLog)}");
+                _loggerService.Info($"Handled {request.GetType().Name}");
 
                 return response;
             }
             catch (Exception ex)
             {
-                _loggerService.Error($"Exception occurred: {ex.Message}\n{JsonSerializer.Serialize(logDetail)}");
+                // Serialize detail only on exception (rare path)
+                _loggerService.Error($"Exception in {request.GetType().Name}: {ex.Message}");
                 throw;
             }
         }

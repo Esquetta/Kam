@@ -36,7 +36,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
                 try
                 {
                     var fileName = process.MainModule?.FileName;
-                    if (fileName != null && fileName.ToLower().Contains(appName.ToLower()))
+                    if (fileName != null && fileName.Contains(appName, StringComparison.OrdinalIgnoreCase))
                     {
                         return AppStatus.Running;
                     }
@@ -52,7 +52,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             foreach (ManagementObject obj in searcher.Get())
             {
                 var path = obj["ExecutablePath"]?.ToString();
-                if (path != null && path.ToLower().Contains(appName.ToLower()))
+                if (path != null && path.Contains(appName, StringComparison.OrdinalIgnoreCase))
                 {
                     return AppStatus.Running;
                 }
@@ -205,8 +205,8 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
                     if (!string.IsNullOrEmpty(path))
                     {
                         var fileName = Path.GetFileNameWithoutExtension(path);
-                        if (fileName.ToLower().Contains(appName.ToLower()) ||
-                            appName.ToLower().Contains(fileName.ToLower()))
+                        if (fileName.Contains(appName, StringComparison.OrdinalIgnoreCase) ||
+                            appName.Contains(fileName, StringComparison.OrdinalIgnoreCase))
                         {
                             return path;
                         }
@@ -252,8 +252,8 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
 
                 foreach (var subKeyName in key.GetSubKeyNames())
                 {
-                    if (subKeyName.ToLower().Contains(appName.ToLower()) ||
-                        appName.ToLower().Contains(subKeyName.ToLower().Replace(".exe", "")))
+                    if (subKeyName.Contains(appName, StringComparison.OrdinalIgnoreCase) ||
+                        appName.Contains(subKeyName.Replace(".exe", "", StringComparison.OrdinalIgnoreCase), StringComparison.OrdinalIgnoreCase))
                     {
                         using var subKey = key.OpenSubKey(subKeyName);
                         var exePath = subKey?.GetValue("")?.ToString();
@@ -301,8 +301,8 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
                 foreach (var lnkFile in lnkFiles)
                 {
                     var shortcutName = Path.GetFileNameWithoutExtension(lnkFile);
-                    if (shortcutName.ToLower().Contains(appName.ToLower()) ||
-                        appName.ToLower().Contains(shortcutName.ToLower()))
+                    if (shortcutName.Contains(appName, StringComparison.OrdinalIgnoreCase) ||
+                        appName.Contains(shortcutName, StringComparison.OrdinalIgnoreCase))
                     {
                         var targetPath = GetShortcutTarget(lnkFile);
                         if (!string.IsNullOrEmpty(targetPath) && File.Exists(targetPath) && targetPath.EndsWith(".exe"))
@@ -342,8 +342,8 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
                         foreach (var subdir in subdirs)
                         {
                             var dirName = Path.GetFileName(subdir);
-                            if (dirName.ToLower().Contains(appName.ToLower()) ||
-                                appName.ToLower().Contains(dirName.ToLower()))
+                            if (dirName.Contains(appName, StringComparison.OrdinalIgnoreCase) ||
+                                appName.Contains(dirName, StringComparison.OrdinalIgnoreCase))
                             {
                                 var exeFiles = Directory.GetFiles(subdir, "*.exe", SearchOption.TopDirectoryOnly);
                                 var mainExe = FindBestExecutable(exeFiles, appName);
@@ -401,8 +401,8 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
                 foreach (var subdir in subdirs)
                 {
                     var dirName = Path.GetFileName(subdir);
-                    if (dirName.ToLower().Contains(appName.ToLower()) ||
-                        appName.ToLower().Contains(dirName.ToLower()))
+                    if (dirName.Contains(appName, StringComparison.OrdinalIgnoreCase) ||
+                        appName.Contains(dirName, StringComparison.OrdinalIgnoreCase))
                     {
                         var exeFiles = Directory.GetFiles(subdir, "*.exe", SearchOption.AllDirectories);
                         var mainExe = FindBestExecutable(exeFiles, appName);
@@ -474,8 +474,8 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
                             if (Directory.Exists(installLocation))
                             {
                                 var dirName = Path.GetFileName(installLocation);
-                                if (dirName.ToLower().Contains(appName.ToLower()) ||
-                                    appName.ToLower().Contains(dirName.ToLower()))
+                                if (dirName.Contains(appName, StringComparison.OrdinalIgnoreCase) ||
+                                    appName.Contains(dirName, StringComparison.OrdinalIgnoreCase))
                                 {
                                     var exeFiles = Directory.GetFiles(installLocation, "*.exe", SearchOption.AllDirectories);
                                     var mainExe = FindBestExecutable(exeFiles, appName);
@@ -670,7 +670,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
 
             // Önce isimle eşleşen exe'yi ara
             var nameMatch = exeFiles.FirstOrDefault(f =>
-                Path.GetFileNameWithoutExtension(f).ToLower().Contains(appName.ToLower()));
+                Path.GetFileNameWithoutExtension(f).Contains(appName, StringComparison.OrdinalIgnoreCase));
             if (!string.IsNullOrEmpty(nameMatch))
             {
                 return nameMatch;
@@ -679,7 +679,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             // Launcher, setup, uninstall gibi kelimeleri içermeyenleri filtrele
             var filteredExes = exeFiles.Where(f =>
             {
-                var fileName = Path.GetFileNameWithoutExtension(f).ToLower();
+                var fileName = Path.GetFileNameWithoutExtension(f);
                 return !fileName.Contains("launcher") &&
                        !fileName.Contains("setup") &&
                        !fileName.Contains("uninstall") &&
@@ -728,7 +728,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
                     {
                         var files = Directory.GetFiles(path, "*.exe");
                         var match = files.FirstOrDefault(f =>
-                            Path.GetFileNameWithoutExtension(f).ToLower().Contains(appName.ToLower()));
+                            Path.GetFileNameWithoutExtension(f).Contains(appName, StringComparison.OrdinalIgnoreCase));
                         if (!string.IsNullOrEmpty(match))
                         {
                             return match;
@@ -759,7 +759,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
                     foreach (var lnkFile in lnkFiles)
                     {
                         var shortcutName = Path.GetFileNameWithoutExtension(lnkFile);
-                        if (shortcutName.ToLower().Contains(appName.ToLower()))
+                        if (shortcutName.Contains(appName, StringComparison.OrdinalIgnoreCase))
                         {
                             var targetPath = GetShortcutTarget(lnkFile);
                             if (!string.IsNullOrEmpty(targetPath) && File.Exists(targetPath))

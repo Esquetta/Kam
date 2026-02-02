@@ -15,12 +15,19 @@ namespace SmartVoiceAgent.Application.Pipelines.Caching
         private readonly LoggerServiceBase _logger;
         private static readonly UTF8Encoding Utf8Encoding = new UTF8Encoding(false);
 
+        // Performance: Reuse JsonSerializerOptions instance
+        private static readonly JsonSerializerOptions s_jsonOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+
         public CachingBehavior(IDistributedCache cache, LoggerServiceBase logger, IConfiguration configuration)
         {
             _cache = cache;
             _logger = logger;
+            // Performance: Cache settings loaded once during construction, not per request
             _cacheSettings = configuration.GetSection("CacheSettings").Get<CacheSettings>() 
-                ?? throw new InvalidOperationException("CacheSettings not found in configuration");
+                ?? new CacheSettings { SlidingExpiration = 1 }; // Default fallback
         }
 
         public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
@@ -31,11 +38,11 @@ namespace SmartVoiceAgent.Application.Pipelines.Caching
             byte[]? cachedResponse = await _cache.GetAsync(request.CacheKey, cancellationToken);
             if (cachedResponse != null)
             {
-                // Use UTF8 encoding consistently instead of Encoding.Default
-                TResponse? response = JsonSerializer.Deserialize<TResponse>(cachedResponse);
+                // Performance: Use cached JsonSerializerOptions
+                TResponse? response = JsonSerializer.Deserialize<TResponse>(cachedResponse, s_jsonOptions);
                 if (response != null)
                 {
-                    _logger.Info($"Fetched from Cache -> {request.CacheKey}");
+                    _logger.Info($"Cache hit: {request.CacheKey}");
                     return response;
                 }
             }
@@ -56,10 +63,10 @@ namespace SmartVoiceAgent.Application.Pipelines.Caching
             
             DistributedCacheEntryOptions cacheOptions = new() { SlidingExpiration = slidingExpiration };
 
-            // Serialize directly to UTF-8 bytes to avoid string allocation
-            byte[] serializeData = JsonSerializer.SerializeToUtf8Bytes(response);
+            // Performance: Serialize directly to UTF-8 bytes to avoid string allocation
+            byte[] serializeData = JsonSerializer.SerializeToUtf8Bytes(response, s_jsonOptions);
             await _cache.SetAsync(request.CacheKey, serializeData, cacheOptions, cancellationToken);
-            _logger.Info($"Added to Cache -> {request.CacheKey}");
+            _logger.Info($"Cache add: {request.CacheKey}");
 
             if (request.CacheGroupKey != null)
                 await AddCacheKeyToGroup(request, slidingExpiration, cancellationToken);
@@ -69,14 +76,24 @@ namespace SmartVoiceAgent.Application.Pipelines.Caching
 
         private async Task AddCacheKeyToGroup(TRequest request, TimeSpan slidingExpiration, CancellationToken cancellationToken)
         {
-            byte[]? cacheGroupCache = await _cache.GetAsync(key: request.CacheGroupKey!, cancellationToken);
+            // Performance: Run cache group operations in parallel when possible
+            var cacheGroupTask = _cache.GetAsync(key: request.CacheGroupKey!, cancellationToken);
+            var expirationTask = _cache.GetAsync(
+                key: $"{request.CacheGroupKey}SlidingExpiration",
+                cancellationToken
+            );
+
+            await Task.WhenAll(cacheGroupTask, expirationTask);
+            
+            byte[]? cacheGroupCache = cacheGroupTask.Result;
+            byte[]? existingExpirationCache = expirationTask.Result;
+
             HashSet<string> cacheKeysInGroup;
             
             if (cacheGroupCache != null)
             {
-                // Use UTF8 encoding consistently
-                cacheKeysInGroup = JsonSerializer.Deserialize<HashSet<string>>(cacheGroupCache) 
-                    ?? new HashSet<string>();
+                cacheKeysInGroup = JsonSerializer.Deserialize<HashSet<string>>(cacheGroupCache, s_jsonOptions) 
+                    ?? new HashSet<string>(StringComparer.Ordinal);
                 cacheKeysInGroup.Add(request.CacheKey);
             }
             else
@@ -84,14 +101,9 @@ namespace SmartVoiceAgent.Application.Pipelines.Caching
                 cacheKeysInGroup = new HashSet<string>(StringComparer.Ordinal) { request.CacheKey };
             }
             
-            byte[] newCacheGroupCache = JsonSerializer.SerializeToUtf8Bytes(cacheKeysInGroup);
+            byte[] newCacheGroupCache = JsonSerializer.SerializeToUtf8Bytes(cacheKeysInGroup, s_jsonOptions);
 
             int cacheGroupSlidingExpirationValue = (int)slidingExpiration.TotalSeconds;
-            
-            byte[]? existingExpirationCache = await _cache.GetAsync(
-                key: $"{request.CacheGroupKey}SlidingExpiration",
-                cancellationToken
-            );
             
             if (existingExpirationCache != null)
             {
@@ -102,23 +114,25 @@ namespace SmartVoiceAgent.Application.Pipelines.Caching
                 }
             }
 
-            byte[] serializedExpirationData = JsonSerializer.SerializeToUtf8Bytes(cacheGroupSlidingExpirationValue);
+            byte[] serializedExpirationData = Utf8Encoding.GetBytes(cacheGroupSlidingExpirationValue.ToString());
 
             DistributedCacheEntryOptions cacheOptions = new() 
             { 
                 SlidingExpiration = TimeSpan.FromSeconds(cacheGroupSlidingExpirationValue) 
             };
 
-            await _cache.SetAsync(key: request.CacheGroupKey!, newCacheGroupCache, cacheOptions, cancellationToken);
-            _logger.Info($"Added to Cache -> {request.CacheGroupKey}");
-
-            await _cache.SetAsync(
+            // Performance: Set both cache entries in parallel
+            var setGroupTask = _cache.SetAsync(key: request.CacheGroupKey!, newCacheGroupCache, cacheOptions, cancellationToken);
+            var setExpirationTask = _cache.SetAsync(
                 key: $"{request.CacheGroupKey}SlidingExpiration",
                 serializedExpirationData,
                 cacheOptions,
                 cancellationToken
             );
-            _logger.Info($"Added to Cache -> {request.CacheGroupKey}SlidingExpiration");
+
+            await Task.WhenAll(setGroupTask, setExpirationTask);
+            
+            _logger.Info($"Cache group: {request.CacheGroupKey}");
         }
     }
 }

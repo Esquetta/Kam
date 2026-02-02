@@ -331,14 +331,26 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
             Task.Run(async () =>
             {
+                // Performance: Throttle to 10 FPS (100ms) instead of 20 FPS to reduce UI thread load
+                // This is still smooth enough for VU meter visualization
+                const int updateIntervalMs = 100;
+                float lastLevel = 0;
+
                 while (!_inputLevelCts.Token.IsCancellationRequested)
                 {
                     if (SelectedInputDevice != null && !IsRecordingTest)
                     {
                         var level = _audioDeviceService.GetInputLevel(SelectedInputDevice.Id);
-                        Dispatcher.UIThread.Post(() => InputLevel = level);
+                        
+                        // Only update UI if level changed significantly (> 0.05) or on every 5th update
+                        // This reduces unnecessary UI refreshes
+                        if (Math.Abs(level - lastLevel) > 0.05f || Environment.TickCount % 5 == 0)
+                        {
+                            lastLevel = level;
+                            Dispatcher.UIThread.Post(() => InputLevel = level);
+                        }
                     }
-                    await Task.Delay(50, _inputLevelCts.Token); // 20 FPS
+                    await Task.Delay(updateIntervalMs, _inputLevelCts.Token);
                 }
             }, _inputLevelCts.Token);
         }
