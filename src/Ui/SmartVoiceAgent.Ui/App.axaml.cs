@@ -29,6 +29,7 @@ namespace SmartVoiceAgent.Ui
         private MainWindowViewModel? _mainViewModel;
         private IHost? _host;
         private UiLogService? _uiLogService;
+        private ErrorHandlingService? _errorHandlingService;
 
         /// <summary>
         /// Gets the service provider for dependency injection access from ViewModels
@@ -66,6 +67,10 @@ namespace SmartVoiceAgent.Ui
                     DataContext = _mainViewModel
                 };
 
+                // Set main window reference for error handling service
+                _errorHandlingService?.SetMainWindow(desktop.MainWindow);
+                _errorHandlingService?.LogInformation("Main window initialized");
+
                 // Setup Tray Icon
                 _trayIconService = new TrayIconService();
                 _trayIconService.Initialize();
@@ -94,6 +99,7 @@ namespace SmartVoiceAgent.Ui
 
                 desktop.ShutdownRequested += async (s, e) =>
                 {
+                    _errorHandlingService?.LogInformation("Application shutting down...");
                     settingsService.Dispose();
                     _mainViewModel.Cleanup();
                     _trayIconService?.Dispose();
@@ -103,6 +109,7 @@ namespace SmartVoiceAgent.Ui
                         await _host.StopAsync();
                         _host.Dispose();
                     }
+                    _errorHandlingService?.LogInformation("Application shutdown complete");
                 };
             }
 
@@ -275,27 +282,34 @@ namespace SmartVoiceAgent.Ui
         /// </summary>
         private void SetupGlobalExceptionHandling()
         {
+            // Initialize error handling service early
+            _errorHandlingService = new ErrorHandlingService();
+            _errorHandlingService.LogInformation("Application starting - Global exception handling initialized");
+
             // Handle UI thread exceptions
-            AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
+            AppDomain.CurrentDomain.UnhandledException += async (sender, e) =>
             {
                 var exception = e.ExceptionObject as Exception;
                 Console.WriteLine($"💥 FATAL ERROR: {exception?.Message}");
                 Console.WriteLine(exception?.StackTrace);
                 
-                // TODO: Show error dialog to user
-                // TODO: Log to persistent storage
+                if (exception != null && _errorHandlingService != null)
+                {
+                    await _errorHandlingService.HandleFatalExceptionAsync(exception);
+                }
             };
 
             // Handle task exceptions
             TaskScheduler.UnobservedTaskException += (sender, e) =>
             {
                 Console.WriteLine($"💥 UNOBSERVED TASK ERROR: {e.Exception.Message}");
+                _errorHandlingService?.HandleUnobservedException(e.Exception);
                 e.SetObserved(); // Prevent crash
             };
         }
 
         /// <summary>
-        /// Validates critical configuration at startup
+        /// Sets up the voice command service
         /// </summary>
         private void SetupVoiceCommandService(MainWindowViewModel viewModel)
         {
@@ -303,6 +317,8 @@ namespace SmartVoiceAgent.Ui
 
             try
             {
+                _errorHandlingService?.LogInformation("Initializing Voice Command Service...");
+                
                 var wakeWordService = _host.Services.GetRequiredService<IWakeWordDetectionService>();
                 var voiceRecognitionFactory = _host.Services.GetRequiredService<IVoiceRecognitionFactory>();
                 var sttService = _host.Services.GetRequiredService<IMultiSTTService>();
@@ -319,10 +335,12 @@ namespace SmartVoiceAgent.Ui
                     uiLogService);
 
                 viewModel.SetVoiceCommandService(voiceCommandService);
+                _errorHandlingService?.LogInformation("Voice Command Service initialized successfully");
                 Console.WriteLine("✅ Voice Command Service initialized");
             }
             catch (Exception ex)
             {
+                _errorHandlingService?.LogError(ex, "Failed to initialize Voice Command Service");
                 Console.WriteLine($"⚠️ Failed to initialize Voice Command Service: {ex.Message}");
             }
         }
@@ -331,26 +349,35 @@ namespace SmartVoiceAgent.Ui
         {
             if (_host == null) return;
 
+            _errorHandlingService?.LogInformation("Validating configuration...");
+            
             var configuration = _host.Services.GetRequiredService<IConfiguration>();
             
             // Check AIService configuration
             var aiServiceSection = configuration.GetSection("AIService");
             if (!aiServiceSection.Exists())
             {
+                _errorHandlingService?.LogWarning("AIService configuration not found");
                 Console.WriteLine("⚠️ WARNING: AIService configuration not found!");
                 Console.WriteLine("   AI features will not work without API configuration.");
                 Console.WriteLine("   Run: dotnet user-secrets set \"AIService:ApiKey\" \"your-key\"");
             }
             else if (string.IsNullOrEmpty(aiServiceSection["ApiKey"]))
             {
+                _errorHandlingService?.LogWarning("AIService:ApiKey is not set");
                 Console.WriteLine("⚠️ WARNING: AIService:ApiKey is not set!");
                 Console.WriteLine("   AI features will not work without an API key.");
+            }
+            else
+            {
+                _errorHandlingService?.LogInformation("AIService configuration validated");
             }
 
             // Check Voice Recognition configuration
             var voiceSection = configuration.GetSection("VoiceRecognition");
             if (!voiceSection.Exists())
             {
+                _errorHandlingService?.LogWarning("VoiceRecognition configuration not found. Using defaults");
                 Console.WriteLine("⚠️ WARNING: VoiceRecognition configuration not found. Using defaults.");
             }
 
@@ -358,9 +385,14 @@ namespace SmartVoiceAgent.Ui
             var hfSection = configuration.GetSection("HuggingFaceConfig");
             if (!hfSection.Exists() || string.IsNullOrEmpty(hfSection["ApiKey"]))
             {
+                _errorHandlingService?.LogWarning("HuggingFaceConfig:ApiKey not found. Voice transcription will not work");
                 Console.WriteLine("⚠️ WARNING: HuggingFaceConfig:ApiKey not found!");
                 Console.WriteLine("   Voice transcription will not work without API key.");
                 Console.WriteLine("   Run: dotnet user-secrets set \"HuggingFaceConfig:ApiKey\" \"your-hf-key\"");
+            }
+            else
+            {
+                _errorHandlingService?.LogInformation("HuggingFace configuration validated");
             }
         }
     }

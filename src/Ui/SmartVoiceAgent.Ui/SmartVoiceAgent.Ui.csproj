@@ -35,6 +35,8 @@
     </PackageReference>
     <PackageReference Include="Lucide.Avalonia" Version="0.1.54" />
     <PackageReference Include="ReactiveUI.Avalonia" Version="11.3.8" />
+    <PackageReference Include="Serilog" Version="4.3.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
   </ItemGroup>
 
   <ItemGroup>
