@@ -105,6 +105,30 @@ public interface ISettingsService
 
     #endregion
 
+    #region Voice Settings
+
+    /// <summary>
+    /// Gets or sets the selected input (microphone) device ID
+    /// </summary>
+    string SelectedInputDeviceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected output (headset/speaker) device ID
+    /// </summary>
+    string SelectedOutputDeviceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the input volume level (0.0 to 1.0)
+    /// </summary>
+    float InputVolume { get; set; }
+
+    /// <summary>
+    /// Gets or sets the output volume level (0.0 to 1.0)
+    /// </summary>
+    float OutputVolume { get; set; }
+
+    #endregion
+
     /// <summary>
     /// Saves all settings to persistent storage
     /// </summary>

@@ -13,7 +13,6 @@ using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.Services.Concrete;
 using SmartVoiceAgent.Ui.ViewModels;
 using SmartVoiceAgent.Ui.Views;
-using SmartVoiceAgent.Core.Interfaces;
 using System;
 using System.IO;
 using System.Linq;
@@ -30,6 +29,11 @@ namespace SmartVoiceAgent.Ui
         private MainWindowViewModel? _mainViewModel;
         private IHost? _host;
         private UiLogService? _uiLogService;
+
+        /// <summary>
+        /// Gets the service provider for dependency injection access from ViewModels
+        /// </summary>
+        public static IServiceProvider? Services => (Current as App)?._host?.Services;
 
         public override void Initialize()
         {

@@ -137,6 +137,34 @@ public class JsonSettingsService : ISettingsService, IDisposable
 
     #endregion
 
+    #region Voice Settings
+
+    public string SelectedInputDeviceId
+    {
+        get => _data.SelectedInputDeviceId ?? string.Empty;
+        set => SetProperty(nameof(SelectedInputDeviceId), value, v => _data.SelectedInputDeviceId = v);
+    }
+
+    public string SelectedOutputDeviceId
+    {
+        get => _data.SelectedOutputDeviceId ?? string.Empty;
+        set => SetProperty(nameof(SelectedOutputDeviceId), value, v => _data.SelectedOutputDeviceId = v);
+    }
+
+    public float InputVolume
+    {
+        get => _data.InputVolume;
+        set => SetProperty(nameof(InputVolume), value, v => _data.InputVolume = v);
+    }
+
+    public float OutputVolume
+    {
+        get => _data.OutputVolume;
+        set => SetProperty(nameof(OutputVolume), value, v => _data.OutputVolume = v);
+    }
+
+    #endregion
+
     #endregion
 
     public void Save()
@@ -307,6 +335,12 @@ public class JsonSettingsService : ISettingsService, IDisposable
         public string? TwilioAuthToken { get; set; }
         public string? TwilioPhoneNumber { get; set; }
         public bool SmsEnabled { get; set; }
+
+        // Voice Settings
+        public string? SelectedInputDeviceId { get; set; }
+        public string? SelectedOutputDeviceId { get; set; }
+        public float InputVolume { get; set; } = 1.0f;
+        public float OutputVolume { get; set; } = 1.0f;
 
         public DateTime LastModified { get; set; } = DateTime.UtcNow;
     }

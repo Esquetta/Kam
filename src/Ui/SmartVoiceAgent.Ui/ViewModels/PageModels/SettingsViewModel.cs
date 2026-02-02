@@ -1,21 +1,48 @@
+using Avalonia.Threading;
+using Microsoft.Extensions.DependencyInjection;
 using ReactiveUI;
+using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Ui.Services;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Reactive;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 {
-    public class SettingsViewModel : ViewModelBase
+    public class SettingsViewModel : ViewModelBase, IDisposable
     {
         private readonly MainWindowViewModel? _mainViewModel;
         private readonly ISettingsService _settingsService;
+        private readonly AudioDeviceService _audioDeviceService;
+        private readonly VoiceTestService? _voiceTestService;
         private int _selectedLanguageIndex;
+        private CancellationTokenSource? _inputLevelCts;
+
+        public ReactiveCommand<Unit, Unit> StartMicTestCommand { get; }
+        public ReactiveCommand<Unit, Unit> StopMicTestCommand { get; }
+        public ReactiveCommand<Unit, Unit> PlayTestRecordingCommand { get; }
 
         public SettingsViewModel()
         {
             Title = "SETTINGS";
             _selectedLanguageIndex = 0;
             _settingsService = new JsonSettingsService();
+            _audioDeviceService = new AudioDeviceService();
+            
+            // Initialize voice test service with factory from DI if available
+            var voiceRecognitionFactory = App.Services?.GetService(typeof(IVoiceRecognitionFactory)) as IVoiceRecognitionFactory;
+            _voiceTestService = voiceRecognitionFactory != null 
+                ? new VoiceTestService(voiceRecognitionFactory)
+                : null;
+
+            // Initialize commands
+            StartMicTestCommand = ReactiveCommand.Create(StartMicTest);
+            StopMicTestCommand = ReactiveCommand.Create(StopMicTest);
+            PlayTestRecordingCommand = ReactiveCommand.Create(PlayTestRecording);
             
             // Load saved settings
             _settingsService.Load();
@@ -26,6 +53,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 System.Diagnostics.Debug.WriteLine($"Setting changed: {e.SettingName} = {e.NewValue}");
             };
+
+            // Initialize voice settings
+            InitializeVoiceSettings();
         }
 
         public SettingsViewModel(MainWindowViewModel mainViewModel) : this()
@@ -33,6 +63,220 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _mainViewModel = mainViewModel;
             _selectedLanguageIndex = mainViewModel.SelectedLanguageIndex;
         }
+
+        #region Voice Settings
+
+        private List<AudioDeviceInfo> _inputDevices = new();
+        public List<AudioDeviceInfo> InputDevices
+        {
+            get => _inputDevices;
+            private set => this.RaiseAndSetIfChanged(ref _inputDevices, value);
+        }
+
+        private List<AudioDeviceInfo> _outputDevices = new();
+        public List<AudioDeviceInfo> OutputDevices
+        {
+            get => _outputDevices;
+            private set => this.RaiseAndSetIfChanged(ref _outputDevices, value);
+        }
+
+        private AudioDeviceInfo? _selectedInputDevice;
+        public AudioDeviceInfo? SelectedInputDevice
+        {
+            get => _selectedInputDevice;
+            set
+            {
+                if (_selectedInputDevice != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _selectedInputDevice, value);
+                    if (value != null)
+                    {
+                        _voiceTestService?.SetInputDevice(value.Id);
+                        _settingsService.SelectedInputDeviceId = value.Id;
+                    }
+                }
+            }
+        }
+
+        private AudioDeviceInfo? _selectedOutputDevice;
+        public AudioDeviceInfo? SelectedOutputDevice
+        {
+            get => _selectedOutputDevice;
+            set
+            {
+                if (_selectedOutputDevice != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _selectedOutputDevice, value);
+                    if (value != null)
+                    {
+                        _settingsService.SelectedOutputDeviceId = value.Id;
+                    }
+                }
+            }
+        }
+
+        private float _inputVolume = 1.0f;
+        public float InputVolume
+        {
+            get => _inputVolume;
+            set
+            {
+                if (_inputVolume != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _inputVolume, value);
+                    if (SelectedInputDevice != null)
+                    {
+                        _audioDeviceService.SetInputVolume(SelectedInputDevice.Id, value);
+                    }
+                }
+            }
+        }
+
+        private float _outputVolume = 1.0f;
+        public float OutputVolume
+        {
+            get => _outputVolume;
+            set
+            {
+                if (_outputVolume != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _outputVolume, value);
+                    if (SelectedOutputDevice != null)
+                    {
+                        _audioDeviceService.SetOutputVolume(SelectedOutputDevice.Id, value);
+                    }
+                }
+            }
+        }
+
+        private float _inputLevel = 0;
+        public float InputLevel
+        {
+            get => _inputLevel;
+            private set => this.RaiseAndSetIfChanged(ref _inputLevel, value);
+        }
+
+        private bool _isMicTesting;
+        public bool IsMicTesting
+        {
+            get => _isMicTesting;
+            private set => this.RaiseAndSetIfChanged(ref _isMicTesting, value);
+        }
+
+        private bool _isRecordingTest;
+        public bool IsRecordingTest
+        {
+            get => _isRecordingTest;
+            private set => this.RaiseAndSetIfChanged(ref _isRecordingTest, value);
+        }
+
+        private bool _hasTestRecording;
+        public bool HasTestRecording
+        {
+            get => _hasTestRecording;
+            private set => this.RaiseAndSetIfChanged(ref _hasTestRecording, value);
+        }
+
+        private void InitializeVoiceSettings()
+        {
+            // Load devices
+            RefreshAudioDevices();
+
+            // Subscribe to voice test events
+            if (_voiceTestService != null)
+            {
+                _voiceTestService.OnInputLevelChanged += OnInputLevelChanged;
+                _voiceTestService.OnRecordingStateChanged += OnRecordingStateChanged;
+                _voiceTestService.OnPlaybackStateChanged += OnPlaybackStateChanged;
+            }
+
+            // Load saved device selections
+            var savedInputId = _settingsService.SelectedInputDeviceId;
+            var savedOutputId = _settingsService.SelectedOutputDeviceId;
+
+            if (!string.IsNullOrEmpty(savedInputId))
+            {
+                SelectedInputDevice = InputDevices.FirstOrDefault(d => d.Id == savedInputId);
+            }
+            if (!string.IsNullOrEmpty(savedOutputId))
+            {
+                SelectedOutputDevice = OutputDevices.FirstOrDefault(d => d.Id == savedOutputId);
+            }
+
+            // Start monitoring input levels
+            StartInputLevelMonitoring();
+        }
+
+        private void RefreshAudioDevices()
+        {
+            InputDevices = _audioDeviceService.GetInputDevices();
+            OutputDevices = _audioDeviceService.GetOutputDevices();
+
+            // Select default if no selection
+            SelectedInputDevice ??= InputDevices.FirstOrDefault(d => d.IsDefault) ?? InputDevices.FirstOrDefault();
+            SelectedOutputDevice ??= OutputDevices.FirstOrDefault(d => d.IsDefault) ?? OutputDevices.FirstOrDefault();
+        }
+
+        private void StartInputLevelMonitoring()
+        {
+            _inputLevelCts?.Cancel();
+            _inputLevelCts = new CancellationTokenSource();
+
+            Task.Run(async () =>
+            {
+                while (!_inputLevelCts.Token.IsCancellationRequested)
+                {
+                    if (SelectedInputDevice != null && !IsRecordingTest)
+                    {
+                        var level = _audioDeviceService.GetInputLevel(SelectedInputDevice.Id);
+                        Dispatcher.UIThread.Post(() => InputLevel = level);
+                    }
+                    await Task.Delay(50, _inputLevelCts.Token); // 20 FPS
+                }
+            }, _inputLevelCts.Token);
+        }
+
+        private void OnInputLevelChanged(object? sender, float level)
+        {
+            Dispatcher.UIThread.Post(() => InputLevel = level);
+        }
+
+        private void OnRecordingStateChanged(object? sender, bool isRecording)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                IsRecordingTest = isRecording;
+                HasTestRecording = !isRecording && _hasTestRecording;
+            });
+        }
+
+        private void OnPlaybackStateChanged(object? sender, bool isPlaying)
+        {
+            Dispatcher.UIThread.Post(() => { });
+        }
+
+        public void StartMicTest()
+        {
+            _voiceTestService?.StartRecording(10);
+            HasTestRecording = true;
+        }
+
+        public void StopMicTest()
+        {
+            _voiceTestService?.StopRecording();
+        }
+
+        public void PlayTestRecording()
+        {
+            _voiceTestService?.StartPlayback();
+        }
+
+        public void StopTestPlayback()
+        {
+            _voiceTestService?.StopPlayback();
+        }
+
+        #endregion
 
         #region Language
 
@@ -311,5 +555,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         }
 
         #endregion
+
+        public void Dispose()
+        {
+            _inputLevelCts?.Cancel();
+            _audioDeviceService?.Dispose();
+            _voiceTestService?.Dispose();
+        }
     }
 }
