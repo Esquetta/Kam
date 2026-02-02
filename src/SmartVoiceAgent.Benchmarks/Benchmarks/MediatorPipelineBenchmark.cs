@@ -3,12 +3,12 @@ using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SmartVoiceAgent.Application.Commands;
-using SmartVoiceAgent.Application.Handlers.CommandHandlers;
+using SmartVoiceAgent.Application.Handlers;
+using SmartVoiceAgent.Application.Behaviors.Performance;
 using SmartVoiceAgent.Application.Behaviors.Logging;
 using SmartVoiceAgent.Application.Behaviors.Validation;
 using SmartVoiceAgent.Application.Pipelines.Caching;
 using SmartVoiceAgent.Application.Pipelines.Performance;
-using SmartVoiceAgent.Core.Config;
 using Core.CrossCuttingConcerns.Logging.Serilog;
 
 namespace SmartVoiceAgent.Benchmarks.Benchmarks;

@@ -1,4 +1,5 @@
 using BenchmarkDotNet.Attributes;
+using SmartVoiceAgent.Benchmarks.Fakes;
 using SmartVoiceAgent.Core.Interfaces;
 
 namespace SmartVoiceAgent.Benchmarks;
