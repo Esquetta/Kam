@@ -127,6 +127,11 @@ public interface ISettingsService
     /// </summary>
     float OutputVolume { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether noise suppression is enabled
+    /// </summary>
+    bool IsNoiseSuppressionEnabled { get; set; }
+
     #endregion
 
     /// <summary>

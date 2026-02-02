@@ -163,6 +163,12 @@ public class JsonSettingsService : ISettingsService, IDisposable
         set => SetProperty(nameof(OutputVolume), value, v => _data.OutputVolume = v);
     }
 
+    public bool IsNoiseSuppressionEnabled
+    {
+        get => _data.IsNoiseSuppressionEnabled;
+        set => SetProperty(nameof(IsNoiseSuppressionEnabled), value, v => _data.IsNoiseSuppressionEnabled = v);
+    }
+
     #endregion
 
     #endregion
@@ -341,6 +347,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
         public string? SelectedOutputDeviceId { get; set; }
         public float InputVolume { get; set; } = 1.0f;
         public float OutputVolume { get; set; } = 1.0f;
+        public bool IsNoiseSuppressionEnabled { get; set; } = true;
 
         public DateTime LastModified { get; set; } = DateTime.UtcNow;
     }

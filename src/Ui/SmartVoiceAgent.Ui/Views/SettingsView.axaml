@@ -151,12 +151,42 @@
 
             <!-- Voice Settings Section -->
             <StackPanel Spacing="12" Margin="0,0,0,32">
-                <TextBlock Text="VOICE &amp; AUDIO"
-                           FontSize="12"
-                           FontWeight="Medium"
-                           Foreground="{DynamicResource TextSecondaryBrush}"
-                           LetterSpacing="1"
-                           Margin="0,0,0,8"/>
+                <Grid ColumnDefinitions="*, Auto">
+                    <TextBlock Grid.Column="0" 
+                               Text="VOICE &amp; AUDIO"
+                               FontSize="12"
+                               FontWeight="Medium"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               LetterSpacing="1"
+                               VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" 
+                            Command="{Binding RefreshDevicesCommand}"
+                            Background="Transparent"
+                            Padding="8"
+                            ToolTip.Tip="Refresh device list">
+                        <Path Data="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"
+                              Fill="{DynamicResource TextMutedBrush}"
+                              Width="16" Height="16"
+                              Stretch="Uniform"/>
+                    </Button>
+                </Grid>
+
+                <!-- Audio Error Message -->
+                <Border Background="#F0474720"
+                        CornerRadius="8"
+                        Padding="12,10"
+                        IsVisible="{Binding AudioErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Path Data="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2z M13,17h-2v-2h2v2z M13,13h-2V7h2v6z"
+                              Fill="#F04747"
+                              Width="16" Height="16"
+                              Stretch="Uniform"/>
+                        <TextBlock Text="{Binding AudioErrorMessage}"
+                                   FontSize="12"
+                                   Foreground="#F04747"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
 
                 <!-- Input Device -->
                 <Border Classes="SettingsItem">
@@ -184,13 +214,32 @@
                         <!-- Device Dropdown -->
                         <ComboBox ItemsSource="{Binding InputDevices}"
                                   SelectedItem="{Binding SelectedInputDevice}"
-                                  HorizontalAlignment="Stretch">
+                                  HorizontalAlignment="Stretch"
+                                  IsVisible="{Binding HasInputDevices}"
+                                  ToolTip.Tip="Select the microphone to use for voice commands">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
+                        
+                        <!-- No Input Devices Message -->
+                        <Border Background="{DynamicResource CardBgHoverBrush}"
+                                CornerRadius="6"
+                                Padding="12,8"
+                                IsVisible="{Binding !HasInputDevices}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Path Data="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9Z"
+                                      Fill="{DynamicResource TextMutedBrush}"
+                                      Width="16" Height="16"
+                                      Stretch="Uniform"/>
+                                <TextBlock Text="No microphones detected. Please connect a microphone and click refresh."
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
                         
                         <!-- Input Volume with VU Meter -->
                         <Grid ColumnDefinitions="Auto, *, Auto">
@@ -219,7 +268,8 @@
                                     Value="{Binding InputVolume, Mode=TwoWay}"
                                     Minimum="0" Maximum="1"
                                     Width="80"
-                                    VerticalAlignment="Center"/>
+                                    VerticalAlignment="Center"
+                                    ToolTip.Tip="Adjust microphone sensitivity"/>
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -250,13 +300,32 @@
                         <!-- Device Dropdown -->
                         <ComboBox ItemsSource="{Binding OutputDevices}"
                                   SelectedItem="{Binding SelectedOutputDevice}"
-                                  HorizontalAlignment="Stretch">
+                                  HorizontalAlignment="Stretch"
+                                  IsVisible="{Binding HasOutputDevices}"
+                                  ToolTip.Tip="Select speakers or headset for audio output">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
+                        
+                        <!-- No Output Devices Message -->
+                        <Border Background="{DynamicResource CardBgHoverBrush}"
+                                CornerRadius="6"
+                                Padding="12,8"
+                                IsVisible="{Binding !HasOutputDevices}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Path Data="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9Z"
+                                      Fill="{DynamicResource TextMutedBrush}"
+                                      Width="16" Height="16"
+                                      Stretch="Uniform"/>
+                                <TextBlock Text="No output devices detected. Please connect speakers or headset."
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
                         
                         <!-- Output Volume -->
                         <Grid ColumnDefinitions="Auto, *, Auto">
@@ -270,7 +339,8 @@
                             <Slider Grid.Column="1"
                                     Value="{Binding OutputVolume, Mode=TwoWay}"
                                     Minimum="0" Maximum="1"
-                                    VerticalAlignment="Center"/>
+                                    VerticalAlignment="Center"
+                                    ToolTip.Tip="Adjust output volume"/>
                             <TextBlock Grid.Column="2"
                                        Text="{Binding OutputVolume, StringFormat='{}{0:P0}'}"
                                        FontSize="11"
@@ -281,6 +351,34 @@
                                        Margin="8,0,0,0"/>
                         </Grid>
                     </StackPanel>
+                </Border>
+
+                <!-- Noise Suppression Toggle -->
+                <Border Classes="SettingsItem">
+                    <Grid ColumnDefinitions="Auto, *, Auto">
+                        <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                            <Path Data="M12,2C13.85,2 15.55,2.78 16.79,4.05C18.03,5.32 18.75,7.05 18.75,8.86C18.75,11.65 16.8,14.03 14.17,14.68C14.41,15.56 14.79,16.39 15.3,17.15C15.5,17.45 15.45,17.85 15.15,18.05C14.85,18.25 14.45,18.2 14.25,17.9C13.58,16.93 13.09,15.85 12.81,14.71H11.19C10.91,15.85 10.42,16.93 9.75,17.9C9.55,18.2 9.15,18.25 8.85,18.05C8.55,17.85 8.5,17.45 8.7,17.15C9.21,16.39 9.59,15.56 9.83,14.68C7.2,14.03 5.25,11.65 5.25,8.86C5.25,7.05 5.97,5.32 7.21,4.05C8.45,2.78 10.15,2 12,2M12,4C10.66,4 9.39,4.53 8.46,5.46C7.53,6.39 7,7.66 7,8.86C7,11.03 8.79,12.82 10.96,12.82H13.04C15.21,12.82 17,11.03 17,8.86C17,7.66 16.47,6.39 15.54,5.46C14.61,4.53 13.34,4 12,4Z"
+                                  Fill="{DynamicResource TextMutedBrush}"
+                                  Width="16" Height="16"
+                                  Stretch="Uniform"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="Noise Suppression"
+                                       FontSize="13"
+                                       FontWeight="Medium"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <TextBlock Text="Reduce background noise during voice recording"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="2"
+                                      IsChecked="{Binding IsNoiseSuppressionEnabled, Mode=TwoWay}"
+                                      OnContent=""
+                                      OffContent=""
+                                      VerticalAlignment="Center"
+                                      ToolTip.Tip="Toggle noise suppression for cleaner voice input"/>
+                    </Grid>
                 </Border>
 
                 <!-- Mic Test Section -->
@@ -312,7 +410,8 @@
                                     IsEnabled="{Binding !IsRecordingTest}"
                                     Background="#43B581"
                                     Foreground="White"
-                                    Padding="16,8">
+                                    Padding="16,8"
+                                    ToolTip.Tip="Record a 10-second sample to test your microphone">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <Path Data="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M12,4A1,1 0 0,0 11,5V11A1,1 0 0,0 13,11V5A1,1 0 0,0 12,4Z"
                                           Fill="White"
@@ -326,7 +425,8 @@
                                     IsEnabled="{Binding IsRecordingTest}"
                                     Background="#F04747"
                                     Foreground="White"
-                                    Padding="16,8">
+                                    Padding="16,8"
+                                    ToolTip.Tip="Stop recording">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <Path Data="M6,6H18V18H6V6Z"
                                           Fill="White"
@@ -341,7 +441,8 @@
                                     Background="{DynamicResource CardBgHoverBrush}"
                                     Foreground="{DynamicResource TextSecondaryBrush}"
                                     Padding="16,8"
-                                    IsVisible="{Binding HasTestRecording}">
+                                    IsVisible="{Binding HasTestRecording}"
+                                    ToolTip.Tip="Play back the recorded sample">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <Path Data="M8,5.14V19.14L19,12.14L8,5.14Z"
                                           Fill="{DynamicResource TextSecondaryBrush}"

@@ -13,15 +13,34 @@ public class AudioDeviceService : IDisposable
 {
     private MMDeviceEnumerator? _deviceEnumerator;
 
+    /// <summary>
+    /// Event fired when audio devices change (added, removed, or default changed)
+    /// </summary>
+    public event EventHandler? DevicesChanged;
+
+    /// <summary>
+    /// Gets whether the audio subsystem is available
+    /// </summary>
+    public bool IsAvailable => _deviceEnumerator != null;
+
+    /// <summary>
+    /// Gets the last error message if initialization failed
+    /// </summary>
+    public string? LastError { get; private set; }
+
     public AudioDeviceService()
     {
         try
         {
             _deviceEnumerator = new MMDeviceEnumerator();
+            
+            // Register for device change notifications
+            _deviceEnumerator.RegisterEndpointNotificationCallback(new DeviceNotificationCallback(this));
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to initialize MMDeviceEnumerator: {ex.Message}");
+            LastError = $"Failed to initialize audio device enumerator: {ex.Message}";
+            System.Diagnostics.Debug.WriteLine(LastError);
         }
     }
 
@@ -42,13 +61,21 @@ public class AudioDeviceService : IDisposable
             
             foreach (var device in captureDevices)
             {
-                devices.Add(new AudioDeviceInfo
+                try
                 {
-                    Id = device.ID,
-                    Name = device.FriendlyName,
-                    IsDefault = device.ID == GetDefaultInputDeviceId(),
-                    DeviceType = AudioDeviceType.Input
-                });
+                    devices.Add(new AudioDeviceInfo
+                    {
+                        Id = device.ID,
+                        Name = device.FriendlyName,
+                        IsDefault = device.ID == GetDefaultInputDeviceId(),
+                        DeviceType = AudioDeviceType.Input,
+                        IsAvailable = true
+                    });
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error reading device info: {ex.Message}");
+                }
             }
         }
         catch (Exception ex)
@@ -76,13 +103,21 @@ public class AudioDeviceService : IDisposable
             
             foreach (var device in renderDevices)
             {
-                devices.Add(new AudioDeviceInfo
+                try
                 {
-                    Id = device.ID,
-                    Name = device.FriendlyName,
-                    IsDefault = device.ID == GetDefaultOutputDeviceId(),
-                    DeviceType = AudioDeviceType.Output
-                });
+                    devices.Add(new AudioDeviceInfo
+                    {
+                        Id = device.ID,
+                        Name = device.FriendlyName,
+                        IsDefault = device.ID == GetDefaultOutputDeviceId(),
+                        DeviceType = AudioDeviceType.Output,
+                        IsAvailable = true
+                    });
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error reading device info: {ex.Message}");
+                }
             }
         }
         catch (Exception ex)
@@ -91,6 +126,25 @@ public class AudioDeviceService : IDisposable
         }
 
         return devices;
+    }
+
+    /// <summary>
+    /// Checks if a specific device is still available
+    /// </summary>
+    public bool IsDeviceAvailable(string deviceId)
+    {
+        if (_deviceEnumerator == null || string.IsNullOrEmpty(deviceId))
+            return false;
+
+        try
+        {
+            var device = _deviceEnumerator.GetDevice(deviceId);
+            return device?.State == DeviceState.Active;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// <summary>
@@ -253,10 +307,61 @@ public class AudioDeviceService : IDisposable
         return 0;
     }
 
+    /// <summary>
+    /// Refreshes the device lists and raises DevicesChanged event
+    /// </summary>
+    public void RefreshDevices()
+    {
+        DevicesChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    internal void OnDevicesChanged()
+    {
+        DevicesChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     public void Dispose()
     {
         _deviceEnumerator?.Dispose();
         _deviceEnumerator = null;
+    }
+
+    /// <summary>
+    /// Callback for device notification events
+    /// </summary>
+    private class DeviceNotificationCallback : NAudio.CoreAudioApi.Interfaces.IMMNotificationClient
+    {
+        private readonly AudioDeviceService _service;
+
+        public DeviceNotificationCallback(AudioDeviceService service)
+        {
+            _service = service;
+        }
+
+        public void OnDeviceStateChanged(string deviceId, DeviceState newState)
+        {
+            _service.OnDevicesChanged();
+        }
+
+        public void OnDeviceAdded(string pwstrDeviceId)
+        {
+            _service.OnDevicesChanged();
+        }
+
+        public void OnDeviceRemoved(string deviceId)
+        {
+            _service.OnDevicesChanged();
+        }
+
+        public void OnDefaultDeviceChanged(DataFlow flow, Role role, string defaultDeviceId)
+        {
+            _service.OnDevicesChanged();
+        }
+
+        public void OnPropertyValueChanged(string pwstrDeviceId, PropertyKey key)
+        {
+            // Ignore property changes
+        }
     }
 }
 
@@ -268,6 +373,7 @@ public class AudioDeviceInfo
     public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public bool IsDefault { get; set; }
+    public bool IsAvailable { get; set; }
     public AudioDeviceType DeviceType { get; set; }
 
     public override string ToString()

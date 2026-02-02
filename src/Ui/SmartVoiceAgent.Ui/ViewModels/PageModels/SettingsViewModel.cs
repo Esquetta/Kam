@@ -25,6 +25,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public ReactiveCommand<Unit, Unit> StartMicTestCommand { get; }
         public ReactiveCommand<Unit, Unit> StopMicTestCommand { get; }
         public ReactiveCommand<Unit, Unit> PlayTestRecordingCommand { get; }
+        public ReactiveCommand<Unit, Unit> RefreshDevicesCommand { get; }
 
         public SettingsViewModel()
         {
@@ -43,6 +44,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             StartMicTestCommand = ReactiveCommand.Create(StartMicTest);
             StopMicTestCommand = ReactiveCommand.Create(StopMicTest);
             PlayTestRecordingCommand = ReactiveCommand.Create(PlayTestRecording);
+            RefreshDevicesCommand = ReactiveCommand.Create(RefreshAudioDevices);
             
             // Load saved settings
             _settingsService.Load();
@@ -177,8 +179,60 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             private set => this.RaiseAndSetIfChanged(ref _hasTestRecording, value);
         }
 
+        private bool _isNoiseSuppressionEnabled = true;
+        public bool IsNoiseSuppressionEnabled
+        {
+            get => _isNoiseSuppressionEnabled;
+            set
+            {
+                if (_isNoiseSuppressionEnabled != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _isNoiseSuppressionEnabled, value);
+                    _settingsService.IsNoiseSuppressionEnabled = value;
+                }
+            }
+        }
+
+        private string? _audioErrorMessage;
+        public string? AudioErrorMessage
+        {
+            get => _audioErrorMessage;
+            private set => this.RaiseAndSetIfChanged(ref _audioErrorMessage, value);
+        }
+
+        private bool _hasInputDevices;
+        public bool HasInputDevices
+        {
+            get => _hasInputDevices;
+            private set => this.RaiseAndSetIfChanged(ref _hasInputDevices, value);
+        }
+
+        private bool _hasOutputDevices;
+        public bool HasOutputDevices
+        {
+            get => _hasOutputDevices;
+            private set => this.RaiseAndSetIfChanged(ref _hasOutputDevices, value);
+        }
+
+        private bool _isAudioAvailable;
+        public bool IsAudioAvailable
+        {
+            get => _isAudioAvailable;
+            private set => this.RaiseAndSetIfChanged(ref _isAudioAvailable, value);
+        }
+
         private void InitializeVoiceSettings()
         {
+            // Check audio availability
+            IsAudioAvailable = _audioDeviceService.IsAvailable;
+            if (!IsAudioAvailable)
+            {
+                AudioErrorMessage = _audioDeviceService.LastError ?? "Audio system is not available.";
+            }
+
+            // Subscribe to device changes
+            _audioDeviceService.DevicesChanged += OnDevicesChanged;
+
             // Load devices
             RefreshAudioDevices();
 
@@ -193,18 +247,54 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             // Load saved device selections
             var savedInputId = _settingsService.SelectedInputDeviceId;
             var savedOutputId = _settingsService.SelectedOutputDeviceId;
+            _isNoiseSuppressionEnabled = _settingsService.IsNoiseSuppressionEnabled;
 
-            if (!string.IsNullOrEmpty(savedInputId))
+            // Validate saved devices are still available
+            if (!string.IsNullOrEmpty(savedInputId) && _audioDeviceService.IsDeviceAvailable(savedInputId))
             {
                 SelectedInputDevice = InputDevices.FirstOrDefault(d => d.Id == savedInputId);
             }
-            if (!string.IsNullOrEmpty(savedOutputId))
+            else if (!string.IsNullOrEmpty(savedInputId))
+            {
+                // Saved device no longer available, clear it
+                _settingsService.SelectedInputDeviceId = null;
+            }
+
+            if (!string.IsNullOrEmpty(savedOutputId) && _audioDeviceService.IsDeviceAvailable(savedOutputId))
             {
                 SelectedOutputDevice = OutputDevices.FirstOrDefault(d => d.Id == savedOutputId);
+            }
+            else if (!string.IsNullOrEmpty(savedOutputId))
+            {
+                // Saved device no longer available, clear it
+                _settingsService.SelectedOutputDeviceId = null;
             }
 
             // Start monitoring input levels
             StartInputLevelMonitoring();
+        }
+
+        private void OnDevicesChanged(object? sender, EventArgs e)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                // Check if selected devices are still available
+                if (SelectedInputDevice != null && !_audioDeviceService.IsDeviceAvailable(SelectedInputDevice.Id))
+                {
+                    // Device disconnected, select default
+                    RefreshAudioDevices();
+                    AudioErrorMessage = "Selected microphone was disconnected. Switched to default device.";
+                }
+                else if (SelectedOutputDevice != null && !_audioDeviceService.IsDeviceAvailable(SelectedOutputDevice.Id))
+                {
+                    RefreshAudioDevices();
+                    AudioErrorMessage = "Selected output device was disconnected. Switched to default device.";
+                }
+                else
+                {
+                    RefreshAudioDevices();
+                }
+            });
         }
 
         private void RefreshAudioDevices()
@@ -212,9 +302,26 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             InputDevices = _audioDeviceService.GetInputDevices();
             OutputDevices = _audioDeviceService.GetOutputDevices();
 
-            // Select default if no selection
-            SelectedInputDevice ??= InputDevices.FirstOrDefault(d => d.IsDefault) ?? InputDevices.FirstOrDefault();
-            SelectedOutputDevice ??= OutputDevices.FirstOrDefault(d => d.IsDefault) ?? OutputDevices.FirstOrDefault();
+            HasInputDevices = InputDevices.Count > 0;
+            HasOutputDevices = OutputDevices.Count > 0;
+            IsAudioAvailable = _audioDeviceService.IsAvailable;
+
+            // Select default if no selection or current selection invalid
+            if (SelectedInputDevice == null || !InputDevices.Any(d => d.Id == SelectedInputDevice.Id))
+            {
+                SelectedInputDevice = InputDevices.FirstOrDefault(d => d.IsDefault) ?? InputDevices.FirstOrDefault();
+            }
+            
+            if (SelectedOutputDevice == null || !OutputDevices.Any(d => d.Id == SelectedOutputDevice.Id))
+            {
+                SelectedOutputDevice = OutputDevices.FirstOrDefault(d => d.IsDefault) ?? OutputDevices.FirstOrDefault();
+            }
+
+            // Clear error if devices are now available
+            if (HasInputDevices && HasOutputDevices)
+            {
+                AudioErrorMessage = null;
+            }
         }
 
         private void StartInputLevelMonitoring()
@@ -559,7 +666,13 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public void Dispose()
         {
             _inputLevelCts?.Cancel();
-            _audioDeviceService?.Dispose();
+            
+            if (_audioDeviceService != null)
+            {
+                _audioDeviceService.DevicesChanged -= OnDevicesChanged;
+                _audioDeviceService.Dispose();
+            }
+            
             _voiceTestService?.Dispose();
         }
     }
