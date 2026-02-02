@@ -1,4 +1,4 @@
-﻿using Avalonia;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform;
@@ -7,11 +7,43 @@ using System.IO;
 
 namespace SmartVoiceAgent.Ui.Services.Concrete
 {
+    /// <summary>
+    /// Service for managing the system tray icon and context menu
+    /// </summary>
     public class TrayIconService
     {
         private TrayIcon? _trayIcon;
         private NativeMenu? _menu;
         private NativeMenuItem? _statusMenuItem;
+        private NativeMenuItem? _voiceToggleItem;
+        private NativeMenuItem? _showWindowItem;
+
+        /// <summary>
+        /// Event raised when user requests to show the main window
+        /// </summary>
+        public event EventHandler? ShowWindowRequested;
+
+        /// <summary>
+        /// Event raised when user requests to open settings
+        /// </summary>
+        public event EventHandler? OpenSettingsRequested;
+
+        /// <summary>
+        /// Event raised when user requests to toggle voice recognition
+        /// </summary>
+        public event EventHandler? ToggleVoiceRequested;
+
+        /// <summary>
+        /// Event raised when user requests to show about dialog
+        /// </summary>
+        public event EventHandler? AboutRequested;
+
+        /// <summary>
+        /// Event raised when user requests to exit the application
+        /// </summary>
+        public event EventHandler? ExitRequested;
+
+        private bool _isVoiceEnabled = false;
 
         public void Initialize()
         {
@@ -24,7 +56,7 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
                 _trayIcon = new TrayIcon
                 {
                     Icon = LoadIconFromAssets(),
-                    ToolTipText = "KAM NEURAL // CORE v3.5",
+                    ToolTipText = "Kam - AI Voice Assistant",
                     IsVisible = true
                 };
 
@@ -81,24 +113,61 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
 
             _menu = new NativeMenu();
 
-            var showWindowItem = new NativeMenuItem
+            // Show Window
+            _showWindowItem = new NativeMenuItem
             {
                 Header = "🖥️ Show Window"
             };
-            showWindowItem.Click += OnShowWindowClick;
-            _menu.Add(showWindowItem);
+            _showWindowItem.Click += OnShowWindowClick;
+            _menu.Add(_showWindowItem);
 
             _menu.Add(new NativeMenuItemSeparator());
 
+            // Quick Actions Section
+            var quickActionsHeader = new NativeMenuItem
+            {
+                Header = "⚡ Quick Actions",
+                IsEnabled = false
+            };
+            _menu.Add(quickActionsHeader);
+
+            // Voice Toggle
+            _voiceToggleItem = new NativeMenuItem
+            {
+                Header = "🎤 Enable Voice"
+            };
+            _voiceToggleItem.Click += OnToggleVoiceClick;
+            _menu.Add(_voiceToggleItem);
+
+            // Settings
+            var settingsItem = new NativeMenuItem
+            {
+                Header = "⚙️ Settings"
+            };
+            settingsItem.Click += OnSettingsClick;
+            _menu.Add(settingsItem);
+
+            _menu.Add(new NativeMenuItemSeparator());
+
+            // Status Section
             _statusMenuItem = new NativeMenuItem
             {
-                Header = "⚡ Status: Running",
+                Header = "● Status: Ready",
                 IsEnabled = false
             };
             _menu.Add(_statusMenuItem);
 
             _menu.Add(new NativeMenuItemSeparator());
 
+            // About
+            var aboutItem = new NativeMenuItem
+            {
+                Header = "ℹ️ About Kam"
+            };
+            aboutItem.Click += OnAboutClick;
+            _menu.Add(aboutItem);
+
+            // Exit
             var exitItem = new NativeMenuItem
             {
                 Header = "❌ Exit"
@@ -111,37 +180,52 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
 
         private void OnTrayIconClicked(object? sender, EventArgs e)
         {
-            ShowMainWindow();
+            ShowWindowRequested?.Invoke(this, EventArgs.Empty);
         }
 
         private void OnShowWindowClick(object? sender, EventArgs e)
         {
-            ShowMainWindow();
+            ShowWindowRequested?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void OnSettingsClick(object? sender, EventArgs e)
+        {
+            OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
+            // Also show window when opening settings
+            ShowWindowRequested?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void OnToggleVoiceClick(object? sender, EventArgs e)
+        {
+            ToggleVoiceRequested?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void OnAboutClick(object? sender, EventArgs e)
+        {
+            AboutRequested?.Invoke(this, EventArgs.Empty);
+            ShowWindowRequested?.Invoke(this, EventArgs.Empty);
         }
 
         private void OnExitClick(object? sender, EventArgs e)
         {
-            if (global::Avalonia.Application.Current?.ApplicationLifetime
-                is IClassicDesktopStyleApplicationLifetime desktop)
-            {
-                desktop.Shutdown();
-            }
+            ExitRequested?.Invoke(this, EventArgs.Empty);
         }
 
-        private void ShowMainWindow()
+        /// <summary>
+        /// Updates the voice toggle menu item based on current state
+        /// </summary>
+        public void SetVoiceEnabled(bool enabled)
         {
-            if (global::Avalonia.Application.Current?.ApplicationLifetime
-                is IClassicDesktopStyleApplicationLifetime desktop)
+            _isVoiceEnabled = enabled;
+            if (_voiceToggleItem != null)
             {
-                if (desktop.MainWindow != null)
-                {
-                    desktop.MainWindow.Show();
-                    desktop.MainWindow.WindowState = WindowState.Normal;
-                    desktop.MainWindow.Activate();
-                }
+                _voiceToggleItem.Header = enabled ? "🔴 Disable Voice" : "🎤 Enable Voice";
             }
         }
 
+        /// <summary>
+        /// Updates the tooltip text
+        /// </summary>
         public void UpdateToolTip(string text)
         {
             if (_trayIcon != null)
@@ -150,14 +234,21 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
             }
         }
 
-        public void UpdateStatus(string status)
+        /// <summary>
+        /// Updates the status menu item
+        /// </summary>
+        public void UpdateStatus(string status, bool isRunning = true)
         {
             if (_statusMenuItem != null)
             {
-                _statusMenuItem.Header = $"⚡ Status: {status}";
+                var indicator = isRunning ? "●" : "○";
+                _statusMenuItem.Header = $"{indicator} Status: {status}";
             }
         }
 
+        /// <summary>
+        /// Updates the tray icon
+        /// </summary>
         public void UpdateIcon(string iconPath)
         {
             if (_trayIcon != null)
@@ -177,6 +268,9 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
             }
         }
 
+        /// <summary>
+        /// Shows or hides the tray icon
+        /// </summary>
         public void SetVisible(bool visible)
         {
             if (_trayIcon != null)

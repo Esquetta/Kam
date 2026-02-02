@@ -1,4 +1,6 @@
 ﻿using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -408,6 +410,41 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public void SetTrayIconService(TrayIconService service)
         {
             _trayIconService = service;
+
+            // Wire up tray icon menu events
+            service.ShowWindowRequested += (s, e) =>
+            {
+                ShowMainWindow();
+            };
+
+            service.OpenSettingsRequested += (s, e) =>
+            {
+                NavigateTo(NavView.Settings);
+            };
+
+            service.ToggleVoiceRequested += (s, e) =>
+            {
+                ToggleVoiceEnabled();
+            };
+
+            service.AboutRequested += (s, e) =>
+            {
+                // Show about info in coordinator or log
+                AddLog("Kam - AI Voice Assistant v1.0");
+                AddLog("Built with .NET 9.0 and Avalonia UI");
+            };
+
+            service.ExitRequested += (s, e) =>
+            {
+                if (global::Avalonia.Application.Current?.ApplicationLifetime
+                    is IClassicDesktopStyleApplicationLifetime desktop)
+                {
+                    desktop.Shutdown();
+                }
+            };
+
+            // Sync initial voice state
+            service.SetVoiceEnabled(IsVoiceEnabled);
         }
 
         public void SetCommandInputService(ICommandInputService commandInput)
@@ -571,6 +608,24 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 _voiceCommandService.StartWakeWordDetection();
                 IsVoiceEnabled = true;
                 AddLog("🎤 Voice control enabled - Say 'Hey Kam'");
+            }
+
+            // Sync tray icon menu state
+            _trayIconService?.SetVoiceEnabled(IsVoiceEnabled);
+            _trayIconService?.UpdateStatus(IsVoiceEnabled ? "Listening" : "Ready", IsVoiceEnabled);
+        }
+
+        private void ShowMainWindow()
+        {
+            if (global::Avalonia.Application.Current?.ApplicationLifetime
+                is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                if (desktop.MainWindow != null)
+                {
+                    desktop.MainWindow.Show();
+                    desktop.MainWindow.WindowState = WindowState.Normal;
+                    desktop.MainWindow.Activate();
+                }
             }
         }
 
