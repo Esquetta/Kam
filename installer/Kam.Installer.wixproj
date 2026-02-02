@@ -1,0 +1,48 @@
+<Project Sdk="WixToolset.Sdk/6.0.2">
+  <PropertyGroup>
+    <OutputName>Kam-Installer</OutputName>
+    <OutputType>Package</OutputType>
+    <Platform>x64</Platform>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Product Information -->
+    <ProductName>Kam - AI Voice Assistant</ProductName>
+    <Manufacturer>KAM Neural Core</Manufacturer>
+    <ProductVersion>1.0.0</ProductVersion>
+    <ProductCode>*</ProductCode>
+    <UpgradeCode>7C2C8F2B-4E5A-4B9C-9F3D-8A1E6B4C2D3F</UpgradeCode>
+    
+    <!-- Installer Properties -->
+    <InstallScope>perMachine</InstallScope>
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Kam is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+    
+    <!-- UI -->
+    <UIRef>$(var.WixUI)
+    </UIRef>
+    <WixUI>FeatureTree</WixUI>
+    <WixUILicenseRTF>$(MSBuildProjectDirectory)\License.rtf</WixUILicenseRTF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Reference WiX extensions -->
+    <PackageReference Include="WixToolset.UI.wixext" Version="6.0.2" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="6.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Main installer source file -->
+    <Compile Include="Product.wxs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Published application files -->
+    <HarvestDirectory Include="..\publish" />
+  </ItemGroup>
+
+  <Target Name="PublishApp" BeforeTargets="Harvest">
+    <Exec Command="dotnet publish $(MSBuildProjectDirectory)\..\src\Ui\SmartVoiceAgent.Ui\SmartVoiceAgent.Ui.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o $(MSBuildProjectDirectory)\..\publish" />
+  </Target>
+</Project>

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <!-- 
+    Kam - AI Voice Assistant Installer
+    
+    Build with: wix build Product.wxs -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext
+  -->
+
+  <Package Name="Kam - AI Voice Assistant"
+           Language="1033"
+           Version="1.0.0.0"
+           Manufacturer="KAM Neural Core"
+           UpgradeCode="7C2C8F2B-4E5A-4B9C-9F3D-8A1E6B4C2D3F"
+           Scope="perMachine">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Kam is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Features -->
+    <Feature Id="ProductFeature" Title="Kam" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+      <ComponentGroupRef Id="StartMenuComponents" />
+      <ComponentGroupRef Id="DesktopComponents" />
+    </Feature>
+
+    <!-- Installation Directory -->
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="Kam">
+        <Component Id="MainExecutable" Guid="*">
+          <File Id="KamExe" 
+                Name="Kam.exe" 
+                Source="..\publish\Kam.exe"
+                KeyPath="yes">
+            <Shortcut Id="StartMenuShortcut"
+                      Directory="ProgramMenuFolder"
+                      Name="Kam"
+                      Description="AI Voice Assistant"
+                      WorkingDirectory="INSTALLFOLDER"
+                      Icon="KamIcon.exe"
+                      IconIndex="0"
+                      Advertise="yes" />
+          </File>
+        </Component>
+        
+        <!-- Application Files -->
+        <Component Id="AppFiles" Guid="*">
+          <File Id="KamDll" Source="..\publish\Kam.dll" />
+          <File Id="KamRuntimeConfig" Source="..\publish\Kam.runtimeconfig.json" />
+          <File Id="KamDeps" Source="..\publish\Kam.deps.json" />
+        </Component>
+
+        <!-- Assets -->
+        <Directory Id="AssetsFolder" Name="Assets">
+          <Component Id="Assets" Guid="*">
+            <File Id="FaviconIco" Source="..\src\Ui\SmartVoiceAgent.Ui\Assets\favicon.ico" />
+          </Component>
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <!-- Start Menu -->
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="Kam">
+        <Component Id="ApplicationShortcut" Guid="*">
+          <Shortcut Id="UninstallProduct"
+                    Name="Uninstall Kam"
+                    Description="Uninstalls Kam AI Voice Assistant"
+                    Target="[System64Folder]msiexec.exe"
+                    Arguments="/x [ProductCode]"
+                    Icon="KamIcon.exe"
+                    IconIndex="0" />
+          <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall" />
+          <RegistryValue Root="HKCU" Key="Software\KAM Neural Core\Kam" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <!-- Desktop Shortcut (optional) -->
+    <StandardDirectory Id="DesktopFolder">
+      <Component Id="DesktopShortcut" Guid="*" Condition="INSTALLDESKTOPSHORTCUT">
+        <Shortcut Id="DesktopShortcut"
+                  Name="Kam"
+                  Description="AI Voice Assistant"
+                  Target="[INSTALLFOLDER]Kam.exe"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="KamIcon.exe"
+                  IconIndex="0" />
+        <RegistryValue Root="HKCU" Key="Software\KAM Neural Core\Kam" Name="desktopshortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+    <!-- Component Groups -->
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="AppFiles" />
+      <ComponentRef Id="Assets" />
+    </ComponentGroup>
+
+    <ComponentGroup Id="StartMenuComponents" Directory="ApplicationProgramsFolder">
+      <ComponentRef Id="ApplicationShortcut" />
+    </ComponentGroup>
+
+    <ComponentGroup Id="DesktopComponents" Directory="DesktopFolder">
+      <ComponentRef Id="DesktopShortcut" />
+    </ComponentGroup>
+
+    <!-- Icons -->
+    <Icon Id="KamIcon.exe" SourceFile="..\src\Ui\SmartVoiceAgent.Ui\Assets\favicon.ico" />
+
+    <!-- UI Configuration -->
+    <ui:WixUI Id="WixUI_InstallDir" />
+    <WixVariable Id="WixUIDialogBmp" Value="..\assets\dialog.bmp" />
+    <WixVariable Id="WixUIBannerBmp" Value="..\assets\banner.bmp" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+
+    <!-- Properties -->
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+    <Property Id="INSTALLDESKTOPSHORTCUT" Value="1" Secure="yes">
+      <RegistrySearch Id="CheckDesktopShortcut" Root="HKCU" Key="Software\KAM Neural Core\Kam" Name="desktopshortcut" Type="raw" />
+    </Property>
+
+    <!-- Launch after install -->
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch Kam after installation" />
+    <Property Id="WixShellExecTarget" Value="[#KamExe]" />
+    <CustomAction Id="LaunchApplication" BinaryRef="Wix4UtilCA_X64" DllEntry="WixShellExec" Impersonate="yes" />
+
+    <InstallExecuteSequence>
+      <Custom Action="LaunchApplication" After="InstallFinalize" Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed" />
+    </InstallExecuteSequence>
+
+  </Package>
+</Wix>
