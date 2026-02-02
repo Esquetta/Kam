@@ -3,7 +3,8 @@ using SmartVoiceAgent.Core.Interfaces;
 namespace SmartVoiceAgent.Benchmarks.Fakes;
 
 /// <summary>
-/// Fake music service for benchmarking - simulates music operations without actual audio playback
+/// Fake music service for benchmarking - simulates music operations without actual audio playback.
+/// Used by BenchmarkDotNet to measure performance of music service operations.
 /// </summary>
 public class FakeMusicService : IMusicService, IDisposable
 {
