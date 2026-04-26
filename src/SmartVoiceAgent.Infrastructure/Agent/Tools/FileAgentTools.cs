@@ -13,6 +13,8 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
     /// </summary>
     public sealed class FileAgentTools
     {
+        private const int MaxDiffPreviewLines = 400;
+
         private readonly string _defaultWorkingDirectory;
         private readonly HashSet<string> _allowedExtensions;
         private readonly HashSet<string> _executableExtensions;
@@ -857,6 +859,138 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
+        [AITool("replace_file_range", "Replaces a 1-based line range in a text file and returns a diff preview.")]
+        public async Task<string> ReplaceRangeAsync(
+            [Description("Full path to the file")]
+            string filePath,
+            [Description("Starting line number (1-based)")]
+            int startLine = 1,
+            [Description("Number of lines to replace")]
+            int lineCount = 0,
+            [Description("Replacement text")]
+            string replacement = "",
+            [Description("If true, returns the diff without writing the file")]
+            bool previewOnly = false)
+        {
+            try
+            {
+                var validationError = ValidateEditableTextFile(filePath);
+                if (validationError is not null)
+                {
+                    return validationError;
+                }
+
+                var original = await File.ReadAllTextAsync(filePath);
+                var newline = DetectNewline(original);
+                var lines = SplitNormalizedLines(original);
+                if (startLine < 1 || startLine > lines.Length)
+                {
+                    return $"Hata: Geçersiz satır numarası. Dosyada {lines.Length} satır var.";
+                }
+
+                if (lineCount < 0 || startLine + lineCount - 1 > lines.Length)
+                {
+                    return $"Hata: Geçersiz satır aralığı. Dosyada {lines.Length} satır var.";
+                }
+
+                var replacementLines = SplitNormalizedLines(replacement);
+                var proposedLines = lines
+                    .Take(startLine - 1)
+                    .Concat(replacementLines)
+                    .Concat(lines.Skip(startLine - 1 + lineCount))
+                    .ToArray();
+                var proposed = string.Join(newline, proposedLines);
+                var diff = FormatDiffPreview(filePath, original, proposed);
+
+                if (!previewOnly)
+                {
+                    await File.WriteAllTextAsync(filePath, proposed);
+                }
+
+                var mode = previewOnly ? "Preview only" : "Patch applied";
+                return $"{mode}: {filePath}{Environment.NewLine}{diff}";
+            }
+            catch (Exception ex)
+            {
+                return $"Dosya aralığı değiştirme hatası: {ex.Message}";
+            }
+        }
+
+        [AITool("patch_file", "Safely replaces exact text in a file and returns a diff preview.")]
+        public async Task<string> PatchFileAsync(
+            [Description("Full path to the file")]
+            string filePath,
+            [Description("Exact text to replace")]
+            string oldText,
+            [Description("Replacement text")]
+            string newText,
+            [Description("Expected number of exact matches")]
+            int expectedOccurrences = 1,
+            [Description("If true, returns the diff without writing the file")]
+            bool previewOnly = false)
+        {
+            try
+            {
+                var validationError = ValidateEditableTextFile(filePath);
+                if (validationError is not null)
+                {
+                    return validationError;
+                }
+
+                if (string.IsNullOrEmpty(oldText))
+                {
+                    return "Hata: oldText değeri gerekli.";
+                }
+
+                expectedOccurrences = Math.Max(1, expectedOccurrences);
+                var original = await File.ReadAllTextAsync(filePath);
+                var occurrenceCount = CountOccurrences(original, oldText);
+                if (occurrenceCount != expectedOccurrences)
+                {
+                    return $"Hata: Beklenen eşleşme sayısı {expectedOccurrences}, bulunan {occurrenceCount}.";
+                }
+
+                var proposed = original.Replace(oldText, newText, StringComparison.Ordinal);
+                var diff = FormatDiffPreview(filePath, original, proposed);
+
+                if (!previewOnly)
+                {
+                    await File.WriteAllTextAsync(filePath, proposed);
+                }
+
+                var mode = previewOnly ? "Preview only" : "Patch applied";
+                return $"{mode}: {filePath}{Environment.NewLine}{diff}";
+            }
+            catch (Exception ex)
+            {
+                return $"Dosya patch hatası: {ex.Message}";
+            }
+        }
+
+        [AITool("preview_file_diff", "Returns a diff between the current file and proposed complete content without writing.")]
+        public async Task<string> PreviewDiffAsync(
+            [Description("Full path to the file")]
+            string filePath,
+            [Description("Complete proposed file content")]
+            string proposedContent)
+        {
+            try
+            {
+                var validationError = ValidateReadableTextFile(filePath);
+                if (validationError is not null)
+                {
+                    return validationError;
+                }
+
+                var original = await File.ReadAllTextAsync(filePath);
+                return FormatDiffPreview(filePath, original, proposedContent);
+            }
+            catch (Exception ex)
+            {
+                return $"Diff preview hatası: {ex.Message}";
+            }
+        }
+
         [AITool("create_directory", "Creates a new directory.")]
         public async Task<string> CreateDirectoryAsync(
             [Description("Full path of the directory to create")]
@@ -961,6 +1095,9 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 AIFunctionFactory.Create(ListDirectoryTreeAsync),
                 AIFunctionFactory.Create(DescribeWorkspaceAsync),
                 AIFunctionFactory.Create(OutlineCodeAsync),
+                AIFunctionFactory.Create(ReplaceRangeAsync),
+                AIFunctionFactory.Create(PatchFileAsync),
+                AIFunctionFactory.Create(PreviewDiffAsync),
                 AIFunctionFactory.Create(CreateDirectoryAsync),
                 AIFunctionFactory.Create(ReadLinesAsync),
                 
@@ -1070,6 +1207,139 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
 
             return null;
+        }
+
+        private string? ValidateReadableTextFile(string filePath)
+        {
+            if (!SecurityUtilities.IsSafeFilePath(filePath, _defaultWorkingDirectory))
+            {
+                return "Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.";
+            }
+
+            if (!File.Exists(filePath))
+            {
+                return $"Hata: '{filePath}' dosyası bulunamadı.";
+            }
+
+            var fileInfo = new FileInfo(filePath);
+            if (fileInfo.Length > _maxFileSizeBytes)
+            {
+                return $"Hata: Dosya çok büyük ({fileInfo.Length / 1024 / 1024}MB). Maksimum boyut: {_maxFileSizeBytes / 1024 / 1024}MB";
+            }
+
+            if (!_allowedExtensions.Contains(fileInfo.Extension) || !IsTextSearchableExtension(fileInfo.Extension))
+            {
+                return $"Hata: '{fileInfo.Extension}' uzantılı dosyalar metin düzenleme için desteklenmiyor.";
+            }
+
+            return null;
+        }
+
+        private string? ValidateEditableTextFile(string filePath)
+        {
+            var readableValidationError = ValidateReadableTextFile(filePath);
+            if (readableValidationError is not null)
+            {
+                return readableValidationError;
+            }
+
+            var fileInfo = new FileInfo(filePath);
+            return fileInfo.IsReadOnly
+                ? $"Hata: '{filePath}' dosyası salt okunur."
+                : null;
+        }
+
+        private static string FormatDiffPreview(string filePath, string original, string proposed)
+        {
+            var originalLines = SplitNormalizedLines(original);
+            var proposedLines = SplitNormalizedLines(proposed);
+            var max = Math.Max(originalLines.Length, proposedLines.Length);
+            var changed = false;
+            var sb = new StringBuilder();
+            sb.AppendLine($"Diff Preview: {filePath}");
+            sb.AppendLine("--- current");
+            sb.AppendLine("+++ proposed");
+
+            var emitted = 0;
+            for (var index = 0; index < max; index++)
+            {
+                if (emitted >= MaxDiffPreviewLines)
+                {
+                    sb.AppendLine($"... diff preview truncated at {MaxDiffPreviewLines} lines.");
+                    break;
+                }
+
+                var hasOriginal = index < originalLines.Length;
+                var hasProposed = index < proposedLines.Length;
+                var originalLine = hasOriginal ? originalLines[index] : string.Empty;
+                var proposedLine = hasProposed ? proposedLines[index] : string.Empty;
+
+                if (hasOriginal && hasProposed && originalLine == proposedLine)
+                {
+                    sb.AppendLine($" {originalLine}");
+                    emitted++;
+                    continue;
+                }
+
+                changed = true;
+                if (hasOriginal)
+                {
+                    sb.AppendLine($"-{originalLine}");
+                    emitted++;
+                }
+
+                if (hasProposed && emitted < MaxDiffPreviewLines)
+                {
+                    sb.AppendLine($"+{proposedLine}");
+                    emitted++;
+                }
+            }
+
+            if (!changed)
+            {
+                sb.AppendLine("No changes.");
+            }
+
+            return sb.ToString();
+        }
+
+        private static string DetectNewline(string content)
+        {
+            return content.Contains("\r\n", StringComparison.Ordinal)
+                ? "\r\n"
+                : "\n";
+        }
+
+        private static string[] SplitNormalizedLines(string content)
+        {
+            if (content.Length == 0)
+            {
+                return [];
+            }
+
+            return content
+                .Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Replace("\r", "\n", StringComparison.Ordinal)
+                .Split('\n');
+        }
+
+        private static int CountOccurrences(string content, string search)
+        {
+            var count = 0;
+            var index = 0;
+            while (index < content.Length)
+            {
+                var next = content.IndexOf(search, index, StringComparison.Ordinal);
+                if (next < 0)
+                {
+                    break;
+                }
+
+                count++;
+                index = next + search.Length;
+            }
+
+            return count;
         }
 
         private static string FormatContentSearchResult(

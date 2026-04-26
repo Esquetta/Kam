@@ -36,12 +36,15 @@ public class BuiltInSkillManifestCatalogTests
             "files.read_lines",
             "file.read",
             "file.read_range",
+            "file.replace_range",
+            "file.patch",
             "files.open",
             "files.show_in_explorer",
             "workspace.tree",
             "workspace.find_files",
             "workspace.search_text",
             "workspace.map",
+            "workspace.diff_preview",
             "code.search",
             "code.outline",
             "directories.create",
@@ -89,6 +92,10 @@ public class BuiltInSkillManifestCatalogTests
         manifests["accessibility.tree"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.SystemInformation);
         manifests["clipboard.peek"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.ClipboardRead);
         manifests["file.read"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.FileSystemRead);
+        manifests["file.replace_range"].RiskLevel.Should().Be(SmartVoiceAgent.Core.Models.Skills.SkillRiskLevel.High);
+        manifests["file.replace_range"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.FileSystemWrite);
+        manifests["file.patch"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.FileSystemWrite);
+        manifests["workspace.diff_preview"].RiskLevel.Should().Be(SmartVoiceAgent.Core.Models.Skills.SkillRiskLevel.Low);
         manifests["workspace.map"].RiskLevel.Should().Be(SmartVoiceAgent.Core.Models.Skills.SkillRiskLevel.Low);
         manifests["workspace.map"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.FileSystemRead);
         manifests["code.outline"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.FileSystemRead);

@@ -23,10 +23,13 @@ public sealed class FileSkillExecutor : ISkillExecutor
         "files.read_lines",
         "file.read",
         "file.read_range",
+        "file.replace_range",
+        "file.patch",
         "workspace.tree",
         "workspace.find_files",
         "workspace.search_text",
         "workspace.map",
+        "workspace.diff_preview",
         "code.search",
         "code.outline",
         "files.open",
@@ -101,6 +104,18 @@ public sealed class FileSkillExecutor : ISkillExecutor
                 SkillPlanArgumentReader.GetString(plan, "filePath"),
                 SkillPlanArgumentReader.GetInt(plan, "startLine", 1),
                 SkillPlanArgumentReader.GetInt(plan, "lineCount")),
+            "file.replace_range" => await _tools.ReplaceRangeAsync(
+                SkillPlanArgumentReader.GetString(plan, "filePath"),
+                SkillPlanArgumentReader.GetInt(plan, "startLine", 1),
+                SkillPlanArgumentReader.GetInt(plan, "lineCount"),
+                SkillPlanArgumentReader.GetString(plan, "replacement"),
+                SkillPlanArgumentReader.GetBool(plan, "previewOnly")),
+            "file.patch" => await _tools.PatchFileAsync(
+                SkillPlanArgumentReader.GetString(plan, "filePath"),
+                SkillPlanArgumentReader.GetString(plan, "oldText"),
+                SkillPlanArgumentReader.GetString(plan, "newText"),
+                SkillPlanArgumentReader.GetInt(plan, "expectedOccurrences", 1),
+                SkillPlanArgumentReader.GetBool(plan, "previewOnly")),
             "workspace.tree" => await _tools.ListDirectoryTreeAsync(
                 SkillPlanArgumentReader.GetString(plan, "directoryPath"),
                 SkillPlanArgumentReader.GetInt(plan, "maxDepth", 2),
@@ -119,6 +134,9 @@ public sealed class FileSkillExecutor : ISkillExecutor
                 SkillPlanArgumentReader.GetString(plan, "directoryPath"),
                 SkillPlanArgumentReader.GetInt(plan, "maxDepth", 2),
                 SkillPlanArgumentReader.GetInt(plan, "maxEntries", 200)),
+            "workspace.diff_preview" => await _tools.PreviewDiffAsync(
+                SkillPlanArgumentReader.GetString(plan, "filePath"),
+                SkillPlanArgumentReader.GetString(plan, "proposedContent")),
             "code.search" => await _tools.SearchFileContentAsync(
                 SkillPlanArgumentReader.GetString(plan, "directoryPath"),
                 SkillPlanArgumentReader.GetString(plan, "query"),

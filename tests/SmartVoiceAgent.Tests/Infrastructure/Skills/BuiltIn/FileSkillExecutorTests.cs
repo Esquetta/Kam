@@ -147,6 +147,80 @@ public class FileSkillExecutorTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_FileReplaceRange_UpdatesSelectedLinesAndReturnsDiff()
+    {
+        var filePath = Path.Combine(_workspace, "notes.md");
+        await File.WriteAllTextAsync(filePath, "one\ntwo\nthree\nfour");
+        var executor = new FileSkillExecutor(new FileAgentTools(_workspace));
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject(
+            "file.replace_range",
+            new
+            {
+                filePath,
+                startLine = 2,
+                lineCount = 2,
+                replacement = "TWO\nTHREE"
+            }));
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Diff Preview");
+        result.Message.Should().Contain("-two");
+        result.Message.Should().Contain("+TWO");
+        var updated = await File.ReadAllTextAsync(filePath);
+        updated.Should().Be("one\nTWO\nTHREE\nfour");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_FilePatch_ReplacesExactTextOnceAndReturnsDiff()
+    {
+        var filePath = Path.Combine(_workspace, "Program.cs");
+        await File.WriteAllTextAsync(filePath, "class Program\n{\n    void Run() {}\n}");
+        var executor = new FileSkillExecutor(new FileAgentTools(_workspace));
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject(
+            "file.patch",
+            new
+            {
+                filePath,
+                oldText = "void Run() {}",
+                newText = "void RunAsync() {}",
+                expectedOccurrences = 1
+            }));
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Patch applied");
+        result.Message.Should().Contain("-    void Run() {}");
+        result.Message.Should().Contain("+    void RunAsync() {}");
+        var updated = await File.ReadAllTextAsync(filePath);
+        updated.Should().Contain("void RunAsync() {}");
+        updated.Should().NotContain("void Run() {}");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WorkspaceDiffPreview_DoesNotModifyFile()
+    {
+        var filePath = Path.Combine(_workspace, "README.md");
+        await File.WriteAllTextAsync(filePath, "# Kam\nold line");
+        var executor = new FileSkillExecutor(new FileAgentTools(_workspace));
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject(
+            "workspace.diff_preview",
+            new
+            {
+                filePath,
+                proposedContent = "# Kam\nnew line"
+            }));
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Diff Preview");
+        result.Message.Should().Contain("-old line");
+        result.Message.Should().Contain("+new line");
+        var unchanged = await File.ReadAllTextAsync(filePath);
+        unchanged.Should().Be("# Kam\nold line");
+    }
+
+    [Fact]
     public async Task ExecuteAsync_UnsupportedSkill_ReturnsFailure()
     {
         var executor = new FileSkillExecutor(new FileAgentTools(_workspace));

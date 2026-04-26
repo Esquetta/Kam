@@ -262,6 +262,30 @@ public static class BuiltInSkillManifestCatalog
                     OptionalNumber("lineCount", "Number of lines to read.")
                 ]),
             Create(
+                "file.replace_range",
+                "Replace File Range",
+                SkillRiskLevel.High,
+                [SkillPermission.FileSystemRead, SkillPermission.FileSystemWrite],
+                [
+                    RequiredString("filePath", "Full path to the file."),
+                    OptionalNumber("startLine", "Starting line number."),
+                    OptionalNumber("lineCount", "Number of lines to replace."),
+                    RequiredString("replacement", "Replacement text for the selected range."),
+                    OptionalBool("previewOnly", "Return diff without writing the file.")
+                ]),
+            Create(
+                "file.patch",
+                "Patch File",
+                SkillRiskLevel.High,
+                [SkillPermission.FileSystemRead, SkillPermission.FileSystemWrite],
+                [
+                    RequiredString("filePath", "Full path to the file."),
+                    RequiredString("oldText", "Exact text to replace."),
+                    RequiredString("newText", "Replacement text."),
+                    OptionalNumber("expectedOccurrences", "Expected number of exact matches."),
+                    OptionalBool("previewOnly", "Return diff without writing the file.")
+                ]),
+            Create(
                 "workspace.tree",
                 "Workspace Tree",
                 SkillRiskLevel.Low,
@@ -302,6 +326,15 @@ public static class BuiltInSkillManifestCatalog
                     RequiredString("directoryPath", "Workspace or directory path to inspect."),
                     OptionalNumber("maxDepth", "Maximum tree depth."),
                     OptionalNumber("maxEntries", "Maximum number of entries to return.")
+                ]),
+            Create(
+                "workspace.diff_preview",
+                "Workspace Diff Preview",
+                SkillRiskLevel.Low,
+                [SkillPermission.FileSystemRead],
+                [
+                    RequiredString("filePath", "Full path to the file."),
+                    RequiredString("proposedContent", "Complete proposed file content to compare.")
                 ]),
             Create(
                 "code.search",
