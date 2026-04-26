@@ -2,6 +2,7 @@ using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using ReactiveUI;
 using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Core.Models.AI;
 using SmartVoiceAgent.Ui.Services;
 using System;
 using System.Collections.Generic;
@@ -26,12 +27,26 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public ReactiveCommand<Unit, Unit> StopMicTestCommand { get; }
         public ReactiveCommand<Unit, Unit> PlayTestRecordingCommand { get; }
         public ReactiveCommand<Unit, Unit> RefreshDevicesCommand { get; }
+        public ReactiveCommand<Unit, Unit> TestAiConnectionCommand { get; }
 
-        public SettingsViewModel()
+        public SettingsViewModel() : this(new JsonSettingsService(), null)
         {
+        }
+
+        public SettingsViewModel(ISettingsService settingsService) : this(settingsService, null)
+        {
+        }
+
+        public SettingsViewModel(MainWindowViewModel mainViewModel) : this(new JsonSettingsService(), mainViewModel)
+        {
+        }
+
+        private SettingsViewModel(ISettingsService settingsService, MainWindowViewModel? mainViewModel)
+        {
+            _mainViewModel = mainViewModel;
             Title = "SETTINGS";
-            _selectedLanguageIndex = 0;
-            _settingsService = new JsonSettingsService();
+            _selectedLanguageIndex = mainViewModel?.SelectedLanguageIndex ?? 0;
+            _settingsService = settingsService;
             _audioDeviceService = new AudioDeviceService();
             
             // Initialize voice test service with factory from DI if available
@@ -45,9 +60,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             StopMicTestCommand = ReactiveCommand.Create(StopMicTest);
             PlayTestRecordingCommand = ReactiveCommand.Create(PlayTestRecording);
             RefreshDevicesCommand = ReactiveCommand.Create(RefreshAudioDevices);
+            TestAiConnectionCommand = ReactiveCommand.Create(() => { });
             
             // Load saved settings
             _settingsService.Load();
+            InitializeAiSettings();
             RefreshStartupSettings();
             
             // Subscribe to setting changes
@@ -60,11 +77,170 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             InitializeVoiceSettings();
         }
 
-        public SettingsViewModel(MainWindowViewModel mainViewModel) : this()
+        #region AI Runtime Settings
+
+        private bool _isInitializingAiSettings;
+        private string _aiProvider = "OpenRouter";
+        private string _aiEndpoint = "https://openrouter.ai/api/v1";
+        private string _aiModelId = "openai/gpt-4.1-mini";
+        private string _aiApiKey = string.Empty;
+        private string _activePlannerProfileId = "openrouter-primary";
+
+        public IReadOnlyList<string> AiProviders { get; } =
+        [
+            "OpenRouter",
+            "OpenAICompatible",
+            "Ollama"
+        ];
+
+        public string AiProvider
         {
-            _mainViewModel = mainViewModel;
-            _selectedLanguageIndex = mainViewModel.SelectedLanguageIndex;
+            get => _aiProvider;
+            set
+            {
+                if (_aiProvider != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _aiProvider, value);
+                    SaveAiProfileSettings();
+                }
+            }
         }
+
+        public string AiEndpoint
+        {
+            get => _aiEndpoint;
+            set
+            {
+                if (_aiEndpoint != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _aiEndpoint, value);
+                    SaveAiProfileSettings();
+                }
+            }
+        }
+
+        public string AiModelId
+        {
+            get => _aiModelId;
+            set
+            {
+                if (_aiModelId != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _aiModelId, value);
+                    SaveAiProfileSettings();
+                }
+            }
+        }
+
+        public string AiApiKey
+        {
+            get => _aiApiKey;
+            set
+            {
+                if (_aiApiKey != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _aiApiKey, value);
+                    this.RaisePropertyChanged(nameof(MaskedAiApiKey));
+                    SaveAiProfileSettings();
+                }
+            }
+        }
+
+        public string MaskedAiApiKey => new ModelProviderProfile { ApiKey = _aiApiKey }.MaskedApiKey;
+
+        public string ActivePlannerProfileId
+        {
+            get => _activePlannerProfileId;
+            set
+            {
+                if (_activePlannerProfileId != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _activePlannerProfileId, value);
+                    SaveAiProfileSettings();
+                }
+            }
+        }
+
+        private void InitializeAiSettings()
+        {
+            var shouldSeedDefaultProfile = false;
+            _isInitializingAiSettings = true;
+            try
+            {
+                var activeProfileId = _settingsService.ActivePlannerProfileId;
+                var profile = _settingsService.ModelProviderProfiles.FirstOrDefault(p => p.Id == activeProfileId)
+                    ?? _settingsService.ModelProviderProfiles.FirstOrDefault(p => p.Roles.Contains(ModelProviderRole.Planner))
+                    ?? CreateDefaultPlannerProfile();
+
+                _activePlannerProfileId = profile.Id;
+                _aiProvider = profile.Provider.ToString();
+                _aiEndpoint = profile.Endpoint;
+                _aiModelId = profile.ModelId;
+                _aiApiKey = profile.ApiKey;
+
+                shouldSeedDefaultProfile = _settingsService.ModelProviderProfiles.All(p => p.Id != profile.Id);
+            }
+            finally
+            {
+                _isInitializingAiSettings = false;
+            }
+
+            if (shouldSeedDefaultProfile)
+            {
+                SaveAiProfileSettings();
+            }
+        }
+
+        private void SaveAiProfileSettings()
+        {
+            if (_isInitializingAiSettings)
+            {
+                return;
+            }
+
+            var profile = new ModelProviderProfile
+            {
+                Id = string.IsNullOrWhiteSpace(_activePlannerProfileId) ? "openrouter-primary" : _activePlannerProfileId,
+                Provider = ParseProvider(_aiProvider),
+                DisplayName = $"{_aiProvider} Planner",
+                Endpoint = _aiEndpoint,
+                ApiKey = _aiApiKey,
+                ModelId = _aiModelId,
+                Roles = [ModelProviderRole.Planner],
+                Enabled = !string.IsNullOrWhiteSpace(_aiApiKey)
+            };
+
+            var profiles = _settingsService.ModelProviderProfiles
+                .Where(p => !p.Id.Equals(profile.Id, StringComparison.OrdinalIgnoreCase))
+                .Concat([profile])
+                .ToList();
+
+            _settingsService.ModelProviderProfiles = profiles;
+            _settingsService.ActivePlannerProfileId = profile.Id;
+        }
+
+        private static ModelProviderProfile CreateDefaultPlannerProfile()
+        {
+            return new ModelProviderProfile
+            {
+                Id = "openrouter-primary",
+                Provider = ModelProviderType.OpenRouter,
+                DisplayName = "OpenRouter Planner",
+                Endpoint = "https://openrouter.ai/api/v1",
+                ModelId = "openai/gpt-4.1-mini",
+                Roles = [ModelProviderRole.Planner],
+                Enabled = false
+            };
+        }
+
+        private static ModelProviderType ParseProvider(string provider)
+        {
+            return Enum.TryParse<ModelProviderType>(provider, ignoreCase: true, out var parsed)
+                ? parsed
+                : ModelProviderType.OpenAICompatible;
+        }
+
+        #endregion
 
         #region Voice Settings
 

@@ -149,6 +149,89 @@
                 </Border>
             </StackPanel>
 
+            <!-- AI Runtime Section -->
+            <StackPanel Spacing="12" Margin="0,0,0,32">
+                <TextBlock Text="AI RUNTIME"
+                           FontSize="12"
+                           FontWeight="Medium"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           LetterSpacing="1"
+                           Margin="0,0,0,8"/>
+
+                <Border Classes="SettingsItem">
+                    <StackPanel Spacing="12">
+                        <Grid ColumnDefinitions="Auto, *">
+                            <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                                <Path Data="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M7,13H11V17H13V13H17V11H13V7H11V11H7V13Z"
+                                      Fill="{DynamicResource TextMutedBrush}"
+                                      Width="16" Height="16"
+                                      Stretch="Uniform"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="Planner Model"
+                                           FontSize="13"
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding ActivePlannerProfileId}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto" ColumnSpacing="10" RowSpacing="10">
+                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="6">
+                                <TextBlock Text="Provider"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                <ComboBox ItemsSource="{Binding AiProviders}"
+                                          SelectedItem="{Binding AiProvider, Mode=TwoWay}"
+                                          HorizontalAlignment="Stretch"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="6">
+                                <TextBlock Text="Model ID"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                <TextBox Text="{Binding AiModelId, Mode=TwoWay}"
+                                         Watermark="openai/gpt-4.1-mini"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Spacing="6">
+                                <TextBlock Text="Endpoint"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                <TextBox Text="{Binding AiEndpoint, Mode=TwoWay}"
+                                         Watermark="https://openrouter.ai/api/v1"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="2" Grid.Column="0" Spacing="6">
+                                <TextBlock Text="API Key"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                <TextBox Text="{Binding AiApiKey, Mode=TwoWay}"
+                                         PasswordChar="*"
+                                         Watermark="sk-..."/>
+                                <TextBlock Text="{Binding MaskedAiApiKey}"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="2" Grid.Column="1" VerticalAlignment="Bottom">
+                                <Button Command="{Binding TestAiConnectionCommand}"
+                                        HorizontalAlignment="Stretch"
+                                        Background="{DynamicResource CardBgHoverBrush}"
+                                        Foreground="{DynamicResource TextSecondaryBrush}"
+                                        Padding="16,9">
+                                    <TextBlock Text="Test Connection" FontSize="12" FontWeight="Medium"/>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
             <!-- Voice Settings Section -->
             <StackPanel Spacing="12" Margin="0,0,0,32">
                 <Grid ColumnDefinitions="*, Auto">
