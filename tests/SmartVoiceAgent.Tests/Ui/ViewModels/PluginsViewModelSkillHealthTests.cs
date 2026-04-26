@@ -223,6 +223,51 @@ public class PluginsViewModelSkillHealthTests
     }
 
     [Fact]
+    public void SelectPlugin_WithRecentRuns_ExposesExecutionHistoryRows()
+    {
+        var viewModel = new PluginsViewModel(
+        [
+            new SkillHealthReport
+            {
+                SkillId = "shell.run",
+                DisplayName = "Run Shell Command",
+                Source = "builtin",
+                ExecutorType = "builtin",
+                Status = SkillHealthStatus.Healthy,
+                Details = "Executor available.",
+                RecentRuns =
+                [
+                    new SkillAuditRecord
+                    {
+                        Timestamp = new DateTimeOffset(2026, 4, 26, 14, 10, 0, TimeSpan.Zero),
+                        Status = SkillExecutionStatus.PermissionDenied,
+                        ErrorCode = "shell_command_blocked",
+                        ResultMessage = "Command blocked.",
+                        DurationMilliseconds = 3
+                    },
+                    new SkillAuditRecord
+                    {
+                        Timestamp = new DateTimeOffset(2026, 4, 26, 14, 0, 0, TimeSpan.Zero),
+                        Status = SkillExecutionStatus.Succeeded,
+                        ResultMessage = "Echo completed.",
+                        DurationMilliseconds = 25
+                    }
+                ]
+            }
+        ]);
+
+        viewModel.SelectPlugin("shell.run");
+
+        var plugin = viewModel.Plugins.Should().ContainSingle().Subject;
+        plugin.HasExecutionHistory.Should().BeTrue();
+        viewModel.HasSelectedSkillExecutionHistory.Should().BeTrue();
+        viewModel.SelectedSkillExecutionHistory.Should().HaveCount(2);
+        viewModel.SelectedSkillExecutionHistory[0].StatusText.Should().Be("Permission Denied");
+        viewModel.SelectedSkillExecutionHistory[0].DetailText.Should().Contain("shell_command_blocked");
+        viewModel.SelectedSkillExecutionHistory[1].DetailText.Should().Contain("Echo completed.");
+    }
+
+    [Fact]
     public void SelectPlugin_UpdatesSkillDetailPanel()
     {
         var viewModel = new PluginsViewModel(
@@ -407,6 +452,54 @@ public class PluginsViewModelSkillHealthTests
             && plugin.HasEvalResult
             && plugin.LastEvalStatus == "Eval Fail");
         evalHarness.RunCount.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task RunSkillEvalAsync_WithRuntimeServices_ExposesDetailedEvalRows()
+    {
+        var evalHarness = new StaticSkillEvalHarness(new SkillEvalSummary
+        {
+            Total = 2,
+            Passed = 1,
+            Failed = 1,
+            Results =
+            [
+                new SkillEvalResult
+                {
+                    Name = "shell smoke",
+                    SkillId = "shell.run",
+                    Passed = true,
+                    ExpectedStatus = SkillExecutionStatus.Succeeded,
+                    ActualStatus = SkillExecutionStatus.Succeeded,
+                    Message = "Exit Code: 0",
+                    DurationMilliseconds = 12
+                },
+                new SkillEvalResult
+                {
+                    Name = "web smoke",
+                    SkillId = "web.fetch",
+                    Passed = false,
+                    ExpectedStatus = SkillExecutionStatus.Succeeded,
+                    ActualStatus = SkillExecutionStatus.PermissionDenied,
+                    Message = "Host blocked.",
+                    DurationMilliseconds = 2
+                }
+            ]
+        });
+        var viewModel = new PluginsViewModel(
+            new StaticSkillHealthService([]),
+            evalHarness,
+            new StaticSkillEvalCaseCatalog());
+
+        await viewModel.RunSkillEvalAsync();
+
+        viewModel.HasSkillEvalResults.Should().BeTrue();
+        viewModel.SkillEvalResults.Should().HaveCount(2);
+        viewModel.SkillEvalResults[0].StatusText.Should().Be("Pass");
+        viewModel.SkillEvalResults[0].DetailText.Should().Contain("Exit Code: 0");
+        viewModel.SkillEvalResults[1].StatusText.Should().Be("Fail");
+        viewModel.SkillEvalResults[1].ExpectedActualText.Should().Be("Expected: Succeeded | Actual: PermissionDenied");
+        viewModel.SkillEvalResults[1].DetailText.Should().Contain("Host blocked.");
     }
 
     [Fact]

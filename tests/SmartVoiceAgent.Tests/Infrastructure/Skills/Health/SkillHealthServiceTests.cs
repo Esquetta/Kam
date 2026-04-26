@@ -170,6 +170,75 @@ public class SkillHealthServiceTests
         report.LastRunDurationMilliseconds.Should().Be(1250);
     }
 
+    [Fact]
+    public async Task GetHealthAsync_IncludesRecentAuditHistoryForEachSkill()
+    {
+        var registry = new InMemorySkillRegistry();
+        registry.Register(new KamSkillManifest
+        {
+            Id = "shell.run",
+            DisplayName = "Run Shell",
+            Source = "builtin",
+            ExecutorType = "builtin",
+            Enabled = true
+        });
+        registry.Register(new KamSkillManifest
+        {
+            Id = "web.fetch",
+            DisplayName = "Fetch URL",
+            Source = "builtin",
+            ExecutorType = "builtin",
+            Enabled = true
+        });
+        var now = new DateTimeOffset(2026, 4, 26, 14, 0, 0, TimeSpan.Zero);
+        var auditLog = new StaticSkillAuditLogService(
+        [
+            new SkillAuditRecord
+            {
+                SkillId = "shell.run",
+                Timestamp = now.AddMinutes(-5),
+                Status = SkillExecutionStatus.Succeeded,
+                ResultMessage = "Echo completed.",
+                DurationMilliseconds = 25
+            },
+            new SkillAuditRecord
+            {
+                SkillId = "web.fetch",
+                Timestamp = now.AddMinutes(-3),
+                Status = SkillExecutionStatus.PermissionDenied,
+                ErrorCode = "web_host_not_allowed",
+                ResultMessage = "Host not allowed."
+            },
+            new SkillAuditRecord
+            {
+                SkillId = "shell.run",
+                Timestamp = now,
+                Status = SkillExecutionStatus.PermissionDenied,
+                ErrorCode = "shell_command_blocked",
+                ResultMessage = "Command blocked.",
+                DurationMilliseconds = 3
+            }
+        ]);
+        var service = new SkillHealthService(
+            registry,
+            [
+                new MatchingSkillExecutor("shell.run"),
+                new MatchingSkillExecutor("web.fetch")
+            ],
+            auditLog);
+
+        var reports = await service.GetHealthAsync();
+
+        var shell = reports.Single(report => report.SkillId == "shell.run");
+        shell.RecentRuns.Should().HaveCount(2);
+        shell.RecentRuns.Select(record => record.ResultMessage)
+            .Should().Equal("Command blocked.", "Echo completed.");
+
+        var web = reports.Single(report => report.SkillId == "web.fetch");
+        web.RecentRuns.Should().ContainSingle()
+            .Which.ErrorCode.Should().Be("web_host_not_allowed");
+    }
+
     private sealed class MatchingSkillExecutor : ISkillExecutor
     {
         private readonly string _skillId;

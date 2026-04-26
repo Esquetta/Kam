@@ -6,6 +6,7 @@ namespace SmartVoiceAgent.Infrastructure.Skills.Health;
 public sealed class SkillHealthService : ISkillHealthService
 {
     private const int AuditHistoryLimit = 500;
+    private const int RecentRunHistoryLimit = 5;
 
     private readonly ISkillRegistry _skillRegistry;
     private readonly IEnumerable<ISkillExecutor> _executors;
@@ -25,14 +26,14 @@ public sealed class SkillHealthService : ISkillHealthService
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var latestRuns = await GetLatestRunsAsync(cancellationToken);
+        var recentRuns = await GetRecentRunsAsync(cancellationToken);
         IReadOnlyCollection<SkillHealthReport> reports = _skillRegistry
             .GetAll()
             .OrderBy(manifest => manifest.Id, StringComparer.OrdinalIgnoreCase)
             .Select(manifest =>
             {
-                latestRuns.TryGetValue(manifest.Id, out var lastRun);
-                return CreateReport(manifest, lastRun);
+                recentRuns.TryGetValue(manifest.Id, out var manifestRuns);
+                return CreateReport(manifest, manifestRuns ?? []);
             })
             .ToArray();
 
@@ -41,10 +42,11 @@ public sealed class SkillHealthService : ISkillHealthService
 
     private SkillHealthReport CreateReport(
         KamSkillManifest manifest,
-        SkillAuditRecord? lastRun)
+        IReadOnlyList<SkillAuditRecord> recentRuns)
     {
         var status = GetStatus(manifest);
         var missingPermissions = GetMissingPermissions(manifest);
+        var lastRun = recentRuns.FirstOrDefault();
 
         return new SkillHealthReport
         {
@@ -75,16 +77,17 @@ public sealed class SkillHealthService : ISkillHealthService
             LastRunStatus = lastRun?.Status,
             LastRunMessage = lastRun?.ResultMessage ?? string.Empty,
             LastRunErrorCode = lastRun?.ErrorCode ?? string.Empty,
-            LastRunDurationMilliseconds = lastRun?.DurationMilliseconds ?? 0
+            LastRunDurationMilliseconds = lastRun?.DurationMilliseconds ?? 0,
+            RecentRuns = recentRuns.ToArray()
         };
     }
 
-    private async Task<IReadOnlyDictionary<string, SkillAuditRecord>> GetLatestRunsAsync(
+    private async Task<IReadOnlyDictionary<string, IReadOnlyList<SkillAuditRecord>>> GetRecentRunsAsync(
         CancellationToken cancellationToken)
     {
         if (_auditLogService is null)
         {
-            return new Dictionary<string, SkillAuditRecord>(StringComparer.OrdinalIgnoreCase);
+            return new Dictionary<string, IReadOnlyList<SkillAuditRecord>>(StringComparer.OrdinalIgnoreCase);
         }
 
         var records = await _auditLogService.GetRecentAsync(AuditHistoryLimit, cancellationToken);
@@ -94,7 +97,7 @@ public sealed class SkillHealthService : ISkillHealthService
             .GroupBy(record => record.SkillId, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
                 group => group.Key,
-                group => group.First(),
+                group => (IReadOnlyList<SkillAuditRecord>)group.Take(RecentRunHistoryLimit).ToArray(),
                 StringComparer.OrdinalIgnoreCase);
     }
 

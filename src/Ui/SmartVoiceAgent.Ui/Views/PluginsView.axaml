@@ -182,6 +182,53 @@
                                    FontSize="11"
                                    Foreground="{DynamicResource TextMutedBrush}"
                                    TextWrapping="Wrap"/>
+                        <ScrollViewer IsVisible="{Binding HasSkillEvalResults}"
+                                      MaxHeight="132"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      Margin="0,6,0,0">
+                            <ItemsControl ItemsSource="{Binding SkillEvalResults}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="54,*,108"
+                                              ColumnSpacing="8"
+                                              Margin="0,2">
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{Binding StatusText}"
+                                                       FontSize="10"
+                                                       FontFamily="Consolas"
+                                                       Foreground="{Binding StatusColor}"
+                                                       TextWrapping="NoWrap"/>
+                                            <StackPanel Grid.Column="1" Spacing="1">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontSize="10"
+                                                           FontFamily="Consolas"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                                           TextWrapping="NoWrap"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding ExpectedActualText}"
+                                                           FontSize="10"
+                                                           Foreground="{DynamicResource TextMutedBrush}"
+                                                           TextWrapping="NoWrap"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding DetailText}"
+                                                           FontSize="10"
+                                                           Foreground="{DynamicResource TextMutedBrush}"
+                                                           TextWrapping="Wrap"
+                                                           MaxLines="2"/>
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{Binding SkillId}"
+                                                       FontSize="10"
+                                                       FontFamily="Consolas"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       TextWrapping="NoWrap"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
                     </StackPanel>
                     <Button Grid.Column="2"
                             Command="{Binding RunSkillEvalCommand}"
@@ -278,6 +325,43 @@
                                    FontFamily="Consolas"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"/>
+                        <StackPanel IsVisible="{Binding HasSelectedSkillExecutionHistory}"
+                                    Spacing="3"
+                                    Margin="0,4,0,0">
+                            <TextBlock Text="Execution History"
+                                       FontSize="10"
+                                       FontFamily="Consolas"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            <ItemsControl ItemsSource="{Binding SelectedSkillExecutionHistory}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="140,120,*"
+                                              ColumnSpacing="8"
+                                              Margin="0,1">
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{Binding TimestampText}"
+                                                       FontSize="10"
+                                                       FontFamily="Consolas"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       TextWrapping="NoWrap"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding StatusText}"
+                                                       FontSize="10"
+                                                       FontFamily="Consolas"
+                                                       Foreground="{Binding StatusColor}"
+                                                       TextWrapping="NoWrap"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{Binding DetailText}"
+                                                       FontSize="10"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       TextWrapping="Wrap"
+                                                       MaxLines="2"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
                         <TextBlock Text="{Binding SelectedSkillPolicyGuardrail}"
                                    FontSize="10"
                                    FontFamily="Consolas"

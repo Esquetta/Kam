@@ -121,6 +121,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             set => this.RaiseAndSetIfChanged(ref _policyGuardrailText, value);
         }
 
+        public ObservableCollection<SkillExecutionHistoryItem> ExecutionHistory { get; set; } = new();
+
+        public bool HasExecutionHistory => ExecutionHistory.Count > 0;
+
         // Color properties for the new design - use theme-aware colors
         public IBrush IconColor { get; set; } = Brush.Parse("#06B6D4");
         public IBrush GlowColor { get; set; } = Brush.Parse("#1606B6D4");
@@ -139,12 +143,40 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         }
     }
 
+    public sealed class SkillExecutionHistoryItem
+    {
+        public string TimestampText { get; set; } = string.Empty;
+
+        public string StatusText { get; set; } = string.Empty;
+
+        public string DetailText { get; set; } = string.Empty;
+
+        public IBrush StatusColor { get; set; } = Brush.Parse("#71717A");
+    }
+
+    public sealed class SkillEvalResultItem
+    {
+        public string Name { get; set; } = string.Empty;
+
+        public string SkillId { get; set; } = string.Empty;
+
+        public string StatusText { get; set; } = string.Empty;
+
+        public string ExpectedActualText { get; set; } = string.Empty;
+
+        public string DetailText { get; set; } = string.Empty;
+
+        public IBrush StatusColor { get; set; } = Brush.Parse("#71717A");
+    }
+
     public class PluginsViewModel : ViewModelBase
     {
         private ObservableCollection<PluginItem> _plugins = new();
+        private ObservableCollection<SkillEvalResultItem> _skillEvalResults = new();
         private string _skillEvalStatus = "Smoke evals not run";
         private string _skillEvalDetail = "Open this screen with runtime services available to run smoke evals.";
         private bool _isSkillEvalHealthy;
+        private bool _hasSkillEvalResults;
         private string _importLocation = string.Empty;
         private int _selectedImportSourceIndex;
         private string _importStatus = "Import local or skills.sh folders containing SKILL.md.";
@@ -159,6 +191,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private string _selectedSkillPermissions = string.Empty;
         private string _selectedSkillLastRun = string.Empty;
         private string _selectedSkillPolicyGuardrail = string.Empty;
+        private ObservableCollection<SkillExecutionHistoryItem> _selectedSkillExecutionHistory = new();
+        private bool _hasSelectedSkillExecutionHistory;
         private bool _canEditSelectedSkillPolicy;
         private string _policyOptionKeyInput = string.Empty;
         private string _policyOptionValueInput = string.Empty;
@@ -174,6 +208,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             get => _plugins;
             set => this.RaiseAndSetIfChanged(ref _plugins, value);
+        }
+
+        public ObservableCollection<SkillEvalResultItem> SkillEvalResults
+        {
+            get => _skillEvalResults;
+            private set => this.RaiseAndSetIfChanged(ref _skillEvalResults, value);
         }
 
         public string SkillEvalStatus
@@ -192,6 +232,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             get => _isSkillEvalHealthy;
             private set => this.RaiseAndSetIfChanged(ref _isSkillEvalHealthy, value);
+        }
+
+        public bool HasSkillEvalResults
+        {
+            get => _hasSkillEvalResults;
+            private set => this.RaiseAndSetIfChanged(ref _hasSkillEvalResults, value);
         }
 
         public ObservableCollection<string> ImportSources { get; } =
@@ -279,6 +325,18 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             get => _selectedSkillPolicyGuardrail;
             private set => this.RaiseAndSetIfChanged(ref _selectedSkillPolicyGuardrail, value);
+        }
+
+        public ObservableCollection<SkillExecutionHistoryItem> SelectedSkillExecutionHistory
+        {
+            get => _selectedSkillExecutionHistory;
+            private set => this.RaiseAndSetIfChanged(ref _selectedSkillExecutionHistory, value);
+        }
+
+        public bool HasSelectedSkillExecutionHistory
+        {
+            get => _hasSelectedSkillExecutionHistory;
+            private set => this.RaiseAndSetIfChanged(ref _hasSelectedSkillExecutionHistory, value);
         }
 
         public bool CanEditSelectedSkillPolicy
@@ -581,6 +639,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 SelectedSkillPermissions = string.Empty;
                 SelectedSkillLastRun = string.Empty;
                 SelectedSkillPolicyGuardrail = string.Empty;
+                SelectedSkillExecutionHistory = new ObservableCollection<SkillExecutionHistoryItem>();
+                HasSelectedSkillExecutionHistory = false;
                 CanEditSelectedSkillPolicy = false;
                 PolicyOptionKeyInput = string.Empty;
                 PolicyOptionValueInput = string.Empty;
@@ -603,6 +663,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 ? $"{plugin.LastRunStatus} | {plugin.LastRunDetail}"
                 : "Last Run: none";
             SelectedSkillPolicyGuardrail = plugin.PolicyGuardrailText;
+            SelectedSkillExecutionHistory = new ObservableCollection<SkillExecutionHistoryItem>(
+                plugin.ExecutionHistory);
+            HasSelectedSkillExecutionHistory = SelectedSkillExecutionHistory.Count > 0;
             CanEditSelectedSkillPolicy = _skillPolicyManager is not null
                 && SkillRuntimePolicyOptions.IsEditableSkill(plugin.SkillId);
             PolicyOptionKeyInput = SkillRuntimePolicyOptions.GetDefaultOptionKey(plugin.SkillId);
@@ -737,12 +800,17 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 SkillEvalStatus = "Smoke evals not run";
                 SkillEvalDetail = "No smoke eval results are available.";
                 IsSkillEvalHealthy = false;
+                SkillEvalResults = new ObservableCollection<SkillEvalResultItem>();
+                HasSkillEvalResults = false;
                 ApplyPluginEvalResults(null);
                 return;
             }
 
             SkillEvalStatus = $"{summary.Passed}/{summary.Total} smoke evals passing";
             IsSkillEvalHealthy = summary.Failed == 0;
+            SkillEvalResults = new ObservableCollection<SkillEvalResultItem>(
+                summary.Results.Select(CreateSkillEvalResultItem));
+            HasSkillEvalResults = SkillEvalResults.Count > 0;
 
             var failingResult = summary.Results.FirstOrDefault(result => !result.Passed);
             SkillEvalDetail = failingResult is null
@@ -828,6 +896,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     ? string.Empty
                     : FormatPermissions("Missing", report.MissingPermissions),
                 RuntimeOptions = CloneRuntimeOptions(report.RuntimeOptions),
+                ExecutionHistory = new ObservableCollection<SkillExecutionHistoryItem>(
+                    report.RecentRuns
+                        .OrderByDescending(record => record.Timestamp)
+                        .Select(CreateExecutionHistoryItem)),
                 PolicyGuardrailText = SkillRuntimePolicyOptions.Describe(
                     report.SkillId,
                     report.RuntimeOptions)
@@ -937,6 +1009,73 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             return values.Length == 0
                 ? $"{label}: none"
                 : $"{label}: {string.Join(", ", values)}";
+        }
+
+        private static SkillExecutionHistoryItem CreateExecutionHistoryItem(SkillAuditRecord record)
+        {
+            return new SkillExecutionHistoryItem
+            {
+                TimestampText = record.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"),
+                StatusText = FormatExecutionStatus(record.Status),
+                DetailText = FormatAuditRecordDetail(record),
+                StatusColor = GetExecutionStatusBrush(record.Status)
+            };
+        }
+
+        private static SkillEvalResultItem CreateSkillEvalResultItem(SkillEvalResult result)
+        {
+            return new SkillEvalResultItem
+            {
+                Name = result.Name,
+                SkillId = result.SkillId,
+                StatusText = result.Passed ? "Pass" : "Fail",
+                ExpectedActualText = $"Expected: {result.ExpectedStatus} | Actual: {result.ActualStatus}",
+                DetailText = FormatEvalResultDetail(result),
+                StatusColor = result.Passed
+                    ? Brush.Parse("#10B981")
+                    : Brush.Parse("#EF4444")
+            };
+        }
+
+        private static string FormatAuditRecordDetail(SkillAuditRecord record)
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(record.ResultMessage))
+            {
+                parts.Add(record.ResultMessage);
+            }
+
+            if (!string.IsNullOrWhiteSpace(record.ErrorCode))
+            {
+                parts.Add(record.ErrorCode);
+            }
+
+            if (record.DurationMilliseconds > 0)
+            {
+                parts.Add($"{record.DurationMilliseconds} ms");
+            }
+
+            return parts.Count == 0
+                ? "No execution detail."
+                : string.Join(" | ", parts);
+        }
+
+        private static string FormatEvalResultDetail(SkillEvalResult result)
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(result.Message))
+            {
+                parts.Add(result.Message);
+            }
+
+            if (result.DurationMilliseconds > 0)
+            {
+                parts.Add($"{result.DurationMilliseconds} ms");
+            }
+
+            return parts.Count == 0
+                ? "No eval detail."
+                : string.Join(" | ", parts);
         }
 
         private static Dictionary<string, string> CloneRuntimeOptions(

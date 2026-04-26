@@ -42,4 +42,6 @@ public sealed class SkillHealthReport
     public string LastRunErrorCode { get; set; } = string.Empty;
 
     public long LastRunDurationMilliseconds { get; set; }
+
+    public IReadOnlyList<SkillAuditRecord> RecentRuns { get; set; } = [];
 }
