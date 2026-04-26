@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Infrastructure.Skills.Policy;
 
 namespace SmartVoiceAgent.Infrastructure.Skills.BuiltIn.AgentTools;
 
@@ -15,10 +16,12 @@ public sealed class WebPageSkillExecutor : ISkillExecutor
     private const int MaxLength = 30000;
 
     private readonly HttpClient _httpClient;
+    private readonly ISkillRegistry? _skillRegistry;
 
-    public WebPageSkillExecutor(HttpClient httpClient)
+    public WebPageSkillExecutor(HttpClient httpClient, ISkillRegistry? skillRegistry = null)
     {
         _httpClient = httpClient;
+        _skillRegistry = skillRegistry;
     }
 
     public bool CanExecute(string skillId)
@@ -37,15 +40,14 @@ public sealed class WebPageSkillExecutor : ISkillExecutor
         }
 
         var url = SkillPlanArgumentReader.GetString(plan, "url");
-        var validation = ValidateUrl(
+        var runtimeOptions = GetRuntimeOptions(plan.SkillId);
+        var validation = ValidateRequest(
             url,
-            SkillPlanArgumentReader.GetBool(plan, "allowPrivateNetwork"));
+            GetRuntimeBool(runtimeOptions, SkillRuntimePolicyOptions.WebAllowPrivateNetwork),
+            runtimeOptions);
         if (validation is not null)
         {
-            return SkillResult.Failed(
-                validation,
-                SkillExecutionStatus.ValidationFailed,
-                "invalid_url");
+            return validation;
         }
 
         var timeoutMilliseconds = Math.Clamp(
@@ -98,24 +100,110 @@ public sealed class WebPageSkillExecutor : ISkillExecutor
         }
     }
 
-    private static string? ValidateUrl(string url, bool allowPrivateNetwork)
+    private IReadOnlyDictionary<string, string> GetRuntimeOptions(string skillId)
+    {
+        return _skillRegistry is not null
+            && _skillRegistry.TryGet(skillId, out var manifest)
+            && manifest is not null
+            ? manifest.RuntimeOptions
+            : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static SkillResult? ValidateRequest(
+        string url,
+        bool allowPrivateNetwork,
+        IReadOnlyDictionary<string, string> runtimeOptions)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
         {
-            return "Argument 'url' must be an absolute URL.";
+            return SkillResult.Failed(
+                "Argument 'url' must be an absolute URL.",
+                SkillExecutionStatus.ValidationFailed,
+                "invalid_url");
         }
 
         if (uri.Scheme is not ("http" or "https"))
         {
-            return "Only http and https URLs are supported.";
+            return SkillResult.Failed(
+                "Only http and https URLs are supported.",
+                SkillExecutionStatus.ValidationFailed,
+                "invalid_url");
         }
 
         if (!allowPrivateNetwork && IsPrivateNetworkTarget(uri.Host))
         {
-            return "Private network and localhost URLs are blocked unless allowPrivateNetwork is true.";
+            return SkillResult.Failed(
+                $"Private network and localhost URLs are blocked unless {SkillRuntimePolicyOptions.WebAllowPrivateNetwork} is true.",
+                SkillExecutionStatus.ValidationFailed,
+                "invalid_url");
+        }
+
+        if (MatchesHostList(uri.Host, runtimeOptions, SkillRuntimePolicyOptions.WebBlockedHosts))
+        {
+            return SkillResult.Failed(
+                "Web host blocked by runtime policy.",
+                SkillExecutionStatus.PermissionDenied,
+                "web_host_blocked");
+        }
+
+        var allowedHosts = GetRuntimeList(runtimeOptions, SkillRuntimePolicyOptions.WebAllowedHosts);
+        if (allowedHosts.Count > 0 && !allowedHosts.Any(allowedHost => HostMatches(uri.Host, allowedHost)))
+        {
+            return SkillResult.Failed(
+                "Web host is not in the configured allow list.",
+                SkillExecutionStatus.PermissionDenied,
+                "web_host_not_allowed");
         }
 
         return null;
+    }
+
+    private static bool MatchesHostList(
+        string host,
+        IReadOnlyDictionary<string, string> runtimeOptions,
+        string key)
+    {
+        return GetRuntimeList(runtimeOptions, key)
+            .Any(candidate => HostMatches(host, candidate));
+    }
+
+    private static IReadOnlyCollection<string> GetRuntimeList(
+        IReadOnlyDictionary<string, string> runtimeOptions,
+        string key)
+    {
+        return runtimeOptions.TryGetValue(key, out var value)
+            ? SkillRuntimePolicyOptions.SplitList(value)
+            : [];
+    }
+
+    private static bool GetRuntimeBool(
+        IReadOnlyDictionary<string, string> runtimeOptions,
+        string key)
+    {
+        return runtimeOptions.TryGetValue(key, out var value)
+            && bool.TryParse(value, out var parsed)
+            && parsed;
+    }
+
+    private static bool HostMatches(string host, string configuredHost)
+    {
+        var normalizedHost = host.Trim().TrimEnd('.').ToLowerInvariant();
+        var normalizedConfiguredHost = NormalizeConfiguredHost(configuredHost);
+
+        return normalizedConfiguredHost == "*"
+            || normalizedHost.Equals(normalizedConfiguredHost, StringComparison.OrdinalIgnoreCase)
+            || normalizedHost.EndsWith($".{normalizedConfiguredHost}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeConfiguredHost(string configuredHost)
+    {
+        var candidate = configuredHost.Trim().TrimEnd('.');
+        if (Uri.TryCreate(candidate, UriKind.Absolute, out var uri))
+        {
+            candidate = uri.Host;
+        }
+
+        return candidate.Trim().TrimEnd('.').ToLowerInvariant();
     }
 
     private static bool IsPrivateNetworkTarget(string host)

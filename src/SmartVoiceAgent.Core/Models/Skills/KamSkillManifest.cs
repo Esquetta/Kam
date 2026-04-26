@@ -30,5 +30,7 @@ public sealed class KamSkillManifest
 
     public List<SkillArgumentDefinition> Arguments { get; set; } = [];
 
+    public Dictionary<string, string> RuntimeOptions { get; set; } = [];
+
     public int TimeoutMilliseconds { get; set; } = 30000;
 }

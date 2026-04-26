@@ -30,6 +30,9 @@ public sealed class SkillHealthReport
 
     public IReadOnlyCollection<SkillPermission> MissingPermissions { get; set; } = [];
 
+    public IReadOnlyDictionary<string, string> RuntimeOptions { get; set; } =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
     public DateTimeOffset? LastRunAt { get; set; }
 
     public SkillExecutionStatus? LastRunStatus { get; set; }

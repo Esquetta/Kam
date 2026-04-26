@@ -11,4 +11,10 @@ public interface ISkillPolicyManager
     Task<bool> RevokePermissionsAsync(string skillId, CancellationToken cancellationToken = default);
 
     Task<bool> GrantPermissionsAsync(string skillId, CancellationToken cancellationToken = default);
+
+    Task<bool> SetRuntimeOptionAsync(
+        string skillId,
+        string key,
+        string value,
+        CancellationToken cancellationToken = default);
 }

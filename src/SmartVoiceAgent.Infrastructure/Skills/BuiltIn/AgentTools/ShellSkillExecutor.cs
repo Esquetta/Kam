@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Infrastructure.Skills.Policy;
 
 namespace SmartVoiceAgent.Infrastructure.Skills.BuiltIn.AgentTools;
 
@@ -33,6 +34,13 @@ public sealed class ShellSkillExecutor : ISkillExecutor
         ":(){"
     ];
 
+    private readonly ISkillRegistry? _skillRegistry;
+
+    public ShellSkillExecutor(ISkillRegistry? skillRegistry = null)
+    {
+        _skillRegistry = skillRegistry;
+    }
+
     public bool CanExecute(string skillId)
     {
         return skillId.Equals("shell.run", StringComparison.OrdinalIgnoreCase);
@@ -56,12 +64,11 @@ public sealed class ShellSkillExecutor : ISkillExecutor
                 "validation_failed");
         }
 
-        if (IsBlockedCommand(command))
+        var runtimeOptions = GetRuntimeOptions(plan.SkillId);
+        var policyFailure = ValidateRuntimePolicy(command, runtimeOptions);
+        if (policyFailure is not null)
         {
-            return SkillResult.Failed(
-                "Shell command blocked by safety policy.",
-                SkillExecutionStatus.PermissionDenied,
-                "shell_command_blocked");
+            return policyFailure;
         }
 
         var workingDirectory = SkillPlanArgumentReader.GetString(
@@ -161,10 +168,77 @@ public sealed class ShellSkillExecutor : ISkillExecutor
         };
     }
 
-    private static bool IsBlockedCommand(string command)
+    private IReadOnlyDictionary<string, string> GetRuntimeOptions(string skillId)
     {
-        var normalized = Regex.Replace(command.Trim().ToLowerInvariant(), @"\s+", " ");
-        return BlockedPatterns.Any(pattern => normalized.Contains(pattern, StringComparison.OrdinalIgnoreCase));
+        return _skillRegistry is not null
+            && _skillRegistry.TryGet(skillId, out var manifest)
+            && manifest is not null
+            ? manifest.RuntimeOptions
+            : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static SkillResult? ValidateRuntimePolicy(
+        string command,
+        IReadOnlyDictionary<string, string> runtimeOptions)
+    {
+        if (IsBlockedCommand(command, runtimeOptions))
+        {
+            return SkillResult.Failed(
+                "Shell command blocked by safety policy.",
+                SkillExecutionStatus.PermissionDenied,
+                "shell_command_blocked");
+        }
+
+        if (!IsAllowedCommand(command, runtimeOptions))
+        {
+            return SkillResult.Failed(
+                "Shell command is not in the configured allow list.",
+                SkillExecutionStatus.PermissionDenied,
+                "shell_command_not_allowed");
+        }
+
+        return null;
+    }
+
+    private static bool IsBlockedCommand(
+        string command,
+        IReadOnlyDictionary<string, string> runtimeOptions)
+    {
+        var normalized = NormalizeCommand(command);
+        var blockedPatterns = BlockedPatterns
+            .Concat(GetRuntimeList(runtimeOptions, SkillRuntimePolicyOptions.ShellBlockedPatterns));
+
+        return blockedPatterns.Any(pattern =>
+            normalized.Contains(NormalizeCommand(pattern), StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsAllowedCommand(
+        string command,
+        IReadOnlyDictionary<string, string> runtimeOptions)
+    {
+        var allowedCommands = GetRuntimeList(runtimeOptions, SkillRuntimePolicyOptions.ShellAllowedCommands);
+        if (allowedCommands.Count == 0)
+        {
+            return true;
+        }
+
+        var normalized = NormalizeCommand(command);
+        return allowedCommands.Any(commandPrefix =>
+            normalized.StartsWith(NormalizeCommand(commandPrefix), StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static IReadOnlyCollection<string> GetRuntimeList(
+        IReadOnlyDictionary<string, string> runtimeOptions,
+        string key)
+    {
+        return runtimeOptions.TryGetValue(key, out var value)
+            ? SkillRuntimePolicyOptions.SplitList(value)
+            : [];
+    }
+
+    private static string NormalizeCommand(string command)
+    {
+        return Regex.Replace(command.Trim().ToLowerInvariant(), @"\s+", " ");
     }
 
     private static string FormatResult(

@@ -269,6 +269,59 @@ public class PluginsViewModelSkillHealthTests
     }
 
     [Fact]
+    public async Task SaveRuntimePolicyOptionAsync_SelectedSkill_PersistsOptionAndRefreshesDetail()
+    {
+        var policyManager = new RecordingSkillPolicyManager();
+        var healthService = new SequencedSkillHealthService(
+        [
+            new SkillHealthReport
+            {
+                SkillId = "shell.run",
+                DisplayName = "Run Shell Command",
+                Source = "builtin",
+                ExecutorType = "builtin",
+                Status = SkillHealthStatus.Healthy,
+                Details = "Executor available.",
+                RuntimeOptions = new Dictionary<string, string>
+                {
+                    ["shell.blockedPatterns"] = "git reset --hard"
+                }
+            }
+        ],
+        [
+            new SkillHealthReport
+            {
+                SkillId = "shell.run",
+                DisplayName = "Run Shell Command",
+                Source = "builtin",
+                ExecutorType = "builtin",
+                Status = SkillHealthStatus.Healthy,
+                Details = "Executor available.",
+                RuntimeOptions = new Dictionary<string, string>
+                {
+                    ["shell.blockedPatterns"] = "git reset --hard;Remove-Item"
+                }
+            }
+        ]);
+        var viewModel = new PluginsViewModel(healthService, policyManager);
+
+        viewModel.SelectPlugin("shell.run");
+        viewModel.CanEditSelectedSkillPolicy.Should().BeTrue();
+        viewModel.SelectedSkillPolicyGuardrail.Should().Contain("shell.blockedPatterns");
+        viewModel.PolicyOptionKeyInput.Should().Be("shell.blockedPatterns");
+        viewModel.PolicyOptionValueInput = "git reset --hard;Remove-Item";
+
+        await viewModel.SaveRuntimePolicyOptionAsync();
+
+        policyManager.SavedRuntimeOptions.Should().ContainSingle().Which.Should().Be((
+            "shell.run",
+            "shell.blockedPatterns",
+            "git reset --hard;Remove-Item"));
+        viewModel.SelectedSkillPolicyGuardrail.Should().Contain("Remove-Item");
+        viewModel.SkillEvalStatus.Should().Be("Runtime policy saved");
+    }
+
+    [Fact]
     public async Task TestSkillAsync_WithRuntimeService_ExecutesSkillTestAndRefreshesCards()
     {
         var testService = new RecordingSkillTestService(
@@ -486,6 +539,7 @@ public class PluginsViewModelSkillHealthTests
     private sealed class RecordingSkillPolicyManager : ISkillPolicyManager
     {
         public List<string> GrantedSkillIds { get; } = [];
+        public List<(string SkillId, string Key, string Value)> SavedRuntimeOptions { get; } = [];
 
         public Task<bool> ApproveReviewAsync(string skillId, CancellationToken cancellationToken = default) =>
             Task.FromResult(true);
@@ -502,6 +556,16 @@ public class PluginsViewModelSkillHealthTests
         public Task<bool> GrantPermissionsAsync(string skillId, CancellationToken cancellationToken = default)
         {
             GrantedSkillIds.Add(skillId);
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> SetRuntimeOptionAsync(
+            string skillId,
+            string key,
+            string value,
+            CancellationToken cancellationToken = default)
+        {
+            SavedRuntimeOptions.Add((skillId, key, value));
             return Task.FromResult(true);
         }
     }

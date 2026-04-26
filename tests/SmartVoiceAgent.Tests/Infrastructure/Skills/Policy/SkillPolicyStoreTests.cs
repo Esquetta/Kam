@@ -83,6 +83,36 @@ public class SkillPolicyStoreTests : IDisposable
         manifest.GrantedPermissions.Should().ContainSingle().Which.Should().Be(SkillPermission.ProcessLaunch);
     }
 
+    [Fact]
+    public void SaveState_PersistsRuntimeOptionsAcrossStoreInstances()
+    {
+        var firstStore = new JsonSkillPolicyStore(_policyFile);
+        firstStore.SaveState(new SkillPolicyState
+        {
+            SkillId = "shell.run",
+            Enabled = true,
+            ReviewRequired = false,
+            RuntimeOptions = new Dictionary<string, string>
+            {
+                ["shell.blockedPatterns"] = "git reset --hard",
+                ["shell.allowedCommands"] = "dotnet;git status"
+            }
+        });
+
+        var secondStore = new JsonSkillPolicyStore(_policyFile);
+        var manifest = new KamSkillManifest
+        {
+            Id = "shell.run",
+            Source = "builtin",
+            ExecutorType = "builtin"
+        };
+
+        secondStore.ApplyPolicy(manifest);
+
+        manifest.RuntimeOptions.Should().Contain("shell.blockedPatterns", "git reset --hard");
+        manifest.RuntimeOptions.Should().Contain("shell.allowedCommands", "dotnet;git status");
+    }
+
     public void Dispose()
     {
         var directory = Path.GetDirectoryName(_policyFile);

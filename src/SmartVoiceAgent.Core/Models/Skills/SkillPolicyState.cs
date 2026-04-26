@@ -9,4 +9,6 @@ public sealed class SkillPolicyState
     public bool ReviewRequired { get; set; }
 
     public List<SkillPermission> GrantedPermissions { get; set; } = [];
+
+    public Dictionary<string, string> RuntimeOptions { get; set; } = [];
 }

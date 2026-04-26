@@ -70,6 +70,7 @@ public sealed class JsonSkillPolicyStore : ISkillPolicyStore
         manifest.GrantedPermissions = state.GrantedPermissions
             .Distinct()
             .ToList();
+        manifest.RuntimeOptions = CloneRuntimeOptions(state.RuntimeOptions);
     }
 
     private Dictionary<string, SkillPolicyState> LoadUnsafe()
@@ -119,7 +120,8 @@ public sealed class JsonSkillPolicyStore : ISkillPolicyStore
             ReviewRequired = !isBuiltIn,
             GrantedPermissions = isBuiltIn
                 ? manifest.Permissions.Where(permission => permission != SkillPermission.None).Distinct().ToList()
-                : []
+                : [],
+            RuntimeOptions = CloneRuntimeOptions(manifest.RuntimeOptions)
         };
     }
 
@@ -136,8 +138,25 @@ public sealed class JsonSkillPolicyStore : ISkillPolicyStore
             SkillId = state.SkillId,
             Enabled = state.Enabled,
             ReviewRequired = state.ReviewRequired,
-            GrantedPermissions = state.GrantedPermissions.Distinct().ToList()
+            GrantedPermissions = state.GrantedPermissions.Distinct().ToList(),
+            RuntimeOptions = CloneRuntimeOptions(state.RuntimeOptions)
         };
+    }
+
+    private static Dictionary<string, string> CloneRuntimeOptions(
+        IReadOnlyDictionary<string, string>? runtimeOptions)
+    {
+        if (runtimeOptions is null)
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        return runtimeOptions
+            .Where(option => !string.IsNullOrWhiteSpace(option.Key))
+            .ToDictionary(
+                option => option.Key.Trim(),
+                option => option.Value ?? string.Empty,
+                StringComparer.OrdinalIgnoreCase);
     }
 
     private static string CreateDefaultPath()

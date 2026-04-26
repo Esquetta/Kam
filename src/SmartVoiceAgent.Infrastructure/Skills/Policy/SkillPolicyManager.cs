@@ -94,6 +94,36 @@ public sealed class SkillPolicyManager : ISkillPolicyManager
         }));
     }
 
+    public Task<bool> SetRuntimeOptionAsync(
+        string skillId,
+        string key,
+        string value,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return Task.FromResult(false);
+        }
+
+        return Task.FromResult(Update(skillId, manifest =>
+        {
+            manifest.RuntimeOptions = CloneRuntimeOptions(manifest.RuntimeOptions);
+            var normalizedKey = key.Trim();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                manifest.RuntimeOptions.Remove(normalizedKey);
+            }
+            else
+            {
+                manifest.RuntimeOptions[normalizedKey] = value.Trim();
+            }
+
+            return true;
+        }));
+    }
+
     private bool Update(string skillId, Func<KamSkillManifest, bool> update)
     {
         if (!_skillRegistry.TryGet(skillId, out var manifest) || manifest is null)
@@ -121,7 +151,8 @@ public sealed class SkillPolicyManager : ISkillPolicyManager
             GrantedPermissions = manifest.GrantedPermissions
                 .Where(permission => permission != SkillPermission.None)
                 .Distinct()
-                .ToList()
+                .ToList(),
+            RuntimeOptions = CloneRuntimeOptions(manifest.RuntimeOptions)
         };
     }
 
@@ -131,5 +162,21 @@ public sealed class SkillPolicyManager : ISkillPolicyManager
             .Where(permission => permission != SkillPermission.None)
             .Distinct()
             .ToList();
+    }
+
+    private static Dictionary<string, string> CloneRuntimeOptions(
+        IReadOnlyDictionary<string, string>? runtimeOptions)
+    {
+        if (runtimeOptions is null)
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        return runtimeOptions
+            .Where(option => !string.IsNullOrWhiteSpace(option.Key))
+            .ToDictionary(
+                option => option.Key.Trim(),
+                option => option.Value ?? string.Empty,
+                StringComparer.OrdinalIgnoreCase);
     }
 }

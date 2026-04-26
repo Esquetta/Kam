@@ -143,6 +143,33 @@ public class SkillPolicyManagerTests : IDisposable
             SkillPermission.ClipboardWrite]);
     }
 
+    [Fact]
+    public async Task SetRuntimeOptionAsync_PersistsOptionAndUpdatesRegistry()
+    {
+        var registry = CreateRegistry(new KamSkillManifest
+        {
+            Id = "web.fetch",
+            Source = "builtin",
+            ExecutorType = "builtin",
+            Enabled = true,
+            ReviewRequired = false
+        });
+        var manager = new SkillPolicyManager(registry, new JsonSkillPolicyStore(_policyFile));
+
+        var result = await manager.SetRuntimeOptionAsync(
+            "web.fetch",
+            "web.allowedHosts",
+            "docs.example.com");
+
+        result.Should().BeTrue();
+        registry.TryGet("web.fetch", out var manifest).Should().BeTrue();
+        manifest!.RuntimeOptions.Should().Contain("web.allowedHosts", "docs.example.com");
+
+        var persisted = new JsonSkillPolicyStore(_policyFile).GetState("web.fetch");
+        persisted.Should().NotBeNull();
+        persisted!.RuntimeOptions.Should().Contain("web.allowedHosts", "docs.example.com");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_workspace))

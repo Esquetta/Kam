@@ -65,6 +65,12 @@ public sealed class SkillHealthService : ISkillHealthService
                 .Distinct()
                 .ToArray(),
             MissingPermissions = missingPermissions,
+            RuntimeOptions = manifest.RuntimeOptions
+                .Where(option => !string.IsNullOrWhiteSpace(option.Key))
+                .ToDictionary(
+                    option => option.Key,
+                    option => option.Value,
+                    StringComparer.OrdinalIgnoreCase),
             LastRunAt = lastRun?.Timestamp,
             LastRunStatus = lastRun?.Status,
             LastRunMessage = lastRun?.ResultMessage ?? string.Empty,

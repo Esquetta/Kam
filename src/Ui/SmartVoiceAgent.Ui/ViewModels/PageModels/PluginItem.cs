@@ -28,6 +28,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private string _requiredPermissionsText = "Requires: none";
         private string _grantedPermissionsText = "Granted: none";
         private string _missingPermissionsText = string.Empty;
+        private string _policyGuardrailText = string.Empty;
 
         public string SkillId { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
@@ -55,6 +56,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public ICommand? GrantPermissionsCommand { get; set; }
         public ICommand? RevokePermissionsCommand { get; set; }
         public IBrush LastRunColor { get; set; } = Brush.Parse("#71717A");
+        public Dictionary<string, string> RuntimeOptions { get; set; } =
+            new(StringComparer.OrdinalIgnoreCase);
 
         public bool HasEvalResult
         {
@@ -112,6 +115,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         public bool HasMissingPermissions => !string.IsNullOrWhiteSpace(MissingPermissionsText);
 
+        public string PolicyGuardrailText
+        {
+            get => _policyGuardrailText;
+            set => this.RaiseAndSetIfChanged(ref _policyGuardrailText, value);
+        }
+
         // Color properties for the new design - use theme-aware colors
         public IBrush IconColor { get; set; } = Brush.Parse("#06B6D4");
         public IBrush GlowColor { get; set; } = Brush.Parse("#1606B6D4");
@@ -149,6 +158,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private string _selectedSkillChecksum = string.Empty;
         private string _selectedSkillPermissions = string.Empty;
         private string _selectedSkillLastRun = string.Empty;
+        private string _selectedSkillPolicyGuardrail = string.Empty;
+        private bool _canEditSelectedSkillPolicy;
+        private string _policyOptionKeyInput = string.Empty;
+        private string _policyOptionValueInput = string.Empty;
         private ISkillHealthService? _skillHealthService;
         private ISkillImportService? _skillImportService;
         private ISkillPolicyManager? _skillPolicyManager;
@@ -262,14 +275,40 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             private set => this.RaiseAndSetIfChanged(ref _selectedSkillLastRun, value);
         }
 
+        public string SelectedSkillPolicyGuardrail
+        {
+            get => _selectedSkillPolicyGuardrail;
+            private set => this.RaiseAndSetIfChanged(ref _selectedSkillPolicyGuardrail, value);
+        }
+
+        public bool CanEditSelectedSkillPolicy
+        {
+            get => _canEditSelectedSkillPolicy;
+            private set => this.RaiseAndSetIfChanged(ref _canEditSelectedSkillPolicy, value);
+        }
+
+        public string PolicyOptionKeyInput
+        {
+            get => _policyOptionKeyInput;
+            set => this.RaiseAndSetIfChanged(ref _policyOptionKeyInput, value);
+        }
+
+        public string PolicyOptionValueInput
+        {
+            get => _policyOptionValueInput;
+            set => this.RaiseAndSetIfChanged(ref _policyOptionValueInput, value);
+        }
+
         public ICommand ImportSkillCommand { get; }
         public ICommand RunSkillEvalCommand { get; }
+        public ICommand SaveRuntimePolicyOptionCommand { get; }
 
         public PluginsViewModel()
         {
             Title = "SKILLS";
             ImportSkillCommand = ReactiveCommand.CreateFromTask(ImportSkillAsync);
             RunSkillEvalCommand = ReactiveCommand.CreateFromTask(RunSkillEvalAsync);
+            SaveRuntimePolicyOptionCommand = ReactiveCommand.CreateFromTask(SaveRuntimePolicyOptionAsync);
             LoadPlugins(CreateBuiltInHealthSnapshot());
         }
 
@@ -541,6 +580,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 SelectedSkillChecksum = string.Empty;
                 SelectedSkillPermissions = string.Empty;
                 SelectedSkillLastRun = string.Empty;
+                SelectedSkillPolicyGuardrail = string.Empty;
+                CanEditSelectedSkillPolicy = false;
+                PolicyOptionKeyInput = string.Empty;
+                PolicyOptionValueInput = string.Empty;
                 return;
             }
 
@@ -559,6 +602,62 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             SelectedSkillLastRun = plugin.HasLastRun
                 ? $"{plugin.LastRunStatus} | {plugin.LastRunDetail}"
                 : "Last Run: none";
+            SelectedSkillPolicyGuardrail = plugin.PolicyGuardrailText;
+            CanEditSelectedSkillPolicy = _skillPolicyManager is not null
+                && SkillRuntimePolicyOptions.IsEditableSkill(plugin.SkillId);
+            PolicyOptionKeyInput = SkillRuntimePolicyOptions.GetDefaultOptionKey(plugin.SkillId);
+            PolicyOptionValueInput = string.IsNullOrWhiteSpace(PolicyOptionKeyInput)
+                ? string.Empty
+                : plugin.RuntimeOptions.TryGetValue(PolicyOptionKeyInput, out var optionValue)
+                    ? optionValue
+                    : string.Empty;
+        }
+
+        public async Task SaveRuntimePolicyOptionAsync()
+        {
+            if (_skillPolicyManager is null || SelectedPlugin is null)
+            {
+                SkillEvalStatus = "Runtime policy unavailable";
+                SkillEvalDetail = "Skill policy manager is not registered for this screen.";
+                IsSkillEvalHealthy = false;
+                return;
+            }
+
+            var key = PolicyOptionKeyInput.Trim();
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                SkillEvalStatus = "Runtime policy not saved";
+                SkillEvalDetail = "Policy option key is required.";
+                IsSkillEvalHealthy = false;
+                return;
+            }
+
+            var value = PolicyOptionValueInput.Trim();
+            var skillId = SelectedPlugin.SkillId;
+            var changed = await _skillPolicyManager.SetRuntimeOptionAsync(
+                skillId,
+                key,
+                value,
+                CancellationToken.None);
+            if (!changed)
+            {
+                SkillEvalStatus = "Runtime policy not saved";
+                SkillEvalDetail = $"{skillId}: policy option could not be persisted.";
+                IsSkillEvalHealthy = false;
+                return;
+            }
+
+            if (_skillHealthService is not null)
+            {
+                await RefreshHealthAsync(_skillHealthService);
+            }
+
+            UpdateSelectedRuntimeOption(skillId, key, value);
+            SkillEvalStatus = "Runtime policy saved";
+            SkillEvalDetail = string.IsNullOrWhiteSpace(value)
+                ? $"{skillId}: removed {key}."
+                : $"{skillId}: saved {key}.";
+            IsSkillEvalHealthy = true;
         }
 
         public async Task TestSkillAsync(string skillId)
@@ -727,7 +826,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 GrantedPermissionsText = FormatPermissions("Granted", report.GrantedPermissions),
                 MissingPermissionsText = report.MissingPermissions.Count == 0
                     ? string.Empty
-                    : FormatPermissions("Missing", report.MissingPermissions)
+                    : FormatPermissions("Missing", report.MissingPermissions),
+                RuntimeOptions = CloneRuntimeOptions(report.RuntimeOptions),
+                PolicyGuardrailText = SkillRuntimePolicyOptions.Describe(
+                    report.SkillId,
+                    report.RuntimeOptions)
             };
 
             AttachPolicyCommands(item);
@@ -774,6 +877,31 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             await RunOnUiThreadAsync(() => LoadPlugins(reports));
         }
 
+        private void UpdateSelectedRuntimeOption(string skillId, string key, string value)
+        {
+            var plugin = Plugins.FirstOrDefault(candidate => candidate.SkillId.Equals(
+                skillId,
+                StringComparison.OrdinalIgnoreCase));
+            if (plugin is null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                plugin.RuntimeOptions.Remove(key);
+            }
+            else
+            {
+                plugin.RuntimeOptions[key] = value;
+            }
+
+            plugin.PolicyGuardrailText = SkillRuntimePolicyOptions.Describe(
+                plugin.SkillId,
+                plugin.RuntimeOptions);
+            SelectPlugin(plugin.SkillId);
+        }
+
         private static string FormatName(string displayName, string skillId)
         {
             var name = string.IsNullOrWhiteSpace(displayName)
@@ -809,6 +937,22 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             return values.Length == 0
                 ? $"{label}: none"
                 : $"{label}: {string.Join(", ", values)}";
+        }
+
+        private static Dictionary<string, string> CloneRuntimeOptions(
+            IReadOnlyDictionary<string, string>? runtimeOptions)
+        {
+            if (runtimeOptions is null)
+            {
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            return runtimeOptions
+                .Where(option => !string.IsNullOrWhiteSpace(option.Key))
+                .ToDictionary(
+                    option => option.Key.Trim(),
+                    option => option.Value ?? string.Empty,
+                    StringComparer.OrdinalIgnoreCase);
         }
 
         private static string FormatExecutionStatus(SkillExecutionStatus? status)

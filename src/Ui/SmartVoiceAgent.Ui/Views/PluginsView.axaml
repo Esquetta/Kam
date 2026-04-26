@@ -278,6 +278,34 @@
                                    FontFamily="Consolas"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding SelectedSkillPolicyGuardrail}"
+                                   FontSize="10"
+                                   FontFamily="Consolas"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"/>
+                        <Grid ColumnDefinitions="170,*,Auto"
+                              ColumnSpacing="8"
+                              IsVisible="{Binding CanEditSelectedSkillPolicy}">
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding PolicyOptionKeyInput, Mode=TwoWay}"
+                                     PlaceholderText="policy key"
+                                     MinHeight="32"/>
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding PolicyOptionValueInput, Mode=TwoWay}"
+                                     PlaceholderText="value"
+                                     MinHeight="32"/>
+                            <Button Grid.Column="2"
+                                    Command="{Binding SaveRuntimePolicyOptionCommand}"
+                                    ToolTip.Tip="Save runtime policy"
+                                    MinHeight="32"
+                                    Padding="10,0">
+                                <Path Data="M9,16.2L4.8,12L3.4,13.4L9,19L21,7L19.6,5.6L9,16.2Z"
+                                      Fill="{DynamicResource AccentCyanBrush}"
+                                      Width="13"
+                                      Height="13"
+                                      Stretch="Uniform"/>
+                            </Button>
+                        </Grid>
                     </StackPanel>
                     <Button Grid.Column="1"
                             Command="{Binding SelectedPlugin.TestSkillCommand}"

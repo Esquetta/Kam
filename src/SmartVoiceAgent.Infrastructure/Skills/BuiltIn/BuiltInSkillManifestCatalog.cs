@@ -324,8 +324,7 @@ public static class BuiltInSkillManifestCatalog
                 [
                     RequiredString("url", "HTTP or HTTPS URL to fetch."),
                     OptionalNumber("maxLength", "Maximum characters to return."),
-                    OptionalNumber("timeoutMilliseconds", "Per-request timeout in milliseconds."),
-                    OptionalBool("allowPrivateNetwork", "Allow localhost or private network targets.")
+                    OptionalNumber("timeoutMilliseconds", "Per-request timeout in milliseconds.")
                 ],
                 timeoutMilliseconds: 15000),
             Create(
@@ -336,8 +335,7 @@ public static class BuiltInSkillManifestCatalog
                 [
                     RequiredString("url", "HTTP or HTTPS URL to read."),
                     OptionalNumber("maxLength", "Maximum readable text characters to return."),
-                    OptionalNumber("timeoutMilliseconds", "Per-request timeout in milliseconds."),
-                    OptionalBool("allowPrivateNetwork", "Allow localhost or private network targets.")
+                    OptionalNumber("timeoutMilliseconds", "Per-request timeout in milliseconds.")
                 ],
                 timeoutMilliseconds: 15000),
             Create(
