@@ -41,8 +41,8 @@ public sealed class LocalSkillAdapter : ISkillAdapter
             Checksum = metadata.Checksum,
             InstalledFrom = metadata.InstalledFrom,
             InstalledAt = metadata.InstalledAt,
-            RiskLevel = SkillRiskLevel.Medium,
-            Permissions = [SkillPermission.None],
+            RiskLevel = metadata.RiskLevel,
+            Permissions = metadata.Permissions.ToList(),
             GrantedPermissions = [],
             Arguments =
             [

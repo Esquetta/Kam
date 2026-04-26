@@ -110,6 +110,69 @@ public class SkillImportServiceTests : IDisposable
         manifest.GrantedPermissions.Should().ContainSingle().Which.Should().Be(SkillPermission.ProcessLaunch);
     }
 
+    [Fact]
+    public async Task ImportAsync_LocalSkillWithoutSkillMarkdown_UsesReadmeFallback()
+    {
+        var skillDirectory = Path.Combine(_workspace, "browser-automation");
+        Directory.CreateDirectory(skillDirectory);
+        File.WriteAllText(
+            Path.Combine(skillDirectory, "README.md"),
+            """
+            # Browser Automation
+
+            Automates browser workflows from imported skill folders.
+            """);
+        var registry = new InMemorySkillRegistry();
+        var service = CreateImportService(registry);
+
+        var result = await service.ImportAsync(new SkillSourceDefinition
+        {
+            Id = "local-dev",
+            Kind = SkillSourceKind.LocalDirectory,
+            Location = skillDirectory
+        });
+
+        result.ImportedCount.Should().Be(1);
+        registry.TryGet("local.browser-automation", out var manifest).Should().BeTrue();
+        manifest!.DisplayName.Should().Be("Browser Automation");
+        manifest.Description.Should().Be("Automates browser workflows from imported skill folders.");
+        manifest.Checksum.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task ImportAsync_CodexClaudeAllowedTools_MapsPermissionsAndRisk()
+    {
+        var skillDirectory = Path.Combine(_workspace, "file-writer");
+        Directory.CreateDirectory(skillDirectory);
+        File.WriteAllText(
+            Path.Combine(skillDirectory, "SKILL.md"),
+            """
+            ---
+            name: file-writer
+            description: Writes files with local command support.
+            allowed-tools: Read, Write, Bash, WebFetch
+            ---
+
+            # File Writer
+            """);
+        var registry = new InMemorySkillRegistry();
+        var service = CreateImportService(registry);
+
+        await service.ImportAsync(new SkillSourceDefinition
+        {
+            Id = "local-dev",
+            Kind = SkillSourceKind.LocalDirectory,
+            Location = skillDirectory
+        });
+
+        registry.TryGet("local.file-writer", out var manifest).Should().BeTrue();
+        manifest!.Permissions.Should().Contain(SkillPermission.FileSystemRead);
+        manifest.Permissions.Should().Contain(SkillPermission.FileSystemWrite);
+        manifest.Permissions.Should().Contain(SkillPermission.ProcessLaunch);
+        manifest.Permissions.Should().Contain(SkillPermission.Network);
+        manifest.RiskLevel.Should().Be(SkillRiskLevel.High);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_workspace))
