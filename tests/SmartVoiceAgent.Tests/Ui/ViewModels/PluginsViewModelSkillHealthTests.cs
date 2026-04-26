@@ -109,6 +109,91 @@ public class PluginsViewModelSkillHealthTests
     }
 
     [Fact]
+    public void Constructor_WithEvalSummary_MapsMatchingResultsToPluginCards()
+    {
+        var viewModel = new PluginsViewModel(
+        [
+            new SkillHealthReport
+            {
+                SkillId = "local.desktop-navigation",
+                DisplayName = "Desktop Navigation",
+                Source = "local:C:\\skills\\desktop-navigation",
+                Status = SkillHealthStatus.Healthy,
+                Details = "Executor available."
+            }
+        ],
+        new SkillEvalSummary
+        {
+            Total = 1,
+            Passed = 1,
+            Results =
+            [
+                new SkillEvalResult
+                {
+                    Name = "desktop navigation smoke",
+                    SkillId = "local.desktop-navigation",
+                    Passed = true,
+                    ExpectedStatus = SkillExecutionStatus.Succeeded,
+                    ActualStatus = SkillExecutionStatus.Succeeded,
+                    Message = "External skill smoke passed."
+                }
+            ]
+        });
+
+        var plugin = viewModel.Plugins.Should().ContainSingle().Subject;
+        plugin.HasEvalResult.Should().BeTrue();
+        plugin.LastEvalStatus.Should().Be("Eval Pass");
+        plugin.LastEvalDetail.Should().Be("External skill smoke passed.");
+    }
+
+    [Fact]
+    public async Task RunSkillEvalAsync_WithRuntimeServices_RefreshesSummary()
+    {
+        var evalHarness = new StaticSkillEvalHarness(new SkillEvalSummary
+        {
+            Total = 1,
+            Failed = 1,
+            Results =
+            [
+                new SkillEvalResult
+                {
+                    Name = "files read smoke",
+                    SkillId = "files.read",
+                    Passed = false,
+                    ExpectedStatus = SkillExecutionStatus.Succeeded,
+                    ActualStatus = SkillExecutionStatus.ValidationFailed,
+                    Message = "Expected Succeeded, got ValidationFailed."
+                }
+            ]
+        });
+        var viewModel = new PluginsViewModel(
+            new StaticSkillHealthService(
+            [
+                new SkillHealthReport
+                {
+                    SkillId = "files.read",
+                    DisplayName = "Read File",
+                    Source = "builtin",
+                    Status = SkillHealthStatus.Healthy,
+                    Details = "Executor available."
+                }
+            ]),
+            evalHarness,
+            new StaticSkillEvalCaseCatalog());
+
+        await viewModel.RunSkillEvalAsync();
+
+        viewModel.SkillEvalStatus.Should().Be("0/1 smoke evals passing");
+        viewModel.SkillEvalDetail.Should().Contain("files.read");
+        viewModel.IsSkillEvalHealthy.Should().BeFalse();
+        viewModel.Plugins.Should().ContainSingle(plugin =>
+            plugin.SkillId == "files.read"
+            && plugin.HasEvalResult
+            && plugin.LastEvalStatus == "Eval Fail");
+        evalHarness.RunCount.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
     public async Task ImportSkillAsync_LocalPath_ImportsSourceAndRefreshesCards()
     {
         var importService = new RecordingSkillImportService();
@@ -196,6 +281,41 @@ public class PluginsViewModelSkillHealthTests
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_reports);
+        }
+    }
+
+    private sealed class StaticSkillEvalHarness : ISkillEvalHarness
+    {
+        private readonly SkillEvalSummary _summary;
+
+        public StaticSkillEvalHarness(SkillEvalSummary summary)
+        {
+            _summary = summary;
+        }
+
+        public int RunCount { get; private set; }
+
+        public Task<SkillEvalSummary> RunAsync(
+            IEnumerable<SkillEvalCase> cases,
+            CancellationToken cancellationToken = default)
+        {
+            RunCount++;
+            return Task.FromResult(_summary);
+        }
+    }
+
+    private sealed class StaticSkillEvalCaseCatalog : ISkillEvalCaseCatalog
+    {
+        public IReadOnlyCollection<SkillEvalCase> CreateSmokeCases()
+        {
+            return
+            [
+                new SkillEvalCase
+                {
+                    Name = "files read smoke",
+                    Plan = SkillPlan.FromObject("files.read", new { path = "README.md" })
+                }
+            ];
         }
     }
 }
