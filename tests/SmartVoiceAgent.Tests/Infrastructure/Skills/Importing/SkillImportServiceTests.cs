@@ -42,6 +42,10 @@ public class SkillImportServiceTests : IDisposable
         manifest!.Enabled.Should().BeFalse();
         manifest.ReviewRequired.Should().BeTrue();
         manifest.GrantedPermissions.Should().BeEmpty();
+        manifest.Arguments.Should().Contain(argument =>
+            argument.Name == "input"
+            && argument.Required
+            && argument.Type == SkillArgumentType.String);
         manifest.Checksum.Should().NotBeNullOrWhiteSpace();
         manifest.InstalledFrom.Should().Be(skillDirectory);
         manifest.InstalledAt.Should().NotBe(default);
@@ -69,6 +73,10 @@ public class SkillImportServiceTests : IDisposable
         manifest.ExecutorType.Should().Be("skills.sh");
         manifest.Enabled.Should().BeFalse();
         manifest.ReviewRequired.Should().BeTrue();
+        manifest.Arguments.Should().Contain(argument =>
+            argument.Name == "input"
+            && argument.Required
+            && argument.Type == SkillArgumentType.String);
         manifest.Checksum.Should().NotBeNullOrWhiteSpace();
     }
 

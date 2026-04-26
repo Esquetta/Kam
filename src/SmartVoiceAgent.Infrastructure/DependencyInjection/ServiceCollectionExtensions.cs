@@ -12,6 +12,7 @@ using SmartVoiceAgent.Infrastructure.Agent.Tools;
 using SmartVoiceAgent.Infrastructure.Mcp;
 using SmartVoiceAgent.Infrastructure.Services;
 using SmartVoiceAgent.Infrastructure.Skills.BuiltIn.AgentTools;
+using SmartVoiceAgent.Infrastructure.Skills.External;
 using SmartVoiceAgent.Infrastructure.Skills.Planning;
 using System.ClientModel;
 
@@ -85,6 +86,22 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISkillExecutor, CommunicationSkillExecutor>();
         services.AddSingleton<ISkillExecutor, ClipboardSkillExecutor>();
         services.AddSingleton<ISkillExecutor, SystemInformationSkillExecutor>();
+        services.AddSingleton<ISkillExecutor>(sp =>
+        {
+            var registry = sp.GetRequiredService<ISkillRegistry>();
+            var chatClient = new Lazy<IChatClient>(() =>
+            {
+                var chatConfig = configuration
+                    .GetSection("AIService:Chat")
+                    .Get<AIServiceConfiguration>();
+
+                return IsUsableAiConfiguration(chatConfig)
+                    ? CreateOpenAICompatibleClient(chatConfig!)
+                    : sp.GetRequiredService<IChatClient>();
+            });
+
+            return new ExternalSkillExecutor(() => chatClient.Value, registry);
+        });
         services.AddSingleton<ISkillPlannerService, ModelSkillPlannerService>();
 
         // Host control service (must be registered before hosted service)
@@ -129,6 +146,15 @@ public static class ServiceCollectionExtensions
         return provider.Equals("OpenRouter", StringComparison.OrdinalIgnoreCase)
             || provider.Equals("OpenAICompatible", StringComparison.OrdinalIgnoreCase)
             || IsOllamaProvider(provider);
+    }
+
+    private static bool IsUsableAiConfiguration(AIServiceConfiguration? config)
+    {
+        return config is not null
+            && IsOpenAICompatibleProvider(config.Provider)
+            && !string.IsNullOrWhiteSpace(config.Endpoint)
+            && !string.IsNullOrWhiteSpace(config.ModelId)
+            && (IsOllamaProvider(config.Provider) || !string.IsNullOrWhiteSpace(config.ApiKey));
     }
 
     private static bool IsOllamaProvider(string provider)

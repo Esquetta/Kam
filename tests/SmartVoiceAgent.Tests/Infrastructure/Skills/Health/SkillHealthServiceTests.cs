@@ -1,7 +1,9 @@
 using FluentAssertions;
+using Microsoft.Extensions.AI;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Infrastructure.Skills;
+using SmartVoiceAgent.Infrastructure.Skills.External;
 using SmartVoiceAgent.Infrastructure.Skills.Health;
 
 namespace SmartVoiceAgent.Tests.Infrastructure.Skills.Health;
@@ -91,6 +93,35 @@ public class SkillHealthServiceTests
         permissionDenied.Details.Should().Contain(nameof(SkillPermission.FileSystemWrite));
     }
 
+    [Fact]
+    public async Task GetHealthAsync_ApprovedImportedExternalSkillWithExecutor_IsHealthy()
+    {
+        var registry = new InMemorySkillRegistry();
+        registry.Register(new KamSkillManifest
+        {
+            Id = "local.desktop-navigation",
+            DisplayName = "Desktop Navigation",
+            Description = "Imported local skill.",
+            Source = "local:C:\\skills\\desktop-navigation",
+            ExecutorType = "local",
+            Enabled = true,
+            ReviewRequired = false,
+            Permissions = [SkillPermission.None],
+            GrantedPermissions = []
+        });
+        var service = new SkillHealthService(
+            registry,
+            [new ExternalSkillExecutor(new NoopChatClient(), registry)]);
+
+        var reports = await service.GetHealthAsync();
+
+        reports.Should().ContainSingle();
+        var report = reports.Single();
+        report.SkillId.Should().Be("local.desktop-navigation");
+        report.Status.Should().Be(SkillHealthStatus.Healthy);
+        report.Details.Should().Be("Executor available.");
+    }
+
     private sealed class MatchingSkillExecutor : ISkillExecutor
     {
         private readonly string _skillId;
@@ -108,6 +139,40 @@ public class SkillHealthServiceTests
         public Task<SkillResult> ExecuteAsync(SkillPlan plan, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(SkillResult.Succeeded("Executed."));
+        }
+    }
+
+    private sealed class NoopChatClient : IChatClient
+    {
+        public Task<ChatResponse> GetResponseAsync(
+            IEnumerable<ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, "ok")));
+        }
+
+        public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            return EmptyAsync();
+        }
+
+        public object? GetService(Type serviceType, object? serviceKey = null)
+        {
+            return null;
+        }
+
+        public void Dispose()
+        {
+        }
+
+        private static async IAsyncEnumerable<ChatResponseUpdate> EmptyAsync()
+        {
+            await Task.Yield();
+            yield break;
         }
     }
 }

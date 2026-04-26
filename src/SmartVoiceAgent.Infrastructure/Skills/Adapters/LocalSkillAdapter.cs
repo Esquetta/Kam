@@ -44,6 +44,23 @@ public sealed class LocalSkillAdapter : ISkillAdapter
             RiskLevel = SkillRiskLevel.Medium,
             Permissions = [SkillPermission.None],
             GrantedPermissions = [],
+            Arguments =
+            [
+                new SkillArgumentDefinition
+                {
+                    Name = "input",
+                    Description = "The user's request for this skill.",
+                    Type = SkillArgumentType.String,
+                    Required = true
+                },
+                new SkillArgumentDefinition
+                {
+                    Name = "context",
+                    Description = "Optional runtime context for the skill.",
+                    Type = SkillArgumentType.String,
+                    Required = false
+                }
+            ],
             TimeoutMilliseconds = 30000
         };
     }
