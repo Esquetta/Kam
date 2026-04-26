@@ -33,5 +33,6 @@ public class SkillRuntimeRegistrationTests
         provider.GetService<ICommandRuntimeService>().Should().NotBeNull();
         provider.GetService<ISkillHealthService>().Should().NotBeNull();
         provider.GetService<ISkillEvalHarness>().Should().NotBeNull();
+        provider.GetService<ISkillEvalCaseCatalog>().Should().NotBeNull();
     }
 }
