@@ -17,4 +17,8 @@ public sealed class KamSkillManifest
     public SkillRiskLevel RiskLevel { get; set; } = SkillRiskLevel.Low;
 
     public List<SkillPermission> Permissions { get; set; } = [];
+
+    public List<SkillArgumentDefinition> Arguments { get; set; } = [];
+
+    public int TimeoutMilliseconds { get; set; } = 30000;
 }

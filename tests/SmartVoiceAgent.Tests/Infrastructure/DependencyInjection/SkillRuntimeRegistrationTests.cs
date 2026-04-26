@@ -23,6 +23,12 @@ public class SkillRuntimeRegistrationTests
         registry.Should().NotBeNull();
         registry!.TryGet("apps.open", out var appSkill).Should().BeTrue();
         appSkill!.Enabled.Should().BeTrue();
+        appSkill.Arguments.Should().Contain(argument =>
+            argument.Name == "applicationName"
+            && argument.Required
+            && argument.Type == SmartVoiceAgent.Core.Models.Skills.SkillArgumentType.String);
+        appSkill.TimeoutMilliseconds.Should().BeGreaterThan(0);
         provider.GetServices<ISkillExecutor>().Should().NotBeEmpty();
+        provider.GetService<ISkillExecutionPipeline>().Should().NotBeNull();
     }
 }

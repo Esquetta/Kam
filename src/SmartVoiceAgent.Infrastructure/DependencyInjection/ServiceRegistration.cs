@@ -7,6 +7,7 @@ using SmartVoiceAgent.Infrastructure.Factories;
 using SmartVoiceAgent.Infrastructure.Helpers;
 using SmartVoiceAgent.Infrastructure.Skills;
 using SmartVoiceAgent.Infrastructure.Skills.BuiltIn.AppSkills;
+using SmartVoiceAgent.Infrastructure.Skills.Execution;
 using SmartVoiceAgent.Infrastructure.Services;
 using SmartVoiceAgent.Infrastructure.Services.ApplicationScanner;
 using SmartVoiceAgent.Infrastructure.Services.Intent;
@@ -114,6 +115,7 @@ public static class ServiceRegistration
             return registry;
         });
         services.AddScoped<ISkillExecutor, AppSkillExecutor>();
+        services.AddScoped<ISkillExecutionPipeline, SkillExecutionPipeline>();
 
         return services;
     }
@@ -130,7 +132,18 @@ public static class ServiceRegistration
                 ExecutorType = "builtin",
                 Enabled = true,
                 RiskLevel = SkillRiskLevel.High,
-                Permissions = [SkillPermission.ProcessLaunch]
+                Permissions = [SkillPermission.ProcessLaunch],
+                Arguments =
+                [
+                    new SkillArgumentDefinition
+                    {
+                        Name = "applicationName",
+                        Description = "Application display name or executable alias.",
+                        Type = SkillArgumentType.String,
+                        Required = true
+                    }
+                ],
+                TimeoutMilliseconds = 10000
             },
             new KamSkillManifest
             {
@@ -140,7 +153,18 @@ public static class ServiceRegistration
                 ExecutorType = "builtin",
                 Enabled = true,
                 RiskLevel = SkillRiskLevel.High,
-                Permissions = [SkillPermission.ProcessControl]
+                Permissions = [SkillPermission.ProcessControl],
+                Arguments =
+                [
+                    new SkillArgumentDefinition
+                    {
+                        Name = "applicationName",
+                        Description = "Application display name or executable alias.",
+                        Type = SkillArgumentType.String,
+                        Required = true
+                    }
+                ],
+                TimeoutMilliseconds = 10000
             },
             new KamSkillManifest
             {
@@ -150,7 +174,18 @@ public static class ServiceRegistration
                 ExecutorType = "builtin",
                 Enabled = true,
                 RiskLevel = SkillRiskLevel.Low,
-                Permissions = [SkillPermission.None]
+                Permissions = [SkillPermission.None],
+                Arguments =
+                [
+                    new SkillArgumentDefinition
+                    {
+                        Name = "applicationName",
+                        Description = "Application display name or executable alias.",
+                        Type = SkillArgumentType.String,
+                        Required = true
+                    }
+                ],
+                TimeoutMilliseconds = 5000
             },
             new KamSkillManifest
             {
@@ -160,7 +195,8 @@ public static class ServiceRegistration
                 ExecutorType = "builtin",
                 Enabled = true,
                 RiskLevel = SkillRiskLevel.Low,
-                Permissions = [SkillPermission.None]
+                Permissions = [SkillPermission.None],
+                TimeoutMilliseconds = 5000
             }
         ];
     }
