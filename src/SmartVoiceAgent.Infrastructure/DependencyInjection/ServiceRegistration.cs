@@ -12,6 +12,7 @@ using SmartVoiceAgent.Infrastructure.Skills.BuiltIn.AppSkills;
 using SmartVoiceAgent.Infrastructure.Skills.Evaluation;
 using SmartVoiceAgent.Infrastructure.Skills.Execution;
 using SmartVoiceAgent.Infrastructure.Skills.Health;
+using SmartVoiceAgent.Infrastructure.Skills.Importing;
 using SmartVoiceAgent.Infrastructure.Services;
 using SmartVoiceAgent.Infrastructure.Skills.Policy;
 using SmartVoiceAgent.Infrastructure.Services.ApplicationScanner;
@@ -133,6 +134,7 @@ public static class ServiceRegistration
         services.AddSingleton<ISkillAdapter, SkillsShSkillAdapter>();
         services.AddSingleton<ISkillAdapter, McpSkillAdapter>();
         services.AddSingleton<ISkillAdapterRegistry, SkillAdapterRegistry>();
+        services.AddSingleton<ISkillImportService, SkillImportService>();
 
         return services;
     }

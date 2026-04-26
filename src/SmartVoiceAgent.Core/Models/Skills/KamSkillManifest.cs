@@ -16,6 +16,12 @@ public sealed class KamSkillManifest
 
     public bool ReviewRequired { get; set; }
 
+    public string Checksum { get; set; } = string.Empty;
+
+    public string InstalledFrom { get; set; } = string.Empty;
+
+    public DateTimeOffset InstalledAt { get; set; }
+
     public SkillRiskLevel RiskLevel { get; set; } = SkillRiskLevel.Low;
 
     public List<SkillPermission> Permissions { get; set; } = [];

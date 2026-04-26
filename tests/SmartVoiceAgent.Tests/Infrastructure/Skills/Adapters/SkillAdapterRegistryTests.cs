@@ -40,7 +40,10 @@ public class SkillAdapterRegistryTests : IDisposable
             && manifest.Source == $"local:{skillDirectory}"
             && manifest.Enabled == false
             && manifest.ReviewRequired
-            && manifest.GrantedPermissions.Count == 0);
+            && manifest.GrantedPermissions.Count == 0
+            && !string.IsNullOrWhiteSpace(manifest.Checksum)
+            && manifest.InstalledFrom == skillDirectory
+            && manifest.InstalledAt != default);
     }
 
     [Fact]
@@ -67,7 +70,10 @@ public class SkillAdapterRegistryTests : IDisposable
             && manifest.Source == $"skills.sh:{skillDirectory}"
             && manifest.Enabled == false
             && manifest.ReviewRequired
-            && manifest.GrantedPermissions.Count == 0);
+            && manifest.GrantedPermissions.Count == 0
+            && !string.IsNullOrWhiteSpace(manifest.Checksum)
+            && manifest.InstalledFrom == skillDirectory
+            && manifest.InstalledAt != default);
     }
 
     [Fact]

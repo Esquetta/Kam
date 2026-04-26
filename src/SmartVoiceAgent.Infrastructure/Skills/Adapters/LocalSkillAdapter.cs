@@ -31,13 +31,16 @@ public sealed class LocalSkillAdapter : ISkillAdapter
 
         return new KamSkillManifest
         {
-            Id = $"{idPrefix}.{SkillIdNormalizer.Normalize(metadata.Value.Name)}",
-            DisplayName = metadata.Value.Name,
-            Description = metadata.Value.Description,
+            Id = $"{idPrefix}.{SkillIdNormalizer.Normalize(metadata.Name)}",
+            DisplayName = metadata.Name,
+            Description = metadata.Description,
             Source = $"{executorType}:{source.Location}",
             ExecutorType = executorType,
             Enabled = false,
             ReviewRequired = true,
+            Checksum = metadata.Checksum,
+            InstalledFrom = metadata.InstalledFrom,
+            InstalledAt = metadata.InstalledAt,
             RiskLevel = SkillRiskLevel.Medium,
             Permissions = [SkillPermission.None],
             GrantedPermissions = [],

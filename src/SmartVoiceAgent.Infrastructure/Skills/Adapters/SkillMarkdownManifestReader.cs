@@ -1,8 +1,10 @@
+using System.Security.Cryptography;
+
 namespace SmartVoiceAgent.Infrastructure.Skills.Adapters;
 
 internal static class SkillMarkdownManifestReader
 {
-    public static (string Name, string Description)? Read(string skillDirectory)
+    public static SkillMarkdownManifestMetadata? Read(string skillDirectory)
     {
         var skillFile = Path.Combine(skillDirectory, "SKILL.md");
         if (!File.Exists(skillFile))
@@ -45,6 +47,26 @@ internal static class SkillMarkdownManifestReader
 
         return string.IsNullOrWhiteSpace(name)
             ? null
-            : (name, description);
+            : new SkillMarkdownManifestMetadata(
+                name,
+                description,
+                ComputeChecksum(skillFile),
+                skillDirectory,
+                DateTimeOffset.UtcNow);
+    }
+
+    private static string ComputeChecksum(string skillFile)
+    {
+        using var sha256 = SHA256.Create();
+        using var stream = File.OpenRead(skillFile);
+        var hash = sha256.ComputeHash(stream);
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 }
+
+internal sealed record SkillMarkdownManifestMetadata(
+    string Name,
+    string Description,
+    string Checksum,
+    string InstalledFrom,
+    DateTimeOffset InstalledAt);
