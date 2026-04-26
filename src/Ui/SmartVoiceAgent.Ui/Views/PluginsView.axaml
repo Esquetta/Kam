@@ -104,13 +104,29 @@
                 </Animation>
             </Style.Animations>
         </Style>
+
+        <Style Selector="Border.EvalSummary">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="14,12"/>
+        </Style>
+
+        <Style Selector="Border.EvalHealthy">
+            <Setter Property="BorderBrush" Value="#4010B981"/>
+        </Style>
+
+        <Style Selector="Border.EvalUnhealthy">
+            <Setter Property="BorderBrush" Value="#40F59E0B"/>
+        </Style>
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <Grid RowDefinitions="Auto, *" Margin="0,20">
+        <Grid RowDefinitions="Auto, Auto, *" Margin="0,20">
 
             <!-- Title Section -->
-            <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,20,0,48">
+            <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,20,0,24">
                 <TextBlock Text="{DynamicResource Lang.Plugins.Title}"
                            FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=48}"
                            LetterSpacing="16"
@@ -126,8 +142,44 @@
                            LetterSpacing="2"/>
             </StackPanel>
 
+            <Border Grid.Row="1"
+                    Classes="EvalSummary"
+                    Classes.EvalHealthy="{Binding IsSkillEvalHealthy}"
+                    Classes.EvalUnhealthy="{Binding !IsSkillEvalHealthy}"
+                    Margin="8,0,8,20"
+                    MaxWidth="920"
+                    HorizontalAlignment="Stretch">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                    <Ellipse Grid.Column="0"
+                             Width="10"
+                             Height="10"
+                             Fill="{DynamicResource AccentCyanBrush}"
+                             VerticalAlignment="Top"
+                             Margin="0,4,0,0"
+                             IsVisible="{Binding IsSkillEvalHealthy}"/>
+                    <Ellipse Grid.Column="0"
+                             Width="10"
+                             Height="10"
+                             Fill="#F59E0B"
+                             VerticalAlignment="Top"
+                             Margin="0,4,0,0"
+                             IsVisible="{Binding !IsSkillEvalHealthy}"/>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Text="{Binding SkillEvalStatus}"
+                                   FontSize="12"
+                                   FontFamily="Consolas"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding SkillEvalDetail}"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
             <!-- Plugins Grid - Responsive Columns -->
-            <ItemsControl Grid.Row="1" ItemsSource="{Binding Plugins}" Margin="0,0,0,20">
+            <ItemsControl Grid.Row="2" ItemsSource="{Binding Plugins}" Margin="0,0,0,20">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <UniformGrid Columns="{Binding Source={StaticResource WindowStateManager}, Path=GridColumns}"/>

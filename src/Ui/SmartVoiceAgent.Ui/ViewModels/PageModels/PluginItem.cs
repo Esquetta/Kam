@@ -44,11 +44,32 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
     public class PluginsViewModel : ViewModelBase
     {
         private ObservableCollection<PluginItem> _plugins = new();
+        private string _skillEvalStatus = "Smoke evals not run";
+        private string _skillEvalDetail = "Open this screen with runtime services available to run smoke evals.";
+        private bool _isSkillEvalHealthy;
 
         public ObservableCollection<PluginItem> Plugins
         {
             get => _plugins;
             set => this.RaiseAndSetIfChanged(ref _plugins, value);
+        }
+
+        public string SkillEvalStatus
+        {
+            get => _skillEvalStatus;
+            private set => this.RaiseAndSetIfChanged(ref _skillEvalStatus, value);
+        }
+
+        public string SkillEvalDetail
+        {
+            get => _skillEvalDetail;
+            private set => this.RaiseAndSetIfChanged(ref _skillEvalDetail, value);
+        }
+
+        public bool IsSkillEvalHealthy
+        {
+            get => _isSkillEvalHealthy;
+            private set => this.RaiseAndSetIfChanged(ref _isSkillEvalHealthy, value);
         }
 
         public PluginsViewModel()
@@ -63,10 +84,27 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             LoadPlugins(skillHealthReports);
         }
 
+        public PluginsViewModel(
+            IEnumerable<SkillHealthReport> skillHealthReports,
+            SkillEvalSummary? evalSummary)
+            : this(skillHealthReports)
+        {
+            ApplyEvalSummary(evalSummary);
+        }
+
         public PluginsViewModel(ISkillHealthService skillHealthService)
             : this()
         {
             _ = RefreshHealthAsync(skillHealthService);
+        }
+
+        public PluginsViewModel(
+            ISkillHealthService skillHealthService,
+            ISkillEvalHarness skillEvalHarness,
+            ISkillEvalCaseCatalog skillEvalCaseCatalog)
+            : this()
+        {
+            _ = RefreshRuntimeStateAsync(skillHealthService, skillEvalHarness, skillEvalCaseCatalog);
         }
 
         private static IReadOnlyCollection<SkillHealthReport> CreateBuiltInHealthSnapshot()
@@ -114,6 +152,55 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 Console.WriteLine($"Failed to refresh skill health: {ex.Message}");
             }
+        }
+
+        private async Task RefreshRuntimeStateAsync(
+            ISkillHealthService skillHealthService,
+            ISkillEvalHarness skillEvalHarness,
+            ISkillEvalCaseCatalog skillEvalCaseCatalog)
+        {
+            try
+            {
+                var reportsTask = skillHealthService.GetHealthAsync();
+                var evalTask = skillEvalHarness.RunAsync(skillEvalCaseCatalog.CreateSmokeCases());
+
+                var reports = await reportsTask;
+                var evalSummary = await evalTask;
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    LoadPlugins(reports);
+                    ApplyEvalSummary(evalSummary);
+                });
+            }
+            catch (Exception ex)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    SkillEvalStatus = "Smoke evals failed to run";
+                    SkillEvalDetail = ex.Message;
+                    IsSkillEvalHealthy = false;
+                });
+            }
+        }
+
+        private void ApplyEvalSummary(SkillEvalSummary? summary)
+        {
+            if (summary is null || summary.Total <= 0)
+            {
+                SkillEvalStatus = "Smoke evals not run";
+                SkillEvalDetail = "No smoke eval results are available.";
+                IsSkillEvalHealthy = false;
+                return;
+            }
+
+            SkillEvalStatus = $"{summary.Passed}/{summary.Total} smoke evals passing";
+            IsSkillEvalHealthy = summary.Failed == 0;
+
+            var failingResult = summary.Results.FirstOrDefault(result => !result.Passed);
+            SkillEvalDetail = failingResult is null
+                ? "All smoke eval cases matched their expected status."
+                : $"{failingResult.SkillId}: {failingResult.Message}";
         }
 
         private static PluginItem CreatePluginItem(SkillHealthReport report)

@@ -47,4 +47,42 @@ public class PluginsViewModelSkillHealthTests
         missing.HealthDetail.Should().Contain("No executor");
         missing.IsActive.Should().BeFalse();
     }
+
+    [Fact]
+    public void Constructor_WithEvalSummary_ExposesSmokeEvalStatus()
+    {
+        var viewModel = new PluginsViewModel(
+        [
+            new SkillHealthReport
+            {
+                SkillId = "files.read",
+                DisplayName = "Read File",
+                Source = "builtin",
+                Status = SkillHealthStatus.Healthy,
+                Details = "Executor available."
+            }
+        ],
+        new SkillEvalSummary
+        {
+            Total = 3,
+            Passed = 2,
+            Failed = 1,
+            Results =
+            [
+                new SkillEvalResult
+                {
+                    Name = "files.exists smoke",
+                    SkillId = "files.exists",
+                    Passed = false,
+                    ExpectedStatus = SkillExecutionStatus.Succeeded,
+                    ActualStatus = SkillExecutionStatus.ValidationFailed,
+                    Message = "Expected Succeeded, got ValidationFailed."
+                }
+            ]
+        });
+
+        viewModel.SkillEvalStatus.Should().Be("2/3 smoke evals passing");
+        viewModel.SkillEvalDetail.Should().Contain("files.exists");
+        viewModel.IsSkillEvalHealthy.Should().BeFalse();
+    }
 }

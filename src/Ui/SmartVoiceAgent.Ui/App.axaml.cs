@@ -88,6 +88,10 @@ namespace SmartVoiceAgent.Ui
                 var skillHealthService = _host.Services.GetRequiredService<ISkillHealthService>();
                 _mainViewModel.SetSkillHealthService(skillHealthService);
 
+                var skillEvalHarness = _host.Services.GetRequiredService<ISkillEvalHarness>();
+                var skillEvalCaseCatalog = _host.Services.GetRequiredService<ISkillEvalCaseCatalog>();
+                _mainViewModel.SetSkillEvalServices(skillEvalHarness, skillEvalCaseCatalog);
+
                 // Setup Voice Command Service
                 SetupVoiceCommandService(_mainViewModel);
 

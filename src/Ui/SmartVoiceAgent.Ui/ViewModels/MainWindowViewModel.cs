@@ -25,6 +25,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private CancellationTokenSource? _resultListenerCts;
         private IVoiceAgentHostControl? _hostControl;
         private ISkillHealthService? _skillHealthService;
+        private ISkillEvalHarness? _skillEvalHarness;
+        private ISkillEvalCaseCatalog? _skillEvalCaseCatalog;
 
         /* ========================= */
         /* CACHED BRUSHES */
@@ -308,6 +310,14 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             _skillHealthService = skillHealthService;
         }
+
+        public void SetSkillEvalServices(
+            ISkillEvalHarness skillEvalHarness,
+            ISkillEvalCaseCatalog skillEvalCaseCatalog)
+        {
+            _skillEvalHarness = skillEvalHarness;
+            _skillEvalCaseCatalog = skillEvalCaseCatalog;
+        }
         
         private void OnHostStateChanged(object? sender, bool isRunning)
         {
@@ -384,9 +394,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             CurrentViewModel = view switch
             {
                 NavView.Coordinator => new CoordinatorViewModel(_hostControl, this),
-                NavView.Plugins => _skillHealthService is null
-                    ? new PluginsViewModel()
-                    : new PluginsViewModel(_skillHealthService),
+                NavView.Plugins => CreatePluginsViewModel(),
                 NavView.Integrations => new IntegrationsViewModel(),
                 NavView.Settings => new SettingsViewModel(this),
                 _ => null
@@ -394,6 +402,23 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             CurrentViewModel?.OnNavigatedTo();
             AddLog($"NAVIGATED_TO: {view.ToString().ToUpper()}");
+        }
+
+        private PluginsViewModel CreatePluginsViewModel()
+        {
+            if (_skillHealthService is not null
+                && _skillEvalHarness is not null
+                && _skillEvalCaseCatalog is not null)
+            {
+                return new PluginsViewModel(
+                    _skillHealthService,
+                    _skillEvalHarness,
+                    _skillEvalCaseCatalog);
+            }
+
+            return _skillHealthService is null
+                ? new PluginsViewModel()
+                : new PluginsViewModel(_skillHealthService);
         }
 
         /* ========================= */
