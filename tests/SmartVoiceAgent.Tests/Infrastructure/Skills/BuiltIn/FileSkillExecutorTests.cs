@@ -29,6 +29,53 @@ public class FileSkillExecutorTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_FilesSearchContent_ReturnsMatchingFileAndLine()
+    {
+        var filePath = Path.Combine(_workspace, "notes.md");
+        await File.WriteAllTextAsync(filePath, "first line\ncodex style search\nlast line");
+        var executor = new FileSkillExecutor(new FileAgentTools(_workspace));
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject(
+            "files.search_content",
+            new
+            {
+                directoryPath = _workspace,
+                query = "codex",
+                searchPattern = "*.md",
+                recursive = false,
+                maxMatches = 10
+            }));
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("notes.md");
+        result.Message.Should().Contain("2:");
+        result.Message.Should().Contain("codex style search");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_FilesTree_ReturnsBoundedDirectoryTree()
+    {
+        Directory.CreateDirectory(Path.Combine(_workspace, "src"));
+        await File.WriteAllTextAsync(Path.Combine(_workspace, "README.md"), "hello");
+        await File.WriteAllTextAsync(Path.Combine(_workspace, "src", "app.cs"), "class App {}");
+        var executor = new FileSkillExecutor(new FileAgentTools(_workspace));
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject(
+            "files.tree",
+            new
+            {
+                directoryPath = _workspace,
+                maxDepth = 2,
+                maxEntries = 20
+            }));
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("README.md");
+        result.Message.Should().Contain("src");
+        result.Message.Should().Contain("app.cs");
+    }
+
+    [Fact]
     public async Task ExecuteAsync_UnsupportedSkill_ReturnsFailure()
     {
         var executor = new FileSkillExecutor(new FileAgentTools(_workspace));

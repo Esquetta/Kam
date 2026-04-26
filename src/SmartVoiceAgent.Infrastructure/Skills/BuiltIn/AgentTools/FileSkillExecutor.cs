@@ -18,6 +18,8 @@ public sealed class FileSkillExecutor : ISkillExecutor
         "files.info",
         "files.list",
         "files.search",
+        "files.search_content",
+        "files.tree",
         "files.read_lines",
         "files.open",
         "files.show_in_explorer",
@@ -72,6 +74,16 @@ public sealed class FileSkillExecutor : ISkillExecutor
                 SkillPlanArgumentReader.GetString(plan, "directoryPath"),
                 SkillPlanArgumentReader.GetString(plan, "searchPattern"),
                 SkillPlanArgumentReader.GetBool(plan, "recursive", true)),
+            "files.search_content" => await _tools.SearchFileContentAsync(
+                SkillPlanArgumentReader.GetString(plan, "directoryPath"),
+                SkillPlanArgumentReader.GetString(plan, "query"),
+                SkillPlanArgumentReader.GetString(plan, "searchPattern", "*.*"),
+                SkillPlanArgumentReader.GetBool(plan, "recursive", true),
+                SkillPlanArgumentReader.GetInt(plan, "maxMatches", 50)),
+            "files.tree" => await _tools.ListDirectoryTreeAsync(
+                SkillPlanArgumentReader.GetString(plan, "directoryPath"),
+                SkillPlanArgumentReader.GetInt(plan, "maxDepth", 2),
+                SkillPlanArgumentReader.GetInt(plan, "maxEntries", 200)),
             "files.read_lines" => await _tools.ReadLinesAsync(
                 SkillPlanArgumentReader.GetString(plan, "filePath"),
                 SkillPlanArgumentReader.GetInt(plan, "startLine", 1),

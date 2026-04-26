@@ -30,6 +30,10 @@ public sealed class BuiltInSkillEvalCaseCatalog : ISkillEvalCaseCatalog
                 "files.exists",
                 new { filePath = GetStableUserPath() }),
             Case(
+                "files.tree inspects a stable user path",
+                "files.tree",
+                new { directoryPath = GetStableUserPath(), maxDepth = 1, maxEntries = 50 }),
+            Case(
                 "clipboard.get reads bounded clipboard text",
                 "clipboard.get",
                 new { maxLength = 256 }),

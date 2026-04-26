@@ -31,6 +31,8 @@ public class BuiltInSkillManifestCatalogTests
             "files.info",
             "files.list",
             "files.search",
+            "files.search_content",
+            "files.tree",
             "files.read_lines",
             "files.open",
             "files.show_in_explorer",

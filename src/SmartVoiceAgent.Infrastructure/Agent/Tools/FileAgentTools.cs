@@ -616,6 +616,129 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
+        [AITool("search_file_content", "Searches text file contents and returns bounded path/line snippets.")]
+        public async Task<string> SearchFileContentAsync(
+            [Description("Directory to search in")]
+            string directoryPath,
+            [Description("Text to search for")]
+            string query,
+            [Description("File glob pattern such as *.md or *.cs")]
+            string searchPattern = "*.*",
+            [Description("If true, searches subdirectories")]
+            bool recursive = true,
+            [Description("Maximum number of matches to return")]
+            int maxMatches = 50)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(query))
+                {
+                    return "Hata: Arama metni gerekli.";
+                }
+
+                if (!Directory.Exists(directoryPath))
+                {
+                    return $"Hata: '{directoryPath}' dizini bulunamadı.";
+                }
+
+                maxMatches = Math.Clamp(maxMatches, 1, 200);
+                searchPattern = string.IsNullOrWhiteSpace(searchPattern) ? "*.*" : searchPattern;
+                var enumerationOptions = new EnumerationOptions
+                {
+                    IgnoreInaccessible = true,
+                    RecurseSubdirectories = recursive,
+                    ReturnSpecialDirectories = false
+                };
+
+                var matches = new List<string>();
+
+                foreach (var file in Directory.EnumerateFiles(directoryPath, searchPattern, enumerationOptions))
+                {
+                    var fileInfo = new FileInfo(file);
+                    if (!_allowedExtensions.Contains(fileInfo.Extension)
+                        || !IsTextSearchableExtension(fileInfo.Extension)
+                        || fileInfo.Length > _maxFileSizeBytes)
+                    {
+                        continue;
+                    }
+
+                    string[] lines;
+                    try
+                    {
+                        lines = await File.ReadAllLinesAsync(file);
+                    }
+                    catch (Exception ex) when (ex is IOException
+                        or UnauthorizedAccessException
+                        or DecoderFallbackException)
+                    {
+                        continue;
+                    }
+
+                    var lineNumber = 0;
+                    foreach (var line in lines)
+                    {
+                        lineNumber++;
+                        if (!line.Contains(query, StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        matches.Add($"{fileInfo.FullName}:{lineNumber}: {line.Trim()}");
+                        if (matches.Count >= maxMatches)
+                        {
+                            return FormatContentSearchResult(query, matches, truncated: true);
+                        }
+                    }
+                }
+
+                return matches.Count == 0
+                    ? $"'{query}' için içerik eşleşmesi bulunamadı."
+                    : FormatContentSearchResult(query, matches, truncated: false);
+            }
+            catch (Exception ex)
+            {
+                return $"İçerik arama hatası: {ex.Message}";
+            }
+        }
+
+        [AITool("list_directory_tree", "Returns a bounded directory tree for project or folder inspection.")]
+        public Task<string> ListDirectoryTreeAsync(
+            [Description("Directory to inspect")]
+            string directoryPath,
+            [Description("Maximum tree depth")]
+            int maxDepth = 2,
+            [Description("Maximum entries to return")]
+            int maxEntries = 200)
+        {
+            try
+            {
+                if (!Directory.Exists(directoryPath))
+                {
+                    return Task.FromResult($"Hata: '{directoryPath}' dizini bulunamadı.");
+                }
+
+                maxDepth = Math.Clamp(maxDepth, 0, 8);
+                maxEntries = Math.Clamp(maxEntries, 1, 1000);
+
+                var root = new DirectoryInfo(directoryPath);
+                var sb = new StringBuilder();
+                var count = 0;
+                sb.AppendLine($"{root.FullName}");
+                AppendDirectoryTree(root, depth: 0, maxDepth, maxEntries, sb, ref count);
+
+                if (count >= maxEntries)
+                {
+                    sb.AppendLine($"... çıktı {maxEntries} kayıt ile sınırlandı.");
+                }
+
+                return Task.FromResult(sb.ToString());
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult($"Dizin ağacı hatası: {ex.Message}");
+            }
+        }
+
         [AITool("create_directory", "Creates a new directory.")]
         public async Task<string> CreateDirectoryAsync(
             [Description("Full path of the directory to create")]
@@ -716,6 +839,8 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 AIFunctionFactory.Create(GetFileInfoAsync),
                 AIFunctionFactory.Create(ListFilesAsync),
                 AIFunctionFactory.Create(SearchFilesAsync),
+                AIFunctionFactory.Create(SearchFileContentAsync),
+                AIFunctionFactory.Create(ListDirectoryTreeAsync),
                 AIFunctionFactory.Create(CreateDirectoryAsync),
                 AIFunctionFactory.Create(ReadLinesAsync),
                 
@@ -739,6 +864,95 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
 
             return $"{len:0.##} {sizes[order]}";
+        }
+
+        private static bool IsTextSearchableExtension(string extension)
+        {
+            return extension.Equals(".txt", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".md", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".json", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".xml", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".csv", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".log", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".html", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".css", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".js", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".ts", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".py", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".cs", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".java", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".cpp", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".h", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".yml", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".yaml", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".ini", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".svg", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string FormatContentSearchResult(
+            string query,
+            IReadOnlyCollection<string> matches,
+            bool truncated)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"İçerik eşleşmeleri: '{query}' ({matches.Count} adet)");
+            foreach (var match in matches)
+            {
+                sb.AppendLine($"  - {match}");
+            }
+
+            if (truncated)
+            {
+                sb.AppendLine("... sonuçlar sınırlandı.");
+            }
+
+            return sb.ToString();
+        }
+
+        private static void AppendDirectoryTree(
+            DirectoryInfo directory,
+            int depth,
+            int maxDepth,
+            int maxEntries,
+            StringBuilder builder,
+            ref int count)
+        {
+            if (depth >= maxDepth || count >= maxEntries)
+            {
+                return;
+            }
+
+            IEnumerable<FileSystemInfo> entries;
+            try
+            {
+                entries = directory
+                    .EnumerateFileSystemInfos()
+                    .OrderBy(entry => entry is FileInfo)
+                    .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                builder.AppendLine($"{new string(' ', (depth + 1) * 2)}[access denied]");
+                return;
+            }
+
+            foreach (var entry in entries)
+            {
+                if (count >= maxEntries)
+                {
+                    return;
+                }
+
+                count++;
+                var marker = entry is DirectoryInfo ? "[D]" : "[F]";
+                builder.AppendLine($"{new string(' ', (depth + 1) * 2)}{marker} {entry.Name}");
+
+                if (entry is DirectoryInfo childDirectory)
+                {
+                    AppendDirectoryTree(childDirectory, depth + 1, maxDepth, maxEntries, builder, ref count);
+                }
+            }
         }
     }
 }

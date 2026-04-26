@@ -214,6 +214,28 @@ public static class BuiltInSkillManifestCatalog
                     OptionalBool("recursive", "Search subdirectories.")
                 ]),
             Create(
+                "files.search_content",
+                "Search File Content",
+                SkillRiskLevel.Low,
+                [SkillPermission.FileSystemRead],
+                [
+                    RequiredString("directoryPath", "Directory path to search."),
+                    RequiredString("query", "Text to search for."),
+                    OptionalString("searchPattern", "File pattern such as *.md or *.cs."),
+                    OptionalBool("recursive", "Search subdirectories."),
+                    OptionalNumber("maxMatches", "Maximum number of matches to return.")
+                ]),
+            Create(
+                "files.tree",
+                "Directory Tree",
+                SkillRiskLevel.Low,
+                [SkillPermission.FileSystemRead],
+                [
+                    RequiredString("directoryPath", "Directory path to inspect."),
+                    OptionalNumber("maxDepth", "Maximum tree depth."),
+                    OptionalNumber("maxEntries", "Maximum number of entries to return.")
+                ]),
+            Create(
                 "files.read_lines",
                 "Read File Lines",
                 SkillRiskLevel.Low,
