@@ -137,6 +137,7 @@ public static class ServiceRegistration
         services.AddScoped<ISkillExecutionPipeline, SkillExecutionPipeline>();
         services.AddScoped<ISkillHealthService, SkillHealthService>();
         services.AddScoped<ISkillEvalHarness, SkillEvalHarness>();
+        services.AddScoped<ISkillTestService, SkillTestService>();
         services.AddSingleton<ISkillEvalCaseCatalog, BuiltInSkillEvalCaseCatalog>();
         services.AddSingleton<ISkillAdapter, LocalSkillAdapter>();
         services.AddSingleton<ISkillAdapter, SkillsShSkillAdapter>();

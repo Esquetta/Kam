@@ -223,6 +223,93 @@ public class PluginsViewModelSkillHealthTests
     }
 
     [Fact]
+    public void SelectPlugin_UpdatesSkillDetailPanel()
+    {
+        var viewModel = new PluginsViewModel(
+        [
+            new SkillHealthReport
+            {
+                SkillId = "files.read",
+                DisplayName = "Read File",
+                Description = "Reads a local file.",
+                Source = "builtin",
+                ExecutorType = "builtin",
+                RiskLevel = SkillRiskLevel.Low,
+                Status = SkillHealthStatus.Healthy,
+                Details = "Executor available.",
+                Checksum = "builtin-files-read",
+                RequiredPermissions = [SkillPermission.FileSystemRead],
+                GrantedPermissions = [SkillPermission.FileSystemRead]
+            },
+            new SkillHealthReport
+            {
+                SkillId = "local.desktop-navigation",
+                DisplayName = "Desktop Navigation",
+                Description = "Imported local skill.",
+                Source = "local:C:\\skills\\desktop-navigation",
+                ExecutorType = "local",
+                RiskLevel = SkillRiskLevel.High,
+                Status = SkillHealthStatus.ReviewRequired,
+                Details = "Skill requires review before it can be enabled.",
+                Checksum = "abc123",
+                RequiredPermissions = [SkillPermission.ProcessControl],
+                GrantedPermissions = []
+            }
+        ]);
+
+        viewModel.SelectPlugin("local.desktop-navigation");
+
+        viewModel.HasSelectedPlugin.Should().BeTrue();
+        viewModel.SelectedSkillId.Should().Be("local.desktop-navigation");
+        viewModel.SelectedSkillTitle.Should().Be("DESKTOP NAVIGATION");
+        viewModel.SelectedSkillExecutor.Should().Be("Executor: local");
+        viewModel.SelectedSkillRisk.Should().Be("Risk: High");
+        viewModel.SelectedSkillChecksum.Should().Be("Checksum: abc123");
+        viewModel.SelectedSkillPermissions.Should().Contain(nameof(SkillPermission.ProcessControl));
+    }
+
+    [Fact]
+    public async Task TestSkillAsync_WithRuntimeService_ExecutesSkillTestAndRefreshesCards()
+    {
+        var testService = new RecordingSkillTestService(
+            SkillResult.Succeeded("Smoke test passed.") with { DurationMilliseconds = 35 });
+        var healthService = new SequencedSkillHealthService(
+        [
+            new SkillHealthReport
+            {
+                SkillId = "files.exists",
+                DisplayName = "Check File Exists",
+                Source = "builtin",
+                Status = SkillHealthStatus.Healthy,
+                Details = "Executor available."
+            }
+        ],
+        [
+            new SkillHealthReport
+            {
+                SkillId = "files.exists",
+                DisplayName = "Check File Exists",
+                Source = "builtin",
+                Status = SkillHealthStatus.Healthy,
+                Details = "Executor available.",
+                LastRunAt = new DateTimeOffset(2026, 4, 26, 13, 0, 0, TimeSpan.Zero),
+                LastRunStatus = SkillExecutionStatus.Succeeded,
+                LastRunMessage = "Smoke test passed.",
+                LastRunDurationMilliseconds = 35
+            }
+        ]);
+        var viewModel = new PluginsViewModel(healthService, testService);
+
+        await viewModel.TestSkillAsync("files.exists");
+
+        testService.TestedSkillIds.Should().ContainSingle().Which.Should().Be("files.exists");
+        viewModel.SkillEvalStatus.Should().Be("Skill test passed");
+        viewModel.SkillEvalDetail.Should().Be("files.exists: Smoke test passed.");
+        viewModel.Plugins.Single(plugin => plugin.SkillId == "files.exists")
+            .HasLastRun.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task RunSkillEvalAsync_WithRuntimeServices_RefreshesSummary()
     {
         var evalHarness = new StaticSkillEvalHarness(new SkillEvalSummary
@@ -373,6 +460,26 @@ public class PluginsViewModelSkillHealthTests
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_reports.Count > 1 ? _reports.Dequeue() : _reports.Peek());
+        }
+    }
+
+    private sealed class RecordingSkillTestService : ISkillTestService
+    {
+        private readonly SkillResult _result;
+
+        public RecordingSkillTestService(SkillResult result)
+        {
+            _result = result;
+        }
+
+        public List<string> TestedSkillIds { get; } = [];
+
+        public Task<SkillResult> TestAsync(
+            string skillId,
+            CancellationToken cancellationToken = default)
+        {
+            TestedSkillIds.Add(skillId);
+            return Task.FromResult(_result);
         }
     }
 

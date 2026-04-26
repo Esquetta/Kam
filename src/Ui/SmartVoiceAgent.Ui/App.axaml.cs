@@ -100,6 +100,9 @@ namespace SmartVoiceAgent.Ui
                 var skillImportService = _host.Services.GetRequiredService<ISkillImportService>();
                 _mainViewModel.SetSkillImportService(skillImportService);
 
+                var skillTestService = _host.Services.GetRequiredService<ISkillTestService>();
+                _mainViewModel.SetSkillTestService(skillTestService);
+
                 var skillConfirmationService = _host.Services.GetRequiredService<ISkillConfirmationService>();
                 _mainViewModel.SetSkillConfirmationService(skillConfirmationService);
 

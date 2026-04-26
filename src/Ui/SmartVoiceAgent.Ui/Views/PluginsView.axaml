@@ -131,7 +131,7 @@
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <Grid RowDefinitions="Auto, Auto, Auto, *" Margin="0,20">
+        <Grid RowDefinitions="Auto, Auto, Auto, Auto, *" Margin="0,20">
 
             <!-- Title Section -->
             <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,20,0,24">
@@ -227,8 +227,76 @@
                 </Grid>
             </Border>
 
+            <Border Grid.Row="3"
+                    Classes="ImportPanel"
+                    IsVisible="{Binding HasSelectedPlugin}"
+                    Margin="8,0,8,20"
+                    MaxWidth="920"
+                    HorizontalAlignment="Stretch">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <StackPanel Grid.Column="0" Spacing="6">
+                        <TextBlock Text="{Binding SelectedSkillTitle}"
+                                   FontSize="15"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding SelectedSkillId}"
+                                   FontSize="11"
+                                   FontFamily="Consolas"
+                                   Foreground="{DynamicResource AccentCyanBrush}"
+                                   TextWrapping="NoWrap"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding SelectedSkillSource}"
+                                   FontSize="10"
+                                   FontFamily="Consolas"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   TextWrapping="NoWrap"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <WrapPanel>
+                            <TextBlock Text="{Binding SelectedSkillExecutor}"
+                                       FontSize="10"
+                                       FontFamily="Consolas"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       Margin="0,0,14,0"/>
+                            <TextBlock Text="{Binding SelectedSkillRisk}"
+                                       FontSize="10"
+                                       FontFamily="Consolas"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       Margin="0,0,14,0"/>
+                            <TextBlock Text="{Binding SelectedSkillChecksum}"
+                                       FontSize="10"
+                                       FontFamily="Consolas"
+                                       Foreground="{DynamicResource TextMutedBrush}"/>
+                        </WrapPanel>
+                        <TextBlock Text="{Binding SelectedSkillPermissions}"
+                                   FontSize="10"
+                                   FontFamily="Consolas"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding SelectedSkillLastRun}"
+                                   FontSize="10"
+                                   FontFamily="Consolas"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Command="{Binding SelectedPlugin.TestSkillCommand}"
+                            IsVisible="{Binding SelectedPlugin.CanTestSkill}"
+                            ToolTip.Tip="Test skill"
+                            MinHeight="32"
+                            Padding="12,0"
+                            VerticalAlignment="Top">
+                        <Path Data="M8,5V19L19,12L8,5Z"
+                              Fill="{DynamicResource AccentCyanBrush}"
+                              Width="13"
+                              Height="13"
+                              Stretch="Uniform"/>
+                    </Button>
+                </Grid>
+            </Border>
+
             <!-- Plugins Grid - Responsive Columns -->
-            <ItemsControl Grid.Row="3" ItemsSource="{Binding Plugins}" Margin="0,0,0,20">
+            <ItemsControl Grid.Row="4" ItemsSource="{Binding Plugins}" Margin="0,0,0,20">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <UniformGrid Columns="{Binding Source={StaticResource WindowStateManager}, Path=GridColumns}"/>
@@ -368,6 +436,35 @@
                                     <StackPanel Orientation="Horizontal"
                                                 Spacing="6"
                                                 Margin="0,12,0,0">
+                                        <Button Width="28" Height="28"
+                                                Background="Transparent"
+                                                BorderBrush="{DynamicResource AccentCyanDimBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="0"
+                                                Cursor="Hand"
+                                                ToolTip.Tip="Details"
+                                                Command="{Binding SelectCommand}">
+                                            <Path Data="M11,17H13V11H11V17M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,7V9H13V7H11Z"
+                                                  Fill="{DynamicResource AccentCyanBrush}"
+                                                  Width="15" Height="15"
+                                                  Stretch="Uniform"/>
+                                        </Button>
+                                        <Button Width="28" Height="28"
+                                                Background="Transparent"
+                                                BorderBrush="{DynamicResource AccentCyanBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="0"
+                                                Cursor="Hand"
+                                                ToolTip.Tip="Test Skill"
+                                                IsVisible="{Binding CanTestSkill}"
+                                                Command="{Binding TestSkillCommand}">
+                                            <Path Data="M8,5V19L19,12L8,5Z"
+                                                  Fill="{DynamicResource AccentCyanBrush}"
+                                                  Width="14" Height="14"
+                                                  Stretch="Uniform"/>
+                                        </Button>
                                         <Button Width="28" Height="28"
                                                 Background="Transparent"
                                                 BorderBrush="{DynamicResource AccentCyanDimBrush}"

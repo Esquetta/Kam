@@ -34,14 +34,21 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public string Description { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public string Source { get; set; } = string.Empty;
+        public string ExecutorType { get; set; } = string.Empty;
+        public string RiskLevelText { get; set; } = string.Empty;
+        public string ChecksumText { get; set; } = string.Empty;
+        public string InstalledFromText { get; set; } = string.Empty;
         public string HealthDetail { get; set; } = string.Empty;
         public string IconPath { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+        public bool CanTestSkill { get; set; }
         public bool CanApproveReview { get; set; }
         public bool CanEnable { get; set; }
         public bool CanDisable { get; set; }
         public bool CanGrantPermissions { get; set; }
         public bool CanRevokePermissions { get; set; }
+        public ICommand? SelectCommand { get; set; }
+        public ICommand? TestSkillCommand { get; set; }
         public ICommand? ApproveReviewCommand { get; set; }
         public ICommand? EnableCommand { get; set; }
         public ICommand? DisableCommand { get; set; }
@@ -132,11 +139,22 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private string _importLocation = string.Empty;
         private int _selectedImportSourceIndex;
         private string _importStatus = "Import local or skills.sh folders containing SKILL.md.";
+        private PluginItem? _selectedPlugin;
+        private bool _hasSelectedPlugin;
+        private string _selectedSkillTitle = "No skill selected";
+        private string _selectedSkillId = string.Empty;
+        private string _selectedSkillSource = string.Empty;
+        private string _selectedSkillExecutor = string.Empty;
+        private string _selectedSkillRisk = string.Empty;
+        private string _selectedSkillChecksum = string.Empty;
+        private string _selectedSkillPermissions = string.Empty;
+        private string _selectedSkillLastRun = string.Empty;
         private ISkillHealthService? _skillHealthService;
         private ISkillImportService? _skillImportService;
         private ISkillPolicyManager? _skillPolicyManager;
         private ISkillEvalHarness? _skillEvalHarness;
         private ISkillEvalCaseCatalog? _skillEvalCaseCatalog;
+        private ISkillTestService? _skillTestService;
         private SkillEvalSummary? _lastEvalSummary;
 
         public ObservableCollection<PluginItem> Plugins
@@ -182,6 +200,66 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             get => _importStatus;
             private set => this.RaiseAndSetIfChanged(ref _importStatus, value);
+        }
+
+        public PluginItem? SelectedPlugin
+        {
+            get => _selectedPlugin;
+            private set => this.RaiseAndSetIfChanged(ref _selectedPlugin, value);
+        }
+
+        public bool HasSelectedPlugin
+        {
+            get => _hasSelectedPlugin;
+            private set => this.RaiseAndSetIfChanged(ref _hasSelectedPlugin, value);
+        }
+
+        public string SelectedSkillTitle
+        {
+            get => _selectedSkillTitle;
+            private set => this.RaiseAndSetIfChanged(ref _selectedSkillTitle, value);
+        }
+
+        public string SelectedSkillId
+        {
+            get => _selectedSkillId;
+            private set => this.RaiseAndSetIfChanged(ref _selectedSkillId, value);
+        }
+
+        public string SelectedSkillSource
+        {
+            get => _selectedSkillSource;
+            private set => this.RaiseAndSetIfChanged(ref _selectedSkillSource, value);
+        }
+
+        public string SelectedSkillExecutor
+        {
+            get => _selectedSkillExecutor;
+            private set => this.RaiseAndSetIfChanged(ref _selectedSkillExecutor, value);
+        }
+
+        public string SelectedSkillRisk
+        {
+            get => _selectedSkillRisk;
+            private set => this.RaiseAndSetIfChanged(ref _selectedSkillRisk, value);
+        }
+
+        public string SelectedSkillChecksum
+        {
+            get => _selectedSkillChecksum;
+            private set => this.RaiseAndSetIfChanged(ref _selectedSkillChecksum, value);
+        }
+
+        public string SelectedSkillPermissions
+        {
+            get => _selectedSkillPermissions;
+            private set => this.RaiseAndSetIfChanged(ref _selectedSkillPermissions, value);
+        }
+
+        public string SelectedSkillLastRun
+        {
+            get => _selectedSkillLastRun;
+            private set => this.RaiseAndSetIfChanged(ref _selectedSkillLastRun, value);
         }
 
         public ICommand ImportSkillCommand { get; }
@@ -237,6 +315,16 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         public PluginsViewModel(
             ISkillHealthService skillHealthService,
+            ISkillTestService skillTestService)
+            : this()
+        {
+            _skillHealthService = skillHealthService;
+            _skillTestService = skillTestService;
+            _ = RefreshHealthAsync(skillHealthService);
+        }
+
+        public PluginsViewModel(
+            ISkillHealthService skillHealthService,
             ISkillEvalHarness skillEvalHarness,
             ISkillEvalCaseCatalog skillEvalCaseCatalog)
             : this()
@@ -282,6 +370,19 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _skillImportService = skillImportService;
         }
 
+        public PluginsViewModel(
+            ISkillHealthService skillHealthService,
+            ISkillEvalHarness skillEvalHarness,
+            ISkillEvalCaseCatalog skillEvalCaseCatalog,
+            ISkillPolicyManager skillPolicyManager,
+            ISkillImportService skillImportService,
+            ISkillTestService skillTestService)
+            : this(skillHealthService, skillEvalHarness, skillEvalCaseCatalog, skillPolicyManager, skillImportService)
+        {
+            _skillTestService = skillTestService;
+            _ = RefreshHealthAsync(skillHealthService);
+        }
+
         private static IReadOnlyCollection<SkillHealthReport> CreateBuiltInHealthSnapshot()
         {
             return BuiltInSkillManifestCatalog
@@ -312,9 +413,13 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         private void LoadPlugins(IEnumerable<SkillHealthReport> skillHealthReports)
         {
+            var selectedSkillId = SelectedPlugin?.SkillId;
             Plugins = new ObservableCollection<PluginItem>(
                 skillHealthReports.Select(CreatePluginItem));
             ApplyPluginEvalResults(_lastEvalSummary);
+            SelectPlugin(!string.IsNullOrWhiteSpace(selectedSkillId)
+                ? selectedSkillId
+                : Plugins.FirstOrDefault()?.SkillId ?? string.Empty);
         }
 
         private async Task RefreshHealthAsync(ISkillHealthService skillHealthService)
@@ -418,6 +523,80 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             await ApplyPolicyActionAsync(skillId, _skillPolicyManager.GrantPermissionsAsync);
         }
 
+        public void SelectPlugin(string skillId)
+        {
+            var plugin = Plugins.FirstOrDefault(candidate => candidate.SkillId.Equals(
+                skillId,
+                StringComparison.OrdinalIgnoreCase));
+            SelectedPlugin = plugin;
+            HasSelectedPlugin = plugin is not null;
+
+            if (plugin is null)
+            {
+                SelectedSkillTitle = "No skill selected";
+                SelectedSkillId = string.Empty;
+                SelectedSkillSource = string.Empty;
+                SelectedSkillExecutor = string.Empty;
+                SelectedSkillRisk = string.Empty;
+                SelectedSkillChecksum = string.Empty;
+                SelectedSkillPermissions = string.Empty;
+                SelectedSkillLastRun = string.Empty;
+                return;
+            }
+
+            SelectedSkillTitle = plugin.Name;
+            SelectedSkillId = plugin.SkillId;
+            SelectedSkillSource = $"Source: {plugin.Source}";
+            SelectedSkillExecutor = $"Executor: {plugin.ExecutorType}";
+            SelectedSkillRisk = plugin.RiskLevelText;
+            SelectedSkillChecksum = plugin.ChecksumText;
+            SelectedSkillPermissions = $"{plugin.RequiredPermissionsText} | {plugin.GrantedPermissionsText}";
+            if (plugin.HasMissingPermissions)
+            {
+                SelectedSkillPermissions = $"{SelectedSkillPermissions} | {plugin.MissingPermissionsText}";
+            }
+
+            SelectedSkillLastRun = plugin.HasLastRun
+                ? $"{plugin.LastRunStatus} | {plugin.LastRunDetail}"
+                : "Last Run: none";
+        }
+
+        public async Task TestSkillAsync(string skillId)
+        {
+            if (_skillTestService is null)
+            {
+                SkillEvalStatus = "Skill test unavailable";
+                SkillEvalDetail = "Runtime skill test service is not registered for this screen.";
+                IsSkillEvalHealthy = false;
+                return;
+            }
+
+            SkillEvalStatus = "Testing skill";
+            SkillEvalDetail = $"Executing smoke test for {skillId}.";
+            IsSkillEvalHealthy = false;
+
+            try
+            {
+                var result = await _skillTestService.TestAsync(skillId);
+                SkillEvalStatus = result.Success ? "Skill test passed" : "Skill test failed";
+                SkillEvalDetail = result.Success
+                    ? $"{skillId}: {result.Message}"
+                    : $"{skillId}: {result.ErrorMessage}";
+                IsSkillEvalHealthy = result.Success;
+
+                if (_skillHealthService is not null)
+                {
+                    await RefreshHealthAsync(_skillHealthService);
+                }
+            }
+            catch (Exception ex)
+            {
+                SkillEvalStatus = "Skill test failed";
+                SkillEvalDetail = ex.Message;
+                IsSkillEvalHealthy = false;
+            }
+        }
+
         public async Task RunSkillEvalAsync()
         {
             if (_skillEvalHarness is null || _skillEvalCaseCatalog is null)
@@ -511,12 +690,24 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     : report.Description,
                 Status = FormatStatus(report.Status),
                 Source = report.Source,
+                ExecutorType = string.IsNullOrWhiteSpace(report.ExecutorType)
+                    ? "unknown"
+                    : report.ExecutorType,
+                RiskLevelText = $"Risk: {report.RiskLevel}",
+                ChecksumText = string.IsNullOrWhiteSpace(report.Checksum)
+                    ? "Checksum: n/a"
+                    : $"Checksum: {report.Checksum}",
+                InstalledFromText = string.IsNullOrWhiteSpace(report.InstalledFrom)
+                    ? "Installed From: n/a"
+                    : $"Installed From: {report.InstalledFrom}",
                 HealthDetail = report.Details,
                 IconColor = Brush.Parse(palette.IconColor),
                 GlowColor = Brush.Parse(palette.GlowColor),
                 StatusColor = Brush.Parse(palette.StatusColor),
                 IconPath = GetIconPath(report),
                 IsActive = report.Status == SkillHealthStatus.Healthy,
+                CanTestSkill = _skillTestService is not null
+                    && report.Status == SkillHealthStatus.Healthy,
                 CanApproveReview = report.Status == SkillHealthStatus.ReviewRequired,
                 CanEnable = report.Status == SkillHealthStatus.Disabled,
                 CanDisable = report.Status is SkillHealthStatus.Healthy
@@ -545,6 +736,13 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         private void AttachPolicyCommands(PluginItem item)
         {
+            item.SelectCommand = ReactiveCommand.Create(() => SelectPlugin(item.SkillId));
+            if (_skillTestService is not null)
+            {
+                item.TestSkillCommand = ReactiveCommand.CreateFromTask(
+                    () => TestSkillAsync(item.SkillId));
+            }
+
             if (_skillPolicyManager is null)
             {
                 return;

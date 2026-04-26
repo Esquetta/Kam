@@ -33,6 +33,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private ISkillConfirmationService? _skillConfirmationService;
         private ISkillPolicyManager? _skillPolicyManager;
         private ISkillImportService? _skillImportService;
+        private ISkillTestService? _skillTestService;
 
         /* ========================= */
         /* CACHED BRUSHES */
@@ -349,6 +350,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _skillImportService = skillImportService;
         }
 
+        public void SetSkillTestService(ISkillTestService skillTestService)
+        {
+            _skillTestService = skillTestService;
+        }
+
         public void SetSkillConfirmationService(ISkillConfirmationService skillConfirmationService)
         {
             if (_skillConfirmationService is not null)
@@ -452,14 +458,16 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 && _skillEvalHarness is not null
                 && _skillEvalCaseCatalog is not null
                 && _skillPolicyManager is not null
-                && _skillImportService is not null)
+                && _skillImportService is not null
+                && _skillTestService is not null)
             {
                 return new PluginsViewModel(
                     _skillHealthService,
                     _skillEvalHarness,
                     _skillEvalCaseCatalog,
                     _skillPolicyManager,
-                    _skillImportService);
+                    _skillImportService,
+                    _skillTestService);
             }
 
             if (_skillHealthService is not null
@@ -504,6 +512,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
             if (_skillHealthService is not null && _skillImportService is not null)
             {
                 return new PluginsViewModel(_skillHealthService, _skillImportService);
+            }
+
+            if (_skillHealthService is not null && _skillTestService is not null)
+            {
+                return new PluginsViewModel(_skillHealthService, _skillTestService);
             }
 
             return _skillHealthService is null

@@ -12,6 +12,12 @@ public sealed class SkillHealthReport
 
     public string ExecutorType { get; set; } = string.Empty;
 
+    public string Checksum { get; set; } = string.Empty;
+
+    public string InstalledFrom { get; set; } = string.Empty;
+
+    public DateTimeOffset InstalledAt { get; set; }
+
     public SkillRiskLevel RiskLevel { get; set; } = SkillRiskLevel.Low;
 
     public SkillHealthStatus Status { get; set; } = SkillHealthStatus.Healthy;
