@@ -6,6 +6,7 @@ using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Infrastructure.Factories;
 using SmartVoiceAgent.Infrastructure.Helpers;
 using SmartVoiceAgent.Infrastructure.Skills;
+using SmartVoiceAgent.Infrastructure.Skills.BuiltIn;
 using SmartVoiceAgent.Infrastructure.Skills.BuiltIn.AppSkills;
 using SmartVoiceAgent.Infrastructure.Skills.Execution;
 using SmartVoiceAgent.Infrastructure.Services;
@@ -107,7 +108,7 @@ public static class ServiceRegistration
         services.AddSingleton<ISkillRegistry>(_ =>
         {
             var registry = new InMemorySkillRegistry();
-            foreach (var manifest in CreateBuiltInAppSkillManifests())
+            foreach (var manifest in BuiltInSkillManifestCatalog.CreateAll())
             {
                 registry.Register(manifest);
             }
@@ -118,86 +119,5 @@ public static class ServiceRegistration
         services.AddScoped<ISkillExecutionPipeline, SkillExecutionPipeline>();
 
         return services;
-    }
-
-    private static IEnumerable<KamSkillManifest> CreateBuiltInAppSkillManifests()
-    {
-        return
-        [
-            new KamSkillManifest
-            {
-                Id = "apps.open",
-                DisplayName = "Open Application",
-                Source = "builtin",
-                ExecutorType = "builtin",
-                Enabled = true,
-                RiskLevel = SkillRiskLevel.High,
-                Permissions = [SkillPermission.ProcessLaunch],
-                Arguments =
-                [
-                    new SkillArgumentDefinition
-                    {
-                        Name = "applicationName",
-                        Description = "Application display name or executable alias.",
-                        Type = SkillArgumentType.String,
-                        Required = true
-                    }
-                ],
-                TimeoutMilliseconds = 10000
-            },
-            new KamSkillManifest
-            {
-                Id = "apps.close",
-                DisplayName = "Close Application",
-                Source = "builtin",
-                ExecutorType = "builtin",
-                Enabled = true,
-                RiskLevel = SkillRiskLevel.High,
-                Permissions = [SkillPermission.ProcessControl],
-                Arguments =
-                [
-                    new SkillArgumentDefinition
-                    {
-                        Name = "applicationName",
-                        Description = "Application display name or executable alias.",
-                        Type = SkillArgumentType.String,
-                        Required = true
-                    }
-                ],
-                TimeoutMilliseconds = 10000
-            },
-            new KamSkillManifest
-            {
-                Id = "apps.status",
-                DisplayName = "Application Status",
-                Source = "builtin",
-                ExecutorType = "builtin",
-                Enabled = true,
-                RiskLevel = SkillRiskLevel.Low,
-                Permissions = [SkillPermission.None],
-                Arguments =
-                [
-                    new SkillArgumentDefinition
-                    {
-                        Name = "applicationName",
-                        Description = "Application display name or executable alias.",
-                        Type = SkillArgumentType.String,
-                        Required = true
-                    }
-                ],
-                TimeoutMilliseconds = 5000
-            },
-            new KamSkillManifest
-            {
-                Id = "apps.list",
-                DisplayName = "List Applications",
-                Source = "builtin",
-                ExecutorType = "builtin",
-                Enabled = true,
-                RiskLevel = SkillRiskLevel.Low,
-                Permissions = [SkillPermission.None],
-                TimeoutMilliseconds = 5000
-            }
-        ];
     }
 }

@@ -11,6 +11,7 @@ using SmartVoiceAgent.Infrastructure.Agent.Functions;
 using SmartVoiceAgent.Infrastructure.Agent.Tools;
 using SmartVoiceAgent.Infrastructure.Mcp;
 using SmartVoiceAgent.Infrastructure.Services;
+using SmartVoiceAgent.Infrastructure.Skills.BuiltIn.AgentTools;
 using System.ClientModel;
 
 namespace SmartVoiceAgent.Infrastructure.Extensions;
@@ -76,6 +77,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<WebSearchAgentTools>();
         services.AddSingleton<FileAgentTools>();
         services.AddSingleton<CommunicationAgentTools>();
+        services.AddSingleton<ISkillExecutor, SystemAgentSkillExecutor>();
+        services.AddSingleton<ISkillExecutor, FileSkillExecutor>();
+        services.AddSingleton<ISkillExecutor, WebSearchSkillExecutor>();
+        services.AddSingleton<ISkillExecutor, CommunicationSkillExecutor>();
 
         // Host control service (must be registered before hosted service)
         services.AddSingleton<VoiceAgentHostControlService>();
