@@ -360,7 +360,7 @@
 					BorderBrush="{DynamicResource BorderSubtleBrush}"
 					BorderThickness="1,0,0,0"
 					IsVisible="{Binding Source={StaticResource WindowStateManager}, Path=IsLogPanelVisible}">
-				<Grid RowDefinitions="48, *, Auto">
+				<Grid RowDefinitions="48, Auto, *, Auto">
 
 					<!-- Window Controls -->
 					<Border Grid.Row="0"
@@ -398,8 +398,101 @@
 							  VerticalAlignment="Center"/>
 					</StackPanel>
 
+					<!-- Pending Skill Confirmations -->
+					<Border Grid.Row="1"
+							Background="{DynamicResource CardBgHoverBrush}"
+							BorderBrush="{DynamicResource AccentCyanDimBrush}"
+							BorderThickness="0,0,0,1"
+							Padding="16,12"
+							IsVisible="{Binding HasPendingSkillConfirmations}">
+						<StackPanel Spacing="8">
+							<StackPanel Orientation="Horizontal" Spacing="8">
+								<Path Data="M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16"
+									  Fill="{DynamicResource AccentCyanBrush}"
+									  Width="14" Height="14"
+									  Stretch="Uniform"
+									  VerticalAlignment="Center"/>
+								<TextBlock Text="PENDING_CONFIRMATION"
+										   FontSize="10"
+										   FontFamily="Consolas"
+										   FontWeight="SemiBold"
+										   Foreground="{DynamicResource AccentCyanBrush}"
+										   LetterSpacing="1"
+										   VerticalAlignment="Center"/>
+							</StackPanel>
+
+							<ItemsControl ItemsSource="{Binding PendingSkillConfirmations}">
+								<ItemsControl.ItemTemplate>
+									<DataTemplate>
+										<Border Background="{DynamicResource CardBgBrush}"
+												BorderBrush="{DynamicResource BorderSubtleBrush}"
+												BorderThickness="1"
+												CornerRadius="8"
+												Padding="10"
+												Margin="0,0,0,6">
+											<Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto, Auto">
+												<TextBlock Grid.Row="0" Grid.Column="0"
+														   Text="{Binding SkillId}"
+														   Foreground="{DynamicResource TextPrimaryBrush}"
+														   FontSize="12"
+														   FontFamily="Consolas"
+														   FontWeight="SemiBold"
+														   TextWrapping="Wrap"/>
+												<TextBlock Grid.Row="1" Grid.Column="0"
+														   Text="{Binding UserCommand}"
+														   Foreground="{DynamicResource TextSecondaryBrush}"
+														   FontSize="11"
+														   TextWrapping="Wrap"
+														   Margin="0,4,12,0"/>
+												<TextBlock Grid.Row="2" Grid.Column="0"
+														   Text="{Binding Reason}"
+														   Foreground="{DynamicResource TextMutedBrush}"
+														   FontSize="10"
+														   TextWrapping="Wrap"
+														   Margin="0,4,12,0"/>
+												<StackPanel Grid.Row="0" Grid.RowSpan="3" Grid.Column="1"
+															Orientation="Horizontal"
+															VerticalAlignment="Top"
+															Spacing="6">
+													<Button Width="28" Height="28"
+															Background="Transparent"
+															BorderBrush="{DynamicResource AccentGreenBrush}"
+															BorderThickness="1"
+															CornerRadius="6"
+															Padding="0"
+															Cursor="Hand"
+															ToolTip.Tip="Approve"
+															Command="{Binding ApproveCommand}">
+														<Path Data="M9,16.17L4.83,12L3.41,13.41L9,19L21,7L19.59,5.59L9,16.17Z"
+															  Fill="{DynamicResource AccentGreenBrush}"
+															  Width="15" Height="15"
+															  Stretch="Uniform"/>
+													</Button>
+													<Button Width="28" Height="28"
+															Background="Transparent"
+															BorderBrush="{DynamicResource AccentErrorBrush}"
+															BorderThickness="1"
+															CornerRadius="6"
+															Padding="0"
+															Cursor="Hand"
+															ToolTip.Tip="Reject"
+															Command="{Binding RejectCommand}">
+														<Path Data="M18.3,5.71L12,12L5.7,5.71L4.29,7.12L10.59,13.41L4.29,19.71L5.7,21.12L12,14.83L18.3,21.12L19.71,19.71L13.41,13.41L19.71,7.12Z"
+															  Fill="{DynamicResource AccentErrorBrush}"
+															  Width="14" Height="14"
+															  Stretch="Uniform"/>
+													</Button>
+												</StackPanel>
+											</Grid>
+										</Border>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+						</StackPanel>
+					</Border>
+
 					<!-- Log Content -->
-					<ScrollViewer x:Name="LogScrollViewer" Grid.Row="1"
+					<ScrollViewer x:Name="LogScrollViewer" Grid.Row="2"
 								  VerticalScrollBarVisibility="Auto"
 								  Margin="24,16,24,0">
 						<ItemsControl ItemsSource="{Binding LogEntries}">
@@ -412,7 +505,7 @@
 					</ScrollViewer>
 
 					<!-- Input Prompt with Voice Controls -->
-					<Border Grid.Row="2"
+					<Border Grid.Row="3"
 							BorderBrush="{DynamicResource BorderSubtleBrush}"
 							BorderThickness="0,1,0,0"
 							Padding="16,8">

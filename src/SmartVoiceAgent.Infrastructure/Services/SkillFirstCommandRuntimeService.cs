@@ -33,7 +33,8 @@ public sealed class SkillFirstCommandRuntimeService : ICommandRuntimeService
 
         using var scope = _scopeFactory.CreateScope();
         var planner = scope.ServiceProvider.GetRequiredService<ISkillPlannerService>();
-        var pipeline = scope.ServiceProvider.GetRequiredService<ISkillExecutionPipeline>();
+        var confirmationService = scope.ServiceProvider.GetRequiredService<ISkillConfirmationService>();
+        var skillRegistry = scope.ServiceProvider.GetRequiredService<ISkillRegistry>();
 
         var planResult = await CreatePlanAsync(planner, command, cancellationToken);
         if (!planResult.IsValid || planResult.Plan is null)
@@ -45,17 +46,18 @@ public sealed class SkillFirstCommandRuntimeService : ICommandRuntimeService
         }
 
         var plan = planResult.Plan;
-        if (plan.RequiresConfirmation)
+        if (RequiresConfirmation(plan, skillRegistry))
         {
-            return CommandRuntimeResult.Failed(
+            var request = confirmationService.Queue(command, plan);
+            return CommandRuntimeResult.PendingConfirmation(
                 $"Skill '{plan.SkillId}' requires confirmation before execution.",
-                SkillExecutionStatus.ValidationFailed,
-                "confirmation_required",
-                plan.SkillId);
+                plan.SkillId,
+                request.Id);
         }
 
         try
         {
+            var pipeline = scope.ServiceProvider.GetRequiredService<ISkillExecutionPipeline>();
             var result = await pipeline.ExecuteAsync(plan, cancellationToken);
             return result.Success
                 ? CommandRuntimeResult.Succeeded(result.Message, plan.SkillId, result)
@@ -99,5 +101,16 @@ public sealed class SkillFirstCommandRuntimeService : ICommandRuntimeService
             _logger.LogWarning(ex, "Skill planner failed while creating a plan.");
             return SkillPlanParseResult.Failure(ex.Message);
         }
+    }
+
+    private static bool RequiresConfirmation(SkillPlan plan, ISkillRegistry registry)
+    {
+        if (plan.RequiresConfirmation)
+        {
+            return true;
+        }
+
+        return registry.TryGet(plan.SkillId, out var manifest)
+            && manifest?.RiskLevel == SkillRiskLevel.High;
     }
 }

@@ -12,6 +12,10 @@ public sealed record CommandRuntimeResult(bool Success, string Message)
 
     public long DurationMilliseconds { get; init; }
 
+    public bool RequiresConfirmation { get; init; }
+
+    public Guid? ConfirmationId { get; init; }
+
     public static CommandRuntimeResult Succeeded(string message, string skillId, SkillResult result) =>
         new(true, string.IsNullOrWhiteSpace(message) ? $"Skill {skillId} completed." : message)
         {
@@ -19,6 +23,19 @@ public sealed record CommandRuntimeResult(bool Success, string Message)
             Status = result.Status,
             ErrorCode = string.Empty,
             DurationMilliseconds = result.DurationMilliseconds
+        };
+
+    public static CommandRuntimeResult PendingConfirmation(
+        string message,
+        string skillId,
+        Guid confirmationId) =>
+        new(false, string.IsNullOrWhiteSpace(message) ? $"Skill {skillId} requires confirmation." : message)
+        {
+            SkillId = skillId,
+            Status = SkillExecutionStatus.ValidationFailed,
+            ErrorCode = "confirmation_required",
+            RequiresConfirmation = true,
+            ConfirmationId = confirmationId
         };
 
     public static CommandRuntimeResult Failed(

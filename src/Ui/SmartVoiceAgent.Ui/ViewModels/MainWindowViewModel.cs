@@ -6,6 +6,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using ReactiveUI;
 using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.Services.Concrete;
 using SmartVoiceAgent.Ui.ViewModels.PageModels;
@@ -27,6 +28,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private ISkillHealthService? _skillHealthService;
         private ISkillEvalHarness? _skillEvalHarness;
         private ISkillEvalCaseCatalog? _skillEvalCaseCatalog;
+        private ISkillConfirmationService? _skillConfirmationService;
 
         /* ========================= */
         /* CACHED BRUSHES */
@@ -193,6 +195,20 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public ICommand SubmitCommand { get; }
 
+        private ObservableCollection<PendingSkillConfirmationViewModel> _pendingSkillConfirmations = new();
+        public ObservableCollection<PendingSkillConfirmationViewModel> PendingSkillConfirmations
+        {
+            get => _pendingSkillConfirmations;
+            set => this.RaiseAndSetIfChanged(ref _pendingSkillConfirmations, value);
+        }
+
+        private bool _hasPendingSkillConfirmations;
+        public bool HasPendingSkillConfirmations
+        {
+            get => _hasPendingSkillConfirmations;
+            private set => this.RaiseAndSetIfChanged(ref _hasPendingSkillConfirmations, value);
+        }
+
         /* ========================= */
         /* VOICE COMMAND */
         /* ========================= */
@@ -317,6 +333,18 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             _skillEvalHarness = skillEvalHarness;
             _skillEvalCaseCatalog = skillEvalCaseCatalog;
+        }
+
+        public void SetSkillConfirmationService(ISkillConfirmationService skillConfirmationService)
+        {
+            if (_skillConfirmationService is not null)
+            {
+                _skillConfirmationService.PendingChanged -= OnPendingSkillConfirmationsChanged;
+            }
+
+            _skillConfirmationService = skillConfirmationService;
+            _skillConfirmationService.PendingChanged += OnPendingSkillConfirmationsChanged;
+            RefreshPendingSkillConfirmations();
         }
         
         private void OnHostStateChanged(object? sender, bool isRunning)
@@ -521,6 +549,64 @@ namespace SmartVoiceAgent.Ui.ViewModels
             });
         }
 
+        private void OnPendingSkillConfirmationsChanged(object? sender, EventArgs e)
+        {
+            RefreshPendingSkillConfirmations();
+        }
+
+        private void RefreshPendingSkillConfirmations()
+        {
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(RefreshPendingSkillConfirmations);
+                return;
+            }
+
+            PendingSkillConfirmations.Clear();
+
+            if (_skillConfirmationService is not null)
+            {
+                foreach (var request in _skillConfirmationService.GetPending())
+                {
+                    PendingSkillConfirmations.Add(new PendingSkillConfirmationViewModel(
+                        request,
+                        ApproveSkillConfirmationAsync,
+                        RejectSkillConfirmation));
+                }
+            }
+
+            HasPendingSkillConfirmations = PendingSkillConfirmations.Count > 0;
+        }
+
+        private async Task ApproveSkillConfirmationAsync(PendingSkillConfirmationViewModel item)
+        {
+            if (_skillConfirmationService is null)
+                return;
+
+            AddLog($"CONFIRMING_SKILL: {item.SkillId}");
+
+            var result = await _skillConfirmationService.ApproveAsync(item.Id);
+            if (result.Success)
+            {
+                AddLog($"✅ {result.Message}");
+            }
+            else
+            {
+                var error = string.IsNullOrWhiteSpace(result.ErrorMessage)
+                    ? result.Message
+                    : result.ErrorMessage;
+                AddLog($"❌ Confirmation failed: {error}");
+            }
+        }
+
+        private void RejectSkillConfirmation(PendingSkillConfirmationViewModel item)
+        {
+            if (_skillConfirmationService?.Reject(item.Id) == true)
+            {
+                AddLog($"CONFIRMATION_REJECTED: {item.SkillId}");
+            }
+        }
+
         /* ========================= */
         /* LOGGING */
         /* ========================= */
@@ -707,7 +793,43 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 _commandInput.OnResult -= OnCommandResult;
             }
 
+            if (_skillConfirmationService is not null)
+            {
+                _skillConfirmationService.PendingChanged -= OnPendingSkillConfirmationsChanged;
+            }
+
             _voiceCommandService?.Dispose();
         }
+    }
+
+    public sealed class PendingSkillConfirmationViewModel
+    {
+        public PendingSkillConfirmationViewModel(
+            SkillConfirmationRequest request,
+            Func<PendingSkillConfirmationViewModel, Task> approve,
+            Action<PendingSkillConfirmationViewModel> reject)
+        {
+            Id = request.Id;
+            SkillId = request.SkillId;
+            UserCommand = request.UserCommand;
+            Reason = request.Reason;
+            CreatedAtText = request.CreatedAt.ToLocalTime().ToString("HH:mm:ss");
+            ApproveCommand = ReactiveCommand.CreateFromTask(() => approve(this));
+            RejectCommand = ReactiveCommand.Create(() => reject(this));
+        }
+
+        public Guid Id { get; }
+
+        public string SkillId { get; }
+
+        public string UserCommand { get; }
+
+        public string Reason { get; }
+
+        public string CreatedAtText { get; }
+
+        public ICommand ApproveCommand { get; }
+
+        public ICommand RejectCommand { get; }
     }
 }

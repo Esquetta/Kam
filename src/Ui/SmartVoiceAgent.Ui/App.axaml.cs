@@ -92,6 +92,9 @@ namespace SmartVoiceAgent.Ui
                 var skillEvalCaseCatalog = _host.Services.GetRequiredService<ISkillEvalCaseCatalog>();
                 _mainViewModel.SetSkillEvalServices(skillEvalHarness, skillEvalCaseCatalog);
 
+                var skillConfirmationService = _host.Services.GetRequiredService<ISkillConfirmationService>();
+                _mainViewModel.SetSkillConfirmationService(skillConfirmationService);
+
                 // Setup Voice Command Service
                 SetupVoiceCommandService(_mainViewModel);
 
