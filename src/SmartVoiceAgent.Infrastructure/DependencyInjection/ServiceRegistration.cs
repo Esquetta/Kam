@@ -6,6 +6,7 @@ using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Infrastructure.Factories;
 using SmartVoiceAgent.Infrastructure.Helpers;
 using SmartVoiceAgent.Infrastructure.Skills;
+using SmartVoiceAgent.Infrastructure.Skills.Adapters;
 using SmartVoiceAgent.Infrastructure.Skills.BuiltIn;
 using SmartVoiceAgent.Infrastructure.Skills.BuiltIn.AppSkills;
 using SmartVoiceAgent.Infrastructure.Skills.Execution;
@@ -117,6 +118,10 @@ public static class ServiceRegistration
         });
         services.AddScoped<ISkillExecutor, AppSkillExecutor>();
         services.AddScoped<ISkillExecutionPipeline, SkillExecutionPipeline>();
+        services.AddSingleton<ISkillAdapter, LocalSkillAdapter>();
+        services.AddSingleton<ISkillAdapter, SkillsShSkillAdapter>();
+        services.AddSingleton<ISkillAdapter, McpSkillAdapter>();
+        services.AddSingleton<ISkillAdapterRegistry, SkillAdapterRegistry>();
 
         return services;
     }
