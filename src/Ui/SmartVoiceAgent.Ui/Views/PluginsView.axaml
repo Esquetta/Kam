@@ -120,10 +120,18 @@
         <Style Selector="Border.EvalUnhealthy">
             <Setter Property="BorderBrush" Value="#40F59E0B"/>
         </Style>
+
+        <Style Selector="Border.ImportPanel">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="14,12"/>
+        </Style>
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <Grid RowDefinitions="Auto, Auto, *" Margin="0,20">
+        <Grid RowDefinitions="Auto, Auto, Auto, *" Margin="0,20">
 
             <!-- Title Section -->
             <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,20,0,24">
@@ -178,8 +186,37 @@
                 </Grid>
             </Border>
 
+            <Border Grid.Row="2"
+                    Classes="ImportPanel"
+                    Margin="8,0,8,20"
+                    MaxWidth="920"
+                    HorizontalAlignment="Stretch">
+                <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+                    <Grid Grid.Row="0" ColumnDefinitions="150,*,Auto" ColumnSpacing="8">
+                        <ComboBox Grid.Column="0"
+                                  ItemsSource="{Binding ImportSources}"
+                                  SelectedIndex="{Binding SelectedImportSourceIndex}"
+                                  MinHeight="34"/>
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding ImportLocation}"
+                                 PlaceholderText="Folder path containing SKILL.md"
+                                 MinHeight="34"/>
+                        <Button Grid.Column="2"
+                                Content="Import"
+                                Command="{Binding ImportSkillCommand}"
+                                MinHeight="34"
+                                Padding="18,0"/>
+                    </Grid>
+                    <TextBlock Grid.Row="1"
+                               Text="{Binding ImportStatus}"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               TextWrapping="Wrap"/>
+                </Grid>
+            </Border>
+
             <!-- Plugins Grid - Responsive Columns -->
-            <ItemsControl Grid.Row="2" ItemsSource="{Binding Plugins}" Margin="0,0,0,20">
+            <ItemsControl Grid.Row="3" ItemsSource="{Binding Plugins}" Margin="0,0,0,20">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <UniformGrid Columns="{Binding Source={StaticResource WindowStateManager}, Path=GridColumns}"/>

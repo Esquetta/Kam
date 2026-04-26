@@ -1,5 +1,8 @@
 using FluentAssertions;
+using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Infrastructure.Skills.Adapters;
+using SmartVoiceAgent.Infrastructure.Skills.Importing;
 using SmartVoiceAgent.Ui.ViewModels.PageModels;
 
 namespace SmartVoiceAgent.Tests.Ui.ViewModels;
@@ -103,5 +106,96 @@ public class PluginsViewModelSkillHealthTests
         viewModel.SkillEvalStatus.Should().Be("2/3 smoke evals passing");
         viewModel.SkillEvalDetail.Should().Contain("files.exists");
         viewModel.IsSkillEvalHealthy.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ImportSkillAsync_LocalPath_ImportsSourceAndRefreshesCards()
+    {
+        var importService = new RecordingSkillImportService();
+        var healthService = new StaticSkillHealthService(
+        [
+            new SkillHealthReport
+            {
+                SkillId = "local.desktop-navigation",
+                DisplayName = "Desktop Navigation",
+                Description = "Imported local skill.",
+                Source = "local:C:\\skills\\desktop-navigation",
+                Status = SkillHealthStatus.ReviewRequired,
+                Details = "Skill requires review before it can be enabled."
+            }
+        ]);
+        var viewModel = new PluginsViewModel(healthService, importService)
+        {
+            ImportLocation = " C:\\skills\\desktop-navigation ",
+            SelectedImportSourceIndex = 0
+        };
+
+        await viewModel.ImportSkillAsync();
+
+        importService.LastSource.Should().NotBeNull();
+        importService.LastSource!.Kind.Should().Be(SkillSourceKind.LocalDirectory);
+        importService.LastSource.Location.Should().Be("C:\\skills\\desktop-navigation");
+        viewModel.ImportStatus.Should().Be("Imported 1 skill. Review required before use.");
+        viewModel.Plugins.Should().Contain(plugin =>
+            plugin.SkillId == "local.desktop-navigation"
+            && plugin.Status == "Review Required");
+    }
+
+    [Fact]
+    public async Task ImportSkillAsync_SkillsShSelection_UsesSkillsShSourceKind()
+    {
+        var importService = new RecordingSkillImportService();
+        var viewModel = new PluginsViewModel(
+            new StaticSkillHealthService([]),
+            importService)
+        {
+            ImportLocation = "D:\\skills\\browser-control",
+            SelectedImportSourceIndex = 1
+        };
+
+        await viewModel.ImportSkillAsync();
+
+        importService.LastSource.Should().NotBeNull();
+        importService.LastSource!.Kind.Should().Be(SkillSourceKind.SkillsSh);
+        viewModel.ImportStatus.Should().Be("Imported 1 skill. Review required before use.");
+    }
+
+    private sealed class RecordingSkillImportService : ISkillImportService
+    {
+        public SkillSourceDefinition? LastSource { get; private set; }
+
+        public Task<SkillImportResult> ImportAsync(
+            SkillSourceDefinition source,
+            CancellationToken cancellationToken = default)
+        {
+            LastSource = source;
+            return Task.FromResult(new SkillImportResult
+            {
+                Manifests =
+                [
+                    new KamSkillManifest
+                    {
+                        Id = "local.desktop-navigation",
+                        DisplayName = "Desktop Navigation"
+                    }
+                ]
+            });
+        }
+    }
+
+    private sealed class StaticSkillHealthService : ISkillHealthService
+    {
+        private readonly IReadOnlyCollection<SkillHealthReport> _reports;
+
+        public StaticSkillHealthService(IReadOnlyCollection<SkillHealthReport> reports)
+        {
+            _reports = reports;
+        }
+
+        public Task<IReadOnlyCollection<SkillHealthReport>> GetHealthAsync(
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_reports);
+        }
     }
 }

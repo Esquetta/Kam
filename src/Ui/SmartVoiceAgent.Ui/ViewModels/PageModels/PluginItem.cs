@@ -11,6 +11,8 @@ using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using SmartVoiceAgent.Infrastructure.Skills.Adapters;
+using SmartVoiceAgent.Infrastructure.Skills.Importing;
 using SmartVoiceAgent.Infrastructure.Skills.Policy;
 
 namespace SmartVoiceAgent.Ui.ViewModels.PageModels
@@ -58,7 +60,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private string _skillEvalStatus = "Smoke evals not run";
         private string _skillEvalDetail = "Open this screen with runtime services available to run smoke evals.";
         private bool _isSkillEvalHealthy;
+        private string _importLocation = string.Empty;
+        private int _selectedImportSourceIndex;
+        private string _importStatus = "Import local or skills.sh folders containing SKILL.md.";
         private ISkillHealthService? _skillHealthService;
+        private ISkillImportService? _skillImportService;
         private ISkillPolicyManager? _skillPolicyManager;
 
         public ObservableCollection<PluginItem> Plugins
@@ -85,13 +91,38 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             private set => this.RaiseAndSetIfChanged(ref _isSkillEvalHealthy, value);
         }
 
+        public ObservableCollection<string> ImportSources { get; } =
+            new(["Local folder", "skills.sh folder"]);
+
+        public string ImportLocation
+        {
+            get => _importLocation;
+            set => this.RaiseAndSetIfChanged(ref _importLocation, value);
+        }
+
+        public int SelectedImportSourceIndex
+        {
+            get => _selectedImportSourceIndex;
+            set => this.RaiseAndSetIfChanged(ref _selectedImportSourceIndex, value);
+        }
+
+        public string ImportStatus
+        {
+            get => _importStatus;
+            private set => this.RaiseAndSetIfChanged(ref _importStatus, value);
+        }
+
+        public ICommand ImportSkillCommand { get; }
+
         public PluginsViewModel()
         {
             Title = "SKILLS";
+            ImportSkillCommand = ReactiveCommand.CreateFromTask(ImportSkillAsync);
             LoadPlugins(CreateBuiltInHealthSnapshot());
         }
 
         public PluginsViewModel(IEnumerable<SkillHealthReport> skillHealthReports)
+            : this()
         {
             Title = "SKILLS";
             LoadPlugins(skillHealthReports);
@@ -110,6 +141,14 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             _skillHealthService = skillHealthService;
             _ = RefreshHealthAsync(skillHealthService);
+        }
+
+        public PluginsViewModel(
+            ISkillHealthService skillHealthService,
+            ISkillImportService skillImportService)
+            : this(skillHealthService)
+        {
+            _skillImportService = skillImportService;
         }
 
         public PluginsViewModel(
@@ -136,12 +175,33 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             ISkillHealthService skillHealthService,
             ISkillEvalHarness skillEvalHarness,
             ISkillEvalCaseCatalog skillEvalCaseCatalog,
+            ISkillImportService skillImportService)
+            : this(skillHealthService, skillEvalHarness, skillEvalCaseCatalog)
+        {
+            _skillImportService = skillImportService;
+        }
+
+        public PluginsViewModel(
+            ISkillHealthService skillHealthService,
+            ISkillEvalHarness skillEvalHarness,
+            ISkillEvalCaseCatalog skillEvalCaseCatalog,
             ISkillPolicyManager skillPolicyManager)
             : this()
         {
             _skillHealthService = skillHealthService;
             _skillPolicyManager = skillPolicyManager;
             _ = RefreshRuntimeStateAsync(skillHealthService, skillEvalHarness, skillEvalCaseCatalog);
+        }
+
+        public PluginsViewModel(
+            ISkillHealthService skillHealthService,
+            ISkillEvalHarness skillEvalHarness,
+            ISkillEvalCaseCatalog skillEvalCaseCatalog,
+            ISkillPolicyManager skillPolicyManager,
+            ISkillImportService skillImportService)
+            : this(skillHealthService, skillEvalHarness, skillEvalCaseCatalog, skillPolicyManager)
+        {
+            _skillImportService = skillImportService;
         }
 
         private static IReadOnlyCollection<SkillHealthReport> CreateBuiltInHealthSnapshot()
@@ -183,7 +243,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             try
             {
                 var reports = await skillHealthService.GetHealthAsync();
-                await Dispatcher.UIThread.InvokeAsync(() => LoadPlugins(reports));
+                await RunOnUiThreadAsync(() => LoadPlugins(reports));
             }
             catch (Exception ex)
             {
@@ -204,7 +264,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 var reports = await reportsTask;
                 var evalSummary = await evalTask;
 
-                await Dispatcher.UIThread.InvokeAsync(() =>
+                await RunOnUiThreadAsync(() =>
                 {
                     LoadPlugins(reports);
                     ApplyEvalSummary(evalSummary);
@@ -212,12 +272,60 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
             catch (Exception ex)
             {
-                await Dispatcher.UIThread.InvokeAsync(() =>
+                await RunOnUiThreadAsync(() =>
                 {
                     SkillEvalStatus = "Smoke evals failed to run";
                     SkillEvalDetail = ex.Message;
                     IsSkillEvalHealthy = false;
                 });
+            }
+        }
+
+        public async Task ImportSkillAsync()
+        {
+            if (_skillImportService is null)
+            {
+                ImportStatus = "Skill import service is not available.";
+                return;
+            }
+
+            var location = ImportLocation.Trim();
+            if (string.IsNullOrWhiteSpace(location))
+            {
+                ImportStatus = "Enter a folder path containing SKILL.md.";
+                return;
+            }
+
+            var sourceKind = SelectedImportSourceIndex == 1
+                ? SkillSourceKind.SkillsSh
+                : SkillSourceKind.LocalDirectory;
+
+            try
+            {
+                var result = await _skillImportService.ImportAsync(new SkillSourceDefinition
+                {
+                    Id = sourceKind == SkillSourceKind.SkillsSh ? "skills-sh-ui" : "local-ui",
+                    Kind = sourceKind,
+                    Location = location
+                });
+
+                ImportStatus = result.ImportedCount == 1
+                    ? "Imported 1 skill. Review required before use."
+                    : $"Imported {result.ImportedCount} skills. Review required before use.";
+
+                if (result.ImportedCount == 0)
+                {
+                    ImportStatus = "No skills found. Select a folder containing SKILL.md.";
+                }
+
+                if (_skillHealthService is not null)
+                {
+                    await RefreshHealthAsync(_skillHealthService);
+                }
+            }
+            catch (Exception ex)
+            {
+                ImportStatus = $"Import failed: {ex.Message}";
             }
         }
 
@@ -357,6 +465,17 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
 
             return "M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M11,6V13H13V6H11M11,15V17H13V15H11Z";
+        }
+
+        private static async Task RunOnUiThreadAsync(Action action)
+        {
+            if (Dispatcher.UIThread.CheckAccess() || global::Avalonia.Application.Current is null)
+            {
+                action();
+                return;
+            }
+
+            await Dispatcher.UIThread.InvokeAsync(action);
         }
 
         public override void OnNavigatedTo()

@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using ReactiveUI;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Infrastructure.Skills.Importing;
 using SmartVoiceAgent.Infrastructure.Skills.Policy;
 using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.Services.Concrete;
@@ -31,6 +32,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private ISkillEvalCaseCatalog? _skillEvalCaseCatalog;
         private ISkillConfirmationService? _skillConfirmationService;
         private ISkillPolicyManager? _skillPolicyManager;
+        private ISkillImportService? _skillImportService;
 
         /* ========================= */
         /* CACHED BRUSHES */
@@ -342,6 +344,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _skillPolicyManager = skillPolicyManager;
         }
 
+        public void SetSkillImportService(ISkillImportService skillImportService)
+        {
+            _skillImportService = skillImportService;
+        }
+
         public void SetSkillConfirmationService(ISkillConfirmationService skillConfirmationService)
         {
             if (_skillConfirmationService is not null)
@@ -444,6 +451,20 @@ namespace SmartVoiceAgent.Ui.ViewModels
             if (_skillHealthService is not null
                 && _skillEvalHarness is not null
                 && _skillEvalCaseCatalog is not null
+                && _skillPolicyManager is not null
+                && _skillImportService is not null)
+            {
+                return new PluginsViewModel(
+                    _skillHealthService,
+                    _skillEvalHarness,
+                    _skillEvalCaseCatalog,
+                    _skillPolicyManager,
+                    _skillImportService);
+            }
+
+            if (_skillHealthService is not null
+                && _skillEvalHarness is not null
+                && _skillEvalCaseCatalog is not null
                 && _skillPolicyManager is not null)
             {
                 return new PluginsViewModel(
@@ -451,6 +472,18 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     _skillEvalHarness,
                     _skillEvalCaseCatalog,
                     _skillPolicyManager);
+            }
+
+            if (_skillHealthService is not null
+                && _skillEvalHarness is not null
+                && _skillEvalCaseCatalog is not null
+                && _skillImportService is not null)
+            {
+                return new PluginsViewModel(
+                    _skillHealthService,
+                    _skillEvalHarness,
+                    _skillEvalCaseCatalog,
+                    _skillImportService);
             }
 
             if (_skillHealthService is not null
@@ -466,6 +499,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
             if (_skillHealthService is not null && _skillPolicyManager is not null)
             {
                 return new PluginsViewModel(_skillHealthService, _skillPolicyManager);
+            }
+
+            if (_skillHealthService is not null && _skillImportService is not null)
+            {
+                return new PluginsViewModel(_skillHealthService, _skillImportService);
             }
 
             return _skillHealthService is null
