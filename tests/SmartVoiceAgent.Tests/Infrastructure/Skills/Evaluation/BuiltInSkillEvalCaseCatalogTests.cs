@@ -22,6 +22,7 @@ public class BuiltInSkillEvalCaseCatalogTests
         cases.Should().Contain(testCase => testCase.Plan.SkillId.StartsWith("system."));
         cases.Should().Contain(testCase => testCase.Plan.SkillId.StartsWith("web."));
         cases.Should().Contain(testCase => testCase.Plan.SkillId.StartsWith("communication."));
+        cases.Should().Contain(testCase => testCase.Plan.SkillId.StartsWith("clipboard."));
     }
 
     [Fact]

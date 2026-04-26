@@ -7,5 +7,8 @@ public enum SkillPermission
     ProcessControl = 2,
     FileSystemRead = 3,
     FileSystemWrite = 4,
-    Network = 5
+    Network = 5,
+    ClipboardRead = 6,
+    ClipboardWrite = 7,
+    SystemInformation = 8
 }

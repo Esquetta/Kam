@@ -22,10 +22,14 @@ internal static class AgentToolSkillResult
         return normalized.StartsWith("Hata", StringComparison.OrdinalIgnoreCase)
             || normalized.StartsWith("Error", StringComparison.OrdinalIgnoreCase)
             || normalized.StartsWith("Failed", StringComparison.OrdinalIgnoreCase)
+            || normalized.StartsWith("Cannot ", StringComparison.OrdinalIgnoreCase)
             || normalized.Contains(" hata", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains(" cannot ", StringComparison.OrdinalIgnoreCase)
             || normalized.Contains("error", StringComparison.OrdinalIgnoreCase)
             || normalized.Contains("failed", StringComparison.OrdinalIgnoreCase)
             || normalized.Contains("not configured", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("not supported", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("unavailable", StringComparison.OrdinalIgnoreCase)
             || normalized.Contains("reddedildi", StringComparison.OrdinalIgnoreCase);
     }
 }

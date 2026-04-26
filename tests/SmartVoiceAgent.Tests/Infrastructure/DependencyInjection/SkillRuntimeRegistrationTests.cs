@@ -1,8 +1,11 @@
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SmartVoiceAgent.Application.DependencyInjection;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Infrastructure.DependencyInjection;
+using SmartVoiceAgent.Infrastructure.Extensions;
+using SmartVoiceAgent.Infrastructure.Skills.BuiltIn;
 using SmartVoiceAgent.Infrastructure.Skills.Importing;
 using SmartVoiceAgent.Infrastructure.Skills.Policy;
 
@@ -39,5 +42,27 @@ public class SkillRuntimeRegistrationTests
         provider.GetService<ISkillEvalCaseCatalog>().Should().NotBeNull();
         provider.GetService<ISkillImportService>().Should().NotBeNull();
         provider.GetService<ISkillPolicyManager>().Should().NotBeNull();
+    }
+
+    [Fact]
+    public void AddSmartVoiceAgent_RegistersExecutorForEveryBuiltInSkill()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection().Build();
+
+        services.AddLogging();
+        services.AddApplicationServices();
+        services.AddInfrastructureServices(configuration);
+        services.AddSmartVoiceAgent(configuration);
+        using var provider = services.BuildServiceProvider();
+
+        var executors = provider.GetServices<ISkillExecutor>().ToArray();
+
+        var missingExecutorSkillIds = BuiltInSkillManifestCatalog.CreateAll()
+            .Where(manifest => !executors.Any(executor => executor.CanExecute(manifest.Id)))
+            .Select(manifest => manifest.Id)
+            .ToArray();
+
+        missingExecutorSkillIds.Should().BeEmpty();
     }
 }

@@ -22,9 +22,17 @@ public sealed class BuiltInSkillEvalCaseCatalog : ISkillEvalCaseCatalog
                 "system.device.control",
                 new { deviceName = "volume", action = "status" }),
             Case(
+                "system.info reads system diagnostics",
+                "system.info",
+                new { }),
+            Case(
                 "files.exists checks a stable user path",
                 "files.exists",
                 new { filePath = GetStableUserPath() }),
+            Case(
+                "clipboard.get reads bounded clipboard text",
+                "clipboard.get",
+                new { maxLength = 256 }),
             Case(
                 "web.search creates a bounded search plan",
                 "web.search",

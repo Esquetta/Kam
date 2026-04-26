@@ -70,6 +70,9 @@ AVAILABLE FUNCTIONS:
 • move_file(sourcePath, destinationPath) - Moves files
 • list_files(directoryPath, searchPattern) - Lists directory contents
 • create_directory(directoryPath) - Creates folders
+• get_system_info() / get_cpu_info() / get_memory_info() / get_disk_info() - Reads system diagnostics
+• list_processes(sortBy, count) - Lists running processes
+• get_clipboard(maxLength) / set_clipboard(content) / clear_clipboard() - Reads or updates clipboard text
 
 EXAMPLES OF CORRECT BEHAVIOR:
 
@@ -100,6 +103,8 @@ Remember: ACTIONS REQUIRE FUNCTION CALLS, not just text responses.";
             .WithName("SystemAgent")
             .WithInstructions(instructions)
             .WithTools<SystemAgentTools>()
+            .WithTools<SystemInformationTools>()
+            .WithTools<ClipboardTools>()
             .Build();
     }
 

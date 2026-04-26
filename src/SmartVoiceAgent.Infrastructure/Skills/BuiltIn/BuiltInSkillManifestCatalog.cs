@@ -77,6 +77,56 @@ public static class BuiltInSkillManifestCatalog
                     RequiredString("action", "Action such as increase, decrease, on, off, toggle, status, or shutdown.")
                 ]),
             Create(
+                "system.info",
+                "System Information",
+                SkillRiskLevel.Low,
+                [SkillPermission.SystemInformation],
+                timeoutMilliseconds: 10000),
+            Create(
+                "system.cpu",
+                "CPU Information",
+                SkillRiskLevel.Low,
+                [SkillPermission.SystemInformation],
+                timeoutMilliseconds: 5000),
+            Create(
+                "system.memory",
+                "Memory Information",
+                SkillRiskLevel.Low,
+                [SkillPermission.SystemInformation],
+                timeoutMilliseconds: 5000),
+            Create(
+                "system.disk",
+                "Disk Information",
+                SkillRiskLevel.Low,
+                [SkillPermission.SystemInformation],
+                timeoutMilliseconds: 5000),
+            Create(
+                "system.battery",
+                "Battery Status",
+                SkillRiskLevel.Low,
+                [SkillPermission.SystemInformation],
+                timeoutMilliseconds: 5000),
+            Create(
+                "system.processes.list",
+                "List Processes",
+                SkillRiskLevel.Low,
+                [SkillPermission.SystemInformation],
+                [
+                    OptionalString("sortBy", "Sort by cpu or memory."),
+                    OptionalNumber("count", "Number of processes to return.")
+                ],
+                timeoutMilliseconds: 5000),
+            Create(
+                "system.process.kill",
+                "Kill Process",
+                SkillRiskLevel.High,
+                [SkillPermission.ProcessControl],
+                [
+                    RequiredString("processNameOrId", "Process name or PID to terminate."),
+                    OptionalBool("force", "Force kill immediately.")
+                ],
+                timeoutMilliseconds: 10000),
+            Create(
                 "files.read",
                 "Read File",
                 SkillRiskLevel.Low,
@@ -206,6 +256,26 @@ public static class BuiltInSkillManifestCatalog
                     RequiredString("directoryPath", "Directory path to open."),
                     OptionalString("selectFile", "File to select in the directory.")
                 ]),
+            Create(
+                "clipboard.get",
+                "Get Clipboard",
+                SkillRiskLevel.Medium,
+                [SkillPermission.ClipboardRead],
+                [OptionalNumber("maxLength", "Maximum characters to return.")],
+                timeoutMilliseconds: 5000),
+            Create(
+                "clipboard.set",
+                "Set Clipboard",
+                SkillRiskLevel.High,
+                [SkillPermission.ClipboardWrite],
+                [RequiredString("content", "Text content to put in the clipboard.")],
+                timeoutMilliseconds: 5000),
+            Create(
+                "clipboard.clear",
+                "Clear Clipboard",
+                SkillRiskLevel.High,
+                [SkillPermission.ClipboardWrite],
+                timeoutMilliseconds: 5000),
             Create(
                 "web.search",
                 "Search Web",

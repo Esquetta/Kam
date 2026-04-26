@@ -42,7 +42,17 @@ public class BuiltInSkillManifestCatalogTests
             "communication.email.validate",
             "communication.sms.send",
             "communication.sms.validate",
-            "communication.sms.status"
+            "communication.sms.status",
+            "clipboard.get",
+            "clipboard.set",
+            "clipboard.clear",
+            "system.info",
+            "system.cpu",
+            "system.memory",
+            "system.disk",
+            "system.battery",
+            "system.processes.list",
+            "system.process.kill"
         ]);
     }
 }

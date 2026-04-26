@@ -77,10 +77,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<WebSearchAgentTools>();
         services.AddSingleton<FileAgentTools>();
         services.AddSingleton<CommunicationAgentTools>();
+        services.AddSingleton<ClipboardTools>();
+        services.AddSingleton<SystemInformationTools>();
         services.AddSingleton<ISkillExecutor, SystemAgentSkillExecutor>();
         services.AddSingleton<ISkillExecutor, FileSkillExecutor>();
         services.AddSingleton<ISkillExecutor, WebSearchSkillExecutor>();
         services.AddSingleton<ISkillExecutor, CommunicationSkillExecutor>();
+        services.AddSingleton<ISkillExecutor, ClipboardSkillExecutor>();
+        services.AddSingleton<ISkillExecutor, SystemInformationSkillExecutor>();
         services.AddSingleton<ISkillPlannerService, ModelSkillPlannerService>();
 
         // Host control service (must be registered before hosted service)
