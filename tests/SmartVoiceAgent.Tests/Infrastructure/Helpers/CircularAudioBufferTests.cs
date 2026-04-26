@@ -293,7 +293,7 @@ namespace SmartVoiceAgent.Tests.Infrastructure.Helpers
         }
 
         [Fact]
-        public void Concurrent_WriteAndRead_NoExceptions()
+        public async Task Concurrent_WriteAndRead_NoExceptions()
         {
             // Arrange
             var buffer = new CircularAudioBuffer(1000);
@@ -341,7 +341,7 @@ namespace SmartVoiceAgent.Tests.Infrastructure.Helpers
                 }));
             }
 
-            Task.WaitAll(tasks.ToArray());
+            await Task.WhenAll(tasks);
 
             // Assert
             exceptions.Should().BeEmpty();

@@ -104,7 +104,13 @@ public class FakeChatClient : IChatClient, IDisposable
         ChatOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        return AsyncEnumerable.Empty<ChatResponseUpdate>();
+        return GetEmptyStreamingResponseAsync();
+    }
+
+    private static async IAsyncEnumerable<ChatResponseUpdate> GetEmptyStreamingResponseAsync()
+    {
+        await Task.Yield();
+        yield break;
     }
 
     public object? GetService(Type serviceType, object? serviceKey = null)

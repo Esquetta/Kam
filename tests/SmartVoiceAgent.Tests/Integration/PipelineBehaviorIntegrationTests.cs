@@ -34,7 +34,7 @@ namespace SmartVoiceAgent.Tests.Integration
 
             _mockCache
                 .Setup(c => c.GetAsync(cacheKey, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((byte[])null); // First call - cache miss
+                .ReturnsAsync((byte[]?)null); // First call - cache miss
 
             _mockCache
                 .Setup(c => c.SetAsync(
@@ -347,7 +347,7 @@ namespace SmartVoiceAgent.Tests.Integration
         {
             public async Task<TestResponse> Handle(TestRequest request, CancellationToken cancellationToken)
             {
-                await Task.Delay(500, cancellationToken);
+                await Task.Delay(600, cancellationToken);
                 return new TestResponse { Data = "slow result" };
             }
         }

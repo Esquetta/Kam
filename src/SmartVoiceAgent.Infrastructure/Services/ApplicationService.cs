@@ -1,78 +1,41 @@
-﻿using SmartVoiceAgent.Core.Dtos;
+using SmartVoiceAgent.Core.Dtos;
 using SmartVoiceAgent.Core.Enums;
 using SmartVoiceAgent.Core.Interfaces;
-using System.Xml.Linq;
 
 namespace SmartVoiceAgent.Infrastructure.Services;
 
 /// <summary>
-/// Service for managing application processes.
+/// Backward-compatible application service wrapper that delegates to the current platform implementation.
 /// </summary>
-public class ApplicationService : IApplicationService
+public sealed class ApplicationService : IApplicationService
 {
-    // Buraya platform-specific service bağımlılıkları ekleyebilirsin
-    // Örneğin: private readonly IProcessService _processService;
+    private readonly IApplicationService _innerService;
 
-    public Task OpenApplicationAsync(string appName)
+    public ApplicationService()
+        : this(new ApplicationServiceFactory().Create())
     {
-        // TODO:
-        Console.WriteLine($"{appName} uygulaması açılıyor...");
-        return Task.CompletedTask;
     }
 
-    public Task<AppStatus> GetApplicationStatusAsync(string appName)
+    public ApplicationService(IApplicationService innerService)
     {
-        // TODO: 
-        Console.WriteLine($"{appName} uygulamasının durumu kontrol ediliyor...");
-        return Task.FromResult(AppStatus.Running);
+        _innerService = innerService ?? throw new ArgumentNullException(nameof(innerService));
     }
 
-    public Task CloseApplicationAsync(string appName)
-    {
-        // TODO:
-        Console.WriteLine($"{appName} uygulaması kapatılıyor...");
-        return Task.CompletedTask;
-    }
+    public Task OpenApplicationAsync(string appName) =>
+        _innerService.OpenApplicationAsync(appName);
 
-    public Task<IEnumerable<AppInfoDTO>> ListApplicationsAsync()
-    {
-        // TODO:
-        var apps = new List<AppInfoDTO>
-        {
-            new AppInfoDTO("Spotify","../",false),
-            new AppInfoDTO("VisualStudio","../",false),
-        };
+    public Task<AppStatus> GetApplicationStatusAsync(string appName) =>
+        _innerService.GetApplicationStatusAsync(appName);
 
-        return Task.FromResult<IEnumerable<AppInfoDTO>>(apps.AsEnumerable());
-    }
+    public Task CloseApplicationAsync(string appName) =>
+        _innerService.CloseApplicationAsync(appName);
 
-    Task IApplicationService.OpenApplicationAsync(string appName)
-    {
-        throw new NotImplementedException();
-    }
+    public Task<IEnumerable<AppInfoDTO>> ListApplicationsAsync() =>
+        _innerService.ListApplicationsAsync();
 
-    Task<AppStatus> IApplicationService.GetApplicationStatusAsync(string appName)
-    {
-        throw new NotImplementedException();
-    }
+    public Task<ApplicationInstallInfo> CheckApplicationInstallationAsync(string appName) =>
+        _innerService.CheckApplicationInstallationAsync(appName);
 
-    Task IApplicationService.CloseApplicationAsync(string appName)
-    {
-        throw new NotImplementedException();
-    }
-
-    Task<IEnumerable<AppInfoDTO>> IApplicationService.ListApplicationsAsync()
-    {
-        throw new NotImplementedException();
-    }
-
-    Task<ApplicationInstallInfo> IApplicationService.CheckApplicationInstallationAsync(string appName)
-    {
-        throw new NotImplementedException();
-    }
-
-    Task<string> IApplicationService.GetApplicationExecutablePathAsync(string appName)
-    {
-        throw new NotImplementedException();
-    }
+    public Task<string> GetApplicationExecutablePathAsync(string appName) =>
+        _innerService.GetApplicationExecutablePathAsync(appName);
 }

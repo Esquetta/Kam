@@ -24,10 +24,10 @@ namespace SmartVoiceAgent.Tests.Infrastructure.Services
         [InlineData(null)]
         [InlineData("")]
         [InlineData("   ")]
-        public async Task ExtractApplicationNameAsync_NullOrEmptyInput_ReturnsNull(string input)
+        public async Task ExtractApplicationNameAsync_NullOrEmptyInput_ReturnsNull(string? input)
         {
             // Act
-            var result = await _service.ExtractApplicationNameAsync(input);
+            var result = await _service.ExtractApplicationNameAsync(input!);
 
             // Assert
             result.Should().BeNull();
