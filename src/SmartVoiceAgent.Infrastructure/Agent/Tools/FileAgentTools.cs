@@ -4,6 +4,7 @@ using SmartVoiceAgent.Infrastructure.Security;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 {
@@ -739,6 +740,123 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
+        [AITool("describe_workspace", "Returns a bounded workspace map with directory tree and file extension summary.")]
+        public Task<string> DescribeWorkspaceAsync(
+            [Description("Directory to inspect")]
+            string directoryPath,
+            [Description("Maximum tree depth")]
+            int maxDepth = 2,
+            [Description("Maximum entries to return")]
+            int maxEntries = 200)
+        {
+            try
+            {
+                if (!Directory.Exists(directoryPath))
+                {
+                    return Task.FromResult($"Hata: '{directoryPath}' dizini bulunamadı.");
+                }
+
+                maxDepth = Math.Clamp(maxDepth, 0, 8);
+                maxEntries = Math.Clamp(maxEntries, 1, 1000);
+
+                var root = new DirectoryInfo(directoryPath);
+                var extensionCounts = GetExtensionCounts(root, maxEntries);
+                var sb = new StringBuilder();
+                sb.AppendLine($"Workspace Map: {root.FullName}");
+                sb.AppendLine("Extension Summary:");
+
+                if (extensionCounts.Count == 0)
+                {
+                    sb.AppendLine("  - no files found");
+                }
+                else
+                {
+                    foreach (var extension in extensionCounts
+                        .OrderByDescending(pair => pair.Value)
+                        .ThenBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
+                        .Take(20))
+                    {
+                        sb.AppendLine($"  - {extension.Key}: {extension.Value}");
+                    }
+                }
+
+                sb.AppendLine("Tree:");
+                var count = 0;
+                AppendDirectoryTree(root, depth: 0, maxDepth, maxEntries, sb, ref count);
+
+                if (count >= maxEntries)
+                {
+                    sb.AppendLine($"... çıktı {maxEntries} kayıt ile sınırlandı.");
+                }
+
+                return Task.FromResult(sb.ToString());
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult($"Workspace map hatası: {ex.Message}");
+            }
+        }
+
+        [AITool("code_outline", "Returns a lightweight line-numbered outline for common code files.")]
+        public async Task<string> OutlineCodeAsync(
+            [Description("Full path to the code file")]
+            string filePath,
+            [Description("Maximum number of symbols to return")]
+            int maxSymbols = 100)
+        {
+            try
+            {
+                if (!File.Exists(filePath))
+                {
+                    return $"Hata: '{filePath}' dosyası bulunamadı.";
+                }
+
+                var fileInfo = new FileInfo(filePath);
+                if (fileInfo.Length > _maxFileSizeBytes)
+                {
+                    return $"Hata: Dosya çok büyük ({fileInfo.Length / 1024 / 1024}MB). Maksimum boyut: {_maxFileSizeBytes / 1024 / 1024}MB";
+                }
+
+                if (!IsCodeOutlineExtension(fileInfo.Extension))
+                {
+                    return $"Hata: '{fileInfo.Extension}' uzantısı için code outline desteklenmiyor.";
+                }
+
+                maxSymbols = Math.Clamp(maxSymbols, 1, 500);
+                var lines = await File.ReadAllLinesAsync(filePath);
+                var symbols = new List<string>();
+
+                for (var index = 0; index < lines.Length && symbols.Count < maxSymbols; index++)
+                {
+                    var symbol = TryFormatCodeSymbol(lines[index]);
+                    if (symbol is not null)
+                    {
+                        symbols.Add($"{index + 1}: {symbol}");
+                    }
+                }
+
+                var sb = new StringBuilder();
+                sb.AppendLine($"Code Outline: {fileInfo.FullName}");
+                if (symbols.Count == 0)
+                {
+                    sb.AppendLine("  - no symbols found");
+                }
+                else
+                {
+                    foreach (var symbol in symbols)
+                    {
+                        sb.AppendLine(symbol);
+                    }
+                }
+
+                return sb.ToString();
+            }
+            catch (Exception ex)
+            {
+                return $"Code outline hatası: {ex.Message}";
+            }
+        }
+
         [AITool("create_directory", "Creates a new directory.")]
         public async Task<string> CreateDirectoryAsync(
             [Description("Full path of the directory to create")]
@@ -841,6 +959,8 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 AIFunctionFactory.Create(SearchFilesAsync),
                 AIFunctionFactory.Create(SearchFileContentAsync),
                 AIFunctionFactory.Create(ListDirectoryTreeAsync),
+                AIFunctionFactory.Create(DescribeWorkspaceAsync),
+                AIFunctionFactory.Create(OutlineCodeAsync),
                 AIFunctionFactory.Create(CreateDirectoryAsync),
                 AIFunctionFactory.Create(ReadLinesAsync),
                 
@@ -887,6 +1007,69 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 || extension.Equals(".yaml", StringComparison.OrdinalIgnoreCase)
                 || extension.Equals(".ini", StringComparison.OrdinalIgnoreCase)
                 || extension.Equals(".svg", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsCodeOutlineExtension(string extension)
+        {
+            return extension.Equals(".cs", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".ts", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".tsx", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".js", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".jsx", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".py", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".java", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".cpp", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".h", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static Dictionary<string, int> GetExtensionCounts(DirectoryInfo root, int maxEntries)
+        {
+            var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var enumerationOptions = new EnumerationOptions
+            {
+                IgnoreInaccessible = true,
+                RecurseSubdirectories = true,
+                ReturnSpecialDirectories = false
+            };
+
+            var inspected = 0;
+            foreach (var file in root.EnumerateFiles("*", enumerationOptions))
+            {
+                if (inspected >= maxEntries)
+                {
+                    break;
+                }
+
+                inspected++;
+                var extension = string.IsNullOrWhiteSpace(file.Extension)
+                    ? "[no extension]"
+                    : file.Extension;
+                counts[extension] = counts.TryGetValue(extension, out var existing)
+                    ? existing + 1
+                    : 1;
+            }
+
+            return counts;
+        }
+
+        private static string? TryFormatCodeSymbol(string line)
+        {
+            var trimmed = line.Trim();
+            if (trimmed.Length == 0 || trimmed.StartsWith("//", StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            if (Regex.IsMatch(trimmed, @"^(public|private|protected|internal|static|sealed|abstract|partial|export|class|interface|record|struct|enum)\b.*\b(class|interface|record|struct|enum)\b\s+\w+", RegexOptions.IgnoreCase)
+                || Regex.IsMatch(trimmed, @"^(public|private|protected|internal|static|async|override|virtual|sealed|partial)\b.*\w+\s+\w+\s*\([^;]*\)\s*(\{|=>)?$", RegexOptions.IgnoreCase)
+                || Regex.IsMatch(trimmed, @"^(export\s+)?(async\s+)?function\s+\w+\s*\(", RegexOptions.IgnoreCase)
+                || Regex.IsMatch(trimmed, @"^(export\s+)?const\s+\w+\s*=\s*(async\s*)?\([^)]*\)\s*=>", RegexOptions.IgnoreCase)
+                || Regex.IsMatch(trimmed, @"^(class|def)\s+\w+", RegexOptions.IgnoreCase))
+            {
+                return trimmed.TrimEnd('{').TrimEnd(';').Trim();
+            }
+
+            return null;
         }
 
         private static string FormatContentSearchResult(

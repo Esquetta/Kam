@@ -246,6 +246,85 @@ public static class BuiltInSkillManifestCatalog
                     OptionalNumber("lineCount", "Number of lines to read.")
                 ]),
             Create(
+                "file.read",
+                "Read File",
+                SkillRiskLevel.Low,
+                [SkillPermission.FileSystemRead],
+                [RequiredString("filePath", "Full path to the file.")]),
+            Create(
+                "file.read_range",
+                "Read File Range",
+                SkillRiskLevel.Low,
+                [SkillPermission.FileSystemRead],
+                [
+                    RequiredString("filePath", "Full path to the file."),
+                    OptionalNumber("startLine", "Starting line number."),
+                    OptionalNumber("lineCount", "Number of lines to read.")
+                ]),
+            Create(
+                "workspace.tree",
+                "Workspace Tree",
+                SkillRiskLevel.Low,
+                [SkillPermission.FileSystemRead],
+                [
+                    RequiredString("directoryPath", "Workspace or directory path to inspect."),
+                    OptionalNumber("maxDepth", "Maximum tree depth."),
+                    OptionalNumber("maxEntries", "Maximum number of entries to return.")
+                ]),
+            Create(
+                "workspace.find_files",
+                "Find Workspace Files",
+                SkillRiskLevel.Low,
+                [SkillPermission.FileSystemRead],
+                [
+                    RequiredString("directoryPath", "Workspace or directory path to search."),
+                    RequiredString("searchPattern", "File name pattern."),
+                    OptionalBool("recursive", "Search subdirectories.")
+                ]),
+            Create(
+                "workspace.search_text",
+                "Search Workspace Text",
+                SkillRiskLevel.Low,
+                [SkillPermission.FileSystemRead],
+                [
+                    RequiredString("directoryPath", "Workspace or directory path to search."),
+                    RequiredString("query", "Text to search for."),
+                    OptionalString("searchPattern", "File pattern such as *.md or *.cs."),
+                    OptionalBool("recursive", "Search subdirectories."),
+                    OptionalNumber("maxMatches", "Maximum number of matches to return.")
+                ]),
+            Create(
+                "workspace.map",
+                "Workspace Map",
+                SkillRiskLevel.Low,
+                [SkillPermission.FileSystemRead],
+                [
+                    RequiredString("directoryPath", "Workspace or directory path to inspect."),
+                    OptionalNumber("maxDepth", "Maximum tree depth."),
+                    OptionalNumber("maxEntries", "Maximum number of entries to return.")
+                ]),
+            Create(
+                "code.search",
+                "Search Code",
+                SkillRiskLevel.Low,
+                [SkillPermission.FileSystemRead],
+                [
+                    RequiredString("directoryPath", "Workspace or directory path to search."),
+                    RequiredString("query", "Code text to search for."),
+                    OptionalString("searchPattern", "File pattern such as *.cs or *.ts."),
+                    OptionalBool("recursive", "Search subdirectories."),
+                    OptionalNumber("maxMatches", "Maximum number of matches to return.")
+                ]),
+            Create(
+                "code.outline",
+                "Code Outline",
+                SkillRiskLevel.Low,
+                [SkillPermission.FileSystemRead],
+                [
+                    RequiredString("filePath", "Full path to the code file."),
+                    OptionalNumber("maxSymbols", "Maximum number of symbols to return.")
+                ]),
+            Create(
                 "files.open",
                 "Open File",
                 SkillRiskLevel.High,

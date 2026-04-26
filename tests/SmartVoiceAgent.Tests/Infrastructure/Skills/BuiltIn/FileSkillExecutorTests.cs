@@ -76,6 +76,77 @@ public class FileSkillExecutorTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_FileReadAlias_MapsCodexStyleReadRequest()
+    {
+        var filePath = Path.Combine(_workspace, "README.md");
+        await File.WriteAllTextAsync(filePath, "# Kam\nCodex-style file reader");
+        var executor = new FileSkillExecutor(new FileAgentTools(_workspace));
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject("file.read", new { filePath }));
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Codex-style file reader");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WorkspaceMap_ReturnsBoundedTreeAndExtensionSummary()
+    {
+        Directory.CreateDirectory(Path.Combine(_workspace, "src"));
+        await File.WriteAllTextAsync(Path.Combine(_workspace, "README.md"), "# Kam");
+        await File.WriteAllTextAsync(Path.Combine(_workspace, "src", "Program.cs"), "public class Program {}");
+        await File.WriteAllTextAsync(Path.Combine(_workspace, "src", "app.ts"), "export const app = true;");
+        var executor = new FileSkillExecutor(new FileAgentTools(_workspace));
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject(
+            "workspace.map",
+            new
+            {
+                directoryPath = _workspace,
+                maxDepth = 2,
+                maxEntries = 20
+            }));
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Workspace Map");
+        result.Message.Should().Contain("README.md");
+        result.Message.Should().Contain(".cs: 1");
+        result.Message.Should().Contain(".ts: 1");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CodeOutline_ReturnsLineNumberedSymbols()
+    {
+        var filePath = Path.Combine(_workspace, "Worker.cs");
+        await File.WriteAllTextAsync(
+            filePath,
+            """
+            namespace Demo;
+
+            public sealed class Worker
+            {
+                public Task RunAsync()
+                {
+                    return Task.CompletedTask;
+                }
+            }
+            """);
+        var executor = new FileSkillExecutor(new FileAgentTools(_workspace));
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject(
+            "code.outline",
+            new
+            {
+                filePath,
+                maxSymbols = 10
+            }));
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Code Outline");
+        result.Message.Should().Contain("3: public sealed class Worker");
+        result.Message.Should().Contain("5: public Task RunAsync()");
+    }
+
+    [Fact]
     public async Task ExecuteAsync_UnsupportedSkill_ReturnsFailure()
     {
         var executor = new FileSkillExecutor(new FileAgentTools(_workspace));

@@ -34,6 +34,21 @@ public sealed class BuiltInSkillEvalCaseCatalog : ISkillEvalCaseCatalog
                 "files.tree",
                 new { directoryPath = GetStableUserPath(), maxDepth = 1, maxEntries = 50 }),
             Case(
+                "workspace.map inspects a stable user path",
+                "workspace.map",
+                new { directoryPath = GetStableUserPath(), maxDepth = 1, maxEntries = 50 }),
+            Case(
+                "code.search performs bounded text search",
+                "code.search",
+                new
+                {
+                    directoryPath = GetStableUserPath(),
+                    query = "kam-skill-smoke-noop",
+                    searchPattern = "*.md",
+                    recursive = false,
+                    maxMatches = 5
+                }),
+            Case(
                 "clipboard.get reads bounded clipboard text",
                 "clipboard.get",
                 new { maxLength = 256 }),

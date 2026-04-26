@@ -34,8 +34,16 @@ public class BuiltInSkillManifestCatalogTests
             "files.search_content",
             "files.tree",
             "files.read_lines",
+            "file.read",
+            "file.read_range",
             "files.open",
             "files.show_in_explorer",
+            "workspace.tree",
+            "workspace.find_files",
+            "workspace.search_text",
+            "workspace.map",
+            "code.search",
+            "code.outline",
             "directories.create",
             "directories.open",
             "web.search",
@@ -80,5 +88,9 @@ public class BuiltInSkillManifestCatalogTests
         manifests["window.active"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.SystemInformation);
         manifests["accessibility.tree"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.SystemInformation);
         manifests["clipboard.peek"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.ClipboardRead);
+        manifests["file.read"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.FileSystemRead);
+        manifests["workspace.map"].RiskLevel.Should().Be(SmartVoiceAgent.Core.Models.Skills.SkillRiskLevel.Low);
+        manifests["workspace.map"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.FileSystemRead);
+        manifests["code.outline"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.FileSystemRead);
     }
 }

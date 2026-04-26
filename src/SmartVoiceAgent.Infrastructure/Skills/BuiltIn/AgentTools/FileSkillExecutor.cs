@@ -21,6 +21,14 @@ public sealed class FileSkillExecutor : ISkillExecutor
         "files.search_content",
         "files.tree",
         "files.read_lines",
+        "file.read",
+        "file.read_range",
+        "workspace.tree",
+        "workspace.find_files",
+        "workspace.search_text",
+        "workspace.map",
+        "code.search",
+        "code.outline",
         "files.open",
         "files.show_in_explorer",
         "directories.create",
@@ -88,6 +96,38 @@ public sealed class FileSkillExecutor : ISkillExecutor
                 SkillPlanArgumentReader.GetString(plan, "filePath"),
                 SkillPlanArgumentReader.GetInt(plan, "startLine", 1),
                 SkillPlanArgumentReader.GetInt(plan, "lineCount")),
+            "file.read" => await _tools.ReadFileAsync(SkillPlanArgumentReader.GetString(plan, "filePath")),
+            "file.read_range" => await _tools.ReadLinesAsync(
+                SkillPlanArgumentReader.GetString(plan, "filePath"),
+                SkillPlanArgumentReader.GetInt(plan, "startLine", 1),
+                SkillPlanArgumentReader.GetInt(plan, "lineCount")),
+            "workspace.tree" => await _tools.ListDirectoryTreeAsync(
+                SkillPlanArgumentReader.GetString(plan, "directoryPath"),
+                SkillPlanArgumentReader.GetInt(plan, "maxDepth", 2),
+                SkillPlanArgumentReader.GetInt(plan, "maxEntries", 200)),
+            "workspace.find_files" => await _tools.SearchFilesAsync(
+                SkillPlanArgumentReader.GetString(plan, "directoryPath"),
+                SkillPlanArgumentReader.GetString(plan, "searchPattern"),
+                SkillPlanArgumentReader.GetBool(plan, "recursive", true)),
+            "workspace.search_text" => await _tools.SearchFileContentAsync(
+                SkillPlanArgumentReader.GetString(plan, "directoryPath"),
+                SkillPlanArgumentReader.GetString(plan, "query"),
+                SkillPlanArgumentReader.GetString(plan, "searchPattern", "*.*"),
+                SkillPlanArgumentReader.GetBool(plan, "recursive", true),
+                SkillPlanArgumentReader.GetInt(plan, "maxMatches", 50)),
+            "workspace.map" => await _tools.DescribeWorkspaceAsync(
+                SkillPlanArgumentReader.GetString(plan, "directoryPath"),
+                SkillPlanArgumentReader.GetInt(plan, "maxDepth", 2),
+                SkillPlanArgumentReader.GetInt(plan, "maxEntries", 200)),
+            "code.search" => await _tools.SearchFileContentAsync(
+                SkillPlanArgumentReader.GetString(plan, "directoryPath"),
+                SkillPlanArgumentReader.GetString(plan, "query"),
+                SkillPlanArgumentReader.GetString(plan, "searchPattern", "*.*"),
+                SkillPlanArgumentReader.GetBool(plan, "recursive", true),
+                SkillPlanArgumentReader.GetInt(plan, "maxMatches", 50)),
+            "code.outline" => await _tools.OutlineCodeAsync(
+                SkillPlanArgumentReader.GetString(plan, "filePath"),
+                SkillPlanArgumentReader.GetInt(plan, "maxSymbols", 100)),
             "files.open" => await _tools.OpenFileAsync(
                 SkillPlanArgumentReader.GetString(plan, "filePath"),
                 SkillPlanArgumentReader.GetBool(plan, "allowExecutables")),
