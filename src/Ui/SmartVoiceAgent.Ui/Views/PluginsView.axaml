@@ -294,6 +294,28 @@
                                                TextWrapping="NoWrap"
                                                TextTrimming="CharacterEllipsis"
                                                Margin="0,0,0,8"/>
+                                    <TextBlock Text="{Binding RequiredPermissionsText}"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               FontFamily="Consolas"
+                                               TextWrapping="NoWrap"
+                                               TextTrimming="CharacterEllipsis"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding GrantedPermissionsText}"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               FontFamily="Consolas"
+                                               TextWrapping="NoWrap"
+                                               TextTrimming="CharacterEllipsis"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding MissingPermissionsText}"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource AccentErrorBrush}"
+                                               FontFamily="Consolas"
+                                               TextWrapping="NoWrap"
+                                               TextTrimming="CharacterEllipsis"
+                                               IsVisible="{Binding HasMissingPermissions}"
+                                               Margin="0,0,0,8"/>
                                     <TextBlock Text="{Binding Description}"
                                                FontSize="11"
                                                Foreground="{DynamicResource TextMutedBrush}"
@@ -359,6 +381,21 @@
                                             <Path Data="M8,5V19L19,12L8,5Z"
                                                   Fill="{DynamicResource AccentGreenBrush}"
                                                   Width="14" Height="14"
+                                                  Stretch="Uniform"/>
+                                        </Button>
+                                        <Button Width="28" Height="28"
+                                                Background="Transparent"
+                                                BorderBrush="{DynamicResource AccentCyanBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="0"
+                                                Cursor="Hand"
+                                                ToolTip.Tip="Grant Permissions"
+                                                IsVisible="{Binding CanGrantPermissions}"
+                                                Command="{Binding GrantPermissionsCommand}">
+                                            <Path Data="M12,17A2,2 0 0,0 14,15A2,2 0 0,0 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8H17V6A5,5 0 0,0 7,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0,0 18,8M9,8V6A3,3 0 0,1 15,6V8H9Z"
+                                                  Fill="{DynamicResource AccentCyanBrush}"
+                                                  Width="15" Height="15"
                                                   Stretch="Uniform"/>
                                         </Button>
                                         <Button Width="28" Height="28"

@@ -3,6 +3,7 @@ using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Infrastructure.Skills.Adapters;
 using SmartVoiceAgent.Infrastructure.Skills.Importing;
+using SmartVoiceAgent.Infrastructure.Skills.Policy;
 using SmartVoiceAgent.Ui.ViewModels.PageModels;
 
 namespace SmartVoiceAgent.Tests.Ui.ViewModels;
@@ -39,7 +40,9 @@ public class PluginsViewModelSkillHealthTests
                 Description = "Imported local skill.",
                 Source = "local:C:\\skills\\desktop-navigation",
                 Status = SkillHealthStatus.ReviewRequired,
-                Details = "Skill requires review before it can be enabled."
+                Details = "Skill requires review before it can be enabled.",
+                RequiredPermissions = [SkillPermission.ProcessControl],
+                GrantedPermissions = []
             }
         ]);
 
@@ -68,6 +71,51 @@ public class PluginsViewModelSkillHealthTests
         reviewRequired.CanDisable.Should().BeFalse();
         reviewRequired.CanEnable.Should().BeFalse();
         reviewRequired.CanRevokePermissions.Should().BeFalse();
+        reviewRequired.RequiredPermissionsText.Should().Contain(nameof(SkillPermission.ProcessControl));
+        reviewRequired.GrantedPermissionsText.Should().Be("Granted: none");
+    }
+
+    [Fact]
+    public async Task GrantPermissionsCommand_PermissionDeniedSkill_GrantsRequiredPermissionsAndRefreshesCards()
+    {
+        var policyManager = new RecordingSkillPolicyManager();
+        var healthService = new SequencedSkillHealthService(
+        [
+            new SkillHealthReport
+            {
+                SkillId = "local.desktop-navigation",
+                DisplayName = "Desktop Navigation",
+                Source = "local:C:\\skills\\desktop-navigation",
+                Status = SkillHealthStatus.PermissionDenied,
+                Details = "Missing granted permissions: ProcessControl.",
+                RequiredPermissions = [SkillPermission.ProcessControl],
+                GrantedPermissions = [],
+                MissingPermissions = [SkillPermission.ProcessControl]
+            }
+        ],
+        [
+            new SkillHealthReport
+            {
+                SkillId = "local.desktop-navigation",
+                DisplayName = "Desktop Navigation",
+                Source = "local:C:\\skills\\desktop-navigation",
+                Status = SkillHealthStatus.Healthy,
+                Details = "Executor available.",
+                RequiredPermissions = [SkillPermission.ProcessControl],
+                GrantedPermissions = [SkillPermission.ProcessControl],
+                MissingPermissions = []
+            }
+        ]);
+        var viewModel = new PluginsViewModel(healthService, policyManager);
+        var plugin = viewModel.Plugins.Single(plugin => plugin.SkillId == "local.desktop-navigation");
+
+        plugin.CanGrantPermissions.Should().BeTrue();
+        plugin.GrantPermissionsCommand.Should().NotBeNull();
+        await viewModel.GrantPermissionsAsync("local.desktop-navigation");
+
+        policyManager.GrantedSkillIds.Should().ContainSingle().Which.Should().Be("local.desktop-navigation");
+        viewModel.Plugins.Single(plugin => plugin.SkillId == "local.desktop-navigation")
+            .GrantedPermissionsText.Should().Contain(nameof(SkillPermission.ProcessControl));
     }
 
     [Fact]
@@ -281,6 +329,45 @@ public class PluginsViewModelSkillHealthTests
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_reports);
+        }
+    }
+
+    private sealed class SequencedSkillHealthService : ISkillHealthService
+    {
+        private readonly Queue<IReadOnlyCollection<SkillHealthReport>> _reports;
+
+        public SequencedSkillHealthService(params IReadOnlyCollection<SkillHealthReport>[] reports)
+        {
+            _reports = new Queue<IReadOnlyCollection<SkillHealthReport>>(reports);
+        }
+
+        public Task<IReadOnlyCollection<SkillHealthReport>> GetHealthAsync(
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_reports.Count > 1 ? _reports.Dequeue() : _reports.Peek());
+        }
+    }
+
+    private sealed class RecordingSkillPolicyManager : ISkillPolicyManager
+    {
+        public List<string> GrantedSkillIds { get; } = [];
+
+        public Task<bool> ApproveReviewAsync(string skillId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(true);
+
+        public Task<bool> EnableAsync(string skillId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(true);
+
+        public Task<bool> DisableAsync(string skillId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(true);
+
+        public Task<bool> RevokePermissionsAsync(string skillId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(true);
+
+        public Task<bool> GrantPermissionsAsync(string skillId, CancellationToken cancellationToken = default)
+        {
+            GrantedSkillIds.Add(skillId);
+            return Task.FromResult(true);
         }
     }
 

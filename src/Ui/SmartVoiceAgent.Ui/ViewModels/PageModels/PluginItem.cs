@@ -22,6 +22,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private bool _hasEvalResult;
         private string _lastEvalStatus = string.Empty;
         private string _lastEvalDetail = string.Empty;
+        private string _requiredPermissionsText = "Requires: none";
+        private string _grantedPermissionsText = "Granted: none";
+        private string _missingPermissionsText = string.Empty;
 
         public string SkillId { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
@@ -34,10 +37,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public bool CanApproveReview { get; set; }
         public bool CanEnable { get; set; }
         public bool CanDisable { get; set; }
+        public bool CanGrantPermissions { get; set; }
         public bool CanRevokePermissions { get; set; }
         public ICommand? ApproveReviewCommand { get; set; }
         public ICommand? EnableCommand { get; set; }
         public ICommand? DisableCommand { get; set; }
+        public ICommand? GrantPermissionsCommand { get; set; }
         public ICommand? RevokePermissionsCommand { get; set; }
 
         public bool HasEvalResult
@@ -57,6 +62,26 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             get => _lastEvalDetail;
             set => this.RaiseAndSetIfChanged(ref _lastEvalDetail, value);
         }
+
+        public string RequiredPermissionsText
+        {
+            get => _requiredPermissionsText;
+            set => this.RaiseAndSetIfChanged(ref _requiredPermissionsText, value);
+        }
+
+        public string GrantedPermissionsText
+        {
+            get => _grantedPermissionsText;
+            set => this.RaiseAndSetIfChanged(ref _grantedPermissionsText, value);
+        }
+
+        public string MissingPermissionsText
+        {
+            get => _missingPermissionsText;
+            set => this.RaiseAndSetIfChanged(ref _missingPermissionsText, value);
+        }
+
+        public bool HasMissingPermissions => !string.IsNullOrWhiteSpace(MissingPermissionsText);
 
         // Color properties for the new design - use theme-aware colors
         public IBrush IconColor { get; set; } = Brush.Parse("#06B6D4");
@@ -361,6 +386,16 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
         }
 
+        public async Task GrantPermissionsAsync(string skillId)
+        {
+            if (_skillPolicyManager is null)
+            {
+                return;
+            }
+
+            await ApplyPolicyActionAsync(skillId, _skillPolicyManager.GrantPermissionsAsync);
+        }
+
         public async Task RunSkillEvalAsync()
         {
             if (_skillEvalHarness is null || _skillEvalCaseCatalog is null)
@@ -465,8 +500,15 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 CanDisable = report.Status is SkillHealthStatus.Healthy
                     or SkillHealthStatus.MissingExecutor
                     or SkillHealthStatus.PermissionDenied,
+                CanGrantPermissions = report.MissingPermissions.Count > 0
+                    && report.Status == SkillHealthStatus.PermissionDenied,
                 CanRevokePermissions = report.Status is SkillHealthStatus.Healthy
-                    or SkillHealthStatus.MissingExecutor
+                    or SkillHealthStatus.MissingExecutor,
+                RequiredPermissionsText = FormatPermissions("Requires", report.RequiredPermissions),
+                GrantedPermissionsText = FormatPermissions("Granted", report.GrantedPermissions),
+                MissingPermissionsText = report.MissingPermissions.Count == 0
+                    ? string.Empty
+                    : FormatPermissions("Missing", report.MissingPermissions)
             };
 
             AttachPolicyCommands(item);
@@ -486,6 +528,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 () => ApplyPolicyActionAsync(item.SkillId, _skillPolicyManager.EnableAsync));
             item.DisableCommand = ReactiveCommand.CreateFromTask(
                 () => ApplyPolicyActionAsync(item.SkillId, _skillPolicyManager.DisableAsync));
+            item.GrantPermissionsCommand = ReactiveCommand.CreateFromTask(
+                () => GrantPermissionsAsync(item.SkillId));
             item.RevokePermissionsCommand = ReactiveCommand.CreateFromTask(
                 () => ApplyPolicyActionAsync(item.SkillId, _skillPolicyManager.RevokePermissionsAsync));
         }
@@ -501,7 +545,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
 
             var reports = await _skillHealthService.GetHealthAsync();
-            await Dispatcher.UIThread.InvokeAsync(() => LoadPlugins(reports));
+            await RunOnUiThreadAsync(() => LoadPlugins(reports));
         }
 
         private static string FormatName(string displayName, string skillId)
@@ -524,6 +568,21 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 SkillHealthStatus.PermissionDenied => "Permission Denied",
                 _ => "Unknown"
             };
+        }
+
+        private static string FormatPermissions(
+            string label,
+            IReadOnlyCollection<SkillPermission> permissions)
+        {
+            var values = permissions
+                .Where(permission => permission != SkillPermission.None)
+                .Distinct()
+                .Select(permission => permission.ToString())
+                .ToArray();
+
+            return values.Length == 0
+                ? $"{label}: none"
+                : $"{label}: {string.Join(", ", values)}";
         }
 
         private static (string IconColor, string GlowColor, string StatusColor) GetStatusPalette(
