@@ -195,6 +195,34 @@ public class PluginsViewModelSkillHealthTests
     }
 
     [Fact]
+    public void Constructor_WithLastRunReport_MapsExecutionHistoryToPluginCards()
+    {
+        var viewModel = new PluginsViewModel(
+        [
+            new SkillHealthReport
+            {
+                SkillId = "local.desktop-navigation",
+                DisplayName = "Desktop Navigation",
+                Source = "local:C:\\skills\\desktop-navigation",
+                Status = SkillHealthStatus.Healthy,
+                Details = "Executor available.",
+                LastRunAt = new DateTimeOffset(2026, 4, 26, 12, 30, 0, TimeSpan.Zero),
+                LastRunStatus = SkillExecutionStatus.Failed,
+                LastRunMessage = "Click target was unavailable.",
+                LastRunErrorCode = "action_execution_failed",
+                LastRunDurationMilliseconds = 1250
+            }
+        ]);
+
+        var plugin = viewModel.Plugins.Should().ContainSingle().Subject;
+        plugin.HasLastRun.Should().BeTrue();
+        plugin.LastRunStatus.Should().Be("Last Run: Failed");
+        plugin.LastRunDetail.Should().Contain("Click target was unavailable.");
+        plugin.LastRunDetail.Should().Contain("action_execution_failed");
+        plugin.LastRunDetail.Should().Contain("1250 ms");
+    }
+
+    [Fact]
     public async Task RunSkillEvalAsync_WithRuntimeServices_RefreshesSummary()
     {
         var evalHarness = new StaticSkillEvalHarness(new SkillEvalSummary

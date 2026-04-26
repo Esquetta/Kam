@@ -122,6 +122,54 @@ public class SkillHealthServiceTests
         report.Details.Should().Be("Executor available.");
     }
 
+    [Fact]
+    public async Task GetHealthAsync_IncludesMostRecentAuditRecordForEachSkill()
+    {
+        var registry = new InMemorySkillRegistry();
+        registry.Register(new KamSkillManifest
+        {
+            Id = "local.desktop-navigation",
+            DisplayName = "Desktop Navigation",
+            Source = "local:C:\\skills\\desktop-navigation",
+            ExecutorType = "local",
+            Enabled = true,
+            Permissions = [SkillPermission.None]
+        });
+        var latestTimestamp = new DateTimeOffset(2026, 4, 26, 12, 30, 0, TimeSpan.Zero);
+        var auditLog = new StaticSkillAuditLogService(
+        [
+            new SkillAuditRecord
+            {
+                SkillId = "local.desktop-navigation",
+                Timestamp = latestTimestamp.AddMinutes(-30),
+                Status = SkillExecutionStatus.Succeeded,
+                ResultMessage = "Older success."
+            },
+            new SkillAuditRecord
+            {
+                SkillId = "local.desktop-navigation",
+                Timestamp = latestTimestamp,
+                Status = SkillExecutionStatus.Failed,
+                ResultMessage = "Click target was unavailable.",
+                ErrorCode = "action_execution_failed",
+                DurationMilliseconds = 1250
+            }
+        ]);
+        var service = new SkillHealthService(
+            registry,
+            [new MatchingSkillExecutor("local.desktop-navigation")],
+            auditLog);
+
+        var reports = await service.GetHealthAsync();
+
+        var report = reports.Should().ContainSingle().Subject;
+        report.LastRunAt.Should().Be(latestTimestamp);
+        report.LastRunStatus.Should().Be(SkillExecutionStatus.Failed);
+        report.LastRunMessage.Should().Be("Click target was unavailable.");
+        report.LastRunErrorCode.Should().Be("action_execution_failed");
+        report.LastRunDurationMilliseconds.Should().Be(1250);
+    }
+
     private sealed class MatchingSkillExecutor : ISkillExecutor
     {
         private readonly string _skillId;
@@ -173,6 +221,34 @@ public class SkillHealthServiceTests
         {
             await Task.Yield();
             yield break;
+        }
+    }
+
+    private sealed class StaticSkillAuditLogService : ISkillAuditLogService
+    {
+        private readonly IReadOnlyCollection<SkillAuditRecord> _records;
+
+        public StaticSkillAuditLogService(IReadOnlyCollection<SkillAuditRecord> records)
+        {
+            _records = records;
+        }
+
+        public Task RecordAsync(
+            SkillAuditRecord record,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyCollection<SkillAuditRecord>> GetRecentAsync(
+            int maxCount = 100,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyCollection<SkillAuditRecord>>(
+                _records
+                    .OrderByDescending(record => record.Timestamp)
+                    .Take(maxCount)
+                    .ToArray());
         }
     }
 }

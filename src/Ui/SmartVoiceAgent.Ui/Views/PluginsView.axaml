@@ -329,6 +329,21 @@
                                                LineHeight="16"
                                                MaxLines="2"
                                                Margin="0,8,0,0"/>
+                                    <StackPanel IsVisible="{Binding HasLastRun}"
+                                                Spacing="3"
+                                                Margin="0,8,0,0">
+                                        <TextBlock Text="{Binding LastRunStatus}"
+                                                   FontSize="10"
+                                                   FontFamily="Consolas"
+                                                   Foreground="{Binding LastRunColor}"
+                                                   TextWrapping="NoWrap"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding LastRunDetail}"
+                                                   FontSize="10"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                   TextWrapping="Wrap"
+                                                   MaxLines="2"/>
+                                    </StackPanel>
                                     <Border IsVisible="{Binding HasEvalResult}"
                                             Background="{DynamicResource SurfaceBgBrush}"
                                             BorderBrush="{DynamicResource BorderSubtleBrush}"

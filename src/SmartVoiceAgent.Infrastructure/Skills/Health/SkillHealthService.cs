@@ -5,29 +5,43 @@ namespace SmartVoiceAgent.Infrastructure.Skills.Health;
 
 public sealed class SkillHealthService : ISkillHealthService
 {
+    private const int AuditHistoryLimit = 500;
+
     private readonly ISkillRegistry _skillRegistry;
     private readonly IEnumerable<ISkillExecutor> _executors;
+    private readonly ISkillAuditLogService? _auditLogService;
 
-    public SkillHealthService(ISkillRegistry skillRegistry, IEnumerable<ISkillExecutor> executors)
+    public SkillHealthService(
+        ISkillRegistry skillRegistry,
+        IEnumerable<ISkillExecutor> executors,
+        ISkillAuditLogService? auditLogService = null)
     {
         _skillRegistry = skillRegistry;
         _executors = executors;
+        _auditLogService = auditLogService;
     }
 
-    public Task<IReadOnlyCollection<SkillHealthReport>> GetHealthAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<SkillHealthReport>> GetHealthAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        var latestRuns = await GetLatestRunsAsync(cancellationToken);
         IReadOnlyCollection<SkillHealthReport> reports = _skillRegistry
             .GetAll()
             .OrderBy(manifest => manifest.Id, StringComparer.OrdinalIgnoreCase)
-            .Select(CreateReport)
+            .Select(manifest =>
+            {
+                latestRuns.TryGetValue(manifest.Id, out var lastRun);
+                return CreateReport(manifest, lastRun);
+            })
             .ToArray();
 
-        return Task.FromResult(reports);
+        return reports;
     }
 
-    private SkillHealthReport CreateReport(KamSkillManifest manifest)
+    private SkillHealthReport CreateReport(
+        KamSkillManifest manifest,
+        SkillAuditRecord? lastRun)
     {
         var status = GetStatus(manifest);
         var missingPermissions = GetMissingPermissions(manifest);
@@ -47,8 +61,32 @@ public sealed class SkillHealthService : ISkillHealthService
                 .Where(permission => permission != SkillPermission.None)
                 .Distinct()
                 .ToArray(),
-            MissingPermissions = missingPermissions
+            MissingPermissions = missingPermissions,
+            LastRunAt = lastRun?.Timestamp,
+            LastRunStatus = lastRun?.Status,
+            LastRunMessage = lastRun?.ResultMessage ?? string.Empty,
+            LastRunErrorCode = lastRun?.ErrorCode ?? string.Empty,
+            LastRunDurationMilliseconds = lastRun?.DurationMilliseconds ?? 0
         };
+    }
+
+    private async Task<IReadOnlyDictionary<string, SkillAuditRecord>> GetLatestRunsAsync(
+        CancellationToken cancellationToken)
+    {
+        if (_auditLogService is null)
+        {
+            return new Dictionary<string, SkillAuditRecord>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        var records = await _auditLogService.GetRecentAsync(AuditHistoryLimit, cancellationToken);
+        return records
+            .Where(record => !string.IsNullOrWhiteSpace(record.SkillId))
+            .OrderByDescending(record => record.Timestamp)
+            .GroupBy(record => record.SkillId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First(),
+                StringComparer.OrdinalIgnoreCase);
     }
 
     private SkillHealthStatus GetStatus(KamSkillManifest manifest)

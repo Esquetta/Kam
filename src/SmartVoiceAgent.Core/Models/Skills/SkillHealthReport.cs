@@ -23,4 +23,14 @@ public sealed class SkillHealthReport
     public IReadOnlyCollection<SkillPermission> GrantedPermissions { get; set; } = [];
 
     public IReadOnlyCollection<SkillPermission> MissingPermissions { get; set; } = [];
+
+    public DateTimeOffset? LastRunAt { get; set; }
+
+    public SkillExecutionStatus? LastRunStatus { get; set; }
+
+    public string LastRunMessage { get; set; } = string.Empty;
+
+    public string LastRunErrorCode { get; set; } = string.Empty;
+
+    public long LastRunDurationMilliseconds { get; set; }
 }

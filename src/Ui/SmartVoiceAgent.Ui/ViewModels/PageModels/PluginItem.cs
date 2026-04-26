@@ -22,6 +22,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private bool _hasEvalResult;
         private string _lastEvalStatus = string.Empty;
         private string _lastEvalDetail = string.Empty;
+        private bool _hasLastRun;
+        private string _lastRunStatus = string.Empty;
+        private string _lastRunDetail = string.Empty;
         private string _requiredPermissionsText = "Requires: none";
         private string _grantedPermissionsText = "Granted: none";
         private string _missingPermissionsText = string.Empty;
@@ -44,6 +47,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public ICommand? DisableCommand { get; set; }
         public ICommand? GrantPermissionsCommand { get; set; }
         public ICommand? RevokePermissionsCommand { get; set; }
+        public IBrush LastRunColor { get; set; } = Brush.Parse("#71717A");
 
         public bool HasEvalResult
         {
@@ -61,6 +65,24 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             get => _lastEvalDetail;
             set => this.RaiseAndSetIfChanged(ref _lastEvalDetail, value);
+        }
+
+        public bool HasLastRun
+        {
+            get => _hasLastRun;
+            set => this.RaiseAndSetIfChanged(ref _hasLastRun, value);
+        }
+
+        public string LastRunStatus
+        {
+            get => _lastRunStatus;
+            set => this.RaiseAndSetIfChanged(ref _lastRunStatus, value);
+        }
+
+        public string LastRunDetail
+        {
+            get => _lastRunDetail;
+            set => this.RaiseAndSetIfChanged(ref _lastRunDetail, value);
         }
 
         public string RequiredPermissionsText
@@ -504,6 +526,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     && report.Status == SkillHealthStatus.PermissionDenied,
                 CanRevokePermissions = report.Status is SkillHealthStatus.Healthy
                     or SkillHealthStatus.MissingExecutor,
+                HasLastRun = report.LastRunAt.HasValue,
+                LastRunStatus = report.LastRunAt.HasValue
+                    ? $"Last Run: {FormatExecutionStatus(report.LastRunStatus)}"
+                    : string.Empty,
+                LastRunDetail = FormatLastRunDetail(report),
+                LastRunColor = GetExecutionStatusBrush(report.LastRunStatus),
                 RequiredPermissionsText = FormatPermissions("Requires", report.RequiredPermissions),
                 GrantedPermissionsText = FormatPermissions("Granted", report.GrantedPermissions),
                 MissingPermissionsText = report.MissingPermissions.Count == 0
@@ -583,6 +611,66 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             return values.Length == 0
                 ? $"{label}: none"
                 : $"{label}: {string.Join(", ", values)}";
+        }
+
+        private static string FormatExecutionStatus(SkillExecutionStatus? status)
+        {
+            return status switch
+            {
+                SkillExecutionStatus.Succeeded => "Succeeded",
+                SkillExecutionStatus.ValidationFailed => "Validation Failed",
+                SkillExecutionStatus.TimedOut => "Timed Out",
+                SkillExecutionStatus.SkillNotFound => "Skill Not Found",
+                SkillExecutionStatus.ExecutorNotFound => "Executor Not Found",
+                SkillExecutionStatus.ReviewRequired => "Review Required",
+                SkillExecutionStatus.PermissionDenied => "Permission Denied",
+                SkillExecutionStatus.Cancelled => "Cancelled",
+                SkillExecutionStatus.Disabled => "Disabled",
+                SkillExecutionStatus.Failed => "Failed",
+                _ => "Unknown"
+            };
+        }
+
+        private static string FormatLastRunDetail(SkillHealthReport report)
+        {
+            if (!report.LastRunAt.HasValue)
+            {
+                return string.Empty;
+            }
+
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(report.LastRunMessage))
+            {
+                parts.Add(report.LastRunMessage);
+            }
+
+            if (!string.IsNullOrWhiteSpace(report.LastRunErrorCode))
+            {
+                parts.Add(report.LastRunErrorCode);
+            }
+
+            if (report.LastRunDurationMilliseconds > 0)
+            {
+                parts.Add($"{report.LastRunDurationMilliseconds} ms");
+            }
+
+            return parts.Count == 0
+                ? report.LastRunAt.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                : string.Join(" | ", parts);
+        }
+
+        private static IBrush GetExecutionStatusBrush(SkillExecutionStatus? status)
+        {
+            return status switch
+            {
+                SkillExecutionStatus.Succeeded => Brush.Parse("#10B981"),
+                SkillExecutionStatus.Failed => Brush.Parse("#EF4444"),
+                SkillExecutionStatus.ValidationFailed => Brush.Parse("#F59E0B"),
+                SkillExecutionStatus.TimedOut => Brush.Parse("#F59E0B"),
+                SkillExecutionStatus.ReviewRequired => Brush.Parse("#F59E0B"),
+                SkillExecutionStatus.PermissionDenied => Brush.Parse("#EF4444"),
+                _ => Brush.Parse("#71717A")
+            };
         }
 
         private static (string IconColor, string GlowColor, string StatusColor) GetStatusPalette(
