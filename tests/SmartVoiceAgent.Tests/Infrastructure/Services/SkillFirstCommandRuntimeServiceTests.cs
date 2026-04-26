@@ -110,6 +110,34 @@ public class SkillFirstCommandRuntimeServiceTests
         confirmation.QueueCount.Should().Be(1);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_ActionConfirmationRequiredResult_QueuesOriginalPlan()
+    {
+        var plan = SkillPlan.FromObject("local.desktop-navigation", new { input = "type hello" });
+        var planner = new StubSkillPlannerService(SkillPlanParseResult.Success(plan));
+        var pipeline = new RecordingSkillExecutionPipeline(
+            _ => SkillResult.Failed(
+                "Skill wants to run actions: type_text. Missing permissions: ProcessControl.",
+                SkillExecutionStatus.ReviewRequired,
+                "action_confirmation_required"));
+        var confirmation = new RecordingSkillConfirmationService();
+        var runtime = CreateRuntime(planner, pipeline, confirmation);
+
+        var result = await runtime.ExecuteAsync("type hello");
+
+        result.Success.Should().BeFalse();
+        result.RequiresConfirmation.Should().BeTrue();
+        result.ConfirmationId.Should().Be(confirmation.LastRequest?.Id);
+        result.SkillId.Should().Be("local.desktop-navigation");
+        result.ErrorCode.Should().Be("confirmation_required");
+        pipeline.CallCount.Should().Be(1);
+        confirmation.QueueCount.Should().Be(1);
+        confirmation.LastRequest.Should().NotBeNull();
+        confirmation.LastRequest!.Plan.Should().BeSameAs(plan);
+        confirmation.LastRequest.Reason.Should().Contain("type_text");
+        confirmation.LastRequest.Reason.Should().Contain("ProcessControl");
+    }
+
     private static ICommandRuntimeService CreateRuntime(
         ISkillPlannerService planner,
         ISkillExecutionPipeline pipeline,
@@ -177,7 +205,10 @@ public class SkillFirstCommandRuntimeServiceTests
         public IReadOnlyCollection<SkillConfirmationRequest> GetPending() =>
             LastRequest is null ? [] : [LastRequest];
 
-        public SkillConfirmationRequest Queue(string userCommand, SkillPlan plan)
+        public SkillConfirmationRequest Queue(
+            string userCommand,
+            SkillPlan plan,
+            string? reason = null)
         {
             QueueCount++;
             LastRequest = new SkillConfirmationRequest
@@ -185,7 +216,8 @@ public class SkillFirstCommandRuntimeServiceTests
                 Id = Guid.NewGuid(),
                 UserCommand = userCommand,
                 Plan = plan,
-                CreatedAt = DateTimeOffset.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow,
+                Reason = reason ?? string.Empty
             };
             PendingChanged?.Invoke(this, EventArgs.Empty);
             return LastRequest;

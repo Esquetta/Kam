@@ -41,7 +41,13 @@ public sealed class SkillHealthService : ISkillHealthService
             ExecutorType = manifest.ExecutorType,
             RiskLevel = manifest.RiskLevel,
             Status = status,
-            Details = GetDetails(status, missingPermissions)
+            Details = GetDetails(status, missingPermissions),
+            RequiredPermissions = GetRequiredPermissions(manifest),
+            GrantedPermissions = manifest.GrantedPermissions
+                .Where(permission => permission != SkillPermission.None)
+                .Distinct()
+                .ToArray(),
+            MissingPermissions = missingPermissions
         };
     }
 
@@ -84,10 +90,7 @@ public sealed class SkillHealthService : ISkillHealthService
 
     private static IReadOnlyCollection<SkillPermission> GetMissingPermissions(KamSkillManifest manifest)
     {
-        var required = manifest.Permissions
-            .Where(permission => permission != SkillPermission.None)
-            .Distinct()
-            .ToArray();
+        var required = GetRequiredPermissions(manifest);
 
         if (required.Length == 0)
         {
@@ -101,6 +104,14 @@ public sealed class SkillHealthService : ISkillHealthService
 
         return required
             .Where(permission => !granted.Contains(permission))
+            .ToArray();
+    }
+
+    private static SkillPermission[] GetRequiredPermissions(KamSkillManifest manifest)
+    {
+        return manifest.Permissions
+            .Where(permission => permission != SkillPermission.None)
+            .Distinct()
             .ToArray();
     }
 }

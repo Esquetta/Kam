@@ -104,7 +104,9 @@ public static class ServiceCollectionExtensions
                 () => chatClient.Value,
                 registry,
                 () => sp.GetService<ISkillRuntimeContextProvider>(),
-                () => sp.GetService<ISkillActionExecutor>());
+                () => sp.GetService<ISkillActionExecutor>(),
+                () => sp.GetService<ISkillAuditLogService>(),
+                () => ResolveExternalSkillModelId(configuration));
         });
         services.AddSingleton<ISkillPlannerService, ModelSkillPlannerService>();
 
@@ -159,6 +161,22 @@ public static class ServiceCollectionExtensions
             && !string.IsNullOrWhiteSpace(config.Endpoint)
             && !string.IsNullOrWhiteSpace(config.ModelId)
             && (IsOllamaProvider(config.Provider) || !string.IsNullOrWhiteSpace(config.ApiKey));
+    }
+
+    private static string ResolveExternalSkillModelId(IConfiguration configuration)
+    {
+        var chatConfig = configuration
+            .GetSection("AIService:Chat")
+            .Get<AIServiceConfiguration>();
+        if (IsUsableAiConfiguration(chatConfig))
+        {
+            return chatConfig!.ModelId;
+        }
+
+        return configuration
+            .GetSection("AIService")
+            .Get<AIServiceConfiguration>()
+            ?.ModelId ?? string.Empty;
     }
 
     private static bool IsOllamaProvider(string provider)

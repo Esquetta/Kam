@@ -17,4 +17,10 @@ public sealed class SkillHealthReport
     public SkillHealthStatus Status { get; set; } = SkillHealthStatus.Healthy;
 
     public string Details { get; set; } = string.Empty;
+
+    public IReadOnlyCollection<SkillPermission> RequiredPermissions { get; set; } = [];
+
+    public IReadOnlyCollection<SkillPermission> GrantedPermissions { get; set; } = [];
+
+    public IReadOnlyCollection<SkillPermission> MissingPermissions { get; set; } = [];
 }

@@ -8,7 +8,10 @@ public interface ISkillConfirmationService
 
     IReadOnlyCollection<SkillConfirmationRequest> GetPending();
 
-    SkillConfirmationRequest Queue(string userCommand, SkillPlan plan);
+    SkillConfirmationRequest Queue(
+        string userCommand,
+        SkillPlan plan,
+        string? reason = null);
 
     Task<SkillResult> ApproveAsync(Guid requestId, CancellationToken cancellationToken = default);
 

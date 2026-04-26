@@ -42,7 +42,20 @@ public class SkillConfirmationServiceTests
         result.Message.Should().Be("Deleted.");
         pipeline.CallCount.Should().Be(1);
         pipeline.LastPlan.Should().BeSameAs(plan);
+        pipeline.LastPlan!.IsConfirmedByUser.Should().BeTrue();
         service.GetPending().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Queue_UsesExplicitReasonWhenProvided()
+    {
+        var pipeline = new RecordingSkillExecutionPipeline(_ => SkillResult.Succeeded("Deleted."));
+        var service = CreateService(pipeline);
+        var plan = SkillPlan.FromObject("files.delete", new { filePath = "C:\\temp\\notes.txt" });
+
+        var request = service.Queue("delete notes", plan, "Deletes a local file.");
+
+        request.Reason.Should().Be("Deletes a local file.");
     }
 
     [Fact]

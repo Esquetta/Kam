@@ -76,6 +76,24 @@ public sealed class SkillPolicyManager : ISkillPolicyManager
         }));
     }
 
+    public Task<bool> GrantPermissionsAsync(
+        string skillId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return Task.FromResult(Update(skillId, manifest =>
+        {
+            if (manifest.ReviewRequired)
+            {
+                return false;
+            }
+
+            manifest.GrantedPermissions = RequiredPermissions(manifest);
+            return true;
+        }));
+    }
+
     private bool Update(string skillId, Func<KamSkillManifest, bool> update)
     {
         if (!_skillRegistry.TryGet(skillId, out var manifest) || manifest is null)

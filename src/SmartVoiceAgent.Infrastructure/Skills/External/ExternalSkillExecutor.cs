@@ -16,13 +16,23 @@ public sealed class ExternalSkillExecutor : ISkillExecutor
     private readonly ISkillRegistry _registry;
     private readonly Func<ISkillRuntimeContextProvider?>? _runtimeContextProviderFactory;
     private readonly Func<ISkillActionExecutor?>? _actionExecutorFactory;
+    private readonly Func<ISkillAuditLogService?>? _auditLogFactory;
+    private readonly Func<string>? _modelIdFactory;
 
     public ExternalSkillExecutor(
         IChatClient chatClient,
         ISkillRegistry registry,
         ISkillRuntimeContextProvider? runtimeContextProvider = null,
-        ISkillActionExecutor? actionExecutor = null)
-        : this(() => chatClient, registry, runtimeContextProvider, actionExecutor)
+        ISkillActionExecutor? actionExecutor = null,
+        ISkillAuditLogService? auditLogService = null,
+        string modelId = "")
+        : this(
+            () => chatClient,
+            registry,
+            runtimeContextProvider,
+            actionExecutor,
+            auditLogService,
+            modelId)
     {
     }
 
@@ -30,12 +40,16 @@ public sealed class ExternalSkillExecutor : ISkillExecutor
         Func<IChatClient> chatClientFactory,
         ISkillRegistry registry,
         ISkillRuntimeContextProvider? runtimeContextProvider = null,
-        ISkillActionExecutor? actionExecutor = null)
+        ISkillActionExecutor? actionExecutor = null,
+        ISkillAuditLogService? auditLogService = null,
+        string modelId = "")
         : this(
             chatClientFactory,
             registry,
             runtimeContextProvider is null ? null : () => runtimeContextProvider,
-            actionExecutor is null ? null : () => actionExecutor)
+            actionExecutor is null ? null : () => actionExecutor,
+            auditLogService is null ? null : () => auditLogService,
+            () => modelId)
     {
     }
 
@@ -43,12 +57,16 @@ public sealed class ExternalSkillExecutor : ISkillExecutor
         Func<IChatClient> chatClientFactory,
         ISkillRegistry registry,
         Func<ISkillRuntimeContextProvider?>? runtimeContextProviderFactory,
-        Func<ISkillActionExecutor?>? actionExecutorFactory)
+        Func<ISkillActionExecutor?>? actionExecutorFactory,
+        Func<ISkillAuditLogService?>? auditLogFactory = null,
+        Func<string>? modelIdFactory = null)
     {
         _chatClientFactory = chatClientFactory;
         _registry = registry;
         _runtimeContextProviderFactory = runtimeContextProviderFactory;
         _actionExecutorFactory = actionExecutorFactory;
+        _auditLogFactory = auditLogFactory;
+        _modelIdFactory = modelIdFactory;
     }
 
     public bool CanExecute(string skillId)
@@ -130,22 +148,64 @@ public sealed class ExternalSkillExecutor : ISkillExecutor
         }
 
         var actionPlan = parseResult.Plan;
-        if (actionPlan.RequiresConfirmation)
+        var requiredPermissions = SkillActionPermissionPolicy.GetRequiredPermissions(actionPlan);
+        var missingPermissions = SkillActionPermissionPolicy.GetMissingPermissions(
+            actionPlan,
+            manifest.GrantedPermissions);
+
+        if ((actionPlan.RequiresConfirmation || requiredPermissions.Count > 0) && !plan.IsConfirmedByUser)
         {
+            var message = BuildActionConfirmationMessage(actionPlan, requiredPermissions, missingPermissions);
+            await RecordAuditAsync(
+                manifest,
+                plan,
+                responseText,
+                actionPlan,
+                requiredPermissions,
+                missingPermissions,
+                SkillExecutionStatus.ReviewRequired,
+                message,
+                "action_confirmation_required",
+                cancellationToken);
+
             return SkillResult.Failed(
-                "The skill requested user confirmation before action execution.",
+                message,
                 SkillExecutionStatus.ReviewRequired,
                 "action_confirmation_required");
         }
 
         if (actionPlan.Actions.Count == 0)
         {
+            await RecordAuditAsync(
+                manifest,
+                plan,
+                responseText,
+                actionPlan,
+                requiredPermissions,
+                missingPermissions,
+                SkillExecutionStatus.Succeeded,
+                actionPlan.Message,
+                string.Empty,
+                cancellationToken);
+
             return SkillResult.Succeeded(actionPlan.Message);
         }
 
         var actionExecutor = _actionExecutorFactory?.Invoke();
         if (actionExecutor is null)
         {
+            await RecordAuditAsync(
+                manifest,
+                plan,
+                responseText,
+                actionPlan,
+                requiredPermissions,
+                missingPermissions,
+                SkillExecutionStatus.ExecutorNotFound,
+                "The deterministic action executor is unavailable.",
+                "action_executor_unavailable",
+                cancellationToken);
+
             return SkillResult.Failed(
                 "The skill returned actions, but the deterministic action executor is unavailable.",
                 SkillExecutionStatus.ExecutorNotFound,
@@ -153,6 +213,18 @@ public sealed class ExternalSkillExecutor : ISkillExecutor
         }
 
         var actionResult = await actionExecutor.ExecuteAsync(actionPlan, cancellationToken);
+        await RecordAuditAsync(
+            manifest,
+            plan,
+            responseText,
+            actionPlan,
+            requiredPermissions,
+            missingPermissions,
+            actionResult.Success ? SkillExecutionStatus.Succeeded : SkillExecutionStatus.Failed,
+            actionResult.Message,
+            actionResult.Success ? string.Empty : "action_execution_failed",
+            cancellationToken);
+
         return actionResult.Success
             ? SkillResult.Succeeded(actionResult.Message, actionResult)
             : SkillResult.Failed(
@@ -288,6 +360,62 @@ public sealed class ExternalSkillExecutor : ISkillExecutor
         }
 
         return source;
+    }
+
+    private static string BuildActionConfirmationMessage(
+        SkillActionPlan actionPlan,
+        IReadOnlyCollection<SkillPermission> requiredPermissions,
+        IReadOnlyCollection<SkillPermission> missingPermissions)
+    {
+        var actions = actionPlan.Actions.Count == 0
+            ? "none"
+            : string.Join(", ", actionPlan.Actions.Select(action => action.Type).Distinct(StringComparer.OrdinalIgnoreCase));
+        var required = requiredPermissions.Count == 0
+            ? "none"
+            : string.Join(", ", requiredPermissions);
+        var missing = missingPermissions.Count == 0
+            ? "none"
+            : string.Join(", ", missingPermissions);
+
+        return $"Skill wants to run actions: {actions}. Required permissions: {required}. Missing permissions: {missing}.";
+    }
+
+    private async Task RecordAuditAsync(
+        KamSkillManifest manifest,
+        SkillPlan plan,
+        string actionPlanJson,
+        SkillActionPlan actionPlan,
+        IReadOnlyCollection<SkillPermission> requiredPermissions,
+        IReadOnlyCollection<SkillPermission> missingPermissions,
+        SkillExecutionStatus status,
+        string resultMessage,
+        string errorCode,
+        CancellationToken cancellationToken)
+    {
+        var auditLog = _auditLogFactory?.Invoke();
+        if (auditLog is null)
+        {
+            return;
+        }
+
+        await auditLog.RecordAsync(new SkillAuditRecord
+        {
+            SkillId = manifest.Id,
+            ExecutorType = manifest.ExecutorType,
+            ModelId = _modelIdFactory?.Invoke() ?? string.Empty,
+            UserInput = BuildUserPrompt(plan),
+            ActionPlanJson = actionPlanJson,
+            ActionTypes = actionPlan.Actions
+                .Select(action => action.Type)
+                .Where(type => !string.IsNullOrWhiteSpace(type))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList(),
+            RequiredPermissions = requiredPermissions.ToList(),
+            MissingPermissions = missingPermissions.ToList(),
+            Status = status,
+            ResultMessage = resultMessage,
+            ErrorCode = errorCode
+        }, cancellationToken);
     }
 
     private async Task<SkillRuntimeContext> CreateRuntimeContextAsync(

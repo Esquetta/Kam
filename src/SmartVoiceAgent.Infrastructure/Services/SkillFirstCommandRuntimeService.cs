@@ -48,7 +48,10 @@ public sealed class SkillFirstCommandRuntimeService : ICommandRuntimeService
         var plan = planResult.Plan;
         if (RequiresConfirmation(plan, skillRegistry))
         {
-            var request = confirmationService.Queue(command, plan);
+            var request = confirmationService.Queue(
+                command,
+                plan,
+                $"Skill '{plan.SkillId}' requires confirmation before execution.");
             return CommandRuntimeResult.PendingConfirmation(
                 $"Skill '{plan.SkillId}' requires confirmation before execution.",
                 plan.SkillId,
@@ -59,6 +62,15 @@ public sealed class SkillFirstCommandRuntimeService : ICommandRuntimeService
         {
             var pipeline = scope.ServiceProvider.GetRequiredService<ISkillExecutionPipeline>();
             var result = await pipeline.ExecuteAsync(plan, cancellationToken);
+            if (IsActionConfirmationRequired(result))
+            {
+                var request = confirmationService.Queue(command, plan, result.ErrorMessage);
+                return CommandRuntimeResult.PendingConfirmation(
+                    result.ErrorMessage,
+                    plan.SkillId,
+                    request.Id);
+            }
+
             return result.Success
                 ? CommandRuntimeResult.Succeeded(result.Message, plan.SkillId, result)
                 : CommandRuntimeResult.Failed(
@@ -112,5 +124,12 @@ public sealed class SkillFirstCommandRuntimeService : ICommandRuntimeService
 
         return registry.TryGet(plan.SkillId, out var manifest)
             && manifest?.RiskLevel == SkillRiskLevel.High;
+    }
+
+    private static bool IsActionConfirmationRequired(SkillResult result)
+    {
+        return !result.Success
+            && result.Status == SkillExecutionStatus.ReviewRequired
+            && result.ErrorCode.Equals("action_confirmation_required", StringComparison.OrdinalIgnoreCase);
     }
 }

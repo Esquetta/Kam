@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace SmartVoiceAgent.Core.Models.Skills;
 
@@ -13,6 +14,9 @@ public sealed class SkillPlan
     public bool RequiresConfirmation { get; set; }
 
     public string Reasoning { get; set; } = string.Empty;
+
+    [JsonIgnore]
+    public bool IsConfirmedByUser { get; set; }
 
     public static SkillPlan FromObject(string skillId, object? arguments)
     {

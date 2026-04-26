@@ -8,6 +8,7 @@ using SmartVoiceAgent.Infrastructure.Helpers;
 using SmartVoiceAgent.Infrastructure.Skills;
 using SmartVoiceAgent.Infrastructure.Skills.Actions;
 using SmartVoiceAgent.Infrastructure.Skills.Adapters;
+using SmartVoiceAgent.Infrastructure.Skills.Audit;
 using SmartVoiceAgent.Infrastructure.Skills.BuiltIn;
 using SmartVoiceAgent.Infrastructure.Skills.BuiltIn.AppSkills;
 using SmartVoiceAgent.Infrastructure.Skills.Context;
@@ -132,6 +133,7 @@ public static class ServiceRegistration
         services.AddScoped<ISkillRuntimeContextProvider, SkillRuntimeContextProvider>();
         services.AddScoped<IDesktopAutomationAdapter, DesktopAutomationAdapter>();
         services.AddScoped<ISkillActionExecutor, SkillActionExecutor>();
+        services.AddSingleton<ISkillAuditLogService, JsonSkillAuditLogService>();
         services.AddScoped<ISkillExecutionPipeline, SkillExecutionPipeline>();
         services.AddScoped<ISkillHealthService, SkillHealthService>();
         services.AddScoped<ISkillEvalHarness, SkillEvalHarness>();

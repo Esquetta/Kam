@@ -119,6 +119,30 @@ public class SkillPolicyManagerTests : IDisposable
         manifest.GrantedPermissions.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task GrantPermissionsAsync_GrantsRequiredPermissionsForEnabledSkill()
+    {
+        var registry = CreateRegistry(new KamSkillManifest
+        {
+            Id = "local.desktop-navigation",
+            Source = "local:C:\\skills\\desktop-navigation",
+            ExecutorType = "local",
+            Enabled = true,
+            ReviewRequired = false,
+            Permissions = [SkillPermission.ProcessControl, SkillPermission.ClipboardWrite],
+            GrantedPermissions = [SkillPermission.ProcessControl]
+        });
+        var manager = new SkillPolicyManager(registry, new JsonSkillPolicyStore(_policyFile));
+
+        var result = await manager.GrantPermissionsAsync("local.desktop-navigation");
+
+        result.Should().BeTrue();
+        registry.TryGet("local.desktop-navigation", out var manifest).Should().BeTrue();
+        manifest!.GrantedPermissions.Should().BeEquivalentTo([
+            SkillPermission.ProcessControl,
+            SkillPermission.ClipboardWrite]);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_workspace))

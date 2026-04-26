@@ -32,7 +32,10 @@ public sealed class SkillConfirmationService : ISkillConfirmationService
         }
     }
 
-    public SkillConfirmationRequest Queue(string userCommand, SkillPlan plan)
+    public SkillConfirmationRequest Queue(
+        string userCommand,
+        SkillPlan plan,
+        string? reason = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
 
@@ -42,7 +45,9 @@ public sealed class SkillConfirmationService : ISkillConfirmationService
             UserCommand = userCommand,
             Plan = plan,
             CreatedAt = DateTimeOffset.UtcNow,
-            Reason = string.IsNullOrWhiteSpace(plan.Reasoning)
+            Reason = !string.IsNullOrWhiteSpace(reason)
+                ? reason
+                : string.IsNullOrWhiteSpace(plan.Reasoning)
                 ? "This skill requires confirmation before execution."
                 : plan.Reasoning
         };
@@ -77,6 +82,7 @@ public sealed class SkillConfirmationService : ISkillConfirmationService
 
         try
         {
+            request.Plan.IsConfirmedByUser = true;
             using var scope = _scopeFactory.CreateScope();
             var pipeline = scope.ServiceProvider.GetRequiredService<ISkillExecutionPipeline>();
             return await pipeline.ExecuteAsync(request.Plan, cancellationToken);

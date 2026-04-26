@@ -38,7 +38,12 @@ public sealed class ExternalSkillExecutorTests : IDisposable
             "desktop-navigation",
             "Follow desktop navigation instructions.");
         var registry = new InMemorySkillRegistry();
-        registry.Register(CreateManifest("local.desktop-navigation", "local", skillDirectory));
+        registry.Register(CreateManifest(
+            "local.desktop-navigation",
+            "local",
+            skillDirectory,
+            [SkillPermission.ProcessControl],
+            [SkillPermission.ProcessControl]));
         var chatClient = new RecordingChatClient("""
         {"message":"Focused the Settings window.","actions":[{"type":"focus_window","target":"settings"}]}
         """);
@@ -49,9 +54,12 @@ public sealed class ExternalSkillExecutorTests : IDisposable
             new StaticSkillRuntimeContextProvider("Settings"),
             actionExecutor);
 
-        var result = await executor.ExecuteAsync(SkillPlan.FromObject(
+        var plan = SkillPlan.FromObject(
             "local.desktop-navigation",
-            new { input = "Open settings", target = "settings" }));
+            new { input = "Open settings", target = "settings" });
+        plan.IsConfirmedByUser = true;
+
+        var result = await executor.ExecuteAsync(plan);
 
         result.Success.Should().BeTrue();
         result.Message.Should().Contain("Focused the Settings window.");
@@ -66,6 +74,78 @@ public sealed class ExternalSkillExecutorTests : IDisposable
         promptText.Should().Contain("Runtime context JSON");
         promptText.Should().Contain("Settings");
         promptText.Should().Contain("Do not call tools");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ActionPlanMissingPermission_ReturnsReviewRequiredAndRecordsAudit()
+    {
+        var skillDirectory = CreateSkillDirectory(
+            "desktop-navigation",
+            "Follow desktop navigation instructions.");
+        var registry = new InMemorySkillRegistry();
+        registry.Register(CreateManifest("local.desktop-navigation", "local", skillDirectory));
+        var chatClient = new RecordingChatClient("""
+        {"message":"Typing into the active window.","actions":[{"type":"type_text","text":"hello"}]}
+        """);
+        var auditLog = new RecordingSkillAuditLogService();
+        var actionExecutor = new RecordingSkillActionExecutor();
+        var executor = new ExternalSkillExecutor(
+            chatClient,
+            registry,
+            new StaticSkillRuntimeContextProvider("Editor"),
+            actionExecutor,
+            auditLog,
+            "openrouter/test-model");
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject(
+            "local.desktop-navigation",
+            new { input = "type hello" }));
+
+        result.Success.Should().BeFalse();
+        result.Status.Should().Be(SkillExecutionStatus.ReviewRequired);
+        result.ErrorCode.Should().Be("action_confirmation_required");
+        result.ErrorMessage.Should().Contain("type_text");
+        result.ErrorMessage.Should().Contain(nameof(SkillPermission.ProcessControl));
+        actionExecutor.LastPlan.Should().BeNull();
+        auditLog.Records.Should().ContainSingle(record =>
+            record.SkillId == "local.desktop-navigation"
+            && record.ModelId == "openrouter/test-model"
+            && record.Status == SkillExecutionStatus.ReviewRequired
+            && record.ActionTypes.Contains(SkillActionTypes.TypeText)
+            && record.MissingPermissions.Contains(SkillPermission.ProcessControl));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ConfirmedPlanAllowsRiskyActionAndRecordsSuccessAudit()
+    {
+        var skillDirectory = CreateSkillDirectory(
+            "desktop-navigation",
+            "Follow desktop navigation instructions.");
+        var registry = new InMemorySkillRegistry();
+        registry.Register(CreateManifest("local.desktop-navigation", "local", skillDirectory));
+        var chatClient = new RecordingChatClient("""
+        {"message":"Typing into the active window.","actions":[{"type":"type_text","text":"hello"}]}
+        """);
+        var auditLog = new RecordingSkillAuditLogService();
+        var actionExecutor = new RecordingSkillActionExecutor();
+        var executor = new ExternalSkillExecutor(
+            chatClient,
+            registry,
+            new StaticSkillRuntimeContextProvider("Editor"),
+            actionExecutor,
+            auditLog,
+            "openrouter/test-model");
+        var plan = SkillPlan.FromObject("local.desktop-navigation", new { input = "type hello" });
+        plan.IsConfirmedByUser = true;
+
+        var result = await executor.ExecuteAsync(plan);
+
+        result.Success.Should().BeTrue();
+        actionExecutor.LastPlan.Should().NotBeNull();
+        auditLog.Records.Should().ContainSingle(record =>
+            record.Status == SkillExecutionStatus.Succeeded
+            && record.ActionTypes.Contains(SkillActionTypes.TypeText)
+            && record.MissingPermissions.Contains(SkillPermission.ProcessControl));
     }
 
     [Fact]
@@ -140,7 +220,9 @@ public sealed class ExternalSkillExecutorTests : IDisposable
     private static KamSkillManifest CreateManifest(
         string skillId,
         string executorType,
-        string? installedFrom = null)
+        string? installedFrom = null,
+        IReadOnlyCollection<SkillPermission>? permissions = null,
+        IReadOnlyCollection<SkillPermission>? grantedPermissions = null)
     {
         return new KamSkillManifest
         {
@@ -152,6 +234,8 @@ public sealed class ExternalSkillExecutorTests : IDisposable
             InstalledFrom = installedFrom ?? string.Empty,
             Enabled = true,
             ReviewRequired = false,
+            Permissions = permissions?.ToList() ?? [],
+            GrantedPermissions = grantedPermissions?.ToList() ?? [],
             Arguments =
             [
                 new SkillArgumentDefinition
@@ -246,6 +330,26 @@ public sealed class ExternalSkillExecutorTests : IDisposable
             return Task.FromResult(SkillActionExecutionResult.Succeeded(
                 $"{plan.Message} Executed {plan.Actions.Count} action(s).",
                 [SkillActionStepResult.Succeeded(plan.Actions[0].Type, "ok")]));
+        }
+    }
+
+    private sealed class RecordingSkillAuditLogService : ISkillAuditLogService
+    {
+        public List<SkillAuditRecord> Records { get; } = [];
+
+        public Task RecordAsync(
+            SkillAuditRecord record,
+            CancellationToken cancellationToken = default)
+        {
+            Records.Add(record);
+            return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyCollection<SkillAuditRecord>> GetRecentAsync(
+            int maxCount = 100,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyCollection<SkillAuditRecord>>(Records.TakeLast(maxCount).ToArray());
         }
     }
 }
