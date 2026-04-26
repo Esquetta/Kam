@@ -85,6 +85,52 @@ public class SkillExecutionPipelineTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_ReviewRequiredSkill_ReturnsReviewRequiredWithoutCallingExecutor()
+    {
+        var registry = CreateRegistry(new KamSkillManifest
+        {
+            Id = "local.desktop-navigation",
+            Enabled = true,
+            ReviewRequired = true
+        });
+        var executor = new RecordingSkillExecutor(
+            "local.desktop-navigation",
+            (_, _) => Task.FromResult(SkillResult.Succeeded("Should not run.")));
+        var pipeline = new SkillExecutionPipeline(registry, [executor]);
+
+        var result = await pipeline.ExecuteAsync(SkillPlan.FromObject("local.desktop-navigation", new { }));
+
+        result.Success.Should().BeFalse();
+        result.Status.Should().Be(SkillExecutionStatus.ReviewRequired);
+        result.ErrorCode.Should().Be("review_required");
+        executor.CallCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MissingPermissionGrant_ReturnsPermissionDeniedWithoutCallingExecutor()
+    {
+        var registry = CreateRegistry(new KamSkillManifest
+        {
+            Id = "files.write",
+            Enabled = true,
+            Permissions = [SkillPermission.FileSystemWrite],
+            GrantedPermissions = []
+        });
+        var executor = new RecordingSkillExecutor(
+            "files.write",
+            (_, _) => Task.FromResult(SkillResult.Succeeded("Should not run.")));
+        var pipeline = new SkillExecutionPipeline(registry, [executor]);
+
+        var result = await pipeline.ExecuteAsync(SkillPlan.FromObject("files.write", new { }));
+
+        result.Success.Should().BeFalse();
+        result.Status.Should().Be(SkillExecutionStatus.PermissionDenied);
+        result.ErrorCode.Should().Be("permission_denied");
+        result.ErrorMessage.Should().Contain(nameof(SkillPermission.FileSystemWrite));
+        executor.CallCount.Should().Be(0);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ExecutorExceedsTimeout_ReturnsTimeoutFailure()
     {
         var registry = CreateRegistry(new KamSkillManifest

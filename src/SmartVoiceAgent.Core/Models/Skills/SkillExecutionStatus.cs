@@ -9,5 +9,7 @@ public enum SkillExecutionStatus
     SkillNotFound = 4,
     Disabled = 5,
     ExecutorNotFound = 6,
-    Cancelled = 7
+    Cancelled = 7,
+    ReviewRequired = 8,
+    PermissionDenied = 9
 }

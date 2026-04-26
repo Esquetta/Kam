@@ -31,6 +31,16 @@ public sealed class SkillExecutionPipeline : ISkillExecutionPipeline
                 stopwatch);
         }
 
+        if (manifest.ReviewRequired)
+        {
+            return WithDuration(
+                SkillResult.Failed(
+                    $"Skill '{plan.SkillId}' requires review before execution.",
+                    SkillExecutionStatus.ReviewRequired,
+                    "review_required"),
+                stopwatch);
+        }
+
         if (!manifest.Enabled)
         {
             return WithDuration(
@@ -38,6 +48,17 @@ public sealed class SkillExecutionPipeline : ISkillExecutionPipeline
                     $"Skill '{plan.SkillId}' is disabled.",
                     SkillExecutionStatus.Disabled,
                     "skill_disabled"),
+                stopwatch);
+        }
+
+        var missingPermissions = GetMissingPermissions(manifest);
+        if (missingPermissions.Count > 0)
+        {
+            return WithDuration(
+                SkillResult.Failed(
+                    $"Skill '{plan.SkillId}' is missing granted permissions: {string.Join(", ", missingPermissions)}.",
+                    SkillExecutionStatus.PermissionDenied,
+                    "permission_denied"),
                 stopwatch);
         }
 
@@ -131,6 +152,28 @@ public sealed class SkillExecutionPipeline : ISkillExecutionPipeline
             : DefaultTimeoutMilliseconds;
 
         return TimeSpan.FromMilliseconds(timeoutMilliseconds);
+    }
+
+    private static IReadOnlyCollection<SkillPermission> GetMissingPermissions(KamSkillManifest manifest)
+    {
+        var required = manifest.Permissions
+            .Where(permission => permission != SkillPermission.None)
+            .Distinct()
+            .ToArray();
+
+        if (required.Length == 0)
+        {
+            return [];
+        }
+
+        var granted = manifest.GrantedPermissions
+            .Where(permission => permission != SkillPermission.None)
+            .Distinct()
+            .ToHashSet();
+
+        return required
+            .Where(permission => !granted.Contains(permission))
+            .ToArray();
     }
 
     private static SkillResult NormalizeResult(string skillId, SkillResult result)

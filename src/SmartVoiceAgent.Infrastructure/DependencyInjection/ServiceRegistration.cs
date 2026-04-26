@@ -13,6 +13,7 @@ using SmartVoiceAgent.Infrastructure.Skills.Evaluation;
 using SmartVoiceAgent.Infrastructure.Skills.Execution;
 using SmartVoiceAgent.Infrastructure.Skills.Health;
 using SmartVoiceAgent.Infrastructure.Services;
+using SmartVoiceAgent.Infrastructure.Skills.Policy;
 using SmartVoiceAgent.Infrastructure.Services.ApplicationScanner;
 using SmartVoiceAgent.Infrastructure.Services.Intent;
 using SmartVoiceAgent.Infrastructure.Services.Language;
@@ -96,6 +97,7 @@ public static class ServiceRegistration
         // Register Command Input Service for UI-to-Agent communication
         services.AddSingleton<ICommandInputService, CommandInputService>();
         services.AddSingleton<ISkillConfirmationService, SkillConfirmationService>();
+        services.AddSingleton<ISkillPolicyStore, JsonSkillPolicyStore>();
         services.AddSingleton<ICommandRuntimeService, SkillFirstCommandRuntimeService>();
         
         // Register Message Services (Email, SMS, etc.)
@@ -110,11 +112,13 @@ public static class ServiceRegistration
         // Register Noise Suppression Service
         services.AddSingleton<INoiseSuppressionService, NoiseSuppressionService>();
 
-        services.AddSingleton<ISkillRegistry>(_ =>
+        services.AddSingleton<ISkillRegistry>(sp =>
         {
+            var policyStore = sp.GetRequiredService<ISkillPolicyStore>();
             var registry = new InMemorySkillRegistry();
             foreach (var manifest in BuiltInSkillManifestCatalog.CreateAll())
             {
+                policyStore.ApplyPolicy(manifest);
                 registry.Register(manifest);
             }
 

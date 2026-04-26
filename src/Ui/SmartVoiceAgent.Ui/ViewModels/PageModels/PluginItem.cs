@@ -241,6 +241,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 SkillHealthStatus.Healthy => "Healthy",
                 SkillHealthStatus.Disabled => "Disabled",
                 SkillHealthStatus.MissingExecutor => "Missing Executor",
+                SkillHealthStatus.ReviewRequired => "Review Required",
+                SkillHealthStatus.PermissionDenied => "Permission Denied",
                 _ => "Unknown"
             };
         }
@@ -252,6 +254,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 SkillHealthStatus.Healthy => ("#22D3EE", "#2006B6D4", "#10B981"),
                 SkillHealthStatus.MissingExecutor => ("#F59E0B", "#20F59E0B", "#F59E0B"),
+                SkillHealthStatus.ReviewRequired => ("#F59E0B", "#20F59E0B", "#F59E0B"),
+                SkillHealthStatus.PermissionDenied => ("#EF4444", "#20EF4444", "#EF4444"),
                 SkillHealthStatus.Disabled => ("#71717A", "#1827272A", "#71717A"),
                 _ => ("#71717A", "#1827272A", "#71717A")
             };

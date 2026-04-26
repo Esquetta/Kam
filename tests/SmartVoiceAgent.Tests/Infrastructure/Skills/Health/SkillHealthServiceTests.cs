@@ -39,12 +39,33 @@ public class SkillHealthServiceTests
             ExecutorType = "test",
             Enabled = false
         });
+        registry.Register(new KamSkillManifest
+        {
+            Id = "review.required",
+            DisplayName = "Review Required",
+            Description = "Imported skill awaiting review.",
+            Source = "local:C:\\skills\\review-required",
+            ExecutorType = "local",
+            Enabled = false,
+            ReviewRequired = true
+        });
+        registry.Register(new KamSkillManifest
+        {
+            Id = "permission.denied",
+            DisplayName = "Permission Denied",
+            Description = "Needs permission grant.",
+            Source = "local:C:\\skills\\permission-denied",
+            ExecutorType = "local",
+            Enabled = true,
+            Permissions = [SkillPermission.FileSystemWrite],
+            GrantedPermissions = []
+        });
 
         var service = new SkillHealthService(registry, [new MatchingSkillExecutor("healthy.skill")]);
 
         var reports = await service.GetHealthAsync();
 
-        reports.Should().HaveCount(3);
+        reports.Should().HaveCount(5);
         reports.Should().BeInAscendingOrder(report => report.SkillId);
 
         var healthy = reports.Single(report => report.SkillId == "healthy.skill");
@@ -60,6 +81,14 @@ public class SkillHealthServiceTests
         var disabled = reports.Single(report => report.SkillId == "disabled.skill");
         disabled.Status.Should().Be(SkillHealthStatus.Disabled);
         disabled.Details.Should().Contain("disabled");
+
+        var reviewRequired = reports.Single(report => report.SkillId == "review.required");
+        reviewRequired.Status.Should().Be(SkillHealthStatus.ReviewRequired);
+        reviewRequired.Details.Should().Contain("review");
+
+        var permissionDenied = reports.Single(report => report.SkillId == "permission.denied");
+        permissionDenied.Status.Should().Be(SkillHealthStatus.PermissionDenied);
+        permissionDenied.Details.Should().Contain(nameof(SkillPermission.FileSystemWrite));
     }
 
     private sealed class MatchingSkillExecutor : ISkillExecutor

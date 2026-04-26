@@ -37,7 +37,10 @@ public class SkillAdapterRegistryTests : IDisposable
             && manifest.DisplayName == "desktop-navigation"
             && manifest.Description == "Navigate desktop windows reliably."
             && manifest.ExecutorType == "local"
-            && manifest.Source == $"local:{skillDirectory}");
+            && manifest.Source == $"local:{skillDirectory}"
+            && manifest.Enabled == false
+            && manifest.ReviewRequired
+            && manifest.GrantedPermissions.Count == 0);
     }
 
     [Fact]
@@ -61,7 +64,10 @@ public class SkillAdapterRegistryTests : IDisposable
         manifests.Should().ContainSingle(manifest =>
             manifest.Id == "skills-sh.browser-automation"
             && manifest.ExecutorType == "skills.sh"
-            && manifest.Source == $"skills.sh:{skillDirectory}");
+            && manifest.Source == $"skills.sh:{skillDirectory}"
+            && manifest.Enabled == false
+            && manifest.ReviewRequired
+            && manifest.GrantedPermissions.Count == 0);
     }
 
     [Fact]
@@ -101,6 +107,9 @@ public class SkillAdapterRegistryTests : IDisposable
         manifest.Id.Should().Be("mcp.todoist.create_task");
         manifest.Source.Should().Be("mcp:todoist");
         manifest.ExecutorType.Should().Be("mcp");
+        manifest.Enabled.Should().BeFalse();
+        manifest.ReviewRequired.Should().BeTrue();
+        manifest.GrantedPermissions.Should().BeEmpty();
         manifest.Arguments.Should().ContainSingle(argument => argument.Name == "title" && argument.Required);
     }
 

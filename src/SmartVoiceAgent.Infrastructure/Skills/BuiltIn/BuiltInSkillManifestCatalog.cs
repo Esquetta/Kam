@@ -282,8 +282,13 @@ public static class BuiltInSkillManifestCatalog
             Source = "builtin",
             ExecutorType = "builtin",
             Enabled = true,
+            ReviewRequired = false,
             RiskLevel = riskLevel,
             Permissions = permissions.ToList(),
+            GrantedPermissions = permissions
+                .Where(permission => permission != SkillPermission.None)
+                .Distinct()
+                .ToList(),
             Arguments = arguments?.ToList() ?? [],
             TimeoutMilliseconds = timeoutMilliseconds
         };

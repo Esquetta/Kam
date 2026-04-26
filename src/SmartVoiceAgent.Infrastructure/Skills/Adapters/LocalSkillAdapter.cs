@@ -36,9 +36,11 @@ public sealed class LocalSkillAdapter : ISkillAdapter
             Description = metadata.Value.Description,
             Source = $"{executorType}:{source.Location}",
             ExecutorType = executorType,
-            Enabled = true,
+            Enabled = false,
+            ReviewRequired = true,
             RiskLevel = SkillRiskLevel.Medium,
             Permissions = [SkillPermission.None],
+            GrantedPermissions = [],
             TimeoutMilliseconds = 30000
         };
     }

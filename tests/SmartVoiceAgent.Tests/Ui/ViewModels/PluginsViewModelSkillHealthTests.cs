@@ -28,10 +28,19 @@ public class PluginsViewModelSkillHealthTests
                 Source = "mcp.todoist",
                 Status = SkillHealthStatus.MissingExecutor,
                 Details = "No executor registered for this skill."
+            },
+            new SkillHealthReport
+            {
+                SkillId = "local.desktop-navigation",
+                DisplayName = "Desktop Navigation",
+                Description = "Imported local skill.",
+                Source = "local:C:\\skills\\desktop-navigation",
+                Status = SkillHealthStatus.ReviewRequired,
+                Details = "Skill requires review before it can be enabled."
             }
         ]);
 
-        viewModel.Plugins.Should().HaveCount(2);
+        viewModel.Plugins.Should().HaveCount(3);
 
         var healthy = viewModel.Plugins[0];
         healthy.Name.Should().Be("READ FILE");
@@ -46,6 +55,12 @@ public class PluginsViewModelSkillHealthTests
         missing.Status.Should().Be("Missing Executor");
         missing.HealthDetail.Should().Contain("No executor");
         missing.IsActive.Should().BeFalse();
+
+        var reviewRequired = viewModel.Plugins[2];
+        reviewRequired.Name.Should().Be("DESKTOP NAVIGATION");
+        reviewRequired.Status.Should().Be("Review Required");
+        reviewRequired.HealthDetail.Should().Contain("requires review");
+        reviewRequired.IsActive.Should().BeFalse();
     }
 
     [Fact]

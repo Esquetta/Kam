@@ -14,9 +14,13 @@ public sealed class KamSkillManifest
 
     public bool Enabled { get; set; }
 
+    public bool ReviewRequired { get; set; }
+
     public SkillRiskLevel RiskLevel { get; set; } = SkillRiskLevel.Low;
 
     public List<SkillPermission> Permissions { get; set; } = [];
+
+    public List<SkillPermission> GrantedPermissions { get; set; } = [];
 
     public List<SkillArgumentDefinition> Arguments { get; set; } = [];
 

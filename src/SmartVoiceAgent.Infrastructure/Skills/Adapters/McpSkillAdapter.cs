@@ -22,9 +22,11 @@ public sealed class McpSkillAdapter : ISkillAdapter
                 Description = skill.Description,
                 Source = $"mcp:{source.Id}",
                 ExecutorType = "mcp",
-                Enabled = true,
+                Enabled = false,
+                ReviewRequired = true,
                 RiskLevel = SkillRiskLevel.Medium,
                 Permissions = [SkillPermission.Network],
+                GrantedPermissions = [],
                 Arguments = skill.Arguments.ToList(),
                 TimeoutMilliseconds = 30000
             })
