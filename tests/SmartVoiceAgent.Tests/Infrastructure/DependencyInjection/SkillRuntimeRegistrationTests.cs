@@ -30,5 +30,7 @@ public class SkillRuntimeRegistrationTests
         appSkill.TimeoutMilliseconds.Should().BeGreaterThan(0);
         provider.GetServices<ISkillExecutor>().Should().NotBeEmpty();
         provider.GetService<ISkillExecutionPipeline>().Should().NotBeNull();
+        provider.GetService<ISkillHealthService>().Should().NotBeNull();
+        provider.GetService<ISkillEvalHarness>().Should().NotBeNull();
     }
 }

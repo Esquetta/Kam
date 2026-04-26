@@ -1,14 +1,25 @@
 using Avalonia.Media;
+using Avalonia.Threading;
 using ReactiveUI;
+using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Infrastructure.Skills.BuiltIn;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 
 namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 {
     public class PluginItem : ReactiveObject
     {
+        public string SkillId { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
+        public string Source { get; set; } = string.Empty;
+        public string HealthDetail { get; set; } = string.Empty;
         public string IconPath { get; set; } = string.Empty;
         public bool IsActive { get; set; }
 
@@ -42,81 +53,141 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         public PluginsViewModel()
         {
-            Title = "PLUGINS";
-            LoadPlugins();
+            Title = "SKILLS";
+            LoadPlugins(CreateBuiltInHealthSnapshot());
         }
 
-        private void LoadPlugins()
+        public PluginsViewModel(IEnumerable<SkillHealthReport> skillHealthReports)
         {
-            Plugins = new ObservableCollection<PluginItem>
+            Title = "SKILLS";
+            LoadPlugins(skillHealthReports);
+        }
+
+        public PluginsViewModel(ISkillHealthService skillHealthService)
+            : this()
+        {
+            _ = RefreshHealthAsync(skillHealthService);
+        }
+
+        private static IReadOnlyCollection<SkillHealthReport> CreateBuiltInHealthSnapshot()
+        {
+            return BuiltInSkillManifestCatalog
+                .CreateAll()
+                .OrderBy(manifest => manifest.Id, StringComparer.OrdinalIgnoreCase)
+                .Select(manifest =>
+                {
+                    var status = manifest.Enabled
+                        ? SkillHealthStatus.Healthy
+                        : SkillHealthStatus.Disabled;
+
+                    return new SkillHealthReport
+                    {
+                        SkillId = manifest.Id,
+                        DisplayName = manifest.DisplayName,
+                        Description = manifest.Description,
+                        Source = manifest.Source,
+                        ExecutorType = manifest.ExecutorType,
+                        RiskLevel = manifest.RiskLevel,
+                        Status = status,
+                        Details = status == SkillHealthStatus.Healthy
+                            ? "Built-in skill configured."
+                            : "Skill is disabled."
+                    };
+                })
+                .ToArray();
+        }
+
+        private void LoadPlugins(IEnumerable<SkillHealthReport> skillHealthReports)
+        {
+            Plugins = new ObservableCollection<PluginItem>(
+                skillHealthReports.Select(CreatePluginItem));
+        }
+
+        private async Task RefreshHealthAsync(ISkillHealthService skillHealthService)
+        {
+            try
             {
-                new PluginItem
-                {
-                    Name = "VOICE ENGINE",
-                    Description = "Real-time voice processing and recognition engine with neural network integration.",
-                    Status = "Active",
-                    IconColor = Brush.Parse("#22D3EE"),
-                    GlowColor = Brush.Parse("#2006B6D4"),
-                    StatusColor = Brush.Parse("#10B981"),
-                    IconPath = "M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z",
-                    IsActive = true
-                },
-                new PluginItem
-                {
-                    Name = "AI ANALYZER",
-                    Description = "Advanced semantic analysis and pattern recognition using machine learning algorithms.",
-                    Status = "Active",
-                    IconColor = Brush.Parse("#A78BFA"),
-                    GlowColor = Brush.Parse("#208B5CF6"),
-                    StatusColor = Brush.Parse("#10B981"),
-                    IconPath = "M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M11,17V16H9V14H13V15H12V17H13V19H9V17H11M13,13H11V11H13V13M13,10H11V8H13V10M11,7V5H13V7H11Z",
-                    IsActive = true
-                },
-                new PluginItem
-                {
-                    Name = "TASK SCHEDULER",
-                    Description = "Automated task scheduling and execution management with priority queuing.",
-                    Status = "Active",
-                    IconColor = Brush.Parse("#FB923C"),
-                    GlowColor = Brush.Parse("#20F97316"),
-                    StatusColor = Brush.Parse("#10B981"),
-                    IconPath = "M19,19H5V8H19M16,1V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3H18V1M17,12H12V17H17V12Z",
-                    IsActive = true
-                },
-                new PluginItem
-                {
-                    Name = "DATA SYNC",
-                    Description = "Cloud synchronization and backup management system.",
-                    Status = "Inactive",
-                    IconColor = Brush.Parse("#71717A"),
-                    GlowColor = Brush.Parse("#1827272A"),
-                    StatusColor = Brush.Parse("#71717A"),
-                    IconPath = "M12,18A6,6 0 0,1 6,12C6,11 6.25,10.03 6.7,9.2L5.24,7.74C4.46,8.97 4,10.43 4,12A8,8 0 0,0 12,20V23L16,19L12,15M12,4V1L8,5L12,9V6A6,6 0 0,1 18,12C18,13 17.75,13.97 17.3,14.8L18.76,16.26C19.54,15.03 20,13.57 20,12A8,8 0 0,0 12,4Z",
-                    IsActive = false
-                },
-                new PluginItem
-                {
-                    Name = "SECURITY MODULE",
-                    Description = "Advanced encryption and security monitoring system.",
-                    Status = "Inactive",
-                    IconColor = Brush.Parse("#71717A"),
-                    GlowColor = Brush.Parse("#1827272A"),
-                    StatusColor = Brush.Parse("#71717A"),
-                    IconPath = "M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1Z",
-                    IsActive = false
-                },
-                new PluginItem
-                {
-                    Name = "PLUGIN SLOT",
-                    Description = "Click to install a new plugin module.",
-                    Status = "Available",
-                    IconColor = Brush.Parse("#71717A"),
-                    GlowColor = Brush.Parse("#1827272A"),
-                    StatusColor = Brush.Parse("#71717A"),
-                    IconPath = "M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z",
-                    IsActive = false
-                }
+                var reports = await skillHealthService.GetHealthAsync();
+                await Dispatcher.UIThread.InvokeAsync(() => LoadPlugins(reports));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to refresh skill health: {ex.Message}");
+            }
+        }
+
+        private static PluginItem CreatePluginItem(SkillHealthReport report)
+        {
+            var palette = GetStatusPalette(report.Status);
+
+            return new PluginItem
+            {
+                SkillId = report.SkillId,
+                Name = FormatName(report.DisplayName, report.SkillId),
+                Description = string.IsNullOrWhiteSpace(report.Description)
+                    ? report.Details
+                    : report.Description,
+                Status = FormatStatus(report.Status),
+                Source = report.Source,
+                HealthDetail = report.Details,
+                IconColor = Brush.Parse(palette.IconColor),
+                GlowColor = Brush.Parse(palette.GlowColor),
+                StatusColor = Brush.Parse(palette.StatusColor),
+                IconPath = GetIconPath(report),
+                IsActive = report.Status == SkillHealthStatus.Healthy
             };
+        }
+
+        private static string FormatName(string displayName, string skillId)
+        {
+            var name = string.IsNullOrWhiteSpace(displayName)
+                ? skillId
+                : displayName;
+
+            return name.ToUpperInvariant();
+        }
+
+        private static string FormatStatus(SkillHealthStatus status)
+        {
+            return status switch
+            {
+                SkillHealthStatus.Healthy => "Healthy",
+                SkillHealthStatus.Disabled => "Disabled",
+                SkillHealthStatus.MissingExecutor => "Missing Executor",
+                _ => "Unknown"
+            };
+        }
+
+        private static (string IconColor, string GlowColor, string StatusColor) GetStatusPalette(
+            SkillHealthStatus status)
+        {
+            return status switch
+            {
+                SkillHealthStatus.Healthy => ("#22D3EE", "#2006B6D4", "#10B981"),
+                SkillHealthStatus.MissingExecutor => ("#F59E0B", "#20F59E0B", "#F59E0B"),
+                SkillHealthStatus.Disabled => ("#71717A", "#1827272A", "#71717A"),
+                _ => ("#71717A", "#1827272A", "#71717A")
+            };
+        }
+
+        private static string GetIconPath(SkillHealthReport report)
+        {
+            if (report.SkillId.StartsWith("apps.", StringComparison.OrdinalIgnoreCase))
+            {
+                return "M13,3H5A2,2 0 0,0 3,5V13H5V5H13V3M19,7H9A2,2 0 0,0 7,9V19A2,2 0 0,0 9,21H19A2,2 0 0,0 21,19V9A2,2 0 0,0 19,7Z";
+            }
+
+            if (report.SkillId.StartsWith("files.", StringComparison.OrdinalIgnoreCase))
+            {
+                return "M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M13,9V3.5L18.5,9H13Z";
+            }
+
+            if (report.SkillId.StartsWith("web.", StringComparison.OrdinalIgnoreCase))
+            {
+                return "M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M18.9,8H15.97C15.65,6.75 15.15,5.56 14.5,4.48A8.03,8.03 0 0,1 18.9,8Z";
+            }
+
+            return "M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M11,6V13H13V6H11M11,15V17H13V15H11Z";
         }
 
         public override void OnNavigatedTo()

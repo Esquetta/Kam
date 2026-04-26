@@ -24,6 +24,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private ICommandInputService? _commandInput;
         private CancellationTokenSource? _resultListenerCts;
         private IVoiceAgentHostControl? _hostControl;
+        private ISkillHealthService? _skillHealthService;
 
         /* ========================= */
         /* CACHED BRUSHES */
@@ -302,6 +303,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 ActiveView = NavView.Coordinator;
             }
         }
+
+        public void SetSkillHealthService(ISkillHealthService skillHealthService)
+        {
+            _skillHealthService = skillHealthService;
+        }
         
         private void OnHostStateChanged(object? sender, bool isRunning)
         {
@@ -378,7 +384,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
             CurrentViewModel = view switch
             {
                 NavView.Coordinator => new CoordinatorViewModel(_hostControl, this),
-                NavView.Plugins => new PluginsViewModel(),
+                NavView.Plugins => _skillHealthService is null
+                    ? new PluginsViewModel()
+                    : new PluginsViewModel(_skillHealthService),
                 NavView.Integrations => new IntegrationsViewModel(),
                 NavView.Settings => new SettingsViewModel(this),
                 _ => null

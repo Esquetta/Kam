@@ -84,6 +84,10 @@ namespace SmartVoiceAgent.Ui
                 var hostControl = _host.Services.GetRequiredService<IVoiceAgentHostControl>();
                 _mainViewModel.SetVoiceAgentHostControl(hostControl);
 
+                // Connect Skill Health Service to the skills dashboard
+                var skillHealthService = _host.Services.GetRequiredService<ISkillHealthService>();
+                _mainViewModel.SetSkillHealthService(skillHealthService);
+
                 // Setup Voice Command Service
                 SetupVoiceCommandService(_mainViewModel);
 

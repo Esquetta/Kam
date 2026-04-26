@@ -19,7 +19,7 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="16"/>
             <Setter Property="Padding" Value="24"/>
-            <Setter Property="MinHeight" Value="180"/>
+            <Setter Property="MinHeight" Value="220"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Transitions">
                 <Transitions>
@@ -40,7 +40,7 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="16"/>
             <Setter Property="Padding" Value="24"/>
-            <Setter Property="MinHeight" Value="180"/>
+            <Setter Property="MinHeight" Value="220"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Transitions">
                 <Transitions>
@@ -59,7 +59,7 @@
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="16"/>
-            <Setter Property="MinHeight" Value="180"/>
+            <Setter Property="MinHeight" Value="220"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Transitions">
                 <Transitions>
@@ -159,27 +159,53 @@
 
                                 <!-- Content -->
                                 <StackPanel Grid.Row="2" VerticalAlignment="Bottom">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+                                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
                                         <TextBlock Text="{Binding Name}"
                                                    FontSize="16"
                                                    FontWeight="SemiBold"
                                                    LetterSpacing="1"
-                                                   Foreground="{Binding TextColor}"/>
+                                                   Foreground="{Binding TextColor}"
+                                                   TextWrapping="Wrap"
+                                                   MaxLines="2"/>
                                         <Border Classes.StatusActive="{Binding IsActive}"
-                                                Classes.StatusInactive="{Binding !IsActive}">
+                                                Classes.StatusInactive="{Binding !IsActive}"
+                                                Grid.Column="1"
+                                                VerticalAlignment="Top"
+                                                Margin="8,0,0,0">
                                             <TextBlock Text="{Binding Status}"
                                                        FontSize="9"
                                                        FontFamily="Consolas"
                                                        Foreground="{Binding StatusColor}"
                                                        VerticalAlignment="Center"/>
                                         </Border>
-                                    </StackPanel>
+                                    </Grid>
+                                    <TextBlock Text="{Binding SkillId}"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource AccentCyanBrush}"
+                                               FontFamily="Consolas"
+                                               TextWrapping="NoWrap"
+                                               TextTrimming="CharacterEllipsis"
+                                               Margin="0,0,0,6"/>
+                                    <TextBlock Text="{Binding Source}"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               FontFamily="Consolas"
+                                               TextWrapping="NoWrap"
+                                               TextTrimming="CharacterEllipsis"
+                                               Margin="0,0,0,8"/>
                                     <TextBlock Text="{Binding Description}"
                                                FontSize="11"
                                                Foreground="{DynamicResource TextMutedBrush}"
                                                TextWrapping="Wrap"
                                                LineHeight="18"
-                                               MaxLines="3"/>
+                                               MaxLines="2"/>
+                                    <TextBlock Text="{Binding HealthDetail}"
+                                               FontSize="10"
+                                               Foreground="{Binding StatusColor}"
+                                               TextWrapping="Wrap"
+                                               LineHeight="16"
+                                               MaxLines="2"
+                                               Margin="0,8,0,0"/>
                                 </StackPanel>
                             </Grid>
                         </Border>
