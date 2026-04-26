@@ -86,7 +86,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISkillExecutor, CommunicationSkillExecutor>();
         services.AddSingleton<ISkillExecutor, ClipboardSkillExecutor>();
         services.AddSingleton<ISkillExecutor, SystemInformationSkillExecutor>();
-        services.AddSingleton<ISkillExecutor>(sp =>
+        services.AddScoped<ISkillExecutor>(sp =>
         {
             var registry = sp.GetRequiredService<ISkillRegistry>();
             var chatClient = new Lazy<IChatClient>(() =>
@@ -100,7 +100,11 @@ public static class ServiceCollectionExtensions
                     : sp.GetRequiredService<IChatClient>();
             });
 
-            return new ExternalSkillExecutor(() => chatClient.Value, registry);
+            return new ExternalSkillExecutor(
+                () => chatClient.Value,
+                registry,
+                () => sp.GetService<ISkillRuntimeContextProvider>(),
+                () => sp.GetService<ISkillActionExecutor>());
         });
         services.AddSingleton<ISkillPlannerService, ModelSkillPlannerService>();
 

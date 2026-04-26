@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.AI;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Infrastructure.Skills.Actions;
 
 namespace SmartVoiceAgent.Infrastructure.Skills.External;
 
@@ -13,16 +14,41 @@ public sealed class ExternalSkillExecutor : ISkillExecutor
 
     private readonly Func<IChatClient> _chatClientFactory;
     private readonly ISkillRegistry _registry;
+    private readonly Func<ISkillRuntimeContextProvider?>? _runtimeContextProviderFactory;
+    private readonly Func<ISkillActionExecutor?>? _actionExecutorFactory;
 
-    public ExternalSkillExecutor(IChatClient chatClient, ISkillRegistry registry)
-        : this(() => chatClient, registry)
+    public ExternalSkillExecutor(
+        IChatClient chatClient,
+        ISkillRegistry registry,
+        ISkillRuntimeContextProvider? runtimeContextProvider = null,
+        ISkillActionExecutor? actionExecutor = null)
+        : this(() => chatClient, registry, runtimeContextProvider, actionExecutor)
     {
     }
 
-    internal ExternalSkillExecutor(Func<IChatClient> chatClientFactory, ISkillRegistry registry)
+    internal ExternalSkillExecutor(
+        Func<IChatClient> chatClientFactory,
+        ISkillRegistry registry,
+        ISkillRuntimeContextProvider? runtimeContextProvider = null,
+        ISkillActionExecutor? actionExecutor = null)
+        : this(
+            chatClientFactory,
+            registry,
+            runtimeContextProvider is null ? null : () => runtimeContextProvider,
+            actionExecutor is null ? null : () => actionExecutor)
+    {
+    }
+
+    internal ExternalSkillExecutor(
+        Func<IChatClient> chatClientFactory,
+        ISkillRegistry registry,
+        Func<ISkillRuntimeContextProvider?>? runtimeContextProviderFactory,
+        Func<ISkillActionExecutor?>? actionExecutorFactory)
     {
         _chatClientFactory = chatClientFactory;
         _registry = registry;
+        _runtimeContextProviderFactory = runtimeContextProviderFactory;
+        _actionExecutorFactory = actionExecutorFactory;
     }
 
     public bool CanExecute(string skillId)
@@ -68,10 +94,11 @@ public sealed class ExternalSkillExecutor : ISkillExecutor
         }
 
         var skillMarkdown = await File.ReadAllTextAsync(skillFile, cancellationToken);
+        var runtimeContext = await CreateRuntimeContextAsync(plan, cancellationToken);
         var messages = new[]
         {
             new ChatMessage(ChatRole.System, BuildSystemPrompt()),
-            new ChatMessage(ChatRole.System, BuildSkillContext(manifest, skillMarkdown, plan)),
+            new ChatMessage(ChatRole.System, BuildSkillContext(manifest, skillMarkdown, plan, runtimeContext)),
             new ChatMessage(ChatRole.User, BuildUserPrompt(plan))
         };
 
@@ -85,12 +112,53 @@ public sealed class ExternalSkillExecutor : ISkillExecutor
                 .Where(text => !string.IsNullOrWhiteSpace(text)))
             .Trim();
 
-        return string.IsNullOrWhiteSpace(responseText)
-            ? SkillResult.Failed(
+        if (string.IsNullOrWhiteSpace(responseText))
+        {
+            return SkillResult.Failed(
                 $"Skill '{plan.SkillId}' returned an empty result.",
                 SkillExecutionStatus.Failed,
-                "empty_external_skill_result")
-            : SkillResult.Succeeded(responseText);
+                "empty_external_skill_result");
+        }
+
+        var parseResult = SkillActionPlanParser.ParseStrict(responseText);
+        if (!parseResult.IsValid || parseResult.Plan is null)
+        {
+            return SkillResult.Failed(
+                $"Skill '{plan.SkillId}' returned an invalid action plan: {parseResult.ErrorMessage}",
+                SkillExecutionStatus.ValidationFailed,
+                "invalid_action_plan");
+        }
+
+        var actionPlan = parseResult.Plan;
+        if (actionPlan.RequiresConfirmation)
+        {
+            return SkillResult.Failed(
+                "The skill requested user confirmation before action execution.",
+                SkillExecutionStatus.ReviewRequired,
+                "action_confirmation_required");
+        }
+
+        if (actionPlan.Actions.Count == 0)
+        {
+            return SkillResult.Succeeded(actionPlan.Message);
+        }
+
+        var actionExecutor = _actionExecutorFactory?.Invoke();
+        if (actionExecutor is null)
+        {
+            return SkillResult.Failed(
+                "The skill returned actions, but the deterministic action executor is unavailable.",
+                SkillExecutionStatus.ExecutorNotFound,
+                "action_executor_unavailable");
+        }
+
+        var actionResult = await actionExecutor.ExecuteAsync(actionPlan, cancellationToken);
+        return actionResult.Success
+            ? SkillResult.Succeeded(actionResult.Message, actionResult)
+            : SkillResult.Failed(
+                actionResult.Message,
+                SkillExecutionStatus.Failed,
+                "action_execution_failed");
     }
 
     private static bool IsExternalExecutorType(string executorType)
@@ -118,17 +186,34 @@ public sealed class ExternalSkillExecutor : ISkillExecutor
     {
         return """
         You are Kam's external skill executor.
-        Follow the provided SKILL.md instructions for reasoning and response style.
+        Follow the provided SKILL.md instructions for reasoning, but the application executes actions.
         Do not call tools, APIs, local programs, shell commands, or MCP servers.
         Do not claim that external side effects happened unless the user explicitly provided evidence.
-        Return a concise text result that the app can show to the user.
+        Return exactly one JSON object and no surrounding text.
+        JSON schema:
+        {
+          "message": "Concise text the app can show to the user.",
+          "requiresConfirmation": false,
+          "actions": [
+            {
+              "type": "open_app | focus_window | click | type_text | hotkey | clipboard_set | clipboard_get | read_screen | respond",
+              "applicationName": "optional app name",
+              "target": "optional window/app/field target",
+              "text": "optional text",
+              "keys": ["ctrl", "l"],
+              "x": 100,
+              "y": 200
+            }
+          ]
+        }
         """;
     }
 
     private static string BuildSkillContext(
         KamSkillManifest manifest,
         string skillMarkdown,
-        SkillPlan plan)
+        SkillPlan plan,
+        SkillRuntimeContext runtimeContext)
     {
         var builder = new StringBuilder();
         builder.AppendLine("Skill metadata:");
@@ -140,6 +225,12 @@ public sealed class ExternalSkillExecutor : ISkillExecutor
         builder.AppendLine();
         builder.AppendLine("Plan arguments JSON:");
         builder.AppendLine(JsonSerializer.Serialize(plan.Arguments));
+        builder.AppendLine();
+        builder.AppendLine("Runtime context JSON:");
+        builder.AppendLine(JsonSerializer.Serialize(runtimeContext));
+        builder.AppendLine();
+        builder.AppendLine("Allowed action types:");
+        builder.AppendLine(string.Join(", ", SkillActionPlanParser.GetSupportedActionTypes()));
         builder.AppendLine();
         builder.AppendLine("SKILL.md:");
         builder.AppendLine(skillMarkdown);
@@ -169,9 +260,21 @@ public sealed class ExternalSkillExecutor : ISkillExecutor
             ? manifest.InstalledFrom
             : ResolveDirectoryFromSource(manifest.Source);
 
-        return string.IsNullOrWhiteSpace(directory)
-            ? null
-            : Path.Combine(directory, "SKILL.md");
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            return null;
+        }
+
+        foreach (var fileName in new[] { "SKILL.md", "skill.md", "README.md", "README.txt" })
+        {
+            var candidate = Path.Combine(directory, fileName);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return Path.Combine(directory, "SKILL.md");
     }
 
     private static string ResolveDirectoryFromSource(string source)
@@ -185,6 +288,23 @@ public sealed class ExternalSkillExecutor : ISkillExecutor
         }
 
         return source;
+    }
+
+    private async Task<SkillRuntimeContext> CreateRuntimeContextAsync(
+        SkillPlan plan,
+        CancellationToken cancellationToken)
+    {
+        var runtimeContextProvider = _runtimeContextProviderFactory?.Invoke();
+        if (runtimeContextProvider is not null)
+        {
+            return await runtimeContextProvider.CreateAsync(plan, cancellationToken);
+        }
+
+        return new SkillRuntimeContext
+        {
+            UserInput = BuildUserPrompt(plan),
+            OperatingSystem = Environment.OSVersion.VersionString
+        };
     }
 
     private sealed record ChatClientResolution(

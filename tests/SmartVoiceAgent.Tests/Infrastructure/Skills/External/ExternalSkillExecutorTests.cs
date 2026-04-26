@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.Extensions.AI;
+using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Infrastructure.Skills;
 using SmartVoiceAgent.Infrastructure.Skills.Execution;
@@ -38,21 +39,32 @@ public sealed class ExternalSkillExecutorTests : IDisposable
             "Follow desktop navigation instructions.");
         var registry = new InMemorySkillRegistry();
         registry.Register(CreateManifest("local.desktop-navigation", "local", skillDirectory));
-        var chatClient = new RecordingChatClient("Focused the Settings window.");
-        var executor = new ExternalSkillExecutor(chatClient, registry);
+        var chatClient = new RecordingChatClient("""
+        {"message":"Focused the Settings window.","actions":[{"type":"focus_window","target":"settings"}]}
+        """);
+        var actionExecutor = new RecordingSkillActionExecutor();
+        var executor = new ExternalSkillExecutor(
+            chatClient,
+            registry,
+            new StaticSkillRuntimeContextProvider("Settings"),
+            actionExecutor);
 
         var result = await executor.ExecuteAsync(SkillPlan.FromObject(
             "local.desktop-navigation",
             new { input = "Open settings", target = "settings" }));
 
         result.Success.Should().BeTrue();
-        result.Message.Should().Be("Focused the Settings window.");
+        result.Message.Should().Contain("Focused the Settings window.");
+        actionExecutor.LastPlan.Should().NotBeNull();
+        actionExecutor.LastPlan!.Actions.Should().ContainSingle(action => action.Type == "focus_window");
         var promptText = string.Join(
             Environment.NewLine,
             chatClient.LastMessages.Select(message => message.Text));
         promptText.Should().Contain("Follow desktop navigation instructions.");
         promptText.Should().Contain("\"target\":\"settings\"");
         promptText.Should().Contain("Open settings");
+        promptText.Should().Contain("Runtime context JSON");
+        promptText.Should().Contain("Settings");
         promptText.Should().Contain("Do not call tools");
     }
 
@@ -63,7 +75,9 @@ public sealed class ExternalSkillExecutorTests : IDisposable
         Directory.CreateDirectory(missingSkillDirectory);
         var registry = new InMemorySkillRegistry();
         registry.Register(CreateManifest("local.missing-skill", "local", missingSkillDirectory));
-        var executor = new ExternalSkillExecutor(new RecordingChatClient("ok"), registry);
+        var executor = new ExternalSkillExecutor(
+            new RecordingChatClient("""{"message":"ok","actions":[]}"""),
+            registry);
 
         var result = await executor.ExecuteAsync(SkillPlan.FromObject(
             "local.missing-skill",
@@ -81,7 +95,7 @@ public sealed class ExternalSkillExecutorTests : IDisposable
             "Follow desktop navigation instructions.");
         var registry = new InMemorySkillRegistry();
         registry.Register(CreateManifest("local.desktop-navigation", "local", skillDirectory));
-        var chatClient = new RecordingChatClient("External skill smoke passed.");
+        var chatClient = new RecordingChatClient("""{"message":"External skill smoke passed.","actions":[]}""");
         var pipeline = new SkillExecutionPipeline(
             registry,
             [new ExternalSkillExecutor(chatClient, registry)]);
@@ -191,6 +205,47 @@ public sealed class ExternalSkillExecutorTests : IDisposable
         {
             await Task.Yield();
             yield break;
+        }
+    }
+
+    private sealed class StaticSkillRuntimeContextProvider : ISkillRuntimeContextProvider
+    {
+        private readonly string _activeWindowTitle;
+
+        public StaticSkillRuntimeContextProvider(string activeWindowTitle)
+        {
+            _activeWindowTitle = activeWindowTitle;
+        }
+
+        public Task<SkillRuntimeContext> CreateAsync(
+            SkillPlan plan,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new SkillRuntimeContext
+            {
+                UserInput = plan.Arguments["input"].GetString() ?? string.Empty,
+                OperatingSystem = "Windows",
+                ActiveWindow = new SkillRuntimeWindow
+                {
+                    Title = _activeWindowTitle,
+                    ProcessName = "SystemSettings"
+                }
+            });
+        }
+    }
+
+    private sealed class RecordingSkillActionExecutor : ISkillActionExecutor
+    {
+        public SkillActionPlan? LastPlan { get; private set; }
+
+        public Task<SkillActionExecutionResult> ExecuteAsync(
+            SkillActionPlan plan,
+            CancellationToken cancellationToken = default)
+        {
+            LastPlan = plan;
+            return Task.FromResult(SkillActionExecutionResult.Succeeded(
+                $"{plan.Message} Executed {plan.Actions.Count} action(s).",
+                [SkillActionStepResult.Succeeded(plan.Actions[0].Type, "ok")]));
         }
     }
 }
