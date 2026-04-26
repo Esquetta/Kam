@@ -429,7 +429,7 @@
 							<!-- Text Input -->
 							<TextBox Grid.Column="1"
 									 x:Name="PromptInput"
-									 Watermark="Enter command or click mic to speak..."
+									 PlaceholderText="Enter command or click mic to speak..."
 									 FontSize="12"
 									 FontFamily="Consolas"
 									 Background="Transparent"

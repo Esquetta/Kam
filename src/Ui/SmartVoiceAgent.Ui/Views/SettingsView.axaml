@@ -194,7 +194,7 @@
                                            FontSize="11"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
                                 <TextBox Text="{Binding AiModelId, Mode=TwoWay}"
-                                         Watermark="openai/gpt-4.1-mini"/>
+                                         PlaceholderText="openai/gpt-4.1-mini"/>
                             </StackPanel>
 
                             <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Spacing="6">
@@ -202,7 +202,7 @@
                                            FontSize="11"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
                                 <TextBox Text="{Binding AiEndpoint, Mode=TwoWay}"
-                                         Watermark="https://openrouter.ai/api/v1"/>
+                                         PlaceholderText="https://openrouter.ai/api/v1"/>
                             </StackPanel>
 
                             <StackPanel Grid.Row="2" Grid.Column="0" Spacing="6">
@@ -211,7 +211,7 @@
                                            Foreground="{DynamicResource TextMutedBrush}"/>
                                 <TextBox Text="{Binding AiApiKey, Mode=TwoWay}"
                                          PasswordChar="*"
-                                         Watermark="sk-..."/>
+                                         PlaceholderText="sk-..."/>
                                 <TextBlock Text="{Binding MaskedAiApiKey}"
                                            FontSize="10"
                                            Foreground="{DynamicResource TextMutedBrush}"

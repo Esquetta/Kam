@@ -106,7 +106,7 @@
                             <Grid ColumnDefinitions="*,Auto">
                                 <TextBox Grid.Column="0"
                                          Text="{Binding TodoistApiKey, Mode=TwoWay}"
-                                         Watermark="Enter your Todoist API key..."
+                                         PlaceholderText="Enter your Todoist API key..."
                                          PasswordChar="●"
                                          Classes="IntegrationInput"
                                          Height="40"
@@ -240,7 +240,7 @@
                                            Foreground="{DynamicResource TextMutedBrush}"
                                            LetterSpacing="1"/>
                                 <TextBox Text="{Binding SmtpUsername, Mode=TwoWay}"
-                                         Watermark="your.email@gmail.com"
+                                         PlaceholderText="your.email@gmail.com"
                                          Classes="IntegrationInput"
                                          Height="40"
                                          VerticalContentAlignment="Center"/>
@@ -254,7 +254,7 @@
                                            Foreground="{DynamicResource TextMutedBrush}"
                                            LetterSpacing="1"/>
                                 <TextBox Text="{Binding SmtpPassword, Mode=TwoWay}"
-                                         Watermark="Your app-specific password"
+                                         PlaceholderText="Your app-specific password"
                                          PasswordChar="●"
                                          Classes="IntegrationInput"
                                          Height="40"
@@ -274,7 +274,7 @@
                                            Foreground="{DynamicResource TextMutedBrush}"
                                            LetterSpacing="1"/>
                                 <TextBox Text="{Binding SenderEmail, Mode=TwoWay}"
-                                         Watermark="noreply@yourdomain.com (defaults to username if empty)"
+                                         PlaceholderText="noreply@yourdomain.com (defaults to username if empty)"
                                          Classes="IntegrationInput"
                                          Height="40"
                                          VerticalContentAlignment="Center"/>
@@ -299,7 +299,7 @@
                                                    Foreground="{DynamicResource TextMutedBrush}"
                                                    LetterSpacing="1"/>
                                         <TextBox Text="{Binding SmtpHost, Mode=TwoWay}"
-                                                 Watermark="smtp.gmail.com"
+                                                 PlaceholderText="smtp.gmail.com"
                                                  Classes="IntegrationInput"
                                                  Height="40"
                                                  VerticalContentAlignment="Center"/>
@@ -311,7 +311,7 @@
                                                    Foreground="{DynamicResource TextMutedBrush}"
                                                    LetterSpacing="1"/>
                                         <TextBox Text="{Binding SmtpPort, Mode=TwoWay}"
-                                                 Watermark="587"
+                                                 PlaceholderText="587"
                                                  Classes="IntegrationInput"
                                                  Height="40"
                                                  VerticalContentAlignment="Center"/>
@@ -438,7 +438,7 @@
                                            Foreground="{DynamicResource TextMutedBrush}"
                                            LetterSpacing="1"/>
                                 <TextBox Text="{Binding TwilioAccountSid, Mode=TwoWay}"
-                                         Watermark="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                                         PlaceholderText="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                                          Classes="IntegrationInput"
                                          Height="40"
                                          VerticalContentAlignment="Center"/>
@@ -452,7 +452,7 @@
                                            Foreground="{DynamicResource TextMutedBrush}"
                                            LetterSpacing="1"/>
                                 <TextBox Text="{Binding TwilioAuthToken, Mode=TwoWay}"
-                                         Watermark="Your Twilio Auth Token"
+                                         PlaceholderText="Your Twilio Auth Token"
                                          PasswordChar="●"
                                          Classes="IntegrationInput"
                                          Height="40"
@@ -467,7 +467,7 @@
                                            Foreground="{DynamicResource TextMutedBrush}"
                                            LetterSpacing="1"/>
                                 <TextBox Text="{Binding TwilioPhoneNumber, Mode=TwoWay}"
-                                         Watermark="+1234567890"
+                                         PlaceholderText="+1234567890"
                                          Classes="IntegrationInput"
                                          Height="40"
                                          VerticalContentAlignment="Center"/>

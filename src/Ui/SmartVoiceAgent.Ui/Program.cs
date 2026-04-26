@@ -19,6 +19,6 @@ namespace SmartVoiceAgent.Ui
                 .UsePlatformDetect()
                 .WithInterFont()
                 .LogToTrace()
-                .UseReactiveUI();
+                .UseReactiveUI(builder => builder.WithAvalonia());
     }
 }
