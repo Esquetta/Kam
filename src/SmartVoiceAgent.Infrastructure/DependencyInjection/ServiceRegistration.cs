@@ -95,6 +95,7 @@ public static class ServiceRegistration
 
         // Register Command Input Service for UI-to-Agent communication
         services.AddSingleton<ICommandInputService, CommandInputService>();
+        services.AddSingleton<ICommandRuntimeService, SkillFirstCommandRuntimeService>();
         
         // Register Message Services (Email, SMS, etc.)
         services.AddScoped<IMessageServiceFactory, MessageServiceFactory>();
