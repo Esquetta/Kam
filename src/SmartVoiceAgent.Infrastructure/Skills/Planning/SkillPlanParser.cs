@@ -25,14 +25,30 @@ public static class SkillPlanParser
 
         try
         {
-            var plan = JsonSerializer.Deserialize<SkillPlan>(json, JsonOptions);
-            if (plan is null || string.IsNullOrWhiteSpace(plan.SkillId))
-            {
-                return SkillPlanParseResult.Failure("Skill plan JSON must include a skillId.");
-            }
+            return DeserializePlan(json);
+        }
+        catch (JsonException)
+        {
+            return SkillPlanParseResult.Failure("Response must contain valid JSON.");
+        }
+    }
 
-            plan.Arguments ??= [];
-            return SkillPlanParseResult.Success(plan);
+    public static SkillPlanParseResult ParseStrictJsonObject(string response)
+    {
+        if (string.IsNullOrWhiteSpace(response))
+        {
+            return SkillPlanParseResult.Failure("Planner response must be a single JSON object.");
+        }
+
+        var trimmed = response.Trim();
+        if (!trimmed.StartsWith('{') || !trimmed.EndsWith('}'))
+        {
+            return SkillPlanParseResult.Failure("Planner response must be a single JSON object.");
+        }
+
+        try
+        {
+            return DeserializePlan(trimmed);
         }
         catch (JsonException)
         {
@@ -68,5 +84,17 @@ public static class SkillPlanParser
         }
 
         return value[start..(end + 1)];
+    }
+
+    private static SkillPlanParseResult DeserializePlan(string json)
+    {
+        var plan = JsonSerializer.Deserialize<SkillPlan>(json, JsonOptions);
+        if (plan is null || string.IsNullOrWhiteSpace(plan.SkillId))
+        {
+            return SkillPlanParseResult.Failure("Skill plan JSON must include a skillId.");
+        }
+
+        plan.Arguments ??= [];
+        return SkillPlanParseResult.Success(plan);
     }
 }

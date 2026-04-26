@@ -35,4 +35,18 @@ public class SkillPlanParserTests
         result.IsValid.Should().BeFalse();
         result.ErrorMessage.Should().Contain("valid JSON");
     }
+
+    [Fact]
+    public void ParseStrictJsonObject_TextAroundJson_ReturnsActionableError()
+    {
+        const string response = """
+        I will open Spotify.
+        {"skillId":"apps.open","arguments":{"applicationName":"Spotify"}}
+        """;
+
+        var result = SkillPlanParser.ParseStrictJsonObject(response);
+
+        result.IsValid.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("single JSON object");
+    }
 }
