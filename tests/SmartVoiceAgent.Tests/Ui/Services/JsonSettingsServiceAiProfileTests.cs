@@ -12,7 +12,7 @@ public class JsonSettingsServiceAiProfileTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void SaveAndLoadModelProviderProfiles_PreservesActivePlannerProfile()
+    public void SaveAndLoadModelProviderProfiles_PreservesActivePlannerAndChatProfiles()
     {
         using (var service = new JsonSettingsService(_settingsDirectory))
         {
@@ -27,17 +27,31 @@ public class JsonSettingsServiceAiProfileTests : IDisposable
                     ModelId = "openai/gpt-4.1-mini",
                     Roles = [ModelProviderRole.Planner],
                     Enabled = true
+                },
+                new ModelProviderProfile
+                {
+                    Id = "openrouter-chat",
+                    Provider = ModelProviderType.OpenRouter,
+                    Endpoint = "https://openrouter.ai/api/v1",
+                    ApiKey = "sk-chat",
+                    ModelId = "openai/gpt-4.1-mini",
+                    Roles = [ModelProviderRole.Chat],
+                    Enabled = true
                 }
             ];
             service.ActivePlannerProfileId = "openrouter-primary";
+            service.ActiveChatProfileId = "openrouter-chat";
             service.Save();
         }
 
         using var reloaded = new JsonSettingsService(_settingsDirectory);
 
         reloaded.ActivePlannerProfileId.Should().Be("openrouter-primary");
+        reloaded.ActiveChatProfileId.Should().Be("openrouter-chat");
         reloaded.ModelProviderProfiles.Should().ContainSingle(
             p => p.Id == "openrouter-primary" && p.ModelId == "openai/gpt-4.1-mini");
+        reloaded.ModelProviderProfiles.Should().ContainSingle(
+            p => p.Id == "openrouter-chat" && p.Roles.Contains(ModelProviderRole.Chat));
     }
 
     public void Dispose()

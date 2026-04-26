@@ -12,6 +12,7 @@ using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.Services.Concrete;
 using SmartVoiceAgent.Ui.ViewModels;
 using SmartVoiceAgent.Ui.Views;
+using SmartVoiceAgent.Infrastructure.Skills.Importing;
 using SmartVoiceAgent.Infrastructure.Skills.Policy;
 using System;
 using System.IO;
@@ -95,6 +96,9 @@ namespace SmartVoiceAgent.Ui
 
                 var skillPolicyManager = _host.Services.GetRequiredService<ISkillPolicyManager>();
                 _mainViewModel.SetSkillPolicyManager(skillPolicyManager);
+
+                var skillImportService = _host.Services.GetRequiredService<ISkillImportService>();
+                _mainViewModel.SetSkillImportService(skillImportService);
 
                 var skillConfirmationService = _host.Services.GetRequiredService<ISkillConfirmationService>();
                 _mainViewModel.SetSkillConfirmationService(skillConfirmationService);
@@ -215,7 +219,8 @@ namespace SmartVoiceAgent.Ui
                 using var settingsService = new JsonSettingsService();
                 var overrides = AiRuntimeConfigurationMapper.CreateAiServiceOverrides(
                     settingsService.ModelProviderProfiles,
-                    settingsService.ActivePlannerProfileId);
+                    settingsService.ActivePlannerProfileId,
+                    settingsService.ActiveChatProfileId);
 
                 if (overrides.Count > 0)
                 {

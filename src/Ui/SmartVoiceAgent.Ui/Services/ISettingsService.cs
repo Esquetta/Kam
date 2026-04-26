@@ -148,6 +148,11 @@ public interface ISettingsService
     /// </summary>
     string ActivePlannerProfileId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the active chat and skill execution model provider profile id.
+    /// </summary>
+    string ActiveChatProfileId { get; set; }
+
     #endregion
 
     /// <summary>

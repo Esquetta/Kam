@@ -228,6 +228,64 @@
                                 </Button>
                             </StackPanel>
                         </Grid>
+                        <Grid ColumnDefinitions="Auto, *" Margin="0,8,0,0">
+                            <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                                <Path Data="M12,3C7.03,3 3,6.58 3,11C3,13.39 4.18,15.54 6.06,17L5,21L9.3,18.86C10.15,19.05 11.06,19 12,19C16.97,19 21,15.42 21,11C21,6.58 16.97,3 12,3Z"
+                                      Fill="{DynamicResource TextMutedBrush}"
+                                      Width="16" Height="16"
+                                      Stretch="Uniform"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="Chat / Skill Execution Model"
+                                           FontSize="13"
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding ActiveChatProfileId}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto" ColumnSpacing="10" RowSpacing="10">
+                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="6">
+                                <TextBlock Text="Provider"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                <ComboBox ItemsSource="{Binding AiProviders}"
+                                          SelectedItem="{Binding ChatProvider, Mode=TwoWay}"
+                                          HorizontalAlignment="Stretch"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="6">
+                                <TextBlock Text="Model ID"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                <TextBox Text="{Binding ChatModelId, Mode=TwoWay}"
+                                         PlaceholderText="openai/gpt-4.1-mini"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Spacing="6">
+                                <TextBlock Text="Endpoint"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                <TextBox Text="{Binding ChatEndpoint, Mode=TwoWay}"
+                                         PlaceholderText="https://openrouter.ai/api/v1"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Spacing="6">
+                                <TextBlock Text="API Key"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                <TextBox Text="{Binding ChatApiKey, Mode=TwoWay}"
+                                         PasswordChar="*"
+                                         PlaceholderText="sk-..."/>
+                                <TextBlock Text="{Binding MaskedChatApiKey}"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Grid>
                         <TextBlock Text="{Binding AiProfileStatus}"
                                    FontSize="11"
                                    Foreground="{DynamicResource TextMutedBrush}"

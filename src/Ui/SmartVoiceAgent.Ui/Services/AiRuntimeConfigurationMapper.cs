@@ -10,33 +10,50 @@ public static class AiRuntimeConfigurationMapper
 {
     public static IReadOnlyDictionary<string, string?> CreateAiServiceOverrides(
         IReadOnlyList<ModelProviderProfile> profiles,
-        string activePlannerProfileId)
+        string activePlannerProfileId,
+        string activeChatProfileId = "")
     {
-        var profile = SelectPlannerProfile(profiles, activePlannerProfileId);
-        if (profile is null || !profile.Enabled || !profile.Validate().IsValid)
+        var plannerProfile = SelectProfile(profiles, activePlannerProfileId, ModelProviderRole.Planner);
+        if (plannerProfile is null || !plannerProfile.Enabled || !plannerProfile.Validate().IsValid)
         {
             return new Dictionary<string, string?>();
         }
 
-        return new Dictionary<string, string?>
+        var overrides = new Dictionary<string, string?>();
+        AddProfileOverrides(overrides, "AIService", plannerProfile);
+        AddProfileOverrides(overrides, "AIService:Planner", plannerProfile);
+
+        var chatProfile = SelectProfile(profiles, activeChatProfileId, ModelProviderRole.Chat);
+        if (chatProfile is not null && chatProfile.Enabled && chatProfile.Validate().IsValid)
         {
-            ["AIService:Provider"] = profile.Provider.ToString(),
-            ["AIService:Endpoint"] = profile.Endpoint,
-            ["AIService:ApiKey"] = ResolveApiKey(profile),
-            ["AIService:ModelId"] = profile.ModelId,
-            ["AIService:DefaultTemperature"] = profile.Temperature.ToString(CultureInfo.InvariantCulture),
-            ["AIService:DefaultMaxTokens"] = profile.MaxTokens.ToString(CultureInfo.InvariantCulture)
-        };
+            AddProfileOverrides(overrides, "AIService:Chat", chatProfile);
+        }
+
+        return overrides;
     }
 
-    private static ModelProviderProfile? SelectPlannerProfile(
+    private static ModelProviderProfile? SelectProfile(
         IReadOnlyList<ModelProviderProfile> profiles,
-        string activePlannerProfileId)
+        string activeProfileId,
+        ModelProviderRole role)
     {
         return profiles.FirstOrDefault(profile =>
-                profile.Id.Equals(activePlannerProfileId, StringComparison.OrdinalIgnoreCase)
-                && profile.Roles.Contains(ModelProviderRole.Planner))
-            ?? profiles.FirstOrDefault(profile => profile.Roles.Contains(ModelProviderRole.Planner));
+                profile.Id.Equals(activeProfileId, StringComparison.OrdinalIgnoreCase)
+                && profile.Roles.Contains(role))
+            ?? profiles.FirstOrDefault(profile => profile.Roles.Contains(role));
+    }
+
+    private static void AddProfileOverrides(
+        IDictionary<string, string?> overrides,
+        string prefix,
+        ModelProviderProfile profile)
+    {
+        overrides[$"{prefix}:Provider"] = profile.Provider.ToString();
+        overrides[$"{prefix}:Endpoint"] = profile.Endpoint;
+        overrides[$"{prefix}:ApiKey"] = ResolveApiKey(profile);
+        overrides[$"{prefix}:ModelId"] = profile.ModelId;
+        overrides[$"{prefix}:DefaultTemperature"] = profile.Temperature.ToString(CultureInfo.InvariantCulture);
+        overrides[$"{prefix}:DefaultMaxTokens"] = profile.MaxTokens.ToString(CultureInfo.InvariantCulture);
     }
 
     private static string ResolveApiKey(ModelProviderProfile profile)

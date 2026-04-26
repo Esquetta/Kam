@@ -20,8 +20,12 @@ public class SettingsViewModelAiProfileTests : IDisposable
 
         viewModel.AiProvider.Should().Be("OpenRouter");
         viewModel.AiEndpoint.Should().Be("https://openrouter.ai/api/v1");
+        viewModel.ChatProvider.Should().Be("OpenRouter");
+        viewModel.ChatEndpoint.Should().Be("https://openrouter.ai/api/v1");
         settingsService.ModelProviderProfiles.Should().ContainSingle(
             p => p.Provider == ModelProviderType.OpenRouter && p.Roles.Contains(ModelProviderRole.Planner));
+        settingsService.ModelProviderProfiles.Should().ContainSingle(
+            p => p.Provider == ModelProviderType.OpenRouter && p.Roles.Contains(ModelProviderRole.Chat));
     }
 
     [Fact]
@@ -61,6 +65,31 @@ public class SettingsViewModelAiProfileTests : IDisposable
             p.Provider == ModelProviderType.Ollama
             && p.Enabled
             && p.ModelId == "llama3.1");
+    }
+
+    [Fact]
+    public void ChatProfileSettings_SaveSeparateActiveChatProfile()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        using var viewModel = new SettingsViewModel(settingsService)
+        {
+            ChatProvider = "OpenAICompatible",
+            ChatEndpoint = "https://api.example.com/v1",
+            ChatApiKey = "sk-chat",
+            ChatModelId = "custom/chat-model",
+            ActiveChatProfileId = "custom-chat"
+        };
+
+        viewModel.TestAiConnectionCommand.Execute().Subscribe();
+
+        settingsService.ActiveChatProfileId.Should().Be("custom-chat");
+        settingsService.ModelProviderProfiles.Should().ContainSingle(p =>
+            p.Id == "custom-chat"
+            && p.Roles.Contains(ModelProviderRole.Chat)
+            && p.ModelId == "custom/chat-model"
+            && p.Enabled);
+        settingsService.ModelProviderProfiles.Should().ContainSingle(p =>
+            p.Roles.Contains(ModelProviderRole.Planner));
     }
 
     public void Dispose()

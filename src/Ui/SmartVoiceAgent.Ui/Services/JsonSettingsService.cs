@@ -193,6 +193,12 @@ public class JsonSettingsService : ISettingsService, IDisposable
         set => SetProperty(nameof(ActivePlannerProfileId), value, v => _data.ActivePlannerProfileId = v);
     }
 
+    public string ActiveChatProfileId
+    {
+        get => _data.ActiveChatProfileId ?? string.Empty;
+        set => SetProperty(nameof(ActiveChatProfileId), value, v => _data.ActiveChatProfileId = v);
+    }
+
     #endregion
 
     public void Save()
@@ -291,6 +297,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
             nameof(SmsEnabled) => (T?)(object?)_data.SmsEnabled,
             nameof(ModelProviderProfiles) => (T?)(object?)_data.ModelProviderProfiles.Select(CloneProfile).ToList().AsReadOnly(),
             nameof(ActivePlannerProfileId) => (T?)(object?)_data.ActivePlannerProfileId,
+            nameof(ActiveChatProfileId) => (T?)(object?)_data.ActiveChatProfileId,
             _ => default
         };
     }
@@ -393,6 +400,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
         // AI Runtime Settings
         public List<ModelProviderProfile> ModelProviderProfiles { get; set; } = [];
         public string? ActivePlannerProfileId { get; set; }
+        public string? ActiveChatProfileId { get; set; }
 
         public DateTime LastModified { get; set; } = DateTime.UtcNow;
     }

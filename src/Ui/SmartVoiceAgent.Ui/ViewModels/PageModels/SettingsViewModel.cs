@@ -85,6 +85,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private string _aiModelId = "openai/gpt-4.1-mini";
         private string _aiApiKey = string.Empty;
         private string _activePlannerProfileId = "openrouter-primary";
+        private string _chatProvider = "OpenRouter";
+        private string _chatEndpoint = "https://openrouter.ai/api/v1";
+        private string _chatModelId = "openai/gpt-4.1-mini";
+        private string _chatApiKey = string.Empty;
+        private string _activeChatProfileId = "openrouter-chat";
         private string _aiProfileStatus = "Profile not validated.";
         private bool _isAiProfileValid;
 
@@ -163,6 +168,74 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
         }
 
+        public string ChatProvider
+        {
+            get => _chatProvider;
+            set
+            {
+                if (_chatProvider != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _chatProvider, value);
+                    SaveAiProfileSettings();
+                }
+            }
+        }
+
+        public string ChatEndpoint
+        {
+            get => _chatEndpoint;
+            set
+            {
+                if (_chatEndpoint != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _chatEndpoint, value);
+                    SaveAiProfileSettings();
+                }
+            }
+        }
+
+        public string ChatModelId
+        {
+            get => _chatModelId;
+            set
+            {
+                if (_chatModelId != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _chatModelId, value);
+                    SaveAiProfileSettings();
+                }
+            }
+        }
+
+        public string ChatApiKey
+        {
+            get => _chatApiKey;
+            set
+            {
+                if (_chatApiKey != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _chatApiKey, value);
+                    this.RaisePropertyChanged(nameof(MaskedChatApiKey));
+                    SaveAiProfileSettings();
+                }
+            }
+        }
+
+        public string MaskedChatApiKey => new ModelProviderProfile { ApiKey = _chatApiKey }.MaskedApiKey;
+
+        public string ActiveChatProfileId
+        {
+            get => _activeChatProfileId;
+            set
+            {
+                if (_activeChatProfileId != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _activeChatProfileId, value);
+                    SaveAiProfileSettings();
+                }
+            }
+        }
+
         public string AiProfileStatus
         {
             get => _aiProfileStatus;
@@ -182,17 +255,29 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             try
             {
                 var activeProfileId = _settingsService.ActivePlannerProfileId;
-                var profile = _settingsService.ModelProviderProfiles.FirstOrDefault(p => p.Id == activeProfileId)
-                    ?? _settingsService.ModelProviderProfiles.FirstOrDefault(p => p.Roles.Contains(ModelProviderRole.Planner))
+                var profiles = _settingsService.ModelProviderProfiles;
+                var profile = profiles.FirstOrDefault(p => p.Id == activeProfileId)
+                    ?? profiles.FirstOrDefault(p => p.Roles.Contains(ModelProviderRole.Planner))
                     ?? CreateDefaultPlannerProfile();
+                var activeChatProfileId = _settingsService.ActiveChatProfileId;
+                var chatProfile = profiles.FirstOrDefault(p => p.Id == activeChatProfileId)
+                    ?? profiles.FirstOrDefault(p => p.Roles.Contains(ModelProviderRole.Chat))
+                    ?? CreateDefaultChatProfile();
 
                 _activePlannerProfileId = profile.Id;
                 _aiProvider = profile.Provider.ToString();
                 _aiEndpoint = profile.Endpoint;
                 _aiModelId = profile.ModelId;
                 _aiApiKey = profile.ApiKey;
+                _activeChatProfileId = chatProfile.Id;
+                _chatProvider = chatProfile.Provider.ToString();
+                _chatEndpoint = chatProfile.Endpoint;
+                _chatModelId = chatProfile.ModelId;
+                _chatApiKey = chatProfile.ApiKey;
 
-                shouldSeedDefaultProfile = _settingsService.ModelProviderProfiles.All(p => p.Id != profile.Id);
+                shouldSeedDefaultProfile =
+                    profiles.All(p => p.Id != profile.Id)
+                    || profiles.All(p => p.Id != chatProfile.Id);
             }
             finally
             {
@@ -213,25 +298,31 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
 
             var profile = CreatePlannerProfile();
+            var chatProfile = CreateChatProfile();
+            var profileIds = new[] { profile.Id, chatProfile.Id };
 
             var profiles = _settingsService.ModelProviderProfiles
-                .Where(p => !p.Id.Equals(profile.Id, StringComparison.OrdinalIgnoreCase))
-                .Concat([profile])
+                .Where(p => !profileIds.Contains(p.Id, StringComparer.OrdinalIgnoreCase))
+                .Concat([profile, chatProfile])
                 .ToList();
 
             _settingsService.ModelProviderProfiles = profiles;
             _settingsService.ActivePlannerProfileId = profile.Id;
+            _settingsService.ActiveChatProfileId = chatProfile.Id;
         }
 
         private void TestAiProfileSettings()
         {
             var profile = CreatePlannerProfile();
+            var chatProfile = CreateChatProfile();
             var validation = profile.Validate();
+            var chatValidation = chatProfile.Validate();
+            var errors = validation.Errors.Concat(chatValidation.Errors).ToArray();
 
-            IsAiProfileValid = validation.IsValid;
-            AiProfileStatus = validation.IsValid
-                ? "Profile is valid. Restart Kam to apply runtime changes."
-                : string.Join(" ", validation.Errors);
+            IsAiProfileValid = validation.IsValid && chatValidation.IsValid;
+            AiProfileStatus = IsAiProfileValid
+                ? "Profiles are valid. Restart Kam to apply runtime changes."
+                : string.Join(" ", errors);
 
             SaveAiProfileSettings();
         }
@@ -253,6 +344,23 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             };
         }
 
+        private ModelProviderProfile CreateChatProfile()
+        {
+            var provider = ParseProvider(_chatProvider);
+
+            return new ModelProviderProfile
+            {
+                Id = string.IsNullOrWhiteSpace(_activeChatProfileId) ? "openrouter-chat" : _activeChatProfileId,
+                Provider = provider,
+                DisplayName = $"{_chatProvider} Chat",
+                Endpoint = _chatEndpoint,
+                ApiKey = _chatApiKey,
+                ModelId = _chatModelId,
+                Roles = [ModelProviderRole.Chat],
+                Enabled = provider == ModelProviderType.Ollama || !string.IsNullOrWhiteSpace(_chatApiKey)
+            };
+        }
+
         private static ModelProviderProfile CreateDefaultPlannerProfile()
         {
             return new ModelProviderProfile
@@ -263,6 +371,20 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 Endpoint = "https://openrouter.ai/api/v1",
                 ModelId = "openai/gpt-4.1-mini",
                 Roles = [ModelProviderRole.Planner],
+                Enabled = false
+            };
+        }
+
+        private static ModelProviderProfile CreateDefaultChatProfile()
+        {
+            return new ModelProviderProfile
+            {
+                Id = "openrouter-chat",
+                Provider = ModelProviderType.OpenRouter,
+                DisplayName = "OpenRouter Chat",
+                Endpoint = "https://openrouter.ai/api/v1",
+                ModelId = "openai/gpt-4.1-mini",
+                Roles = [ModelProviderRole.Chat],
                 Enabled = false
             };
         }
