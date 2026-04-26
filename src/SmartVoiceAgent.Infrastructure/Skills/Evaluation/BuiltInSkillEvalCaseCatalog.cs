@@ -38,6 +38,14 @@ public sealed class BuiltInSkillEvalCaseCatalog : ISkillEvalCaseCatalog
                 "clipboard.get",
                 new { maxLength = 256 }),
             Case(
+                "clipboard.peek reads bounded clipboard preview",
+                "clipboard.peek",
+                new { maxLength = 256 }),
+            Case(
+                "shell.run executes a bounded non-interactive command",
+                "shell.run",
+                new { command = "echo kam-skill-smoke", timeoutMilliseconds = 5000, maxOutputLength = 1000 }),
+            Case(
                 "web.search creates a bounded search plan",
                 "web.search",
                 new { query = "Kam voice automation", lang = "en", results = 3 }),

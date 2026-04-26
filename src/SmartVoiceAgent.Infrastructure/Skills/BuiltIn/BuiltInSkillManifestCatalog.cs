@@ -286,6 +286,13 @@ public static class BuiltInSkillManifestCatalog
                 [OptionalNumber("maxLength", "Maximum characters to return.")],
                 timeoutMilliseconds: 5000),
             Create(
+                "clipboard.peek",
+                "Peek Clipboard",
+                SkillRiskLevel.Medium,
+                [SkillPermission.ClipboardRead],
+                [OptionalNumber("maxLength", "Maximum characters to return.")],
+                timeoutMilliseconds: 5000),
+            Create(
                 "clipboard.set",
                 "Set Clipboard",
                 SkillRiskLevel.High,
@@ -309,6 +316,66 @@ public static class BuiltInSkillManifestCatalog
                     OptionalNumber("results", "Maximum result count.")
                 ],
                 timeoutMilliseconds: 20000),
+            Create(
+                "web.fetch",
+                "Fetch Web URL",
+                SkillRiskLevel.Medium,
+                [SkillPermission.Network],
+                [
+                    RequiredString("url", "HTTP or HTTPS URL to fetch."),
+                    OptionalNumber("maxLength", "Maximum characters to return."),
+                    OptionalNumber("timeoutMilliseconds", "Per-request timeout in milliseconds."),
+                    OptionalBool("allowPrivateNetwork", "Allow localhost or private network targets.")
+                ],
+                timeoutMilliseconds: 15000),
+            Create(
+                "web.read_page",
+                "Read Web Page",
+                SkillRiskLevel.Medium,
+                [SkillPermission.Network],
+                [
+                    RequiredString("url", "HTTP or HTTPS URL to read."),
+                    OptionalNumber("maxLength", "Maximum readable text characters to return."),
+                    OptionalNumber("timeoutMilliseconds", "Per-request timeout in milliseconds."),
+                    OptionalBool("allowPrivateNetwork", "Allow localhost or private network targets.")
+                ],
+                timeoutMilliseconds: 15000),
+            Create(
+                "shell.run",
+                "Run Shell Command",
+                SkillRiskLevel.High,
+                [SkillPermission.ProcessLaunch],
+                [
+                    RequiredString("command", "Non-interactive shell command to execute."),
+                    OptionalString("workingDirectory", "Existing working directory."),
+                    OptionalNumber("timeoutMilliseconds", "Command timeout in milliseconds."),
+                    OptionalNumber("maxOutputLength", "Maximum stdout/stderr characters to return.")
+                ],
+                timeoutMilliseconds: 15000),
+            Create(
+                "window.active",
+                "Active Window Context",
+                SkillRiskLevel.Low,
+                [SkillPermission.SystemInformation],
+                timeoutMilliseconds: 5000),
+            Create(
+                "window.list",
+                "Visible Window List",
+                SkillRiskLevel.Low,
+                [SkillPermission.SystemInformation],
+                [OptionalNumber("maxWindows", "Maximum visible windows to return.")],
+                timeoutMilliseconds: 5000),
+            Create(
+                "accessibility.tree",
+                "Accessibility Tree Snapshot",
+                SkillRiskLevel.Low,
+                [SkillPermission.SystemInformation],
+                [
+                    OptionalNumber("maxNodes", "Maximum OCR/object nodes to return."),
+                    OptionalNumber("maxScreens", "Maximum screens to inspect."),
+                    OptionalBool("includeObjects", "Include detected UI objects.")
+                ],
+                timeoutMilliseconds: 15000),
             Create(
                 "communication.email.send",
                 "Send Email",

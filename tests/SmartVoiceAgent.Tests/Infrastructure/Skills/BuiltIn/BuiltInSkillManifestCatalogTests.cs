@@ -46,8 +46,15 @@ public class BuiltInSkillManifestCatalogTests
             "communication.sms.validate",
             "communication.sms.status",
             "clipboard.get",
+            "clipboard.peek",
             "clipboard.set",
             "clipboard.clear",
+            "shell.run",
+            "web.fetch",
+            "web.read_page",
+            "window.active",
+            "window.list",
+            "accessibility.tree",
             "system.info",
             "system.cpu",
             "system.memory",
@@ -56,5 +63,22 @@ public class BuiltInSkillManifestCatalogTests
             "system.processes.list",
             "system.process.kill"
         ]);
+    }
+
+    [Fact]
+    public void CreateAll_AssignsPolicyBoundariesToWorkspaceAgentLikeSkills()
+    {
+        var manifests = BuiltInSkillManifestCatalog.CreateAll()
+            .ToDictionary(manifest => manifest.Id, StringComparer.OrdinalIgnoreCase);
+
+        manifests["shell.run"].RiskLevel.Should().Be(SmartVoiceAgent.Core.Models.Skills.SkillRiskLevel.High);
+        manifests["shell.run"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.ProcessLaunch);
+        manifests["shell.run"].TimeoutMilliseconds.Should().BeLessThanOrEqualTo(15000);
+
+        manifests["web.fetch"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.Network);
+        manifests["web.read_page"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.Network);
+        manifests["window.active"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.SystemInformation);
+        manifests["accessibility.tree"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.SystemInformation);
+        manifests["clipboard.peek"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.ClipboardRead);
     }
 }

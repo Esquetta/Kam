@@ -86,6 +86,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISkillExecutor, CommunicationSkillExecutor>();
         services.AddSingleton<ISkillExecutor, ClipboardSkillExecutor>();
         services.AddSingleton<ISkillExecutor, SystemInformationSkillExecutor>();
+        services.AddScoped<ISkillExecutor, ShellSkillExecutor>();
+        services.AddHttpClient<WebPageSkillExecutor>();
+        services.AddScoped<ISkillExecutor>(sp => sp.GetRequiredService<WebPageSkillExecutor>());
+        services.AddScoped<ISkillExecutor>(sp => new WindowContextSkillExecutor(sp));
+        services.AddScoped<ISkillExecutor>(sp => new AccessibilitySkillExecutor(sp));
         services.AddScoped<ISkillExecutor>(sp =>
         {
             var registry = sp.GetRequiredService<ISkillRegistry>();

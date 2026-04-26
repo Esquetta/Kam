@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Skills;
@@ -40,6 +41,8 @@ public static class ServiceRegistration
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        services.TryAddSingleton(configuration);
+
         services.AddScoped<ICommandLearningService, CommandLearningService>();
         services.AddSingleton<ISTTServiceFactory, STTServiceFactory>();
         services.AddSingleton<AudioProcessingService>();

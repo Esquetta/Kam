@@ -9,6 +9,7 @@ public sealed class ClipboardSkillExecutor : ISkillExecutor
     private static readonly HashSet<string> SkillIds = new(StringComparer.OrdinalIgnoreCase)
     {
         "clipboard.get",
+        "clipboard.peek",
         "clipboard.set",
         "clipboard.clear"
     };
@@ -31,6 +32,8 @@ public sealed class ClipboardSkillExecutor : ISkillExecutor
         {
             "clipboard.get" => await _tools.GetClipboardAsync(
                 SkillPlanArgumentReader.GetInt(plan, "maxLength")),
+            "clipboard.peek" => await _tools.GetClipboardAsync(
+                SkillPlanArgumentReader.GetInt(plan, "maxLength", 500)),
             "clipboard.set" => await _tools.SetClipboardAsync(
                 SkillPlanArgumentReader.GetString(plan, "content")),
             "clipboard.clear" => await _tools.ClearClipboardAsync(),
