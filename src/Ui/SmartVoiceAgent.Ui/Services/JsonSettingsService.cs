@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
+using SmartVoiceAgent.Core.Models.AI;
 
 namespace SmartVoiceAgent.Ui.Services;
 
@@ -173,6 +176,25 @@ public class JsonSettingsService : ISettingsService, IDisposable
 
     #endregion
 
+    #region AI Runtime Settings
+
+    public IReadOnlyList<ModelProviderProfile> ModelProviderProfiles
+    {
+        get => _data.ModelProviderProfiles.Select(CloneProfile).ToList().AsReadOnly();
+        set => SetProperty(
+            nameof(ModelProviderProfiles),
+            value,
+            v => _data.ModelProviderProfiles = v.Select(CloneProfile).ToList());
+    }
+
+    public string ActivePlannerProfileId
+    {
+        get => _data.ActivePlannerProfileId ?? string.Empty;
+        set => SetProperty(nameof(ActivePlannerProfileId), value, v => _data.ActivePlannerProfileId = v);
+    }
+
+    #endregion
+
     public void Save()
     {
         lock (_lock)
@@ -267,6 +289,8 @@ public class JsonSettingsService : ISettingsService, IDisposable
             nameof(TwilioAuthToken) => (T?)(object?)_data.TwilioAuthToken,
             nameof(TwilioPhoneNumber) => (T?)(object?)_data.TwilioPhoneNumber,
             nameof(SmsEnabled) => (T?)(object?)_data.SmsEnabled,
+            nameof(ModelProviderProfiles) => (T?)(object?)_data.ModelProviderProfiles.Select(CloneProfile).ToList().AsReadOnly(),
+            nameof(ActivePlannerProfileId) => (T?)(object?)_data.ActivePlannerProfileId,
             _ => default
         };
     }
@@ -313,6 +337,23 @@ public class JsonSettingsService : ISettingsService, IDisposable
         Save();
     }
 
+    private static ModelProviderProfile CloneProfile(ModelProviderProfile profile)
+    {
+        return new ModelProviderProfile
+        {
+            Id = profile.Id,
+            Provider = profile.Provider,
+            DisplayName = profile.DisplayName,
+            Endpoint = profile.Endpoint,
+            ApiKey = profile.ApiKey,
+            ModelId = profile.ModelId,
+            Roles = profile.Roles.ToList(),
+            Temperature = profile.Temperature,
+            MaxTokens = profile.MaxTokens,
+            Enabled = profile.Enabled
+        };
+    }
+
     /// <summary>
     /// Data model for settings serialization
     /// </summary>
@@ -348,6 +389,10 @@ public class JsonSettingsService : ISettingsService, IDisposable
         public float InputVolume { get; set; } = 1.0f;
         public float OutputVolume { get; set; } = 1.0f;
         public bool IsNoiseSuppressionEnabled { get; set; } = true;
+
+        // AI Runtime Settings
+        public List<ModelProviderProfile> ModelProviderProfiles { get; set; } = [];
+        public string? ActivePlannerProfileId { get; set; }
 
         public DateTime LastModified { get; set; } = DateTime.UtcNow;
     }

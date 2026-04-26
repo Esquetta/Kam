@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using SmartVoiceAgent.Core.Models.AI;
 
 namespace SmartVoiceAgent.Ui.Services;
 
@@ -131,6 +133,20 @@ public interface ISettingsService
     /// Gets or sets whether noise suppression is enabled
     /// </summary>
     bool IsNoiseSuppressionEnabled { get; set; }
+
+    #endregion
+
+    #region AI Runtime Settings
+
+    /// <summary>
+    /// Gets or sets model provider profiles available to Kam runtime.
+    /// </summary>
+    IReadOnlyList<ModelProviderProfile> ModelProviderProfiles { get; set; }
+
+    /// <summary>
+    /// Gets or sets the active planner model provider profile id.
+    /// </summary>
+    string ActivePlannerProfileId { get; set; }
 
     #endregion
 

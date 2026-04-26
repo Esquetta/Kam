@@ -30,6 +30,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SmartVoiceAgent.Infrastructure\SmartVoiceAgent.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Ui\SmartVoiceAgent.Ui\SmartVoiceAgent.Ui.csproj" />
   </ItemGroup>
 
 </Project>
