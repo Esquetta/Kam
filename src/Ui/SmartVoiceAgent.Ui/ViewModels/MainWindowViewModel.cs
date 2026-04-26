@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using ReactiveUI;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Infrastructure.Skills.Policy;
 using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.Services.Concrete;
 using SmartVoiceAgent.Ui.ViewModels.PageModels;
@@ -29,6 +30,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private ISkillEvalHarness? _skillEvalHarness;
         private ISkillEvalCaseCatalog? _skillEvalCaseCatalog;
         private ISkillConfirmationService? _skillConfirmationService;
+        private ISkillPolicyManager? _skillPolicyManager;
 
         /* ========================= */
         /* CACHED BRUSHES */
@@ -335,6 +337,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _skillEvalCaseCatalog = skillEvalCaseCatalog;
         }
 
+        public void SetSkillPolicyManager(ISkillPolicyManager skillPolicyManager)
+        {
+            _skillPolicyManager = skillPolicyManager;
+        }
+
         public void SetSkillConfirmationService(ISkillConfirmationService skillConfirmationService)
         {
             if (_skillConfirmationService is not null)
@@ -436,12 +443,29 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             if (_skillHealthService is not null
                 && _skillEvalHarness is not null
+                && _skillEvalCaseCatalog is not null
+                && _skillPolicyManager is not null)
+            {
+                return new PluginsViewModel(
+                    _skillHealthService,
+                    _skillEvalHarness,
+                    _skillEvalCaseCatalog,
+                    _skillPolicyManager);
+            }
+
+            if (_skillHealthService is not null
+                && _skillEvalHarness is not null
                 && _skillEvalCaseCatalog is not null)
             {
                 return new PluginsViewModel(
                     _skillHealthService,
                     _skillEvalHarness,
                     _skillEvalCaseCatalog);
+            }
+
+            if (_skillHealthService is not null && _skillPolicyManager is not null)
+            {
+                return new PluginsViewModel(_skillHealthService, _skillPolicyManager);
             }
 
             return _skillHealthService is null

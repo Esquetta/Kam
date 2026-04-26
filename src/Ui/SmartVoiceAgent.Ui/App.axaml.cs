@@ -12,6 +12,7 @@ using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.Services.Concrete;
 using SmartVoiceAgent.Ui.ViewModels;
 using SmartVoiceAgent.Ui.Views;
+using SmartVoiceAgent.Infrastructure.Skills.Policy;
 using System;
 using System.IO;
 using System.Linq;
@@ -91,6 +92,9 @@ namespace SmartVoiceAgent.Ui
                 var skillEvalHarness = _host.Services.GetRequiredService<ISkillEvalHarness>();
                 var skillEvalCaseCatalog = _host.Services.GetRequiredService<ISkillEvalCaseCatalog>();
                 _mainViewModel.SetSkillEvalServices(skillEvalHarness, skillEvalCaseCatalog);
+
+                var skillPolicyManager = _host.Services.GetRequiredService<ISkillPolicyManager>();
+                _mainViewModel.SetSkillPolicyManager(skillPolicyManager);
 
                 var skillConfirmationService = _host.Services.GetRequiredService<ISkillConfirmationService>();
                 _mainViewModel.SetSkillConfirmationService(skillConfirmationService);

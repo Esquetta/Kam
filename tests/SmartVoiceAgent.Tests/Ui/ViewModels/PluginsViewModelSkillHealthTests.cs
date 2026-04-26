@@ -61,6 +61,10 @@ public class PluginsViewModelSkillHealthTests
         reviewRequired.Status.Should().Be("Review Required");
         reviewRequired.HealthDetail.Should().Contain("requires review");
         reviewRequired.IsActive.Should().BeFalse();
+        reviewRequired.CanApproveReview.Should().BeTrue();
+        reviewRequired.CanDisable.Should().BeFalse();
+        reviewRequired.CanEnable.Should().BeFalse();
+        reviewRequired.CanRevokePermissions.Should().BeFalse();
     }
 
     [Fact]

@@ -99,6 +99,7 @@ public static class ServiceRegistration
         services.AddSingleton<ICommandInputService, CommandInputService>();
         services.AddSingleton<ISkillConfirmationService, SkillConfirmationService>();
         services.AddSingleton<ISkillPolicyStore, JsonSkillPolicyStore>();
+        services.AddSingleton<ISkillPolicyManager, SkillPolicyManager>();
         services.AddSingleton<ICommandRuntimeService, SkillFirstCommandRuntimeService>();
         
         // Register Message Services (Email, SMS, etc.)

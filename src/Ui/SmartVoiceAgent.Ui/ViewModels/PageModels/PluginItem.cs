@@ -8,7 +8,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Collections.ObjectModel;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Input;
+using SmartVoiceAgent.Infrastructure.Skills.Policy;
 
 namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 {
@@ -22,6 +25,14 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public string HealthDetail { get; set; } = string.Empty;
         public string IconPath { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+        public bool CanApproveReview { get; set; }
+        public bool CanEnable { get; set; }
+        public bool CanDisable { get; set; }
+        public bool CanRevokePermissions { get; set; }
+        public ICommand? ApproveReviewCommand { get; set; }
+        public ICommand? EnableCommand { get; set; }
+        public ICommand? DisableCommand { get; set; }
+        public ICommand? RevokePermissionsCommand { get; set; }
 
         // Color properties for the new design - use theme-aware colors
         public IBrush IconColor { get; set; } = Brush.Parse("#06B6D4");
@@ -47,6 +58,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private string _skillEvalStatus = "Smoke evals not run";
         private string _skillEvalDetail = "Open this screen with runtime services available to run smoke evals.";
         private bool _isSkillEvalHealthy;
+        private ISkillHealthService? _skillHealthService;
+        private ISkillPolicyManager? _skillPolicyManager;
 
         public ObservableCollection<PluginItem> Plugins
         {
@@ -95,6 +108,17 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public PluginsViewModel(ISkillHealthService skillHealthService)
             : this()
         {
+            _skillHealthService = skillHealthService;
+            _ = RefreshHealthAsync(skillHealthService);
+        }
+
+        public PluginsViewModel(
+            ISkillHealthService skillHealthService,
+            ISkillPolicyManager skillPolicyManager)
+            : this()
+        {
+            _skillHealthService = skillHealthService;
+            _skillPolicyManager = skillPolicyManager;
             _ = RefreshHealthAsync(skillHealthService);
         }
 
@@ -104,6 +128,19 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             ISkillEvalCaseCatalog skillEvalCaseCatalog)
             : this()
         {
+            _skillHealthService = skillHealthService;
+            _ = RefreshRuntimeStateAsync(skillHealthService, skillEvalHarness, skillEvalCaseCatalog);
+        }
+
+        public PluginsViewModel(
+            ISkillHealthService skillHealthService,
+            ISkillEvalHarness skillEvalHarness,
+            ISkillEvalCaseCatalog skillEvalCaseCatalog,
+            ISkillPolicyManager skillPolicyManager)
+            : this()
+        {
+            _skillHealthService = skillHealthService;
+            _skillPolicyManager = skillPolicyManager;
             _ = RefreshRuntimeStateAsync(skillHealthService, skillEvalHarness, skillEvalCaseCatalog);
         }
 
@@ -203,11 +240,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 : $"{failingResult.SkillId}: {failingResult.Message}";
         }
 
-        private static PluginItem CreatePluginItem(SkillHealthReport report)
+        private PluginItem CreatePluginItem(SkillHealthReport report)
         {
             var palette = GetStatusPalette(report.Status);
 
-            return new PluginItem
+            var item = new PluginItem
             {
                 SkillId = report.SkillId,
                 Name = FormatName(report.DisplayName, report.SkillId),
@@ -221,8 +258,49 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 GlowColor = Brush.Parse(palette.GlowColor),
                 StatusColor = Brush.Parse(palette.StatusColor),
                 IconPath = GetIconPath(report),
-                IsActive = report.Status == SkillHealthStatus.Healthy
+                IsActive = report.Status == SkillHealthStatus.Healthy,
+                CanApproveReview = report.Status == SkillHealthStatus.ReviewRequired,
+                CanEnable = report.Status == SkillHealthStatus.Disabled,
+                CanDisable = report.Status is SkillHealthStatus.Healthy
+                    or SkillHealthStatus.MissingExecutor
+                    or SkillHealthStatus.PermissionDenied,
+                CanRevokePermissions = report.Status is SkillHealthStatus.Healthy
+                    or SkillHealthStatus.MissingExecutor
             };
+
+            AttachPolicyCommands(item);
+            return item;
+        }
+
+        private void AttachPolicyCommands(PluginItem item)
+        {
+            if (_skillPolicyManager is null)
+            {
+                return;
+            }
+
+            item.ApproveReviewCommand = ReactiveCommand.CreateFromTask(
+                () => ApplyPolicyActionAsync(item.SkillId, _skillPolicyManager.ApproveReviewAsync));
+            item.EnableCommand = ReactiveCommand.CreateFromTask(
+                () => ApplyPolicyActionAsync(item.SkillId, _skillPolicyManager.EnableAsync));
+            item.DisableCommand = ReactiveCommand.CreateFromTask(
+                () => ApplyPolicyActionAsync(item.SkillId, _skillPolicyManager.DisableAsync));
+            item.RevokePermissionsCommand = ReactiveCommand.CreateFromTask(
+                () => ApplyPolicyActionAsync(item.SkillId, _skillPolicyManager.RevokePermissionsAsync));
+        }
+
+        private async Task ApplyPolicyActionAsync(
+            string skillId,
+            Func<string, CancellationToken, Task<bool>> action)
+        {
+            var changed = await action(skillId, CancellationToken.None);
+            if (!changed || _skillHealthService is null)
+            {
+                return;
+            }
+
+            var reports = await _skillHealthService.GetHealthAsync();
+            await Dispatcher.UIThread.InvokeAsync(() => LoadPlugins(reports));
         }
 
         private static string FormatName(string displayName, string skillId)

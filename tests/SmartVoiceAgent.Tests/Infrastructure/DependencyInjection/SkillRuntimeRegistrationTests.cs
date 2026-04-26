@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Infrastructure.DependencyInjection;
 using SmartVoiceAgent.Infrastructure.Skills.Importing;
+using SmartVoiceAgent.Infrastructure.Skills.Policy;
 
 namespace SmartVoiceAgent.Tests.Infrastructure.DependencyInjection;
 
@@ -37,5 +38,6 @@ public class SkillRuntimeRegistrationTests
         provider.GetService<ISkillEvalHarness>().Should().NotBeNull();
         provider.GetService<ISkillEvalCaseCatalog>().Should().NotBeNull();
         provider.GetService<ISkillImportService>().Should().NotBeNull();
+        provider.GetService<ISkillPolicyManager>().Should().NotBeNull();
     }
 }
