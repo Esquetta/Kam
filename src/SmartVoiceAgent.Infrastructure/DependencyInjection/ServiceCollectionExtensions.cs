@@ -55,8 +55,7 @@ public static class ServiceCollectionExtensions
 
             return config.Provider switch
             {
-                "OpenRouter" => CreateOpenRouterClient(config),
-
+                var provider when IsOpenAICompatibleProvider(provider) => CreateOpenAICompatibleClient(config),
                 _ => throw new NotSupportedException(
                     $"AI provider '{config.Provider}' is not supported.")
             };
@@ -103,18 +102,34 @@ public static class ServiceCollectionExtensions
         Console.WriteLine($"✅ Agent function service {typeof(T).Name} registered");
         return services;
     }
-    static IChatClient CreateOpenRouterClient(AIServiceConfiguration config)
+    static IChatClient CreateOpenAICompatibleClient(AIServiceConfiguration config)
     {
         var options = new OpenAIClientOptions
         {
             Endpoint = new Uri(config.Endpoint)
         };
 
+        var apiKey = string.IsNullOrWhiteSpace(config.ApiKey) && IsOllamaProvider(config.Provider)
+            ? "ollama"
+            : config.ApiKey;
+
         var client = new OpenAIClient(
-            credential: new ApiKeyCredential(config.ApiKey),
+            credential: new ApiKeyCredential(apiKey),
             options: options);
 
         return client.GetChatClient(config.ModelId).AsIChatClient();
+    }
+
+    private static bool IsOpenAICompatibleProvider(string provider)
+    {
+        return provider.Equals("OpenRouter", StringComparison.OrdinalIgnoreCase)
+            || provider.Equals("OpenAICompatible", StringComparison.OrdinalIgnoreCase)
+            || IsOllamaProvider(provider);
+    }
+
+    private static bool IsOllamaProvider(string provider)
+    {
+        return provider.Equals("Ollama", StringComparison.OrdinalIgnoreCase);
     }
 }
 

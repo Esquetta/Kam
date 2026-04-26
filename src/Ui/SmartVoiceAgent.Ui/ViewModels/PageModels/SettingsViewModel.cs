@@ -60,7 +60,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             StopMicTestCommand = ReactiveCommand.Create(StopMicTest);
             PlayTestRecordingCommand = ReactiveCommand.Create(PlayTestRecording);
             RefreshDevicesCommand = ReactiveCommand.Create(RefreshAudioDevices);
-            TestAiConnectionCommand = ReactiveCommand.Create(() => { });
+            TestAiConnectionCommand = ReactiveCommand.Create(TestAiProfileSettings);
             
             // Load saved settings
             _settingsService.Load();
@@ -85,6 +85,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private string _aiModelId = "openai/gpt-4.1-mini";
         private string _aiApiKey = string.Empty;
         private string _activePlannerProfileId = "openrouter-primary";
+        private string _aiProfileStatus = "Profile not validated.";
+        private bool _isAiProfileValid;
 
         public IReadOnlyList<string> AiProviders { get; } =
         [
@@ -161,6 +163,18 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
         }
 
+        public string AiProfileStatus
+        {
+            get => _aiProfileStatus;
+            private set => this.RaiseAndSetIfChanged(ref _aiProfileStatus, value);
+        }
+
+        public bool IsAiProfileValid
+        {
+            get => _isAiProfileValid;
+            private set => this.RaiseAndSetIfChanged(ref _isAiProfileValid, value);
+        }
+
         private void InitializeAiSettings()
         {
             var shouldSeedDefaultProfile = false;
@@ -198,17 +212,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 return;
             }
 
-            var profile = new ModelProviderProfile
-            {
-                Id = string.IsNullOrWhiteSpace(_activePlannerProfileId) ? "openrouter-primary" : _activePlannerProfileId,
-                Provider = ParseProvider(_aiProvider),
-                DisplayName = $"{_aiProvider} Planner",
-                Endpoint = _aiEndpoint,
-                ApiKey = _aiApiKey,
-                ModelId = _aiModelId,
-                Roles = [ModelProviderRole.Planner],
-                Enabled = !string.IsNullOrWhiteSpace(_aiApiKey)
-            };
+            var profile = CreatePlannerProfile();
 
             var profiles = _settingsService.ModelProviderProfiles
                 .Where(p => !p.Id.Equals(profile.Id, StringComparison.OrdinalIgnoreCase))
@@ -217,6 +221,36 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
             _settingsService.ModelProviderProfiles = profiles;
             _settingsService.ActivePlannerProfileId = profile.Id;
+        }
+
+        private void TestAiProfileSettings()
+        {
+            var profile = CreatePlannerProfile();
+            var validation = profile.Validate();
+
+            IsAiProfileValid = validation.IsValid;
+            AiProfileStatus = validation.IsValid
+                ? "Profile is valid. Restart Kam to apply runtime changes."
+                : string.Join(" ", validation.Errors);
+
+            SaveAiProfileSettings();
+        }
+
+        private ModelProviderProfile CreatePlannerProfile()
+        {
+            var provider = ParseProvider(_aiProvider);
+
+            return new ModelProviderProfile
+            {
+                Id = string.IsNullOrWhiteSpace(_activePlannerProfileId) ? "openrouter-primary" : _activePlannerProfileId,
+                Provider = provider,
+                DisplayName = $"{_aiProvider} Planner",
+                Endpoint = _aiEndpoint,
+                ApiKey = _aiApiKey,
+                ModelId = _aiModelId,
+                Roles = [ModelProviderRole.Planner],
+                Enabled = provider == ModelProviderType.Ollama || !string.IsNullOrWhiteSpace(_aiApiKey)
+            };
         }
 
         private static ModelProviderProfile CreateDefaultPlannerProfile()

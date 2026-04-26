@@ -173,7 +173,7 @@ namespace SmartVoiceAgent.Ui
                     // - appsettings.json
                     // - UserSecrets (when Environment is Development)
                     // - EnvironmentVariables
-                    // Just add additional config if needed
+                    AddUserAiRuntimeConfiguration(config);
                 })
                 .ConfigureServices((context, services) =>
                 {
@@ -195,6 +195,26 @@ namespace SmartVoiceAgent.Ui
                     services.AddSingleton<IUiLogService>(sp => new UiLogService());
                 })
                 .Build();
+        }
+
+        private static void AddUserAiRuntimeConfiguration(IConfigurationBuilder config)
+        {
+            try
+            {
+                using var settingsService = new JsonSettingsService();
+                var overrides = AiRuntimeConfigurationMapper.CreateAiServiceOverrides(
+                    settingsService.ModelProviderProfiles,
+                    settingsService.ActivePlannerProfileId);
+
+                if (overrides.Count > 0)
+                {
+                    config.AddInMemoryCollection(overrides);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"AI runtime settings could not be loaded: {ex.Message}");
+            }
         }
 
         private void LogConfigurationDebugInfo(IConfiguration configuration)

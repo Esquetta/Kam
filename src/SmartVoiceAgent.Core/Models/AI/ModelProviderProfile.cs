@@ -38,7 +38,7 @@ public sealed class ModelProviderProfile
             errors.Add("A valid endpoint is required.");
         }
 
-        if (Enabled && string.IsNullOrWhiteSpace(ApiKey))
+        if (Enabled && Provider != ModelProviderType.Ollama && string.IsNullOrWhiteSpace(ApiKey))
         {
             errors.Add("API key is required for enabled profiles.");
         }

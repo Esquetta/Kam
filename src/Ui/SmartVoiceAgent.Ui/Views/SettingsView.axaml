@@ -228,6 +228,10 @@
                                 </Button>
                             </StackPanel>
                         </Grid>
+                        <TextBlock Text="{Binding AiProfileStatus}"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
