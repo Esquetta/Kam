@@ -6,6 +6,7 @@ using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Infrastructure.DependencyInjection;
 using SmartVoiceAgent.Infrastructure.Extensions;
 using SmartVoiceAgent.Infrastructure.Skills.BuiltIn;
+using SmartVoiceAgent.Infrastructure.Skills.Execution;
 using SmartVoiceAgent.Infrastructure.Skills.Importing;
 using SmartVoiceAgent.Infrastructure.Skills.Policy;
 
@@ -35,7 +36,7 @@ public class SkillRuntimeRegistrationTests
         appSkill.TimeoutMilliseconds.Should().BeGreaterThan(0);
         provider.GetServices<ISkillExecutor>().Should().NotBeEmpty();
         provider.GetService<ISkillExecutionPipeline>().Should().NotBeNull();
-        provider.GetService<ISkillExecutionHistoryService>().Should().NotBeNull();
+        provider.GetService<ISkillExecutionHistoryService>().Should().BeOfType<JsonSkillExecutionHistoryService>();
         provider.GetService<ICommandRuntimeService>().Should().NotBeNull();
         provider.GetService<ISkillConfirmationService>().Should().NotBeNull();
         provider.GetService<ISkillHealthService>().Should().NotBeNull();

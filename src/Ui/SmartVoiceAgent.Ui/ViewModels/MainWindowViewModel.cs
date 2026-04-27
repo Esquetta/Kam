@@ -133,6 +133,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public ICommand NavigateToIntegrationsCommand { get; }
         public ICommand NavigateToSettingsCommand { get; }
         public ICommand ToggleThemeCommand { get; }
+        public ICommand ClearSkillExecutionHistoryCommand { get; }
 
         /* ========================= */
         /* LOGGING */
@@ -293,6 +294,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             NavigateToIntegrationsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Integrations));
             NavigateToSettingsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Settings));
             ToggleThemeCommand = ReactiveCommand.Create(ToggleTheme);
+            ClearSkillExecutionHistoryCommand = ReactiveCommand.Create(ClearSkillExecutionHistory);
             SubmitCommand = ReactiveCommand.Create(SubmitCommandInput);
             ToggleVoiceCommand = ReactiveCommand.Create(ToggleVoiceEnabled);
             StartVoiceRecordingCommand = ReactiveCommand.CreateFromTask(StartVoiceRecordingAsync);
@@ -705,6 +707,17 @@ namespace SmartVoiceAgent.Ui.ViewModels
             }
 
             HasSkillExecutionHistory = SkillExecutionHistory.Count > 0;
+        }
+
+        private void ClearSkillExecutionHistory()
+        {
+            if (_skillExecutionHistoryService is null)
+            {
+                return;
+            }
+
+            _skillExecutionHistoryService.Clear();
+            AddLog("SKILL_HISTORY_CLEARED");
         }
 
         private async Task ApproveSkillConfirmationAsync(PendingSkillConfirmationViewModel item)

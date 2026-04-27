@@ -1,5 +1,6 @@
 using FluentAssertions;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Infrastructure.Skills.Execution;
 using SmartVoiceAgent.Ui.ViewModels;
 
 namespace SmartVoiceAgent.Tests.Ui.ViewModels;
@@ -50,5 +51,20 @@ public sealed class SkillExecutionHistoryItemViewModelTests
         viewModel.ExitCodeText.Should().Be("exit 1");
         viewModel.HasRuntimeFlags.Should().BeTrue();
         viewModel.RuntimeFlagsText.Should().Contain("truncated");
+    }
+
+    [Fact]
+    public void ClearSkillExecutionHistoryCommand_WhenHistoryServiceIsAttached_ClearsService()
+    {
+        var service = new InMemorySkillExecutionHistoryService();
+        service.Record(
+            SkillPlan.FromObject("apps.list", new { }),
+            SkillResult.Succeeded("Listed applications."));
+        var viewModel = new MainWindowViewModel();
+        viewModel.SetSkillExecutionHistoryService(service);
+
+        viewModel.ClearSkillExecutionHistoryCommand.Execute(null);
+
+        service.GetRecent().Should().BeEmpty();
     }
 }
