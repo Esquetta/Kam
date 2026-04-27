@@ -47,6 +47,15 @@ public sealed class SkillHealthService : ISkillHealthService
         var status = GetStatus(manifest);
         var missingPermissions = GetMissingPermissions(manifest);
         var lastRun = recentRuns.FirstOrDefault();
+        var successfulRuns = recentRuns
+            .Count(run => run.Status == SkillExecutionStatus.Succeeded);
+        var failedRuns = recentRuns.Count - successfulRuns;
+        var measuredDurations = recentRuns
+            .Where(run => run.DurationMilliseconds > 0)
+            .Select(run => run.DurationMilliseconds)
+            .ToArray();
+        var lastFailure = recentRuns.FirstOrDefault(run =>
+            run.Status != SkillExecutionStatus.Succeeded);
 
         return new SkillHealthReport
         {
@@ -78,7 +87,19 @@ public sealed class SkillHealthService : ISkillHealthService
             LastRunMessage = lastRun?.ResultMessage ?? string.Empty,
             LastRunErrorCode = lastRun?.ErrorCode ?? string.Empty,
             LastRunDurationMilliseconds = lastRun?.DurationMilliseconds ?? 0,
-            RecentRuns = recentRuns.ToArray()
+            RecentRuns = recentRuns.ToArray(),
+            RecentRunCount = recentRuns.Count,
+            RecentSuccessCount = successfulRuns,
+            RecentFailureCount = failedRuns,
+            RecentSuccessRatePercent = recentRuns.Count == 0
+                ? 0
+                : successfulRuns * 100d / recentRuns.Count,
+            RecentAverageDurationMilliseconds = measuredDurations.Length == 0
+                ? 0
+                : Convert.ToInt64(Math.Round(measuredDurations.Average())),
+            LastFailureAt = lastFailure?.Timestamp,
+            LastFailureMessage = lastFailure?.ResultMessage ?? string.Empty,
+            LastFailureErrorCode = lastFailure?.ErrorCode ?? string.Empty
         };
     }
 

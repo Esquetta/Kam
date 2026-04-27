@@ -25,6 +25,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private bool _hasLastRun;
         private string _lastRunStatus = string.Empty;
         private string _lastRunDetail = string.Empty;
+        private string _healthMetricsText = string.Empty;
+        private string _failureMetricsText = string.Empty;
         private string _requiredPermissionsText = "Requires: none";
         private string _grantedPermissionsText = "Granted: none";
         private string _missingPermissionsText = string.Empty;
@@ -94,6 +96,22 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             get => _lastRunDetail;
             set => this.RaiseAndSetIfChanged(ref _lastRunDetail, value);
         }
+
+        public string HealthMetricsText
+        {
+            get => _healthMetricsText;
+            set => this.RaiseAndSetIfChanged(ref _healthMetricsText, value);
+        }
+
+        public bool HasHealthMetrics => !string.IsNullOrWhiteSpace(HealthMetricsText);
+
+        public string FailureMetricsText
+        {
+            get => _failureMetricsText;
+            set => this.RaiseAndSetIfChanged(ref _failureMetricsText, value);
+        }
+
+        public bool HasFailureMetrics => !string.IsNullOrWhiteSpace(FailureMetricsText);
 
         public string RequiredPermissionsText
         {
@@ -190,6 +208,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private string _selectedSkillChecksum = string.Empty;
         private string _selectedSkillPermissions = string.Empty;
         private string _selectedSkillLastRun = string.Empty;
+        private string _selectedSkillHealthMetrics = string.Empty;
         private string _selectedSkillPolicyGuardrail = string.Empty;
         private ObservableCollection<SkillExecutionHistoryItem> _selectedSkillExecutionHistory = new();
         private bool _hasSelectedSkillExecutionHistory;
@@ -319,6 +338,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             get => _selectedSkillLastRun;
             private set => this.RaiseAndSetIfChanged(ref _selectedSkillLastRun, value);
+        }
+
+        public string SelectedSkillHealthMetrics
+        {
+            get => _selectedSkillHealthMetrics;
+            private set => this.RaiseAndSetIfChanged(ref _selectedSkillHealthMetrics, value);
         }
 
         public string SelectedSkillPolicyGuardrail
@@ -638,6 +663,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 SelectedSkillChecksum = string.Empty;
                 SelectedSkillPermissions = string.Empty;
                 SelectedSkillLastRun = string.Empty;
+                SelectedSkillHealthMetrics = string.Empty;
                 SelectedSkillPolicyGuardrail = string.Empty;
                 SelectedSkillExecutionHistory = new ObservableCollection<SkillExecutionHistoryItem>();
                 HasSelectedSkillExecutionHistory = false;
@@ -662,6 +688,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             SelectedSkillLastRun = plugin.HasLastRun
                 ? $"{plugin.LastRunStatus} | {plugin.LastRunDetail}"
                 : "Last Run: none";
+            SelectedSkillHealthMetrics = FormatSelectedHealthMetrics(plugin);
             SelectedSkillPolicyGuardrail = plugin.PolicyGuardrailText;
             SelectedSkillExecutionHistory = new ObservableCollection<SkillExecutionHistoryItem>(
                 plugin.ExecutionHistory);
@@ -889,6 +916,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     ? $"Last Run: {FormatExecutionStatus(report.LastRunStatus)}"
                     : string.Empty,
                 LastRunDetail = FormatLastRunDetail(report),
+                HealthMetricsText = FormatHealthMetrics(report),
+                FailureMetricsText = FormatFailureMetrics(report),
                 LastRunColor = GetExecutionStatusBrush(report.LastRunStatus),
                 RequiredPermissionsText = FormatPermissions("Requires", report.RequiredPermissions),
                 GrantedPermissionsText = FormatPermissions("Granted", report.GrantedPermissions),
@@ -1138,6 +1167,70 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             return parts.Count == 0
                 ? report.LastRunAt.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
                 : string.Join(" | ", parts);
+        }
+
+        private static string FormatHealthMetrics(SkillHealthReport report)
+        {
+            if (report.RecentRunCount <= 0)
+            {
+                return string.Empty;
+            }
+
+            var parts = new List<string>
+            {
+                string.Format(
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    "Recent: {0}/{1} succeeded ({2:0.0}%)",
+                    report.RecentSuccessCount,
+                    report.RecentRunCount,
+                    report.RecentSuccessRatePercent)
+            };
+
+            if (report.RecentAverageDurationMilliseconds > 0)
+            {
+                parts.Add($"avg {report.RecentAverageDurationMilliseconds} ms");
+            }
+
+            return string.Join(" | ", parts);
+        }
+
+        private static string FormatFailureMetrics(SkillHealthReport report)
+        {
+            if (report.RecentFailureCount <= 0)
+            {
+                return string.Empty;
+            }
+
+            var parts = new List<string>
+            {
+                report.LastFailureAt.HasValue
+                    ? $"Last Failure: {report.LastFailureAt.Value.ToLocalTime():yyyy-MM-dd HH:mm}"
+                    : "Last Failure: unknown"
+            };
+
+            if (!string.IsNullOrWhiteSpace(report.LastFailureErrorCode))
+            {
+                parts.Add(report.LastFailureErrorCode);
+            }
+
+            if (!string.IsNullOrWhiteSpace(report.LastFailureMessage))
+            {
+                parts.Add(report.LastFailureMessage);
+            }
+
+            return string.Join(" | ", parts);
+        }
+
+        private static string FormatSelectedHealthMetrics(PluginItem plugin)
+        {
+            if (!plugin.HasHealthMetrics)
+            {
+                return "Recent Metrics: no runs";
+            }
+
+            return plugin.HasFailureMetrics
+                ? $"{plugin.HealthMetricsText} | {plugin.FailureMetricsText}"
+                : plugin.HealthMetricsText;
         }
 
         private static IBrush GetExecutionStatusBrush(SkillExecutionStatus? status)

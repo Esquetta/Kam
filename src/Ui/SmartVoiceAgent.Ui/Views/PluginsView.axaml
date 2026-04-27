@@ -325,6 +325,11 @@
                                    FontFamily="Consolas"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding SelectedSkillHealthMetrics}"
+                                   FontSize="10"
+                                   FontFamily="Consolas"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   TextWrapping="Wrap"/>
                         <StackPanel IsVisible="{Binding HasSelectedSkillExecutionHistory}"
                                     Spacing="3"
                                     Margin="0,4,0,0">
@@ -523,6 +528,22 @@
                                                    Foreground="{DynamicResource TextMutedBrush}"
                                                    TextWrapping="Wrap"
                                                    MaxLines="2"/>
+                                    </StackPanel>
+                                    <StackPanel IsVisible="{Binding HasHealthMetrics}"
+                                                Spacing="3"
+                                                Margin="0,8,0,0">
+                                        <TextBlock Text="{Binding HealthMetricsText}"
+                                                   FontSize="10"
+                                                   FontFamily="Consolas"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   TextWrapping="Wrap"
+                                                   MaxLines="2"/>
+                                        <TextBlock Text="{Binding FailureMetricsText}"
+                                                   FontSize="10"
+                                                   Foreground="{DynamicResource AccentErrorBrush}"
+                                                   TextWrapping="Wrap"
+                                                   MaxLines="2"
+                                                   IsVisible="{Binding HasFailureMetrics}"/>
                                     </StackPanel>
                                     <Border IsVisible="{Binding HasEvalResult}"
                                             Background="{DynamicResource SurfaceBgBrush}"

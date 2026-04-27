@@ -44,4 +44,20 @@ public sealed class SkillHealthReport
     public long LastRunDurationMilliseconds { get; set; }
 
     public IReadOnlyList<SkillAuditRecord> RecentRuns { get; set; } = [];
+
+    public int RecentRunCount { get; set; }
+
+    public int RecentSuccessCount { get; set; }
+
+    public int RecentFailureCount { get; set; }
+
+    public double RecentSuccessRatePercent { get; set; }
+
+    public long RecentAverageDurationMilliseconds { get; set; }
+
+    public DateTimeOffset? LastFailureAt { get; set; }
+
+    public string LastFailureMessage { get; set; } = string.Empty;
+
+    public string LastFailureErrorCode { get; set; } = string.Empty;
 }

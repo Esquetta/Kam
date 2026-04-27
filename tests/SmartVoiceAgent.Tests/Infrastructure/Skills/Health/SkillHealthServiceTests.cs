@@ -239,6 +239,65 @@ public class SkillHealthServiceTests
             .Which.ErrorCode.Should().Be("web_host_not_allowed");
     }
 
+    [Fact]
+    public async Task GetHealthAsync_ComputesRecentReliabilityMetrics()
+    {
+        var registry = new InMemorySkillRegistry();
+        registry.Register(new KamSkillManifest
+        {
+            Id = "shell.run",
+            DisplayName = "Run Shell",
+            Source = "builtin",
+            ExecutorType = "builtin",
+            Enabled = true
+        });
+        var now = new DateTimeOffset(2026, 4, 26, 15, 0, 0, TimeSpan.Zero);
+        var auditLog = new StaticSkillAuditLogService(
+        [
+            new SkillAuditRecord
+            {
+                SkillId = "shell.run",
+                Timestamp = now.AddMinutes(-10),
+                Status = SkillExecutionStatus.Succeeded,
+                ResultMessage = "First command completed.",
+                DurationMilliseconds = 30
+            },
+            new SkillAuditRecord
+            {
+                SkillId = "shell.run",
+                Timestamp = now.AddMinutes(-5),
+                Status = SkillExecutionStatus.Succeeded,
+                ResultMessage = "Second command completed.",
+                DurationMilliseconds = 60
+            },
+            new SkillAuditRecord
+            {
+                SkillId = "shell.run",
+                Timestamp = now,
+                Status = SkillExecutionStatus.PermissionDenied,
+                ErrorCode = "shell_command_blocked",
+                ResultMessage = "Command blocked.",
+                DurationMilliseconds = 0
+            }
+        ]);
+        var service = new SkillHealthService(
+            registry,
+            [new MatchingSkillExecutor("shell.run")],
+            auditLog);
+
+        var reports = await service.GetHealthAsync();
+
+        var report = reports.Should().ContainSingle().Subject;
+        report.RecentRunCount.Should().Be(3);
+        report.RecentSuccessCount.Should().Be(2);
+        report.RecentFailureCount.Should().Be(1);
+        report.RecentSuccessRatePercent.Should().BeApproximately(66.7, 0.1);
+        report.RecentAverageDurationMilliseconds.Should().Be(45);
+        report.LastFailureAt.Should().Be(now);
+        report.LastFailureMessage.Should().Be("Command blocked.");
+        report.LastFailureErrorCode.Should().Be("shell_command_blocked");
+    }
+
     private sealed class MatchingSkillExecutor : ISkillExecutor
     {
         private readonly string _skillId;

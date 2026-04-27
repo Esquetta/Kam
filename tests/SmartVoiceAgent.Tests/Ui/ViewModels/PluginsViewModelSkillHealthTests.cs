@@ -223,6 +223,43 @@ public class PluginsViewModelSkillHealthTests
     }
 
     [Fact]
+    public void SelectPlugin_WithRunMetrics_ExposesReliabilitySummary()
+    {
+        var viewModel = new PluginsViewModel(
+        [
+            new SkillHealthReport
+            {
+                SkillId = "shell.run",
+                DisplayName = "Run Shell Command",
+                Source = "builtin",
+                ExecutorType = "builtin",
+                Status = SkillHealthStatus.Healthy,
+                Details = "Executor available.",
+                RecentRunCount = 4,
+                RecentSuccessCount = 3,
+                RecentFailureCount = 1,
+                RecentSuccessRatePercent = 75,
+                RecentAverageDurationMilliseconds = 40,
+                LastFailureAt = new DateTimeOffset(2026, 4, 26, 14, 10, 0, TimeSpan.Zero),
+                LastFailureMessage = "Command blocked.",
+                LastFailureErrorCode = "shell_command_blocked"
+            }
+        ]);
+
+        var plugin = viewModel.Plugins.Should().ContainSingle().Subject;
+        plugin.HasHealthMetrics.Should().BeTrue();
+        plugin.HealthMetricsText.Should().Be("Recent: 3/4 succeeded (75.0%) | avg 40 ms");
+        plugin.HasFailureMetrics.Should().BeTrue();
+        plugin.FailureMetricsText.Should().Contain("shell_command_blocked");
+        plugin.FailureMetricsText.Should().Contain("Command blocked.");
+
+        viewModel.SelectPlugin("shell.run");
+
+        viewModel.SelectedSkillHealthMetrics.Should().Contain("3/4 succeeded");
+        viewModel.SelectedSkillHealthMetrics.Should().Contain("Last Failure:");
+    }
+
+    [Fact]
     public void SelectPlugin_WithRecentRuns_ExposesExecutionHistoryRows()
     {
         var viewModel = new PluginsViewModel(
