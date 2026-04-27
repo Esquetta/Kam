@@ -137,6 +137,7 @@ public static class ServiceRegistration
         services.AddScoped<IDesktopAutomationAdapter, DesktopAutomationAdapter>();
         services.AddScoped<ISkillActionExecutor, SkillActionExecutor>();
         services.AddSingleton<ISkillAuditLogService, JsonSkillAuditLogService>();
+        services.AddSingleton<ISkillExecutionHistoryService, InMemorySkillExecutionHistoryService>();
         services.AddScoped<ISkillExecutionPipeline, SkillExecutionPipeline>();
         services.AddScoped<ISkillHealthService, SkillHealthService>();
         services.AddScoped<ISkillEvalHarness, SkillEvalHarness>();

@@ -37,6 +37,38 @@ public class SkillExecutionPipelineTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_MissingRequiredArgument_RecordsValidationFailureHistory()
+    {
+        var registry = CreateRegistry(new KamSkillManifest
+        {
+            Id = "apps.open",
+            Enabled = true,
+            Arguments =
+            [
+                new SkillArgumentDefinition
+                {
+                    Name = "applicationName",
+                    Type = SkillArgumentType.String,
+                    Required = true
+                }
+            ]
+        });
+        var executor = new RecordingSkillExecutor("apps.open", (_, _) => Task.FromResult(SkillResult.Succeeded("Opened.")));
+        var history = new InMemorySkillExecutionHistoryService();
+        var pipeline = new SkillExecutionPipeline(registry, [executor], history);
+
+        await pipeline.ExecuteAsync(SkillPlan.FromObject("apps.open", new { }));
+
+        var entry = history.GetRecent().Single();
+        entry.SkillId.Should().Be("apps.open");
+        entry.Success.Should().BeFalse();
+        entry.Status.Should().Be(SkillExecutionStatus.ValidationFailed);
+        entry.ErrorCode.Should().Be("validation_failed");
+        entry.ResultSummary.Should().Contain("applicationName");
+        executor.CallCount.Should().Be(0);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_TypeMismatch_ReturnsValidationFailure()
     {
         var registry = CreateRegistry(new KamSkillManifest
@@ -174,6 +206,32 @@ public class SkillExecutionPipelineTests
         result.Status.Should().Be(SkillExecutionStatus.Succeeded);
         result.Message.Should().Be("Skill apps.list completed.");
         result.DurationMilliseconds.Should().BeGreaterThanOrEqualTo(0);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Success_RecordsExecutionHistory()
+    {
+        var registry = CreateRegistry(new KamSkillManifest
+        {
+            Id = "apps.list",
+            Enabled = true
+        });
+        var executor = new RecordingSkillExecutor(
+            "apps.list",
+            (_, _) => Task.FromResult(SkillResult.Succeeded("Listed applications.")));
+        var history = new InMemorySkillExecutionHistoryService();
+        var pipeline = new SkillExecutionPipeline(registry, [executor], history);
+
+        var result = await pipeline.ExecuteAsync(SkillPlan.FromObject("apps.list", new { maxItems = 10 }));
+
+        result.Success.Should().BeTrue();
+        var entry = history.GetRecent().Single();
+        entry.SkillId.Should().Be("apps.list");
+        entry.Success.Should().BeTrue();
+        entry.Status.Should().Be(SkillExecutionStatus.Succeeded);
+        entry.ResultSummary.Should().Be("Listed applications.");
+        entry.DurationMilliseconds.Should().Be(result.DurationMilliseconds);
+        entry.ArgumentsSummary.Should().Contain("maxItems=10");
     }
 
     private static InMemorySkillRegistry CreateRegistry(KamSkillManifest manifest)

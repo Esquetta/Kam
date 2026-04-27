@@ -13,6 +13,7 @@ using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.Services.Concrete;
 using SmartVoiceAgent.Ui.ViewModels.PageModels;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,6 +35,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private ISkillPolicyManager? _skillPolicyManager;
         private ISkillImportService? _skillImportService;
         private ISkillTestService? _skillTestService;
+        private ISkillExecutionHistoryService? _skillExecutionHistoryService;
 
         /* ========================= */
         /* CACHED BRUSHES */
@@ -214,6 +216,20 @@ namespace SmartVoiceAgent.Ui.ViewModels
             private set => this.RaiseAndSetIfChanged(ref _hasPendingSkillConfirmations, value);
         }
 
+        private ObservableCollection<SkillExecutionHistoryItemViewModel> _skillExecutionHistory = new();
+        public ObservableCollection<SkillExecutionHistoryItemViewModel> SkillExecutionHistory
+        {
+            get => _skillExecutionHistory;
+            set => this.RaiseAndSetIfChanged(ref _skillExecutionHistory, value);
+        }
+
+        private bool _hasSkillExecutionHistory;
+        public bool HasSkillExecutionHistory
+        {
+            get => _hasSkillExecutionHistory;
+            private set => this.RaiseAndSetIfChanged(ref _hasSkillExecutionHistory, value);
+        }
+
         /* ========================= */
         /* VOICE COMMAND */
         /* ========================= */
@@ -365,6 +381,18 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _skillConfirmationService = skillConfirmationService;
             _skillConfirmationService.PendingChanged += OnPendingSkillConfirmationsChanged;
             RefreshPendingSkillConfirmations();
+        }
+
+        public void SetSkillExecutionHistoryService(ISkillExecutionHistoryService skillExecutionHistoryService)
+        {
+            if (_skillExecutionHistoryService is not null)
+            {
+                _skillExecutionHistoryService.Changed -= OnSkillExecutionHistoryChanged;
+            }
+
+            _skillExecutionHistoryService = skillExecutionHistoryService;
+            _skillExecutionHistoryService.Changed += OnSkillExecutionHistoryChanged;
+            RefreshSkillExecutionHistory();
         }
         
         private void OnHostStateChanged(object? sender, bool isRunning)
@@ -653,6 +681,32 @@ namespace SmartVoiceAgent.Ui.ViewModels
             HasPendingSkillConfirmations = PendingSkillConfirmations.Count > 0;
         }
 
+        private void OnSkillExecutionHistoryChanged(object? sender, EventArgs e)
+        {
+            RefreshSkillExecutionHistory();
+        }
+
+        private void RefreshSkillExecutionHistory()
+        {
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(RefreshSkillExecutionHistory);
+                return;
+            }
+
+            SkillExecutionHistory.Clear();
+
+            if (_skillExecutionHistoryService is not null)
+            {
+                foreach (var entry in _skillExecutionHistoryService.GetRecent(8))
+                {
+                    SkillExecutionHistory.Add(new SkillExecutionHistoryItemViewModel(entry));
+                }
+            }
+
+            HasSkillExecutionHistory = SkillExecutionHistory.Count > 0;
+        }
+
         private async Task ApproveSkillConfirmationAsync(PendingSkillConfirmationViewModel item)
         {
             if (_skillConfirmationService is null)
@@ -873,6 +927,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 _skillConfirmationService.PendingChanged -= OnPendingSkillConfirmationsChanged;
             }
 
+            if (_skillExecutionHistoryService is not null)
+            {
+                _skillExecutionHistoryService.Changed -= OnSkillExecutionHistoryChanged;
+            }
+
             _voiceCommandService?.Dispose();
         }
     }
@@ -912,5 +971,132 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public ICommand ApproveCommand { get; }
 
         public ICommand RejectCommand { get; }
+    }
+
+    public sealed class SkillExecutionHistoryItemViewModel
+    {
+        public SkillExecutionHistoryItemViewModel(SkillExecutionHistoryEntry entry)
+        {
+            SkillId = entry.SkillId;
+            StatusText = FormatStatus(entry.Status);
+            TimestampText = entry.Timestamp.ToLocalTime().ToString("HH:mm:ss");
+            DurationText = entry.DurationMilliseconds <= 0
+                ? "<1 ms"
+                : $"{entry.DurationMilliseconds} ms";
+            ResultSummary = entry.ResultSummary;
+            ArgumentsSummary = entry.ArgumentsSummary;
+            ErrorCode = entry.ErrorCode;
+            StdOut = entry.StdOut;
+            StdErr = entry.StdErr;
+            ExitCodeText = entry.ExitCode.HasValue ? $"exit {entry.ExitCode.Value}" : string.Empty;
+            RuntimeFlagsText = FormatRuntimeFlags(entry);
+            DetailText = FormatDetailText(entry);
+        }
+
+        public string SkillId { get; }
+
+        public string StatusText { get; }
+
+        public string TimestampText { get; }
+
+        public string DurationText { get; }
+
+        public string ResultSummary { get; }
+
+        public string ArgumentsSummary { get; }
+
+        public string ErrorCode { get; }
+
+        public string DetailText { get; }
+
+        public string StdOut { get; }
+
+        public string StdErr { get; }
+
+        public string ExitCodeText { get; }
+
+        public string RuntimeFlagsText { get; }
+
+        public bool HasArguments => !string.IsNullOrWhiteSpace(ArgumentsSummary);
+
+        public bool HasDetailText => !string.IsNullOrWhiteSpace(DetailText);
+
+        public bool HasStdOut => !string.IsNullOrWhiteSpace(StdOut);
+
+        public bool HasStdErr => !string.IsNullOrWhiteSpace(StdErr);
+
+        public bool HasExitCode => !string.IsNullOrWhiteSpace(ExitCodeText);
+
+        public bool HasRuntimeFlags => !string.IsNullOrWhiteSpace(RuntimeFlagsText);
+
+        private static string FormatStatus(SkillExecutionStatus status)
+        {
+            return status switch
+            {
+                SkillExecutionStatus.Cancelled => "Cancelled",
+                SkillExecutionStatus.Disabled => "Disabled",
+                SkillExecutionStatus.ExecutorNotFound => "Executor Missing",
+                SkillExecutionStatus.Failed => "Failed",
+                SkillExecutionStatus.PermissionDenied => "Permission Denied",
+                SkillExecutionStatus.ReviewRequired => "Review Required",
+                SkillExecutionStatus.SkillNotFound => "Skill Missing",
+                SkillExecutionStatus.Succeeded => "Succeeded",
+                SkillExecutionStatus.TimedOut => "Timed Out",
+                SkillExecutionStatus.ValidationFailed => "Validation Failed",
+                _ => status.ToString()
+            };
+        }
+
+        private static string FormatRuntimeFlags(SkillExecutionHistoryEntry entry)
+        {
+            var flags = new List<string>();
+            if (entry.TimedOut)
+            {
+                flags.Add("timed out");
+            }
+
+            if (entry.Cancelled)
+            {
+                flags.Add("cancelled");
+            }
+
+            if (entry.Truncated)
+            {
+                flags.Add("truncated");
+            }
+
+            return string.Join(", ", flags);
+        }
+
+        private static string FormatDetailText(SkillExecutionHistoryEntry entry)
+        {
+            var lines = new List<string>();
+            if (!string.IsNullOrWhiteSpace(entry.ResultSummary))
+            {
+                lines.Add(entry.ResultSummary);
+            }
+
+            if (!string.IsNullOrWhiteSpace(entry.ErrorCode))
+            {
+                lines.Add($"error: {entry.ErrorCode}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(entry.ArgumentsSummary))
+            {
+                lines.Add($"args: {entry.ArgumentsSummary}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(entry.Command))
+            {
+                lines.Add($"command: {entry.Command}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(entry.WorkingDirectory))
+            {
+                lines.Add($"cwd: {entry.WorkingDirectory}");
+            }
+
+            return string.Join(Environment.NewLine, lines);
+        }
     }
 }

@@ -10,11 +10,16 @@ public sealed class SkillExecutionPipeline : ISkillExecutionPipeline
 
     private readonly ISkillRegistry _registry;
     private readonly IEnumerable<ISkillExecutor> _executors;
+    private readonly ISkillExecutionHistoryService? _historyService;
 
-    public SkillExecutionPipeline(ISkillRegistry registry, IEnumerable<ISkillExecutor> executors)
+    public SkillExecutionPipeline(
+        ISkillRegistry registry,
+        IEnumerable<ISkillExecutor> executors,
+        ISkillExecutionHistoryService? historyService = null)
     {
         _registry = registry;
         _executors = executors;
+        _historyService = historyService;
     }
 
     public async Task<SkillResult> ExecuteAsync(SkillPlan plan, CancellationToken cancellationToken = default)
@@ -23,7 +28,8 @@ public sealed class SkillExecutionPipeline : ISkillExecutionPipeline
 
         if (!_registry.TryGet(plan.SkillId, out var manifest) || manifest is null)
         {
-            return WithDuration(
+            return Complete(
+                plan,
                 SkillResult.Failed(
                     $"Skill '{plan.SkillId}' is not registered.",
                     SkillExecutionStatus.SkillNotFound,
@@ -33,7 +39,8 @@ public sealed class SkillExecutionPipeline : ISkillExecutionPipeline
 
         if (manifest.ReviewRequired)
         {
-            return WithDuration(
+            return Complete(
+                plan,
                 SkillResult.Failed(
                     $"Skill '{plan.SkillId}' requires review before execution.",
                     SkillExecutionStatus.ReviewRequired,
@@ -43,7 +50,8 @@ public sealed class SkillExecutionPipeline : ISkillExecutionPipeline
 
         if (!manifest.Enabled)
         {
-            return WithDuration(
+            return Complete(
+                plan,
                 SkillResult.Failed(
                     $"Skill '{plan.SkillId}' is disabled.",
                     SkillExecutionStatus.Disabled,
@@ -54,7 +62,8 @@ public sealed class SkillExecutionPipeline : ISkillExecutionPipeline
         var missingPermissions = GetMissingPermissions(manifest);
         if (missingPermissions.Count > 0)
         {
-            return WithDuration(
+            return Complete(
+                plan,
                 SkillResult.Failed(
                     $"Skill '{plan.SkillId}' is missing granted permissions: {string.Join(", ", missingPermissions)}.",
                     SkillExecutionStatus.PermissionDenied,
@@ -65,7 +74,8 @@ public sealed class SkillExecutionPipeline : ISkillExecutionPipeline
         var validationError = SkillArgumentValidator.Validate(manifest, plan);
         if (validationError is not null)
         {
-            return WithDuration(
+            return Complete(
+                plan,
                 SkillResult.Failed(
                     validationError,
                     SkillExecutionStatus.ValidationFailed,
@@ -76,7 +86,8 @@ public sealed class SkillExecutionPipeline : ISkillExecutionPipeline
         var executor = _executors.FirstOrDefault(candidate => candidate.CanExecute(plan.SkillId));
         if (executor is null)
         {
-            return WithDuration(
+            return Complete(
+                plan,
                 SkillResult.Failed(
                     $"No executor is registered for skill '{plan.SkillId}'.",
                     SkillExecutionStatus.ExecutorNotFound,
@@ -96,7 +107,8 @@ public sealed class SkillExecutionPipeline : ISkillExecutionPipeline
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    return WithDuration(
+                    return Complete(
+                        plan,
                         SkillResult.Failed(
                             $"Skill '{plan.SkillId}' was cancelled.",
                             SkillExecutionStatus.Cancelled,
@@ -106,7 +118,8 @@ public sealed class SkillExecutionPipeline : ISkillExecutionPipeline
 
                 await timeoutCts.CancelAsync();
                 _ = ObserveAbandonedTaskAsync(executionTask);
-                return WithDuration(
+                return Complete(
+                    plan,
                     SkillResult.Failed(
                         $"Skill '{plan.SkillId}' timed out after {timeout.TotalMilliseconds:0} ms.",
                         SkillExecutionStatus.TimedOut,
@@ -115,11 +128,12 @@ public sealed class SkillExecutionPipeline : ISkillExecutionPipeline
             }
 
             var result = await executionTask;
-            return WithDuration(NormalizeResult(plan.SkillId, result), stopwatch);
+            return Complete(plan, NormalizeResult(plan.SkillId, result), stopwatch);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            return WithDuration(
+            return Complete(
+                plan,
                 SkillResult.Failed(
                     $"Skill '{plan.SkillId}' was cancelled.",
                     SkillExecutionStatus.Cancelled,
@@ -128,7 +142,8 @@ public sealed class SkillExecutionPipeline : ISkillExecutionPipeline
         }
         catch (Exception ex)
         {
-            return WithDuration(
+            return Complete(
+                plan,
                 SkillResult.Failed(
                     $"Skill '{plan.SkillId}' failed: {ex.Message}",
                     SkillExecutionStatus.Failed,
@@ -206,10 +221,20 @@ public sealed class SkillExecutionPipeline : ISkillExecutionPipeline
             };
     }
 
-    private static SkillResult WithDuration(SkillResult result, Stopwatch stopwatch)
+    private SkillResult Complete(SkillPlan plan, SkillResult result, Stopwatch stopwatch)
     {
         stopwatch.Stop();
-        return result with { DurationMilliseconds = stopwatch.ElapsedMilliseconds };
+        var completed = result with { DurationMilliseconds = stopwatch.ElapsedMilliseconds };
+        try
+        {
+            _historyService?.Record(plan, completed);
+        }
+        catch
+        {
+            // History is observability; execution result should remain authoritative.
+        }
+
+        return completed;
     }
 
     private static async Task ObserveAbandonedTaskAsync(Task task)

@@ -106,6 +106,9 @@ namespace SmartVoiceAgent.Ui
                 var skillConfirmationService = _host.Services.GetRequiredService<ISkillConfirmationService>();
                 _mainViewModel.SetSkillConfirmationService(skillConfirmationService);
 
+                var skillExecutionHistoryService = _host.Services.GetRequiredService<ISkillExecutionHistoryService>();
+                _mainViewModel.SetSkillExecutionHistoryService(skillExecutionHistoryService);
+
                 // Setup Voice Command Service
                 SetupVoiceCommandService(_mainViewModel);
 
