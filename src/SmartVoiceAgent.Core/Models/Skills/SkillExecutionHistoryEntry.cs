@@ -10,6 +10,12 @@ public sealed class SkillExecutionHistoryEntry
 
     public string ArgumentsSummary { get; init; } = string.Empty;
 
+    public string ReplayPlanJson { get; init; } = string.Empty;
+
+    public bool CanReplay { get; init; }
+
+    public string ReplayBlockedReason { get; init; } = string.Empty;
+
     public bool Success { get; init; }
 
     public SkillExecutionStatus Status { get; init; } = SkillExecutionStatus.Failed;

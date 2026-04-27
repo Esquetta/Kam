@@ -109,6 +109,9 @@ namespace SmartVoiceAgent.Ui
                 var skillExecutionHistoryService = _host.Services.GetRequiredService<ISkillExecutionHistoryService>();
                 _mainViewModel.SetSkillExecutionHistoryService(skillExecutionHistoryService);
 
+                var skillExecutionPipeline = _host.Services.GetRequiredService<ISkillExecutionPipeline>();
+                _mainViewModel.SetSkillExecutionPipeline(skillExecutionPipeline);
+
                 // Setup Voice Command Service
                 SetupVoiceCommandService(_mainViewModel);
 

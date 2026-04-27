@@ -5,6 +5,8 @@ namespace SmartVoiceAgent.Infrastructure.Skills.Execution;
 
 internal static class SkillExecutionHistoryEntryFactory
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     private const int MaxArgumentValueLength = 120;
     private const int MaxArgumentsSummaryLength = 600;
     private const int MaxResultSummaryLength = 2000;
@@ -28,11 +30,15 @@ internal static class SkillExecutionHistoryEntryFactory
         DateTimeOffset? timestamp = null)
     {
         var shellResult = result.Data as ShellCommandResult;
+        var canReplay = CanReplay(plan, out var replayBlockedReason);
         return new SkillExecutionHistoryEntry
         {
             Timestamp = timestamp ?? DateTimeOffset.UtcNow,
             SkillId = plan.SkillId,
             ArgumentsSummary = SummarizeArguments(plan),
+            ReplayPlanJson = JsonSerializer.Serialize(plan, JsonOptions),
+            CanReplay = canReplay,
+            ReplayBlockedReason = replayBlockedReason,
             Success = result.Success,
             Status = result.Status,
             ErrorCode = result.ErrorCode,
@@ -49,6 +55,39 @@ internal static class SkillExecutionHistoryEntryFactory
             Cancelled = shellResult?.Cancelled ?? result.Status == SkillExecutionStatus.Cancelled,
             Truncated = shellResult?.Truncated ?? false
         };
+    }
+
+    private static bool CanReplay(SkillPlan plan, out string blockedReason)
+    {
+        if (plan.RequiresConfirmation)
+        {
+            blockedReason = "Replay requires confirmation.";
+            return false;
+        }
+
+        if (IsHighRiskReplayBlocked(plan.SkillId))
+        {
+            blockedReason = "Replay is blocked for high-risk write actions.";
+            return false;
+        }
+
+        blockedReason = string.Empty;
+        return true;
+    }
+
+    private static bool IsHighRiskReplayBlocked(string skillId)
+    {
+        return skillId.Equals("file.patch", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("file.replace_range", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("files.create", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("files.copy", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("files.move", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("file.write", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("files.write", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("file.delete", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("files.delete", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("clipboard.set", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("clipboard.clear", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string SummarizeArguments(SkillPlan plan)

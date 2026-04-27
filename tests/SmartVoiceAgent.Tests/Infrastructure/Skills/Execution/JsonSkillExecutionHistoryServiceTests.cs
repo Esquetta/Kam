@@ -40,6 +40,8 @@ public sealed class JsonSkillExecutionHistoryServiceTests : IDisposable
         recent.Single().SkillId.Should().Be("shell.run");
         recent.Single().ErrorCode.Should().Be("shell_exit_code");
         recent.Single().ArgumentsSummary.Should().Contain("command=git status");
+        recent.Single().ReplayPlanJson.Should().Contain("shell.run");
+        recent.Single().CanReplay.Should().BeTrue();
     }
 
     [Fact]

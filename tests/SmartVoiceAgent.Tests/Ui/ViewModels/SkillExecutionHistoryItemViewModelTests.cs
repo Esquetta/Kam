@@ -33,7 +33,9 @@ public sealed class SkillExecutionHistoryItemViewModelTests
             ExitCode = 1,
             StdOut = "tracked output",
             StdErr = "error output",
-            Truncated = true
+            Truncated = true,
+            CanReplay = true,
+            ReplayPlanJson = """{"skillId":"shell.run","arguments":{"command":"git status"}}"""
         };
 
         var viewModel = new SkillExecutionHistoryItemViewModel(entry);
@@ -51,6 +53,10 @@ public sealed class SkillExecutionHistoryItemViewModelTests
         viewModel.ExitCodeText.Should().Be("exit 1");
         viewModel.HasRuntimeFlags.Should().BeTrue();
         viewModel.RuntimeFlagsText.Should().Contain("truncated");
+        viewModel.CanRerun.Should().BeTrue();
+        viewModel.CopyResultText.Should().Contain("shell.run");
+        viewModel.CopyResultText.Should().Contain("tracked output");
+        viewModel.CopyResultText.Should().Contain("error output");
     }
 
     [Fact]
@@ -66,5 +72,49 @@ public sealed class SkillExecutionHistoryItemViewModelTests
         viewModel.ClearSkillExecutionHistoryCommand.Execute(null);
 
         service.GetRecent().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void CopyCommands_InvokeCopyCallbackWithExpectedPayloads()
+    {
+        var copied = new List<(string Label, string Text)>();
+        var viewModel = new SkillExecutionHistoryItemViewModel(
+            new SkillExecutionHistoryEntry
+            {
+                SkillId = "shell.run",
+                Status = SkillExecutionStatus.Succeeded,
+                ResultSummary = "Done.",
+                StdOut = "stdout text",
+                StdErr = "stderr text"
+            },
+            (label, text) => copied.Add((label, text)));
+
+        viewModel.CopyResultCommand.Execute(null);
+        viewModel.CopyStdOutCommand.Execute(null);
+        viewModel.CopyStdErrCommand.Execute(null);
+
+        copied.Should().HaveCount(3);
+        copied[0].Should().Be(("result", viewModel.CopyResultText));
+        copied[1].Should().Be(("stdout", "stdout text"));
+        copied[2].Should().Be(("stderr", "stderr text"));
+    }
+
+    [Fact]
+    public void RerunCommand_WhenReplayIsAllowed_InvokeRerunCallback()
+    {
+        var rerunCount = 0;
+        var viewModel = new SkillExecutionHistoryItemViewModel(
+            new SkillExecutionHistoryEntry
+            {
+                SkillId = "apps.list",
+                CanReplay = true,
+                ReplayPlanJson = """{"skillId":"apps.list","arguments":{}}"""
+            },
+            (_, _) => { },
+            _ => rerunCount++);
+
+        viewModel.RerunCommand.Execute(null);
+
+        rerunCount.Should().Be(1);
     }
 }

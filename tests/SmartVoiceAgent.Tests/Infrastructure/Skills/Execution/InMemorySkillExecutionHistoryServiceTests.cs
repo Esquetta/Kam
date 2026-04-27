@@ -92,4 +92,47 @@ public sealed class InMemorySkillExecutionHistoryServiceTests
         entry.TimedOut.Should().BeTrue();
         entry.Truncated.Should().BeTrue();
     }
+
+    [Fact]
+    public void Record_WhenPlanCanBeReplayed_StoresReplayPlanJson()
+    {
+        var service = new InMemorySkillExecutionHistoryService();
+
+        var entry = service.Record(
+            SkillPlan.FromObject("apps.list", new { maxItems = 5 }),
+            SkillResult.Succeeded("Listed applications."));
+
+        entry.CanReplay.Should().BeTrue();
+        entry.ReplayPlanJson.Should().Contain("apps.list");
+        entry.ReplayPlanJson.Should().Contain("maxItems");
+        entry.ReplayBlockedReason.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Record_WhenPlanRequiresConfirmation_BlocksReplay()
+    {
+        var service = new InMemorySkillExecutionHistoryService();
+        var plan = SkillPlan.FromObject("file.patch", new { filePath = "notes.txt", patch = "diff" });
+        plan.RequiresConfirmation = true;
+
+        var entry = service.Record(plan, SkillResult.Succeeded("Patched."));
+
+        entry.CanReplay.Should().BeFalse();
+        entry.ReplayPlanJson.Should().Contain("file.patch");
+        entry.ReplayBlockedReason.Should().Contain("confirmation");
+    }
+
+    [Fact]
+    public void Record_WhenPlanIsWriteAction_BlocksReplay()
+    {
+        var service = new InMemorySkillExecutionHistoryService();
+
+        var entry = service.Record(
+            SkillPlan.FromObject("files.create", new { filePath = "notes.txt", content = "hello" }),
+            SkillResult.Succeeded("Created."));
+
+        entry.CanReplay.Should().BeFalse();
+        entry.ReplayPlanJson.Should().Contain("files.create");
+        entry.ReplayBlockedReason.Should().Contain("write");
+    }
 }

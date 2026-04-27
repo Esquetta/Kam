@@ -1,6 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input.Platform;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -15,6 +16,7 @@ using SmartVoiceAgent.Ui.ViewModels.PageModels;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -36,6 +38,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private ISkillImportService? _skillImportService;
         private ISkillTestService? _skillTestService;
         private ISkillExecutionHistoryService? _skillExecutionHistoryService;
+        private ISkillExecutionPipeline? _skillExecutionPipeline;
+
+        private static readonly JsonSerializerOptions SkillPlanJsonOptions = new(JsonSerializerDefaults.Web);
 
         /* ========================= */
         /* CACHED BRUSHES */
@@ -396,6 +401,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _skillExecutionHistoryService.Changed += OnSkillExecutionHistoryChanged;
             RefreshSkillExecutionHistory();
         }
+
+        public void SetSkillExecutionPipeline(ISkillExecutionPipeline skillExecutionPipeline)
+        {
+            _skillExecutionPipeline = skillExecutionPipeline;
+        }
         
         private void OnHostStateChanged(object? sender, bool isRunning)
         {
@@ -702,7 +712,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 foreach (var entry in _skillExecutionHistoryService.GetRecent(8))
                 {
-                    SkillExecutionHistory.Add(new SkillExecutionHistoryItemViewModel(entry));
+                    SkillExecutionHistory.Add(new SkillExecutionHistoryItemViewModel(
+                        entry,
+                        CopySkillExecutionText,
+                        RerunSkillExecution));
                 }
             }
 
@@ -718,6 +731,89 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             _skillExecutionHistoryService.Clear();
             AddLog("SKILL_HISTORY_CLEARED");
+        }
+
+        private void CopySkillExecutionText(string label, string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return;
+            }
+
+            _ = CopySkillExecutionTextAsync(label, text);
+        }
+
+        private async Task CopySkillExecutionTextAsync(string label, string text)
+        {
+            try
+            {
+                var clipboard = (global::Avalonia.Application.Current?.ApplicationLifetime
+                    as IClassicDesktopStyleApplicationLifetime)?.MainWindow?.Clipboard;
+                if (clipboard is null)
+                {
+                    AddLog("COPY_FAILED: clipboard unavailable");
+                    return;
+                }
+
+                await clipboard.SetTextAsync(text);
+                AddLog($"COPIED_{label.ToUpperInvariant()}");
+            }
+            catch (Exception ex)
+            {
+                AddLog($"COPY_FAILED: {ex.Message}");
+            }
+        }
+
+        private void RerunSkillExecution(SkillExecutionHistoryItemViewModel item)
+        {
+            _ = RerunSkillExecutionAsync(item);
+        }
+
+        private async Task RerunSkillExecutionAsync(SkillExecutionHistoryItemViewModel item)
+        {
+            if (_skillExecutionPipeline is null)
+            {
+                AddLog("RERUN_FAILED: skill pipeline unavailable");
+                return;
+            }
+
+            if (!item.CanRerun)
+            {
+                AddLog($"RERUN_BLOCKED: {item.RerunBlockedReason}");
+                return;
+            }
+
+            SkillPlan? plan;
+            try
+            {
+                plan = JsonSerializer.Deserialize<SkillPlan>(
+                    item.ReplayPlanJson,
+                    SkillPlanJsonOptions);
+            }
+            catch (JsonException ex)
+            {
+                AddLog($"RERUN_FAILED: invalid plan json ({ex.Message})");
+                return;
+            }
+
+            if (plan is null || string.IsNullOrWhiteSpace(plan.SkillId))
+            {
+                AddLog("RERUN_FAILED: invalid plan");
+                return;
+            }
+
+            AddLog($"RERUN_SKILL: {plan.SkillId}");
+            var result = await _skillExecutionPipeline.ExecuteAsync(plan);
+            if (result.Success)
+            {
+                AddLog($"RERUN_OK: {result.Message}");
+                return;
+            }
+
+            var error = string.IsNullOrWhiteSpace(result.ErrorMessage)
+                ? result.Message
+                : result.ErrorMessage;
+            AddLog($"RERUN_FAILED: {error}");
         }
 
         private async Task ApproveSkillConfirmationAsync(PendingSkillConfirmationViewModel item)
@@ -988,7 +1084,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
     public sealed class SkillExecutionHistoryItemViewModel
     {
-        public SkillExecutionHistoryItemViewModel(SkillExecutionHistoryEntry entry)
+        public SkillExecutionHistoryItemViewModel(
+            SkillExecutionHistoryEntry entry,
+            Action<string, string>? copy = null,
+            Action<SkillExecutionHistoryItemViewModel>? rerun = null)
         {
             SkillId = entry.SkillId;
             StatusText = FormatStatus(entry.Status);
@@ -1004,6 +1103,20 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ExitCodeText = entry.ExitCode.HasValue ? $"exit {entry.ExitCode.Value}" : string.Empty;
             RuntimeFlagsText = FormatRuntimeFlags(entry);
             DetailText = FormatDetailText(entry);
+            ReplayPlanJson = entry.ReplayPlanJson;
+            CanRerun = entry.CanReplay && !string.IsNullOrWhiteSpace(entry.ReplayPlanJson);
+            RerunBlockedReason = entry.ReplayBlockedReason;
+            CopyResultText = FormatCopyResultText(entry, DetailText, StatusText, DurationText);
+            CopyResultCommand = ReactiveCommand.Create(() => copy?.Invoke("result", CopyResultText));
+            CopyStdOutCommand = ReactiveCommand.Create(() => copy?.Invoke("stdout", StdOut));
+            CopyStdErrCommand = ReactiveCommand.Create(() => copy?.Invoke("stderr", StdErr));
+            RerunCommand = ReactiveCommand.Create(() =>
+            {
+                if (CanRerun)
+                {
+                    rerun?.Invoke(this);
+                }
+            });
         }
 
         public string SkillId { get; }
@@ -1030,6 +1143,14 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public string RuntimeFlagsText { get; }
 
+        public string ReplayPlanJson { get; }
+
+        public string RerunBlockedReason { get; }
+
+        public string CopyResultText { get; }
+
+        public bool CanRerun { get; }
+
         public bool HasArguments => !string.IsNullOrWhiteSpace(ArgumentsSummary);
 
         public bool HasDetailText => !string.IsNullOrWhiteSpace(DetailText);
@@ -1041,6 +1162,16 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public bool HasExitCode => !string.IsNullOrWhiteSpace(ExitCodeText);
 
         public bool HasRuntimeFlags => !string.IsNullOrWhiteSpace(RuntimeFlagsText);
+
+        public bool HasRerunBlockedReason => !string.IsNullOrWhiteSpace(RerunBlockedReason);
+
+        public ICommand CopyResultCommand { get; }
+
+        public ICommand CopyStdOutCommand { get; }
+
+        public ICommand CopyStdErrCommand { get; }
+
+        public ICommand RerunCommand { get; }
 
         private static string FormatStatus(SkillExecutionStatus status)
         {
@@ -1107,6 +1238,42 @@ namespace SmartVoiceAgent.Ui.ViewModels
             if (!string.IsNullOrWhiteSpace(entry.WorkingDirectory))
             {
                 lines.Add($"cwd: {entry.WorkingDirectory}");
+            }
+
+            return string.Join(Environment.NewLine, lines);
+        }
+
+        private static string FormatCopyResultText(
+            SkillExecutionHistoryEntry entry,
+            string detailText,
+            string statusText,
+            string durationText)
+        {
+            var lines = new List<string>
+            {
+                $"Skill: {entry.SkillId}",
+                $"Status: {statusText}",
+                $"Duration: {durationText}"
+            };
+
+            if (!string.IsNullOrWhiteSpace(detailText))
+            {
+                lines.Add(string.Empty);
+                lines.Add(detailText);
+            }
+
+            if (!string.IsNullOrWhiteSpace(entry.StdOut))
+            {
+                lines.Add(string.Empty);
+                lines.Add("StdOut:");
+                lines.Add(entry.StdOut);
+            }
+
+            if (!string.IsNullOrWhiteSpace(entry.StdErr))
+            {
+                lines.Add(string.Empty);
+                lines.Add("StdErr:");
+                lines.Add(entry.StdErr);
             }
 
             return string.Join(Environment.NewLine, lines);
