@@ -17,6 +17,7 @@ using SmartVoiceAgent.Infrastructure.Skills.Evaluation;
 using SmartVoiceAgent.Infrastructure.Skills.Execution;
 using SmartVoiceAgent.Infrastructure.Skills.Health;
 using SmartVoiceAgent.Infrastructure.Skills.Importing;
+using SmartVoiceAgent.Infrastructure.Skills.Planning;
 using SmartVoiceAgent.Infrastructure.Services;
 using SmartVoiceAgent.Infrastructure.Skills.Policy;
 using SmartVoiceAgent.Infrastructure.Services.ApplicationScanner;
@@ -138,6 +139,7 @@ public static class ServiceRegistration
         services.AddScoped<ISkillActionExecutor, SkillActionExecutor>();
         services.AddSingleton<ISkillAuditLogService, JsonSkillAuditLogService>();
         services.AddSingleton<ISkillExecutionHistoryService, JsonSkillExecutionHistoryService>();
+        services.AddSingleton<ISkillPlannerTraceStore, JsonSkillPlannerTraceStore>();
         services.AddScoped<ISkillExecutionPipeline, SkillExecutionPipeline>();
         services.AddScoped<ISkillHealthService, SkillHealthService>();
         services.AddScoped<ISkillEvalHarness, SkillEvalHarness>();

@@ -37,6 +37,7 @@ public class SkillRuntimeRegistrationTests
         provider.GetServices<ISkillExecutor>().Should().NotBeEmpty();
         provider.GetService<ISkillExecutionPipeline>().Should().NotBeNull();
         provider.GetService<ISkillExecutionHistoryService>().Should().BeOfType<JsonSkillExecutionHistoryService>();
+        provider.GetService<ISkillPlannerTraceStore>().Should().NotBeNull();
         provider.GetService<ICommandRuntimeService>().Should().NotBeNull();
         provider.GetService<ISkillConfirmationService>().Should().NotBeNull();
         provider.GetService<ISkillHealthService>().Should().NotBeNull();

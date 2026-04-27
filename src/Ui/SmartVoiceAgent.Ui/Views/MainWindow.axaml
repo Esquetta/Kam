@@ -360,7 +360,7 @@
 					BorderBrush="{DynamicResource BorderSubtleBrush}"
 					BorderThickness="1,0,0,0"
 					IsVisible="{Binding Source={StaticResource WindowStateManager}, Path=IsLogPanelVisible}">
-				<Grid RowDefinitions="48, Auto, Auto, *, Auto">
+				<Grid RowDefinitions="48, Auto, Auto, Auto, *, Auto">
 
 					<!-- Window Controls -->
 					<Border Grid.Row="0"
@@ -509,8 +509,124 @@
 						</StackPanel>
 					</Border>
 
-					<!-- Skill Execution History -->
+					<!-- Planner Trace -->
 					<Border Grid.Row="2"
+							Background="{DynamicResource CardBgBrush}"
+							BorderBrush="{DynamicResource BorderSubtleBrush}"
+							BorderThickness="0,0,0,1"
+							Padding="16,12"
+							IsVisible="{Binding HasSkillPlannerTraces}">
+						<StackPanel Spacing="8">
+							<Grid ColumnDefinitions="*, Auto">
+								<StackPanel Grid.Column="0"
+											Orientation="Horizontal"
+											Spacing="8">
+									<Path Data="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M7,13H9V11H7V13M11,17H13V7H11V17M15,13H17V11H15V13Z"
+										  Fill="{DynamicResource TextMutedBrush}"
+										  Width="14" Height="14"
+										  Stretch="Uniform"
+										  VerticalAlignment="Center"/>
+									<TextBlock Text="PLANNER_TRACE"
+											   FontSize="10"
+											   FontFamily="Consolas"
+											   FontWeight="SemiBold"
+											   Foreground="{DynamicResource TextMutedBrush}"
+											   LetterSpacing="1"
+											   VerticalAlignment="Center"/>
+								</StackPanel>
+								<Button Grid.Column="1"
+										Width="24" Height="24"
+										Background="Transparent"
+										BorderBrush="{DynamicResource BorderSubtleBrush}"
+										BorderThickness="1"
+										CornerRadius="6"
+										Padding="0"
+										Cursor="Hand"
+										ToolTip.Tip="Clear planner trace"
+										Command="{Binding ClearSkillPlannerTraceCommand}">
+									<Path Data="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"
+										  Fill="{DynamicResource TextMutedBrush}"
+										  Width="13" Height="13"
+										  Stretch="Uniform"/>
+								</Button>
+							</Grid>
+
+							<ScrollViewer MaxHeight="220"
+										  VerticalScrollBarVisibility="Auto">
+								<ItemsControl ItemsSource="{Binding SkillPlannerTraces}">
+									<ItemsControl.ItemTemplate>
+										<DataTemplate>
+											<Border Background="{DynamicResource CardBgHoverBrush}"
+													BorderBrush="{DynamicResource BorderSubtleBrush}"
+													BorderThickness="1"
+													CornerRadius="8"
+													Padding="10"
+													Margin="0,0,0,8">
+												<Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto">
+													<StackPanel Grid.Row="0"
+																Orientation="Horizontal"
+																Spacing="8">
+														<TextBlock Text="{Binding SkillIdText}"
+																   Foreground="{DynamicResource TextPrimaryBrush}"
+																   FontSize="11"
+																   FontFamily="Consolas"
+																   FontWeight="SemiBold"/>
+														<TextBlock Text="{Binding StatusText}"
+																   Foreground="{DynamicResource AccentCyanBrush}"
+																   FontSize="10"
+																   FontFamily="Consolas"/>
+														<TextBlock Text="{Binding ConfidenceText}"
+																   Foreground="{DynamicResource TextMutedBrush}"
+																   FontSize="10"
+																   FontFamily="Consolas"/>
+														<TextBlock Text="{Binding DurationText}"
+																   Foreground="{DynamicResource TextMutedBrush}"
+																   FontSize="10"
+																   FontFamily="Consolas"/>
+													</StackPanel>
+													<TextBlock Grid.Row="1"
+															   Text="{Binding UserRequestText}"
+															   Foreground="{DynamicResource TextSecondaryBrush}"
+															   FontSize="10"
+															   TextWrapping="Wrap"
+															   MaxLines="2"
+															   Margin="0,6,0,0"/>
+													<TextBlock Grid.Row="2"
+															   Text="{Binding ReasoningText}"
+															   Foreground="{DynamicResource TextMutedBrush}"
+															   FontSize="10"
+															   TextWrapping="Wrap"
+															   MaxLines="2"
+															   IsVisible="{Binding HasReasoning}"
+															   Margin="0,4,0,0"/>
+													<TextBlock Grid.Row="3"
+															   Text="{Binding ErrorText}"
+															   Foreground="{DynamicResource AccentErrorBrush}"
+															   FontSize="10"
+															   TextWrapping="Wrap"
+															   MaxLines="2"
+															   IsVisible="{Binding HasError}"
+															   Margin="0,4,0,0"/>
+													<TextBlock Grid.Row="4"
+															   Text="{Binding RawResponseText}"
+															   Foreground="{DynamicResource TextMutedBrush}"
+															   FontSize="10"
+															   FontFamily="Consolas, Cascadia Code, monospace"
+															   TextWrapping="Wrap"
+															   MaxLines="4"
+															   IsVisible="{Binding HasRawResponse}"
+															   Margin="0,6,0,0"/>
+												</Grid>
+											</Border>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+							</ScrollViewer>
+						</StackPanel>
+					</Border>
+
+					<!-- Skill Execution History -->
+					<Border Grid.Row="3"
 							Background="{DynamicResource CardBgBrush}"
 							BorderBrush="{DynamicResource BorderSubtleBrush}"
 							BorderThickness="0,0,0,1"
@@ -778,7 +894,7 @@
 					</Border>
 
 					<!-- Log Content -->
-					<ScrollViewer x:Name="LogScrollViewer" Grid.Row="3"
+					<ScrollViewer x:Name="LogScrollViewer" Grid.Row="4"
 								  VerticalScrollBarVisibility="Auto"
 								  Margin="24,16,24,0">
 						<ItemsControl ItemsSource="{Binding LogEntries}">
@@ -791,7 +907,7 @@
 					</ScrollViewer>
 
 					<!-- Input Prompt with Voice Controls -->
-					<Border Grid.Row="4"
+					<Border Grid.Row="5"
 							BorderBrush="{DynamicResource BorderSubtleBrush}"
 							BorderThickness="0,1,0,0"
 							Padding="16,8">

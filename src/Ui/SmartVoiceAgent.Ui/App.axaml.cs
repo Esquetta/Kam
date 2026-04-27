@@ -109,6 +109,9 @@ namespace SmartVoiceAgent.Ui
                 var skillExecutionHistoryService = _host.Services.GetRequiredService<ISkillExecutionHistoryService>();
                 _mainViewModel.SetSkillExecutionHistoryService(skillExecutionHistoryService);
 
+                var skillPlannerTraceStore = _host.Services.GetRequiredService<ISkillPlannerTraceStore>();
+                _mainViewModel.SetSkillPlannerTraceStore(skillPlannerTraceStore);
+
                 var skillExecutionPipeline = _host.Services.GetRequiredService<ISkillExecutionPipeline>();
                 _mainViewModel.SetSkillExecutionPipeline(skillExecutionPipeline);
 

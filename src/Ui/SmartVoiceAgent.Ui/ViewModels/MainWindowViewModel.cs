@@ -40,9 +40,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private ISkillTestService? _skillTestService;
         private ISkillExecutionHistoryService? _skillExecutionHistoryService;
         private ISkillExecutionPipeline? _skillExecutionPipeline;
+        private ISkillPlannerTraceStore? _skillPlannerTraceStore;
 
         private const int MaxSkillExecutionHistoryScanCount = 50;
         private const int MaxSkillExecutionHistoryDisplayCount = 8;
+        private const int MaxSkillPlannerTraceDisplayCount = 5;
         private const string SkillExecutionHistoryAllStatusFilter = "All";
 
         private static readonly JsonSerializerOptions SkillPlanJsonOptions = new(JsonSerializerDefaults.Web);
@@ -145,6 +147,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public ICommand ToggleThemeCommand { get; }
         public ICommand ClearSkillExecutionHistoryCommand { get; }
         public ICommand ClearSkillExecutionHistoryFiltersCommand { get; }
+        public ICommand ClearSkillPlannerTraceCommand { get; }
 
         /* ========================= */
         /* LOGGING */
@@ -233,6 +236,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             get => _skillExecutionHistory;
             set => this.RaiseAndSetIfChanged(ref _skillExecutionHistory, value);
+        }
+
+        private ObservableCollection<SkillPlannerTraceItemViewModel> _skillPlannerTraces = new();
+        public ObservableCollection<SkillPlannerTraceItemViewModel> SkillPlannerTraces
+        {
+            get => _skillPlannerTraces;
+            set => this.RaiseAndSetIfChanged(ref _skillPlannerTraces, value);
         }
 
         public IReadOnlyList<string> SkillExecutionHistoryStatusFilters { get; } =
@@ -341,6 +351,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
             private set => this.RaiseAndSetIfChanged(ref _hasSkillExecutionHistory, value);
         }
 
+        private bool _hasSkillPlannerTraces;
+        public bool HasSkillPlannerTraces
+        {
+            get => _hasSkillPlannerTraces;
+            private set => this.RaiseAndSetIfChanged(ref _hasSkillPlannerTraces, value);
+        }
+
         /* ========================= */
         /* VOICE COMMAND */
         /* ========================= */
@@ -406,6 +423,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ToggleThemeCommand = ReactiveCommand.Create(ToggleTheme);
             ClearSkillExecutionHistoryCommand = ReactiveCommand.Create(ClearSkillExecutionHistory);
             ClearSkillExecutionHistoryFiltersCommand = ReactiveCommand.Create(ClearSkillExecutionHistoryFilters);
+            ClearSkillPlannerTraceCommand = ReactiveCommand.Create(ClearSkillPlannerTrace);
             SubmitCommand = ReactiveCommand.Create(SubmitCommandInput);
             ToggleVoiceCommand = ReactiveCommand.Create(ToggleVoiceEnabled);
             StartVoiceRecordingCommand = ReactiveCommand.CreateFromTask(StartVoiceRecordingAsync);
@@ -506,6 +524,18 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _skillExecutionHistoryService = skillExecutionHistoryService;
             _skillExecutionHistoryService.Changed += OnSkillExecutionHistoryChanged;
             RefreshSkillExecutionHistory();
+        }
+
+        public void SetSkillPlannerTraceStore(ISkillPlannerTraceStore skillPlannerTraceStore)
+        {
+            if (_skillPlannerTraceStore is not null)
+            {
+                _skillPlannerTraceStore.Changed -= OnSkillPlannerTraceChanged;
+            }
+
+            _skillPlannerTraceStore = skillPlannerTraceStore;
+            _skillPlannerTraceStore.Changed += OnSkillPlannerTraceChanged;
+            RefreshSkillPlannerTrace();
         }
 
         public void SetSkillExecutionPipeline(ISkillExecutionPipeline skillExecutionPipeline)
@@ -864,6 +894,46 @@ namespace SmartVoiceAgent.Ui.ViewModels
             SkillExecutionHistoryFilterText = string.Empty;
             SkillExecutionHistoryStatusFilter = SkillExecutionHistoryAllStatusFilter;
             RefreshSkillExecutionHistory();
+        }
+
+        private void OnSkillPlannerTraceChanged(object? sender, EventArgs e)
+        {
+            RefreshSkillPlannerTrace();
+        }
+
+        private void RefreshSkillPlannerTrace()
+        {
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                if (global::Avalonia.Application.Current is not null)
+                {
+                    Dispatcher.UIThread.Post(RefreshSkillPlannerTrace);
+                    return;
+                }
+            }
+
+            SkillPlannerTraces.Clear();
+
+            if (_skillPlannerTraceStore is not null)
+            {
+                foreach (var entry in _skillPlannerTraceStore.GetRecent(MaxSkillPlannerTraceDisplayCount))
+                {
+                    SkillPlannerTraces.Add(new SkillPlannerTraceItemViewModel(entry));
+                }
+            }
+
+            HasSkillPlannerTraces = SkillPlannerTraces.Count > 0;
+        }
+
+        private void ClearSkillPlannerTrace()
+        {
+            if (_skillPlannerTraceStore is null)
+            {
+                return;
+            }
+
+            _skillPlannerTraceStore.Clear();
+            AddLog("PLANNER_TRACE_CLEARED");
         }
 
         private bool MatchesSkillExecutionHistoryFilters(SkillExecutionHistoryEntry entry)
@@ -1226,6 +1296,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 _skillExecutionHistoryService.Changed -= OnSkillExecutionHistoryChanged;
             }
 
+            if (_skillPlannerTraceStore is not null)
+            {
+                _skillPlannerTraceStore.Changed -= OnSkillPlannerTraceChanged;
+            }
+
             _voiceCommandService?.Dispose();
         }
     }
@@ -1265,6 +1340,55 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public ICommand ApproveCommand { get; }
 
         public ICommand RejectCommand { get; }
+    }
+
+    public sealed class SkillPlannerTraceItemViewModel
+    {
+        public SkillPlannerTraceItemViewModel(SkillPlannerTraceEntry entry)
+        {
+            TimestampText = entry.Timestamp.ToLocalTime().ToString("HH:mm:ss");
+            StatusText = entry.IsValid ? "Valid" : "Invalid";
+            SkillIdText = string.IsNullOrWhiteSpace(entry.SkillId)
+                ? "no skill"
+                : entry.SkillId;
+            ConfidenceText = entry.Confidence > 0
+                ? $"confidence {entry.Confidence:0.00}"
+                : "confidence n/a";
+            DurationText = entry.DurationMilliseconds <= 0
+                ? "<1 ms"
+                : $"{entry.DurationMilliseconds} ms";
+            UserRequestText = entry.UserRequest;
+            RawResponseText = entry.RawResponse;
+            ErrorText = entry.ErrorMessage;
+            ReasoningText = entry.Reasoning;
+            AvailableSkillCountText = $"{entry.AvailableSkillCount} skills";
+        }
+
+        public string TimestampText { get; }
+
+        public string StatusText { get; }
+
+        public string SkillIdText { get; }
+
+        public string ConfidenceText { get; }
+
+        public string DurationText { get; }
+
+        public string UserRequestText { get; }
+
+        public string RawResponseText { get; }
+
+        public string ErrorText { get; }
+
+        public string ReasoningText { get; }
+
+        public string AvailableSkillCountText { get; }
+
+        public bool HasRawResponse => !string.IsNullOrWhiteSpace(RawResponseText);
+
+        public bool HasError => !string.IsNullOrWhiteSpace(ErrorText);
+
+        public bool HasReasoning => !string.IsNullOrWhiteSpace(ReasoningText);
     }
 
     public sealed class SkillExecutionHistoryItemViewModel
