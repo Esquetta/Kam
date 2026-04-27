@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Commands;
 using SmartVoiceAgent.Core.Models.Skills;
+using System.Text.Json;
 
 namespace SmartVoiceAgent.Infrastructure.Services;
 
@@ -46,21 +47,33 @@ public sealed class SkillFirstCommandRuntimeService : ICommandRuntimeService
         }
 
         var plan = planResult.Plan;
-        if (RequiresConfirmation(plan, skillRegistry))
-        {
-            var request = confirmationService.Queue(
-                command,
-                plan,
-                $"Skill '{plan.SkillId}' requires confirmation before execution.");
-            return CommandRuntimeResult.PendingConfirmation(
-                $"Skill '{plan.SkillId}' requires confirmation before execution.",
-                plan.SkillId,
-                request.Id);
-        }
 
         try
         {
             var pipeline = scope.ServiceProvider.GetRequiredService<ISkillExecutionPipeline>();
+
+            if (RequiresPreviewBeforeConfirmation(plan, skillRegistry))
+            {
+                return await PreviewAndQueueFileEditAsync(
+                    command,
+                    plan,
+                    pipeline,
+                    confirmationService,
+                    cancellationToken);
+            }
+
+            if (RequiresConfirmation(plan, skillRegistry))
+            {
+                var request = confirmationService.Queue(
+                    command,
+                    plan,
+                    $"Skill '{plan.SkillId}' requires confirmation before execution.");
+                return CommandRuntimeResult.PendingConfirmation(
+                    $"Skill '{plan.SkillId}' requires confirmation before execution.",
+                    plan.SkillId,
+                    request.Id);
+            }
+
             var result = await pipeline.ExecuteAsync(plan, cancellationToken);
             if (IsActionConfirmationRequired(result))
             {
@@ -115,8 +128,70 @@ public sealed class SkillFirstCommandRuntimeService : ICommandRuntimeService
         }
     }
 
+    private static async Task<CommandRuntimeResult> PreviewAndQueueFileEditAsync(
+        string command,
+        SkillPlan plan,
+        ISkillExecutionPipeline pipeline,
+        ISkillConfirmationService confirmationService,
+        CancellationToken cancellationToken)
+    {
+        var previewPlan = CreatePreviewPlan(plan);
+        var previewResult = await pipeline.ExecuteAsync(previewPlan, cancellationToken);
+        if (!previewResult.Success)
+        {
+            return CommandRuntimeResult.Failed(
+                previewResult.ErrorMessage,
+                previewResult.Status,
+                string.IsNullOrWhiteSpace(previewResult.ErrorCode)
+                    ? "preview_failed"
+                    : previewResult.ErrorCode,
+                plan.SkillId,
+                previewResult.DurationMilliseconds);
+        }
+
+        var request = confirmationService.Queue(
+            command,
+            plan,
+            $"Review the diff for skill '{plan.SkillId}' before applying changes.",
+            previewResult.Message);
+
+        return CommandRuntimeResult.PendingConfirmation(
+            $"Skill '{plan.SkillId}' preview is ready for confirmation.",
+            plan.SkillId,
+            request.Id);
+    }
+
+    private static SkillPlan CreatePreviewPlan(SkillPlan plan)
+    {
+        var arguments = plan.Arguments.ToDictionary(
+            pair => pair.Key,
+            pair => pair.Value.Clone());
+        arguments["previewOnly"] = JsonSerializer.SerializeToElement(true).Clone();
+
+        return new SkillPlan
+        {
+            SkillId = plan.SkillId,
+            Arguments = arguments,
+            Confidence = plan.Confidence,
+            RequiresConfirmation = false,
+            Reasoning = plan.Reasoning
+        };
+    }
+
+    private static bool RequiresPreviewBeforeConfirmation(SkillPlan plan, ISkillRegistry registry)
+    {
+        return IsPreviewableFileEditSkill(plan.SkillId)
+            && !IsPreviewOnlyFileEditPlan(plan)
+            && RequiresConfirmation(plan, registry);
+    }
+
     private static bool RequiresConfirmation(SkillPlan plan, ISkillRegistry registry)
     {
+        if (plan.IsConfirmedByUser || IsPreviewOnlyFileEditPlan(plan))
+        {
+            return false;
+        }
+
         if (plan.RequiresConfirmation)
         {
             return true;
@@ -124,6 +199,19 @@ public sealed class SkillFirstCommandRuntimeService : ICommandRuntimeService
 
         return registry.TryGet(plan.SkillId, out var manifest)
             && manifest?.RiskLevel == SkillRiskLevel.High;
+    }
+
+    private static bool IsPreviewableFileEditSkill(string skillId)
+    {
+        return skillId.Equals("file.patch", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("file.replace_range", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsPreviewOnlyFileEditPlan(SkillPlan plan)
+    {
+        return IsPreviewableFileEditSkill(plan.SkillId)
+            && plan.Arguments.TryGetValue("previewOnly", out var previewOnly)
+            && previewOnly.ValueKind == JsonValueKind.True;
     }
 
     private static bool IsActionConfirmationRequired(SkillResult result)

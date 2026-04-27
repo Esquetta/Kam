@@ -11,7 +11,8 @@ public interface ISkillConfirmationService
     SkillConfirmationRequest Queue(
         string userCommand,
         SkillPlan plan,
-        string? reason = null);
+        string? reason = null,
+        string? preview = null);
 
     Task<SkillResult> ApproveAsync(Guid requestId, CancellationToken cancellationToken = default);
 

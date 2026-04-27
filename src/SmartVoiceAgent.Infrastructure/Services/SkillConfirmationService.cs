@@ -35,7 +35,8 @@ public sealed class SkillConfirmationService : ISkillConfirmationService
     public SkillConfirmationRequest Queue(
         string userCommand,
         SkillPlan plan,
-        string? reason = null)
+        string? reason = null,
+        string? preview = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
 
@@ -49,7 +50,8 @@ public sealed class SkillConfirmationService : ISkillConfirmationService
                 ? reason
                 : string.IsNullOrWhiteSpace(plan.Reasoning)
                 ? "This skill requires confirmation before execution."
-                : plan.Reasoning
+                : plan.Reasoning,
+            Preview = preview ?? string.Empty
         };
 
         lock (_gate)

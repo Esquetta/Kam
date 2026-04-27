@@ -59,6 +59,22 @@ public class SkillConfirmationServiceTests
     }
 
     [Fact]
+    public void Queue_WithPreviewStoresPreviewText()
+    {
+        var pipeline = new RecordingSkillExecutionPipeline(_ => SkillResult.Succeeded("Patched."));
+        var service = CreateService(pipeline);
+        var plan = SkillPlan.FromObject("file.patch", new { filePath = "C:\\temp\\notes.txt" });
+
+        var request = service.Queue(
+            "patch notes",
+            plan,
+            "Review the diff before applying.",
+            "Diff Preview:\n-old\n+new");
+
+        request.Preview.Should().Be("Diff Preview:\n-old\n+new");
+    }
+
+    [Fact]
     public void Reject_RemovesPendingRequestWithoutExecutingPlan()
     {
         var pipeline = new RecordingSkillExecutionPipeline(_ => SkillResult.Succeeded("Should not run."));

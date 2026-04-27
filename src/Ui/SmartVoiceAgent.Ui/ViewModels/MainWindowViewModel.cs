@@ -888,6 +888,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
             SkillId = request.SkillId;
             UserCommand = request.UserCommand;
             Reason = request.Reason;
+            Preview = request.Preview;
+            HasPreview = !string.IsNullOrWhiteSpace(request.Preview);
             CreatedAtText = request.CreatedAt.ToLocalTime().ToString("HH:mm:ss");
             ApproveCommand = ReactiveCommand.CreateFromTask(() => approve(this));
             RejectCommand = ReactiveCommand.Create(() => reject(this));
@@ -900,6 +902,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public string UserCommand { get; }
 
         public string Reason { get; }
+
+        public string Preview { get; }
+
+        public bool HasPreview { get; }
 
         public string CreatedAtText { get; }
 

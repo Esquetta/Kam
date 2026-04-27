@@ -12,5 +12,7 @@ public sealed class SkillConfirmationRequest
 
     public string Reason { get; init; } = string.Empty;
 
+    public string Preview { get; init; } = string.Empty;
+
     public string SkillId => Plan.SkillId;
 }

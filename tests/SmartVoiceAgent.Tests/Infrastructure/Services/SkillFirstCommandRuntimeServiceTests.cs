@@ -110,6 +110,128 @@ public class SkillFirstCommandRuntimeServiceTests
         confirmation.QueueCount.Should().Be(1);
     }
 
+    [Theory]
+    [InlineData("file.patch")]
+    [InlineData("file.replace_range")]
+    public async Task ExecuteAsync_HighRiskFileEditSkill_RunsPreviewAndQueuesConfirmationWithPreview(string skillId)
+    {
+        var plan = SkillPlan.FromObject(
+            skillId,
+            new
+            {
+                filePath = "C:\\temp\\notes.txt",
+                oldText = "old",
+                newText = "new"
+            });
+        var planner = new StubSkillPlannerService(SkillPlanParseResult.Success(plan));
+        var pipeline = new RecordingSkillExecutionPipeline(previewPlan =>
+        {
+            previewPlan.Arguments["previewOnly"].GetBoolean().Should().BeTrue();
+            return SkillResult.Succeeded("Diff Preview:\n-old\n+new");
+        });
+        var confirmation = new RecordingSkillConfirmationService();
+        var registry = new StubSkillRegistry(
+            new KamSkillManifest
+            {
+                Id = skillId,
+                DisplayName = "Edit File",
+                Enabled = true,
+                RiskLevel = SkillRiskLevel.High
+            });
+        var runtime = CreateRuntime(planner, pipeline, confirmation, registry);
+
+        var result = await runtime.ExecuteAsync("patch notes");
+
+        result.Success.Should().BeFalse();
+        result.RequiresConfirmation.Should().BeTrue();
+        result.ConfirmationId.Should().Be(confirmation.LastRequest?.Id);
+        result.SkillId.Should().Be(skillId);
+        result.ErrorCode.Should().Be("confirmation_required");
+        pipeline.CallCount.Should().Be(1);
+        pipeline.LastPlan.Should().NotBeSameAs(plan);
+        pipeline.LastPlan!.Arguments["previewOnly"].GetBoolean().Should().BeTrue();
+        confirmation.QueueCount.Should().Be(1);
+        confirmation.LastRequest.Should().NotBeNull();
+        confirmation.LastRequest!.Plan.Should().BeSameAs(plan);
+        confirmation.LastRequest.Preview.Should().Be("Diff Preview:\n-old\n+new");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_FilePatchPreviewFailure_ReturnsFailureWithoutQueueingConfirmation()
+    {
+        var plan = SkillPlan.FromObject(
+            "file.patch",
+            new
+            {
+                filePath = "C:\\temp\\notes.txt",
+                oldText = "missing",
+                newText = "new"
+            });
+        var planner = new StubSkillPlannerService(SkillPlanParseResult.Success(plan));
+        var pipeline = new RecordingSkillExecutionPipeline(_ => SkillResult.Failed(
+            "oldText was not found.",
+            SkillExecutionStatus.ValidationFailed,
+            "old_text_not_found"));
+        var confirmation = new RecordingSkillConfirmationService();
+        var registry = new StubSkillRegistry(
+            new KamSkillManifest
+            {
+                Id = "file.patch",
+                DisplayName = "Patch File",
+                Enabled = true,
+                RiskLevel = SkillRiskLevel.High
+            });
+        var runtime = CreateRuntime(planner, pipeline, confirmation, registry);
+
+        var result = await runtime.ExecuteAsync("patch notes");
+
+        result.Success.Should().BeFalse();
+        result.RequiresConfirmation.Should().BeFalse();
+        result.ConfirmationId.Should().BeNull();
+        result.SkillId.Should().Be("file.patch");
+        result.Message.Should().Be("oldText was not found.");
+        result.ErrorCode.Should().Be("old_text_not_found");
+        result.Status.Should().Be(SkillExecutionStatus.ValidationFailed);
+        pipeline.CallCount.Should().Be(1);
+        confirmation.QueueCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_FilePatchPreviewOnly_RunsPipelineWithoutConfirmation()
+    {
+        var plan = SkillPlan.FromObject(
+            "file.patch",
+            new
+            {
+                filePath = "C:\\temp\\notes.txt",
+                oldText = "old",
+                newText = "new",
+                previewOnly = true
+            });
+        var planner = new StubSkillPlannerService(SkillPlanParseResult.Success(plan));
+        var pipeline = new RecordingSkillExecutionPipeline(
+            _ => SkillResult.Succeeded("Diff Preview:\n-old\n+new"));
+        var confirmation = new RecordingSkillConfirmationService();
+        var registry = new StubSkillRegistry(
+            new KamSkillManifest
+            {
+                Id = "file.patch",
+                DisplayName = "Patch File",
+                Enabled = true,
+                RiskLevel = SkillRiskLevel.High
+            });
+        var runtime = CreateRuntime(planner, pipeline, confirmation, registry);
+
+        var result = await runtime.ExecuteAsync("preview patch notes");
+
+        result.Success.Should().BeTrue();
+        result.RequiresConfirmation.Should().BeFalse();
+        result.Message.Should().Be("Diff Preview:\n-old\n+new");
+        pipeline.CallCount.Should().Be(1);
+        pipeline.LastPlan.Should().BeSameAs(plan);
+        confirmation.QueueCount.Should().Be(0);
+    }
+
     [Fact]
     public async Task ExecuteAsync_ActionConfirmationRequiredResult_QueuesOriginalPlan()
     {
@@ -208,7 +330,8 @@ public class SkillFirstCommandRuntimeServiceTests
         public SkillConfirmationRequest Queue(
             string userCommand,
             SkillPlan plan,
-            string? reason = null)
+            string? reason = null,
+            string? preview = null)
         {
             QueueCount++;
             LastRequest = new SkillConfirmationRequest
@@ -217,7 +340,8 @@ public class SkillFirstCommandRuntimeServiceTests
                 UserCommand = userCommand,
                 Plan = plan,
                 CreatedAt = DateTimeOffset.UtcNow,
-                Reason = reason ?? string.Empty
+                Reason = reason ?? string.Empty,
+                Preview = preview ?? string.Empty
             };
             PendingChanged?.Invoke(this, EventArgs.Empty);
             return LastRequest;
