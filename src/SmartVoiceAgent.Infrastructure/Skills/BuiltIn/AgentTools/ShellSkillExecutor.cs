@@ -71,16 +71,17 @@ public sealed class ShellSkillExecutor : ISkillExecutor
             return policyFailure;
         }
 
-        var workingDirectory = SkillPlanArgumentReader.GetString(
+        var workingDirectoryArgument = SkillPlanArgumentReader.GetString(
             plan,
             "workingDirectory",
             Environment.CurrentDirectory);
-        if (!Directory.Exists(workingDirectory))
+        var workingDirectoryFailure = ValidateWorkingDirectory(
+            workingDirectoryArgument,
+            runtimeOptions,
+            out var workingDirectory);
+        if (workingDirectoryFailure is not null)
         {
-            return SkillResult.Failed(
-                $"Working directory '{workingDirectory}' does not exist.",
-                SkillExecutionStatus.ValidationFailed,
-                "working_directory_not_found");
+            return workingDirectoryFailure;
         }
 
         var timeoutMilliseconds = Math.Clamp(
@@ -98,6 +99,7 @@ public sealed class ShellSkillExecutor : ISkillExecutor
             EnableRaisingEvents = false
         };
 
+        var stopwatch = Stopwatch.StartNew();
         try
         {
             if (!process.Start())
@@ -118,27 +120,61 @@ public sealed class ShellSkillExecutor : ISkillExecutor
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
                 TryKillProcess(process);
-                return SkillResult.Failed(
+                var timeoutData = CreateResult(
+                    command,
+                    workingDirectory,
+                    exitCode: null,
+                    await ReadCompletedOrEmptyAsync(stdoutTask),
+                    await ReadCompletedOrEmptyAsync(stderrTask),
+                    timedOut: true,
+                    cancelled: false,
+                    maxOutputLength,
+                    stopwatch.ElapsedMilliseconds);
+
+                return Failed(
                     $"Shell command timed out after {timeoutMilliseconds} ms.",
                     SkillExecutionStatus.TimedOut,
-                    "timeout");
+                    "timeout",
+                    timeoutData);
             }
 
             var stdout = await stdoutTask;
             var stderr = await stderrTask;
-            var message = FormatResult(process.ExitCode, stdout, stderr, maxOutputLength);
+            var data = CreateResult(
+                command,
+                workingDirectory,
+                process.ExitCode,
+                stdout,
+                stderr,
+                timedOut: false,
+                cancelled: false,
+                maxOutputLength,
+                stopwatch.ElapsedMilliseconds);
+            var message = FormatResult(data);
 
             return process.ExitCode == 0
-                ? SkillResult.Succeeded(message)
-                : SkillResult.Failed(message, SkillExecutionStatus.Failed, "shell_exit_code");
+                ? SkillResult.Succeeded(message, data) with { DurationMilliseconds = data.DurationMilliseconds }
+                : Failed(message, SkillExecutionStatus.Failed, "shell_exit_code", data);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             TryKillProcess(process);
-            return SkillResult.Failed(
+            var cancelledData = CreateResult(
+                command,
+                workingDirectory,
+                exitCode: null,
+                string.Empty,
+                string.Empty,
+                timedOut: false,
+                cancelled: true,
+                maxOutputLength,
+                stopwatch.ElapsedMilliseconds);
+
+            return Failed(
                 "Shell command was cancelled.",
                 SkillExecutionStatus.Cancelled,
-                "cancelled");
+                "cancelled",
+                cancelledData);
         }
         catch (Exception ex)
         {
@@ -152,12 +188,9 @@ public sealed class ShellSkillExecutor : ISkillExecutor
     private static ProcessStartInfo CreateStartInfo(string command, string workingDirectory)
     {
         var isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-        return new ProcessStartInfo
+        var startInfo = new ProcessStartInfo
         {
             FileName = isWindows ? "powershell.exe" : "/bin/sh",
-            Arguments = isWindows
-                ? $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command {QuotePowerShell(command)}"
-                : $"-c {QuotePosix(command)}",
             WorkingDirectory = workingDirectory,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -166,6 +199,23 @@ public sealed class ShellSkillExecutor : ISkillExecutor
             StandardOutputEncoding = Encoding.UTF8,
             StandardErrorEncoding = Encoding.UTF8
         };
+
+        if (isWindows)
+        {
+            startInfo.ArgumentList.Add("-NoProfile");
+            startInfo.ArgumentList.Add("-NonInteractive");
+            startInfo.ArgumentList.Add("-ExecutionPolicy");
+            startInfo.ArgumentList.Add("Bypass");
+            startInfo.ArgumentList.Add("-Command");
+            startInfo.ArgumentList.Add(command);
+        }
+        else
+        {
+            startInfo.ArgumentList.Add("-c");
+            startInfo.ArgumentList.Add(command);
+        }
+
+        return startInfo;
     }
 
     private IReadOnlyDictionary<string, string> GetRuntimeOptions(string skillId)
@@ -198,6 +248,52 @@ public sealed class ShellSkillExecutor : ISkillExecutor
         }
 
         return null;
+    }
+
+    private static SkillResult? ValidateWorkingDirectory(
+        string workingDirectory,
+        IReadOnlyDictionary<string, string> runtimeOptions,
+        out string resolvedWorkingDirectory)
+    {
+        try
+        {
+            resolvedWorkingDirectory = Path.GetFullPath(
+                string.IsNullOrWhiteSpace(workingDirectory)
+                    ? Environment.CurrentDirectory
+                    : workingDirectory);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            resolvedWorkingDirectory = string.Empty;
+            return SkillResult.Failed(
+                $"Working directory path is invalid: {ex.Message}",
+                SkillExecutionStatus.ValidationFailed,
+                "working_directory_invalid");
+        }
+
+        if (!Directory.Exists(resolvedWorkingDirectory))
+        {
+            return SkillResult.Failed(
+                $"Working directory '{resolvedWorkingDirectory}' does not exist.",
+                SkillExecutionStatus.ValidationFailed,
+                "working_directory_not_found");
+        }
+
+        var allowedDirectories = GetRuntimeList(
+            runtimeOptions,
+            SkillRuntimePolicyOptions.ShellAllowedWorkingDirectories);
+        if (allowedDirectories.Count == 0)
+        {
+            return null;
+        }
+
+        var normalizedWorkingDirectory = resolvedWorkingDirectory;
+        return allowedDirectories.Any(root => IsSameOrChildDirectory(normalizedWorkingDirectory, root))
+            ? null
+            : SkillResult.Failed(
+                "Shell working directory is not in the configured allowed directory list.",
+                SkillExecutionStatus.PermissionDenied,
+                "shell_working_directory_not_allowed");
     }
 
     private static bool IsBlockedCommand(
@@ -241,24 +337,54 @@ public sealed class ShellSkillExecutor : ISkillExecutor
         return Regex.Replace(command.Trim().ToLowerInvariant(), @"\s+", " ");
     }
 
-    private static string FormatResult(
-        int exitCode,
+    private static ShellCommandResult CreateResult(
+        string command,
+        string workingDirectory,
+        int? exitCode,
         string stdout,
         string stderr,
-        int maxOutputLength)
+        bool timedOut,
+        bool cancelled,
+        int maxOutputLength,
+        long durationMilliseconds)
     {
-        var output = NormalizeOutput(stdout, stderr);
-        var truncated = output.Length > maxOutputLength;
-        if (truncated)
+        var (limitedStdout, limitedStderr, truncated) = LimitOutput(stdout, stderr, maxOutputLength);
+
+        return new ShellCommandResult
         {
-            output = output[..maxOutputLength];
+            Command = command,
+            WorkingDirectory = workingDirectory,
+            ExitCode = exitCode,
+            StdOut = limitedStdout,
+            StdErr = limitedStderr,
+            TimedOut = timedOut,
+            Cancelled = cancelled,
+            Truncated = truncated,
+            MaxOutputLength = maxOutputLength,
+            DurationMilliseconds = durationMilliseconds
+        };
+    }
+
+    private static string FormatResult(ShellCommandResult result)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine($"Exit Code: {result.ExitCode?.ToString() ?? "(not available)"}");
+        builder.AppendLine($"Working Directory: {result.WorkingDirectory}");
+        builder.AppendLine("Stdout:");
+        builder.AppendLine(string.IsNullOrWhiteSpace(result.StdOut) ? "(no stdout)" : result.StdOut.TrimEnd());
+        builder.AppendLine("Stderr:");
+        builder.AppendLine(string.IsNullOrWhiteSpace(result.StdErr) ? "(no stderr)" : result.StdErr.TrimEnd());
+        if (result.TimedOut)
+        {
+            builder.AppendLine("[timed out]");
         }
 
-        var builder = new StringBuilder();
-        builder.AppendLine($"Exit Code: {exitCode}");
-        builder.AppendLine("Output:");
-        builder.AppendLine(string.IsNullOrWhiteSpace(output) ? "(no output)" : output.TrimEnd());
-        if (truncated)
+        if (result.Cancelled)
+        {
+            builder.AppendLine("[cancelled]");
+        }
+
+        if (result.Truncated)
         {
             builder.AppendLine("[truncated]");
         }
@@ -266,29 +392,80 @@ public sealed class ShellSkillExecutor : ISkillExecutor
         return builder.ToString();
     }
 
-    private static string NormalizeOutput(string stdout, string stderr)
+    private static (string Stdout, string Stderr, bool Truncated) LimitOutput(
+        string stdout,
+        string stderr,
+        int maxOutputLength)
     {
-        if (string.IsNullOrWhiteSpace(stderr))
+        stdout ??= string.Empty;
+        stderr ??= string.Empty;
+
+        if (stdout.Length + stderr.Length <= maxOutputLength)
         {
-            return stdout;
+            return (stdout, stderr, false);
         }
 
-        if (string.IsNullOrWhiteSpace(stdout))
+        var remaining = Math.Max(0, maxOutputLength);
+        var limitedStdout = stdout.Length <= remaining
+            ? stdout
+            : stdout[..remaining];
+        remaining -= limitedStdout.Length;
+
+        var limitedStderr = remaining > 0
+            ? stderr[..Math.Min(stderr.Length, remaining)]
+            : string.Empty;
+
+        return (limitedStdout, limitedStderr, true);
+    }
+
+    private static SkillResult Failed(
+        string message,
+        SkillExecutionStatus status,
+        string errorCode,
+        ShellCommandResult data)
+    {
+        return new SkillResult(false, string.Empty, message, data)
         {
-            return stderr;
+            Status = status,
+            ErrorCode = errorCode,
+            DurationMilliseconds = data.DurationMilliseconds
+        };
+    }
+
+    private static async Task<string> ReadCompletedOrEmptyAsync(Task<string> outputTask)
+    {
+        try
+        {
+            return await outputTask.WaitAsync(TimeSpan.FromMilliseconds(250));
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    private static bool IsSameOrChildDirectory(string directory, string root)
+    {
+        if (string.IsNullOrWhiteSpace(root))
+        {
+            return false;
         }
 
-        return $"{stdout.TrimEnd()}{Environment.NewLine}{stderr.TrimEnd()}";
-    }
-
-    private static string QuotePowerShell(string value)
-    {
-        return $"'{value.Replace("'", "''")}'";
-    }
-
-    private static string QuotePosix(string value)
-    {
-        return $"'{value.Replace("'", "'\"'\"'")}'";
+        try
+        {
+            var normalizedDirectory = Path.GetFullPath(directory);
+            var normalizedRoot = Path.GetFullPath(root);
+            var relative = Path.GetRelativePath(normalizedRoot, normalizedDirectory);
+            return relative.Equals(".", StringComparison.Ordinal)
+                || (!relative.Equals("..", StringComparison.Ordinal)
+                    && !relative.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+                    && !relative.StartsWith($"..{Path.AltDirectorySeparatorChar}", StringComparison.Ordinal)
+                    && !Path.IsPathRooted(relative));
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static void TryKillProcess(Process process)
