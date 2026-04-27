@@ -16,6 +16,7 @@ using SmartVoiceAgent.Ui.ViewModels.PageModels;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,6 +40,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private ISkillTestService? _skillTestService;
         private ISkillExecutionHistoryService? _skillExecutionHistoryService;
         private ISkillExecutionPipeline? _skillExecutionPipeline;
+
+        private const int MaxSkillExecutionHistoryScanCount = 50;
+        private const int MaxSkillExecutionHistoryDisplayCount = 8;
+        private const string SkillExecutionHistoryAllStatusFilter = "All";
 
         private static readonly JsonSerializerOptions SkillPlanJsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -139,6 +144,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public ICommand NavigateToSettingsCommand { get; }
         public ICommand ToggleThemeCommand { get; }
         public ICommand ClearSkillExecutionHistoryCommand { get; }
+        public ICommand ClearSkillExecutionHistoryFiltersCommand { get; }
 
         /* ========================= */
         /* LOGGING */
@@ -229,6 +235,105 @@ namespace SmartVoiceAgent.Ui.ViewModels
             set => this.RaiseAndSetIfChanged(ref _skillExecutionHistory, value);
         }
 
+        public IReadOnlyList<string> SkillExecutionHistoryStatusFilters { get; } =
+        [
+            SkillExecutionHistoryAllStatusFilter,
+            "Succeeded",
+            "Failed",
+            "Timed Out",
+            "Permission Denied",
+            "Validation Failed",
+            "Review Required"
+        ];
+
+        private string _skillExecutionHistoryFilterText = string.Empty;
+        public string SkillExecutionHistoryFilterText
+        {
+            get => _skillExecutionHistoryFilterText;
+            set
+            {
+                var normalizedValue = value ?? string.Empty;
+                if (_skillExecutionHistoryFilterText == normalizedValue)
+                {
+                    return;
+                }
+
+                this.RaiseAndSetIfChanged(ref _skillExecutionHistoryFilterText, normalizedValue);
+                RaiseSkillExecutionHistoryFilterStateChanged();
+                RefreshSkillExecutionHistory();
+            }
+        }
+
+        private string _skillExecutionHistoryStatusFilter = SkillExecutionHistoryAllStatusFilter;
+        public string SkillExecutionHistoryStatusFilter
+        {
+            get => _skillExecutionHistoryStatusFilter;
+            set
+            {
+                var normalizedValue = string.IsNullOrWhiteSpace(value)
+                    ? SkillExecutionHistoryAllStatusFilter
+                    : value;
+                if (_skillExecutionHistoryStatusFilter == normalizedValue)
+                {
+                    return;
+                }
+
+                this.RaiseAndSetIfChanged(ref _skillExecutionHistoryStatusFilter, normalizedValue);
+                RaiseSkillExecutionHistoryFilterStateChanged();
+                RefreshSkillExecutionHistory();
+            }
+        }
+
+        private int _skillExecutionHistoryTotalCount;
+        public int SkillExecutionHistoryTotalCount
+        {
+            get => _skillExecutionHistoryTotalCount;
+            private set => this.RaiseAndSetIfChanged(ref _skillExecutionHistoryTotalCount, value);
+        }
+
+        private int _skillExecutionHistoryMatchCount;
+        public int SkillExecutionHistoryMatchCount
+        {
+            get => _skillExecutionHistoryMatchCount;
+            private set => this.RaiseAndSetIfChanged(ref _skillExecutionHistoryMatchCount, value);
+        }
+
+        private int _skillExecutionHistoryVisibleCount;
+        public int SkillExecutionHistoryVisibleCount
+        {
+            get => _skillExecutionHistoryVisibleCount;
+            private set => this.RaiseAndSetIfChanged(ref _skillExecutionHistoryVisibleCount, value);
+        }
+
+        public bool HasSkillExecutionHistoryFilter =>
+            !string.IsNullOrWhiteSpace(SkillExecutionHistoryFilterText)
+            || !SkillExecutionHistoryStatusFilter.Equals(
+                SkillExecutionHistoryAllStatusFilter,
+                StringComparison.OrdinalIgnoreCase);
+
+        public bool HasSkillExecutionHistoryMatches => SkillExecutionHistoryVisibleCount > 0;
+
+        public bool HasNoSkillExecutionHistoryMatches =>
+            HasSkillExecutionHistory && SkillExecutionHistoryVisibleCount == 0;
+
+        public string SkillExecutionHistorySummaryText
+        {
+            get
+            {
+                if (SkillExecutionHistoryTotalCount == 0)
+                {
+                    return "No executions";
+                }
+
+                if (HasSkillExecutionHistoryFilter)
+                {
+                    return $"{SkillExecutionHistoryVisibleCount}/{SkillExecutionHistoryMatchCount} matches in last {SkillExecutionHistoryTotalCount}";
+                }
+
+                return $"{SkillExecutionHistoryVisibleCount}/{SkillExecutionHistoryTotalCount} recent executions";
+            }
+        }
+
         private bool _hasSkillExecutionHistory;
         public bool HasSkillExecutionHistory
         {
@@ -300,6 +405,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             NavigateToSettingsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Settings));
             ToggleThemeCommand = ReactiveCommand.Create(ToggleTheme);
             ClearSkillExecutionHistoryCommand = ReactiveCommand.Create(ClearSkillExecutionHistory);
+            ClearSkillExecutionHistoryFiltersCommand = ReactiveCommand.Create(ClearSkillExecutionHistoryFilters);
             SubmitCommand = ReactiveCommand.Create(SubmitCommandInput);
             ToggleVoiceCommand = ReactiveCommand.Create(ToggleVoiceEnabled);
             StartVoiceRecordingCommand = ReactiveCommand.CreateFromTask(StartVoiceRecordingAsync);
@@ -702,15 +808,28 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             if (!Dispatcher.UIThread.CheckAccess())
             {
-                Dispatcher.UIThread.Post(RefreshSkillExecutionHistory);
-                return;
+                if (global::Avalonia.Application.Current is not null)
+                {
+                    Dispatcher.UIThread.Post(RefreshSkillExecutionHistory);
+                    return;
+                }
             }
 
             SkillExecutionHistory.Clear();
 
             if (_skillExecutionHistoryService is not null)
             {
-                foreach (var entry in _skillExecutionHistoryService.GetRecent(8))
+                var entries = _skillExecutionHistoryService
+                    .GetRecent(MaxSkillExecutionHistoryScanCount)
+                    .ToList();
+                var matches = entries
+                    .Where(MatchesSkillExecutionHistoryFilters)
+                    .ToList();
+
+                SkillExecutionHistoryTotalCount = entries.Count;
+                SkillExecutionHistoryMatchCount = matches.Count;
+
+                foreach (var entry in matches.Take(MaxSkillExecutionHistoryDisplayCount))
                 {
                     SkillExecutionHistory.Add(new SkillExecutionHistoryItemViewModel(
                         entry,
@@ -718,8 +837,15 @@ namespace SmartVoiceAgent.Ui.ViewModels
                         RerunSkillExecution));
                 }
             }
+            else
+            {
+                SkillExecutionHistoryTotalCount = 0;
+                SkillExecutionHistoryMatchCount = 0;
+            }
 
-            HasSkillExecutionHistory = SkillExecutionHistory.Count > 0;
+            SkillExecutionHistoryVisibleCount = SkillExecutionHistory.Count;
+            HasSkillExecutionHistory = SkillExecutionHistoryTotalCount > 0;
+            RaiseSkillExecutionHistoryFilterStateChanged();
         }
 
         private void ClearSkillExecutionHistory()
@@ -731,6 +857,65 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             _skillExecutionHistoryService.Clear();
             AddLog("SKILL_HISTORY_CLEARED");
+        }
+
+        private void ClearSkillExecutionHistoryFilters()
+        {
+            SkillExecutionHistoryFilterText = string.Empty;
+            SkillExecutionHistoryStatusFilter = SkillExecutionHistoryAllStatusFilter;
+            RefreshSkillExecutionHistory();
+        }
+
+        private bool MatchesSkillExecutionHistoryFilters(SkillExecutionHistoryEntry entry)
+        {
+            return MatchesSkillExecutionHistoryStatusFilter(entry)
+                && MatchesSkillExecutionHistoryTextFilter(entry);
+        }
+
+        private bool MatchesSkillExecutionHistoryStatusFilter(SkillExecutionHistoryEntry entry)
+        {
+            if (SkillExecutionHistoryStatusFilter.Equals(
+                    SkillExecutionHistoryAllStatusFilter,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return SkillExecutionHistoryItemViewModel.FormatStatusText(entry.Status)
+                .Equals(SkillExecutionHistoryStatusFilter, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool MatchesSkillExecutionHistoryTextFilter(SkillExecutionHistoryEntry entry)
+        {
+            var query = SkillExecutionHistoryFilterText.Trim();
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return true;
+            }
+
+            return ContainsIgnoreCase(entry.SkillId, query)
+                || ContainsIgnoreCase(SkillExecutionHistoryItemViewModel.FormatStatusText(entry.Status), query)
+                || ContainsIgnoreCase(entry.ResultSummary, query)
+                || ContainsIgnoreCase(entry.ArgumentsSummary, query)
+                || ContainsIgnoreCase(entry.ErrorCode, query)
+                || ContainsIgnoreCase(entry.Command, query)
+                || ContainsIgnoreCase(entry.WorkingDirectory, query)
+                || ContainsIgnoreCase(entry.StdOut, query)
+                || ContainsIgnoreCase(entry.StdErr, query);
+        }
+
+        private void RaiseSkillExecutionHistoryFilterStateChanged()
+        {
+            this.RaisePropertyChanged(nameof(HasSkillExecutionHistoryFilter));
+            this.RaisePropertyChanged(nameof(HasSkillExecutionHistoryMatches));
+            this.RaisePropertyChanged(nameof(HasNoSkillExecutionHistoryMatches));
+            this.RaisePropertyChanged(nameof(SkillExecutionHistorySummaryText));
+        }
+
+        private static bool ContainsIgnoreCase(string value, string query)
+        {
+            return !string.IsNullOrWhiteSpace(value)
+                && value.Contains(query, StringComparison.OrdinalIgnoreCase);
         }
 
         private void CopySkillExecutionText(string label, string text)
@@ -1090,7 +1275,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             Action<SkillExecutionHistoryItemViewModel>? rerun = null)
         {
             SkillId = entry.SkillId;
-            StatusText = FormatStatus(entry.Status);
+            StatusText = FormatStatusText(entry.Status);
             TimestampText = entry.Timestamp.ToLocalTime().ToString("HH:mm:ss");
             DurationText = entry.DurationMilliseconds <= 0
                 ? "<1 ms"
@@ -1173,7 +1358,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public ICommand RerunCommand { get; }
 
-        private static string FormatStatus(SkillExecutionStatus status)
+        public static string FormatStatusText(SkillExecutionStatus status)
         {
             return status switch
             {
