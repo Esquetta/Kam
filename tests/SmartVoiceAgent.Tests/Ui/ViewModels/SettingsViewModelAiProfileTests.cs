@@ -2,6 +2,7 @@ using FluentAssertions;
 using SmartVoiceAgent.Core.Models.AI;
 using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.ViewModels.PageModels;
+using System.Reactive.Linq;
 
 namespace SmartVoiceAgent.Tests.Ui.ViewModels;
 
@@ -29,38 +30,34 @@ public class SettingsViewModelAiProfileTests : IDisposable
     }
 
     [Fact]
-    public void TestAiConnectionCommand_InvalidEndpoint_ShowsValidationError()
+    public async Task TestAiConnectionCommand_InvalidEndpoint_ShowsValidationError()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);
-        using var viewModel = new SettingsViewModel(settingsService)
-        {
-            AiEndpoint = "not-a-url",
-            AiApiKey = "sk-test",
-            AiModelId = "openai/gpt-4.1-mini"
-        };
+        using var viewModel = CreateViewModel(settingsService);
+        viewModel.AiEndpoint = "not-a-url";
+        viewModel.AiApiKey = "sk-test";
+        viewModel.AiModelId = "openai/gpt-4.1-mini";
 
-        viewModel.TestAiConnectionCommand.Execute().Subscribe();
+        await viewModel.TestAiConnectionCommand.Execute().FirstAsync();
 
         viewModel.IsAiProfileValid.Should().BeFalse();
-        viewModel.AiProfileStatus.Should().Contain("valid endpoint");
+        viewModel.AiProfileStatus.Should().Contain("Planner: A valid endpoint is required.");
     }
 
     [Fact]
-    public void TestAiConnectionCommand_OllamaWithoutApiKey_IsValid()
+    public async Task TestAiConnectionCommand_OllamaWithoutApiKey_IsValid()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);
-        using var viewModel = new SettingsViewModel(settingsService)
-        {
-            AiProvider = "Ollama",
-            AiEndpoint = "http://localhost:11434/v1",
-            AiApiKey = string.Empty,
-            AiModelId = "llama3.1"
-        };
+        using var viewModel = CreateViewModel(settingsService);
+        viewModel.AiProvider = "Ollama";
+        viewModel.AiEndpoint = "http://localhost:11434/v1";
+        viewModel.AiApiKey = string.Empty;
+        viewModel.AiModelId = "llama3.1";
 
-        viewModel.TestAiConnectionCommand.Execute().Subscribe();
+        await viewModel.TestAiConnectionCommand.Execute().FirstAsync();
 
         viewModel.IsAiProfileValid.Should().BeTrue();
-        viewModel.AiProfileStatus.Should().Contain("valid");
+        viewModel.AiProfileStatus.Should().Contain("Connection verified");
         settingsService.ModelProviderProfiles.Should().ContainSingle(p =>
             p.Provider == ModelProviderType.Ollama
             && p.Enabled
@@ -68,19 +65,18 @@ public class SettingsViewModelAiProfileTests : IDisposable
     }
 
     [Fact]
-    public void ChatProfileSettings_SaveSeparateActiveChatProfile()
+    public async Task ChatProfileSettings_SaveSeparateActiveChatProfile()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);
-        using var viewModel = new SettingsViewModel(settingsService)
-        {
-            ChatProvider = "OpenAICompatible",
-            ChatEndpoint = "https://api.example.com/v1",
-            ChatApiKey = "sk-chat",
-            ChatModelId = "custom/chat-model",
-            ActiveChatProfileId = "custom-chat"
-        };
+        using var viewModel = CreateViewModel(settingsService);
+        viewModel.AiApiKey = "sk-planner";
+        viewModel.ChatProvider = "OpenAICompatible";
+        viewModel.ChatEndpoint = "https://api.example.com/v1";
+        viewModel.ChatApiKey = "sk-chat";
+        viewModel.ChatModelId = "custom/chat-model";
+        viewModel.ActiveChatProfileId = "custom-chat";
 
-        viewModel.TestAiConnectionCommand.Execute().Subscribe();
+        await viewModel.TestAiConnectionCommand.Execute().FirstAsync();
 
         settingsService.ActiveChatProfileId.Should().Be("custom-chat");
         settingsService.ModelProviderProfiles.Should().ContainSingle(p =>
@@ -90,6 +86,43 @@ public class SettingsViewModelAiProfileTests : IDisposable
             && p.Enabled);
         settingsService.ModelProviderProfiles.Should().ContainSingle(p =>
             p.Roles.Contains(ModelProviderRole.Planner));
+    }
+
+    [Fact]
+    public async Task TestAiConnectionCommand_OpenAiProvider_UsesLiveConnectionTestAndShowsSuccess()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var connectionTestService = new StubModelConnectionTestService(ModelConnectionTestResult.Passed(42));
+        using var viewModel = CreateViewModel(settingsService, connectionTestService);
+        viewModel.AiProvider = "OpenAI";
+        viewModel.AiApiKey = "sk-planner";
+        viewModel.AiModelId = "gpt-4.1-mini";
+
+        await viewModel.TestAiConnectionCommand.Execute().FirstAsync();
+
+        viewModel.IsAiProfileValid.Should().BeTrue();
+        viewModel.AiProfileStatus.Should().Contain("Planner returned 42 live models");
+        connectionTestService.Requests.Should().ContainSingle(request =>
+            request.Provider == ModelProviderType.OpenAI
+            && request.ApiKey == "sk-planner"
+            && request.Endpoint == "https://api.openai.com/v1");
+    }
+
+    [Fact]
+    public async Task TestAiConnectionCommand_LiveConnectionFails_ShowsProviderFailure()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        using var viewModel = CreateViewModel(
+            settingsService,
+            new StubModelConnectionTestService(ModelConnectionTestResult.Failed("HTTP 401 Unauthorized")));
+        viewModel.AiProvider = "OpenAI";
+        viewModel.AiApiKey = "sk-invalid";
+        viewModel.AiModelId = "gpt-4.1-mini";
+
+        await viewModel.TestAiConnectionCommand.Execute().FirstAsync();
+
+        viewModel.IsAiProfileValid.Should().BeFalse();
+        viewModel.AiProfileStatus.Should().Be("Planner connection failed: HTTP 401 Unauthorized");
     }
 
     [Fact]
@@ -138,6 +171,16 @@ public class SettingsViewModelAiProfileTests : IDisposable
         viewModel.IsPlannerModelCatalogBacked.Should().BeTrue();
     }
 
+    private static SettingsViewModel CreateViewModel(
+        ISettingsService settingsService,
+        IModelConnectionTestService? connectionTestService = null)
+    {
+        return new SettingsViewModel(
+            settingsService,
+            new StubModelCatalogService([]),
+            connectionTestService ?? new StubModelConnectionTestService(ModelConnectionTestResult.Passed(12)));
+    }
+
     private sealed class StubModelCatalogService(IReadOnlyList<ModelCatalogEntry> models) : IModelCatalogService
     {
         public Task<IReadOnlyList<ModelCatalogEntry>> GetModelsAsync(
@@ -145,6 +188,19 @@ public class SettingsViewModelAiProfileTests : IDisposable
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(models);
+        }
+    }
+
+    private sealed class StubModelConnectionTestService(ModelConnectionTestResult result) : IModelConnectionTestService
+    {
+        public List<ModelProviderProfile> Requests { get; } = [];
+
+        public Task<ModelConnectionTestResult> TestAsync(
+            ModelProviderProfile profile,
+            CancellationToken cancellationToken = default)
+        {
+            Requests.Add(profile);
+            return Task.FromResult(result);
         }
     }
 

@@ -19,7 +19,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private readonly MainWindowViewModel? _mainViewModel;
         private readonly ISettingsService _settingsService;
         private readonly IModelCatalogService _modelCatalogService;
+        private readonly IModelConnectionTestService _modelConnectionTestService;
         private readonly bool _ownsModelCatalogService;
+        private readonly bool _ownsModelConnectionTestService;
         private readonly AudioDeviceService _audioDeviceService;
         private readonly VoiceTestService? _voiceTestService;
         private int _selectedLanguageIndex;
@@ -33,34 +35,45 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public ReactiveCommand<Unit, Unit> RefreshAiModelsCommand { get; }
         public ReactiveCommand<Unit, Unit> RefreshChatModelsCommand { get; }
 
-        public SettingsViewModel() : this(new JsonSettingsService(), null, null)
+        public SettingsViewModel() : this(new JsonSettingsService(), null, null, null)
         {
         }
 
-        public SettingsViewModel(ISettingsService settingsService) : this(settingsService, null, null)
+        public SettingsViewModel(ISettingsService settingsService) : this(settingsService, null, null, null)
         {
         }
 
         public SettingsViewModel(ISettingsService settingsService, IModelCatalogService modelCatalogService)
-            : this(settingsService, null, modelCatalogService)
+            : this(settingsService, null, modelCatalogService, null)
         {
         }
 
-        public SettingsViewModel(MainWindowViewModel mainViewModel) : this(new JsonSettingsService(), mainViewModel, null)
+        public SettingsViewModel(
+            ISettingsService settingsService,
+            IModelCatalogService modelCatalogService,
+            IModelConnectionTestService modelConnectionTestService)
+            : this(settingsService, null, modelCatalogService, modelConnectionTestService)
+        {
+        }
+
+        public SettingsViewModel(MainWindowViewModel mainViewModel) : this(new JsonSettingsService(), mainViewModel, null, null)
         {
         }
 
         private SettingsViewModel(
             ISettingsService settingsService,
             MainWindowViewModel? mainViewModel,
-            IModelCatalogService? modelCatalogService)
+            IModelCatalogService? modelCatalogService,
+            IModelConnectionTestService? modelConnectionTestService)
         {
             _mainViewModel = mainViewModel;
             Title = "SETTINGS";
             _selectedLanguageIndex = mainViewModel?.SelectedLanguageIndex ?? 0;
             _settingsService = settingsService;
             _modelCatalogService = modelCatalogService ?? CompositeModelCatalogService.CreateDefault();
+            _modelConnectionTestService = modelConnectionTestService ?? new ModelConnectionTestService();
             _ownsModelCatalogService = modelCatalogService is null;
+            _ownsModelConnectionTestService = modelConnectionTestService is null;
             _audioDeviceService = new AudioDeviceService();
             
             // Initialize voice test service with factory from DI if available
@@ -74,7 +87,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             StopMicTestCommand = ReactiveCommand.Create(StopMicTest);
             PlayTestRecordingCommand = ReactiveCommand.Create(PlayTestRecording);
             RefreshDevicesCommand = ReactiveCommand.Create(RefreshAudioDevices);
-            TestAiConnectionCommand = ReactiveCommand.Create(TestAiProfileSettings);
+            TestAiConnectionCommand = ReactiveCommand.CreateFromTask(TestAiProfileSettingsAsync);
             RefreshAiModelsCommand = ReactiveCommand.CreateFromTask(RefreshPlannerModelsAsync);
             RefreshChatModelsCommand = ReactiveCommand.CreateFromTask(RefreshChatModelsAsync);
             
@@ -114,6 +127,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private IReadOnlyList<ModelCatalogEntry> _chatModelCatalogEntries = CreateDefaultModelCatalogEntries("OpenRouter", "openai/gpt-4.1-mini");
         private bool _isRefreshingAiModels;
         private bool _isRefreshingChatModels;
+        private bool _isTestingAiConnection;
         private bool _isPlannerModelCatalogBacked = true;
         private bool _isChatModelCatalogBacked = true;
 
@@ -298,6 +312,20 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             private set => this.RaiseAndSetIfChanged(ref _isRefreshingChatModels, value);
         }
 
+        public bool IsTestingAiConnection
+        {
+            get => _isTestingAiConnection;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _isTestingAiConnection, value);
+                this.RaisePropertyChanged(nameof(AiConnectionTestButtonText));
+            }
+        }
+
+        public string AiConnectionTestButtonText => IsTestingAiConnection
+            ? "Testing..."
+            : "Test Connection";
+
         public string ActiveChatProfileId
         {
             get => _activeChatProfileId;
@@ -392,20 +420,51 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _settingsService.ActiveChatProfileId = chatProfile.Id;
         }
 
-        private void TestAiProfileSettings()
+        private async Task TestAiProfileSettingsAsync()
         {
             var profile = CreatePlannerProfile();
             var chatProfile = CreateChatProfile();
-            var validation = profile.Validate();
-            var chatValidation = chatProfile.Validate();
-            var errors = validation.Errors.Concat(chatValidation.Errors).ToArray();
+            var targets = CreateConnectionTestTargets(profile, chatProfile);
+            var validationErrors = targets
+                .SelectMany(target => ValidateProfileForConnectionTest(target.Label, target.Profile, target.Required))
+                .ToArray();
 
-            IsAiProfileValid = validation.IsValid && chatValidation.IsValid;
-            AiProfileStatus = IsAiProfileValid
-                ? "Profiles are valid. Restart Kam to apply runtime changes."
-                : string.Join(" ", errors);
+            if (validationErrors.Length > 0)
+            {
+                IsAiProfileValid = false;
+                AiProfileStatus = string.Join(" ", validationErrors);
+                SaveAiProfileSettings();
+                return;
+            }
 
-            SaveAiProfileSettings();
+            try
+            {
+                IsTestingAiConnection = true;
+                AiProfileStatus = "Testing provider connection...";
+                var results = new List<string>();
+
+                foreach (var target in targets.Where(target => target.Required || ShouldTestOptionalProfile(target.Profile)))
+                {
+                    var result = await _modelConnectionTestService.TestAsync(target.Profile).ConfigureAwait(true);
+                    if (!result.Success)
+                    {
+                        IsAiProfileValid = false;
+                        AiProfileStatus = $"{target.Label} connection failed: {result.Message}";
+                        SaveAiProfileSettings();
+                        return;
+                    }
+
+                    results.Add($"{target.Label} returned {result.LiveModelCount} live models");
+                }
+
+                IsAiProfileValid = true;
+                AiProfileStatus = $"Connection verified: {string.Join("; ", results)}. Restart Kam to apply runtime changes.";
+                SaveAiProfileSettings();
+            }
+            finally
+            {
+                IsTestingAiConnection = false;
+            }
         }
 
         public Task RefreshPlannerModelsAsync()
@@ -633,6 +692,49 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 or ModelProviderType.OpenRouter
                 or ModelProviderType.Ollama;
         }
+
+        private static IReadOnlyList<ConnectionTestTarget> CreateConnectionTestTargets(
+            ModelProviderProfile plannerProfile,
+            ModelProviderProfile chatProfile)
+        {
+            return
+            [
+                new ConnectionTestTarget("Planner", plannerProfile, Required: true),
+                new ConnectionTestTarget("Chat", chatProfile, Required: false)
+            ];
+        }
+
+        private static IEnumerable<string> ValidateProfileForConnectionTest(
+            string label,
+            ModelProviderProfile profile,
+            bool required)
+        {
+            if (!required && !ShouldTestOptionalProfile(profile))
+            {
+                yield break;
+            }
+
+            foreach (var error in profile.Validate().Errors)
+            {
+                yield return $"{label}: {error}";
+            }
+
+            if (profile.Provider != ModelProviderType.Ollama && string.IsNullOrWhiteSpace(profile.ApiKey))
+            {
+                yield return $"{label}: API key is required to test this provider.";
+            }
+        }
+
+        private static bool ShouldTestOptionalProfile(ModelProviderProfile profile)
+        {
+            return profile.Provider == ModelProviderType.Ollama
+                || !string.IsNullOrWhiteSpace(profile.ApiKey);
+        }
+
+        private sealed record ConnectionTestTarget(
+            string Label,
+            ModelProviderProfile Profile,
+            bool Required);
 
         private static string GetDefaultEndpoint(ModelProviderType provider)
         {
@@ -1418,6 +1520,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             if (_ownsModelCatalogService && _modelCatalogService is IDisposable disposableModelCatalogService)
             {
                 disposableModelCatalogService.Dispose();
+            }
+
+            if (_ownsModelConnectionTestService && _modelConnectionTestService is IDisposable disposableConnectionTestService)
+            {
+                disposableConnectionTestService.Dispose();
             }
         }
     }

@@ -235,13 +235,14 @@
                                 <Button Grid.Row="1"
                                         Grid.Column="1"
                                         Command="{Binding TestAiConnectionCommand}"
+                                        IsEnabled="{Binding !IsTestingAiConnection}"
                                         MinWidth="180"
                                         HorizontalAlignment="Stretch"
                                         VerticalAlignment="Stretch"
                                         Background="{DynamicResource CardBgHoverBrush}"
                                         Foreground="{DynamicResource TextSecondaryBrush}"
                                         Padding="16,9">
-                                    <TextBlock Text="Test Connection" FontSize="12" FontWeight="Medium"/>
+                                    <TextBlock Text="{Binding AiConnectionTestButtonText}" FontSize="12" FontWeight="Medium"/>
                                 </Button>
                                 <TextBlock Grid.Row="2"
                                            Grid.Column="0"
