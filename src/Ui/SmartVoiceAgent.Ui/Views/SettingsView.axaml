@@ -190,11 +190,28 @@
                             </StackPanel>
 
                             <StackPanel Grid.Row="0" Grid.Column="1" Spacing="6">
-                                <TextBlock Text="Model ID"
+                                <TextBlock Text="Model"
                                            FontSize="11"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
+                                <Grid ColumnDefinitions="*, Auto"
+                                      ColumnSpacing="8"
+                                      IsVisible="{Binding IsPlannerModelCatalogBacked}">
+                                    <ComboBox Grid.Column="0"
+                                              ItemsSource="{Binding AiModelOptions}"
+                                              SelectedItem="{Binding AiModelId, Mode=TwoWay}"
+                                              HorizontalAlignment="Stretch"/>
+                                    <Button Grid.Column="1"
+                                            Command="{Binding RefreshAiModelsCommand}"
+                                            IsEnabled="{Binding !IsRefreshingAiModels}"
+                                            Background="{DynamicResource CardBgHoverBrush}"
+                                            Foreground="{DynamicResource TextSecondaryBrush}"
+                                            Padding="12,8">
+                                        <TextBlock Text="Refresh" FontSize="12" FontWeight="Medium"/>
+                                    </Button>
+                                </Grid>
                                 <TextBox Text="{Binding AiModelId, Mode=TwoWay}"
-                                         PlaceholderText="openai/gpt-4.1-mini"/>
+                                         IsVisible="{Binding !IsPlannerModelCatalogBacked}"
+                                         PlaceholderText="custom/model-id"/>
                             </StackPanel>
 
                             <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Spacing="6">
@@ -258,11 +275,28 @@
                             </StackPanel>
 
                             <StackPanel Grid.Row="0" Grid.Column="1" Spacing="6">
-                                <TextBlock Text="Model ID"
+                                <TextBlock Text="Model"
                                            FontSize="11"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
+                                <Grid ColumnDefinitions="*, Auto"
+                                      ColumnSpacing="8"
+                                      IsVisible="{Binding IsChatModelCatalogBacked}">
+                                    <ComboBox Grid.Column="0"
+                                              ItemsSource="{Binding ChatModelOptions}"
+                                              SelectedItem="{Binding ChatModelId, Mode=TwoWay}"
+                                              HorizontalAlignment="Stretch"/>
+                                    <Button Grid.Column="1"
+                                            Command="{Binding RefreshChatModelsCommand}"
+                                            IsEnabled="{Binding !IsRefreshingChatModels}"
+                                            Background="{DynamicResource CardBgHoverBrush}"
+                                            Foreground="{DynamicResource TextSecondaryBrush}"
+                                            Padding="12,8">
+                                        <TextBlock Text="Refresh" FontSize="12" FontWeight="Medium"/>
+                                    </Button>
+                                </Grid>
                                 <TextBox Text="{Binding ChatModelId, Mode=TwoWay}"
-                                         PlaceholderText="openai/gpt-4.1-mini"/>
+                                         IsVisible="{Binding !IsChatModelCatalogBacked}"
+                                         PlaceholderText="custom/model-id"/>
                             </StackPanel>
 
                             <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Spacing="6">

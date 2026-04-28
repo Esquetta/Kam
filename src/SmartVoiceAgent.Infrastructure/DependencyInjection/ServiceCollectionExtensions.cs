@@ -155,6 +155,7 @@ public static class ServiceCollectionExtensions
     private static bool IsOpenAICompatibleProvider(string provider)
     {
         return provider.Equals("OpenRouter", StringComparison.OrdinalIgnoreCase)
+            || provider.Equals("OpenAI", StringComparison.OrdinalIgnoreCase)
             || provider.Equals("OpenAICompatible", StringComparison.OrdinalIgnoreCase)
             || IsOllamaProvider(provider);
     }

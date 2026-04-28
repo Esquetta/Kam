@@ -18,6 +18,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
     {
         private readonly MainWindowViewModel? _mainViewModel;
         private readonly ISettingsService _settingsService;
+        private readonly IModelCatalogService _modelCatalogService;
+        private readonly bool _ownsModelCatalogService;
         private readonly AudioDeviceService _audioDeviceService;
         private readonly VoiceTestService? _voiceTestService;
         private int _selectedLanguageIndex;
@@ -28,25 +30,37 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public ReactiveCommand<Unit, Unit> PlayTestRecordingCommand { get; }
         public ReactiveCommand<Unit, Unit> RefreshDevicesCommand { get; }
         public ReactiveCommand<Unit, Unit> TestAiConnectionCommand { get; }
+        public ReactiveCommand<Unit, Unit> RefreshAiModelsCommand { get; }
+        public ReactiveCommand<Unit, Unit> RefreshChatModelsCommand { get; }
 
-        public SettingsViewModel() : this(new JsonSettingsService(), null)
+        public SettingsViewModel() : this(new JsonSettingsService(), null, null)
         {
         }
 
-        public SettingsViewModel(ISettingsService settingsService) : this(settingsService, null)
+        public SettingsViewModel(ISettingsService settingsService) : this(settingsService, null, null)
         {
         }
 
-        public SettingsViewModel(MainWindowViewModel mainViewModel) : this(new JsonSettingsService(), mainViewModel)
+        public SettingsViewModel(ISettingsService settingsService, IModelCatalogService modelCatalogService)
+            : this(settingsService, null, modelCatalogService)
         {
         }
 
-        private SettingsViewModel(ISettingsService settingsService, MainWindowViewModel? mainViewModel)
+        public SettingsViewModel(MainWindowViewModel mainViewModel) : this(new JsonSettingsService(), mainViewModel, null)
+        {
+        }
+
+        private SettingsViewModel(
+            ISettingsService settingsService,
+            MainWindowViewModel? mainViewModel,
+            IModelCatalogService? modelCatalogService)
         {
             _mainViewModel = mainViewModel;
             Title = "SETTINGS";
             _selectedLanguageIndex = mainViewModel?.SelectedLanguageIndex ?? 0;
             _settingsService = settingsService;
+            _modelCatalogService = modelCatalogService ?? new OpenAiCompatibleModelCatalogService();
+            _ownsModelCatalogService = modelCatalogService is null;
             _audioDeviceService = new AudioDeviceService();
             
             // Initialize voice test service with factory from DI if available
@@ -61,6 +75,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             PlayTestRecordingCommand = ReactiveCommand.Create(PlayTestRecording);
             RefreshDevicesCommand = ReactiveCommand.Create(RefreshAudioDevices);
             TestAiConnectionCommand = ReactiveCommand.Create(TestAiProfileSettings);
+            RefreshAiModelsCommand = ReactiveCommand.CreateFromTask(RefreshPlannerModelsAsync);
+            RefreshChatModelsCommand = ReactiveCommand.CreateFromTask(RefreshChatModelsAsync);
             
             // Load saved settings
             _settingsService.Load();
@@ -92,9 +108,16 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private string _activeChatProfileId = "openrouter-chat";
         private string _aiProfileStatus = "Profile not validated.";
         private bool _isAiProfileValid;
+        private IReadOnlyList<string> _aiModelOptions = CreateDefaultModelOptions("OpenRouter", "openai/gpt-4.1-mini");
+        private IReadOnlyList<string> _chatModelOptions = CreateDefaultModelOptions("OpenRouter", "openai/gpt-4.1-mini");
+        private bool _isRefreshingAiModels;
+        private bool _isRefreshingChatModels;
+        private bool _isPlannerModelCatalogBacked = true;
+        private bool _isChatModelCatalogBacked = true;
 
         public IReadOnlyList<string> AiProviders { get; } =
         [
+            "OpenAI",
             "OpenRouter",
             "OpenAICompatible",
             "Ollama"
@@ -108,6 +131,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 if (_aiProvider != value)
                 {
                     this.RaiseAndSetIfChanged(ref _aiProvider, value);
+                    ApplyProviderDefaults(ModelProviderRole.Planner);
                     SaveAiProfileSettings();
                 }
             }
@@ -176,6 +200,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 if (_chatProvider != value)
                 {
                     this.RaiseAndSetIfChanged(ref _chatProvider, value);
+                    ApplyProviderDefaults(ModelProviderRole.Chat);
                     SaveAiProfileSettings();
                 }
             }
@@ -222,6 +247,42 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         }
 
         public string MaskedChatApiKey => new ModelProviderProfile { ApiKey = _chatApiKey }.MaskedApiKey;
+
+        public IReadOnlyList<string> AiModelOptions
+        {
+            get => _aiModelOptions;
+            private set => this.RaiseAndSetIfChanged(ref _aiModelOptions, value);
+        }
+
+        public IReadOnlyList<string> ChatModelOptions
+        {
+            get => _chatModelOptions;
+            private set => this.RaiseAndSetIfChanged(ref _chatModelOptions, value);
+        }
+
+        public bool IsPlannerModelCatalogBacked
+        {
+            get => _isPlannerModelCatalogBacked;
+            private set => this.RaiseAndSetIfChanged(ref _isPlannerModelCatalogBacked, value);
+        }
+
+        public bool IsChatModelCatalogBacked
+        {
+            get => _isChatModelCatalogBacked;
+            private set => this.RaiseAndSetIfChanged(ref _isChatModelCatalogBacked, value);
+        }
+
+        public bool IsRefreshingAiModels
+        {
+            get => _isRefreshingAiModels;
+            private set => this.RaiseAndSetIfChanged(ref _isRefreshingAiModels, value);
+        }
+
+        public bool IsRefreshingChatModels
+        {
+            get => _isRefreshingChatModels;
+            private set => this.RaiseAndSetIfChanged(ref _isRefreshingChatModels, value);
+        }
 
         public string ActiveChatProfileId
         {
@@ -274,6 +335,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 _chatEndpoint = chatProfile.Endpoint;
                 _chatModelId = chatProfile.ModelId;
                 _chatApiKey = chatProfile.ApiKey;
+                _aiModelOptions = CreateDefaultModelOptions(_aiProvider, _aiModelId);
+                _chatModelOptions = CreateDefaultModelOptions(_chatProvider, _chatModelId);
+                _isPlannerModelCatalogBacked = IsCatalogBackedProvider(_aiProvider);
+                _isChatModelCatalogBacked = IsCatalogBackedProvider(_chatProvider);
 
                 shouldSeedDefaultProfile =
                     profiles.All(p => p.Id != profile.Id)
@@ -325,6 +390,60 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 : string.Join(" ", errors);
 
             SaveAiProfileSettings();
+        }
+
+        public Task RefreshPlannerModelsAsync()
+        {
+            return RefreshModelOptionsAsync(ModelProviderRole.Planner);
+        }
+
+        public Task RefreshChatModelsAsync()
+        {
+            return RefreshModelOptionsAsync(ModelProviderRole.Chat);
+        }
+
+        private async Task RefreshModelOptionsAsync(ModelProviderRole role)
+        {
+            var isPlanner = role == ModelProviderRole.Planner;
+            var profile = isPlanner ? CreatePlannerProfile() : CreateChatProfile();
+
+            if (!IsCatalogBackedProvider(profile.Provider))
+            {
+                SetModelOptions(role, CreateDefaultModelOptions(profile.Provider.ToString(), profile.ModelId));
+                SetCatalogBacked(role, false);
+                AiProfileStatus = "Custom OpenAI-compatible providers keep manual model entry enabled.";
+                return;
+            }
+
+            SetCatalogBacked(role, true);
+
+            if (profile.Provider != ModelProviderType.Ollama && string.IsNullOrWhiteSpace(profile.ApiKey))
+            {
+                SetModelOptions(role, CreateDefaultModelOptions(profile.Provider.ToString(), profile.ModelId));
+                AiProfileStatus = "Enter an API key, then refresh the model list.";
+                return;
+            }
+
+            try
+            {
+                SetIsRefreshingModels(role, true);
+                var modelIds = await _modelCatalogService.GetModelIdsAsync(profile).ConfigureAwait(true);
+                SetModelOptions(role, modelIds.Count > 0
+                    ? modelIds
+                    : CreateDefaultModelOptions(profile.Provider.ToString(), profile.ModelId));
+
+                AiProfileStatus = $"{(isPlanner ? "Planner" : "Chat")} model list loaded from {profile.Provider}.";
+                SaveAiProfileSettings();
+            }
+            catch (Exception ex)
+            {
+                SetModelOptions(role, CreateDefaultModelOptions(profile.Provider.ToString(), profile.ModelId));
+                AiProfileStatus = $"Model list could not be loaded: {ex.Message}";
+            }
+            finally
+            {
+                SetIsRefreshingModels(role, false);
+            }
         }
 
         private ModelProviderProfile CreatePlannerProfile()
@@ -394,6 +513,193 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             return Enum.TryParse<ModelProviderType>(provider, ignoreCase: true, out var parsed)
                 ? parsed
                 : ModelProviderType.OpenAICompatible;
+        }
+
+        private void ApplyProviderDefaults(ModelProviderRole role)
+        {
+            var isPlanner = role == ModelProviderRole.Planner;
+            var providerText = isPlanner ? _aiProvider : _chatProvider;
+            var provider = ParseProvider(providerText);
+            var currentModel = isPlanner ? _aiModelId : _chatModelId;
+
+            SetCatalogBacked(role, IsCatalogBackedProvider(provider));
+
+            var endpoint = GetDefaultEndpoint(provider);
+            if (!string.IsNullOrWhiteSpace(endpoint))
+            {
+                if (isPlanner)
+                {
+                    this.RaiseAndSetIfChanged(ref _aiEndpoint, endpoint, nameof(AiEndpoint));
+                }
+                else
+                {
+                    this.RaiseAndSetIfChanged(ref _chatEndpoint, endpoint, nameof(ChatEndpoint));
+                }
+            }
+
+            var model = NormalizeModelForProvider(provider, currentModel);
+            if (isPlanner)
+            {
+                this.RaiseAndSetIfChanged(ref _aiModelId, model, nameof(AiModelId));
+            }
+            else
+            {
+                this.RaiseAndSetIfChanged(ref _chatModelId, model, nameof(ChatModelId));
+            }
+
+            SetModelOptions(role, CreateDefaultModelOptions(provider.ToString(), model));
+        }
+
+        private void SetModelOptions(ModelProviderRole role, IReadOnlyList<string> modelIds)
+        {
+            var isPlanner = role == ModelProviderRole.Planner;
+            var currentModel = isPlanner ? _aiModelId : _chatModelId;
+            var options = MergeModelOptions(modelIds, currentModel);
+            if (options.Count == 0)
+            {
+                return;
+            }
+
+            if (isPlanner)
+            {
+                AiModelOptions = options;
+                if (!options.Contains(_aiModelId, StringComparer.OrdinalIgnoreCase))
+                {
+                    AiModelId = options[0];
+                }
+            }
+            else
+            {
+                ChatModelOptions = options;
+                if (!options.Contains(_chatModelId, StringComparer.OrdinalIgnoreCase))
+                {
+                    ChatModelId = options[0];
+                }
+            }
+        }
+
+        private void SetCatalogBacked(ModelProviderRole role, bool isCatalogBacked)
+        {
+            if (role == ModelProviderRole.Planner)
+            {
+                IsPlannerModelCatalogBacked = isCatalogBacked;
+            }
+            else
+            {
+                IsChatModelCatalogBacked = isCatalogBacked;
+            }
+        }
+
+        private void SetIsRefreshingModels(ModelProviderRole role, bool isRefreshing)
+        {
+            if (role == ModelProviderRole.Planner)
+            {
+                IsRefreshingAiModels = isRefreshing;
+            }
+            else
+            {
+                IsRefreshingChatModels = isRefreshing;
+            }
+        }
+
+        private static bool IsCatalogBackedProvider(string provider)
+        {
+            return IsCatalogBackedProvider(ParseProvider(provider));
+        }
+
+        private static bool IsCatalogBackedProvider(ModelProviderType provider)
+        {
+            return provider is ModelProviderType.OpenAI
+                or ModelProviderType.OpenRouter
+                or ModelProviderType.Ollama;
+        }
+
+        private static string GetDefaultEndpoint(ModelProviderType provider)
+        {
+            return provider switch
+            {
+                ModelProviderType.OpenAI => "https://api.openai.com/v1",
+                ModelProviderType.OpenRouter => "https://openrouter.ai/api/v1",
+                ModelProviderType.Ollama => "http://localhost:11434/v1",
+                _ => string.Empty
+            };
+        }
+
+        private static string NormalizeModelForProvider(ModelProviderType provider, string modelId)
+        {
+            if (provider == ModelProviderType.OpenAI)
+            {
+                if (modelId.StartsWith("openai/", StringComparison.OrdinalIgnoreCase))
+                {
+                    return modelId["openai/".Length..];
+                }
+
+                return string.IsNullOrWhiteSpace(modelId) || modelId.Contains('/', StringComparison.Ordinal)
+                    ? "gpt-4.1-mini"
+                    : modelId;
+            }
+
+            if (provider == ModelProviderType.Ollama)
+            {
+                return string.IsNullOrWhiteSpace(modelId) || modelId.Contains('/', StringComparison.Ordinal)
+                    ? "llama3.1"
+                    : modelId;
+            }
+
+            return string.IsNullOrWhiteSpace(modelId)
+                ? "openai/gpt-4.1-mini"
+                : modelId;
+        }
+
+        private static IReadOnlyList<string> CreateDefaultModelOptions(string provider, string currentModel)
+        {
+            IEnumerable<string> defaults = ParseProvider(provider) switch
+            {
+                ModelProviderType.OpenAI =>
+                [
+                    "gpt-5.2",
+                    "gpt-5.1",
+                    "gpt-5",
+                    "gpt-5-mini",
+                    "gpt-5-nano",
+                    "gpt-4.1",
+                    "gpt-4.1-mini",
+                    "gpt-4o",
+                    "gpt-4o-mini"
+                ],
+                ModelProviderType.Ollama =>
+                [
+                    "llama3.1",
+                    "llama3.2",
+                    "mistral",
+                    "qwen2.5-coder"
+                ],
+                _ =>
+                [
+                    "openai/gpt-4.1-mini",
+                    "openai/gpt-4o-mini",
+                    "anthropic/claude-3.5-sonnet",
+                    "google/gemini-2.0-flash-001"
+                ]
+            };
+
+            return MergeModelOptions(defaults, currentModel);
+        }
+
+        private static IReadOnlyList<string> MergeModelOptions(IEnumerable<string> modelIds, string currentModel)
+        {
+            var options = modelIds
+                .Where(modelId => !string.IsNullOrWhiteSpace(modelId))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            if (string.IsNullOrWhiteSpace(currentModel)
+                || options.Contains(currentModel, StringComparer.OrdinalIgnoreCase))
+            {
+                return options;
+            }
+
+            return options.Prepend(currentModel).ToArray();
         }
 
         #endregion
@@ -589,7 +895,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             else if (!string.IsNullOrEmpty(savedInputId))
             {
                 // Saved device no longer available, clear it
-                _settingsService.SelectedInputDeviceId = null;
+                _settingsService.SelectedInputDeviceId = string.Empty;
             }
 
             if (!string.IsNullOrEmpty(savedOutputId) && _audioDeviceService.IsDeviceAvailable(savedOutputId))
@@ -599,7 +905,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             else if (!string.IsNullOrEmpty(savedOutputId))
             {
                 // Saved device no longer available, clear it
-                _settingsService.SelectedOutputDeviceId = null;
+                _settingsService.SelectedOutputDeviceId = string.Empty;
             }
 
             // Start monitoring input levels
@@ -1018,6 +1324,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
             
             _voiceTestService?.Dispose();
+            if (_ownsModelCatalogService && _modelCatalogService is IDisposable disposableModelCatalogService)
+            {
+                disposableModelCatalogService.Dispose();
+            }
         }
     }
 }

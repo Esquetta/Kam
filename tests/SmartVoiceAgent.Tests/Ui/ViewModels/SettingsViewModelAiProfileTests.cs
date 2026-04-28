@@ -92,6 +92,36 @@ public class SettingsViewModelAiProfileTests : IDisposable
             p.Roles.Contains(ModelProviderRole.Planner));
     }
 
+    [Fact]
+    public async Task RefreshPlannerModelsAsync_OpenAiProvider_LoadsModelsFromCatalog()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        using var viewModel = new SettingsViewModel(
+            settingsService,
+            new StubModelCatalogService("gpt-5.2", "gpt-4.1-mini"))
+        {
+            AiProvider = "OpenAI",
+            AiApiKey = "sk-test"
+        };
+
+        await viewModel.RefreshPlannerModelsAsync();
+
+        viewModel.AiEndpoint.Should().Be("https://api.openai.com/v1");
+        viewModel.AiModelOptions.Should().Equal("gpt-5.2", "gpt-4.1-mini");
+        viewModel.AiModelId.Should().Be("gpt-4.1-mini");
+        viewModel.IsPlannerModelCatalogBacked.Should().BeTrue();
+    }
+
+    private sealed class StubModelCatalogService(params string[] modelIds) : IModelCatalogService
+    {
+        public Task<IReadOnlyList<string>> GetModelIdsAsync(
+            ModelProviderProfile profile,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<string>>(modelIds);
+        }
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_settingsDirectory))
