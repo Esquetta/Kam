@@ -29,13 +29,20 @@ namespace SmartVoiceAgent.Ui
         private TrayIconService? _trayIconService;
         private MainWindowViewModel? _mainViewModel;
         private IHost? _host;
+        private IServiceScope? _applicationScope;
         private UiLogService? _uiLogService;
         private ErrorHandlingService? _errorHandlingService;
 
         /// <summary>
         /// Gets the service provider for dependency injection access from ViewModels
         /// </summary>
-        public static IServiceProvider? Services => (Current as App)?._host?.Services;
+        public static IServiceProvider? Services => (Current as App)?.GetCurrentServiceProvider();
+
+        public static IServiceScope CreateApplicationServiceScope(IServiceProvider services)
+        {
+            ArgumentNullException.ThrowIfNull(services);
+            return services.CreateScope();
+        }
 
         public override void Initialize()
         {
@@ -51,6 +58,8 @@ namespace SmartVoiceAgent.Ui
             {
                 // Build the host with backend services
                 _host = BuildHost();
+                _applicationScope = CreateApplicationServiceScope(_host.Services);
+                var services = _applicationScope.ServiceProvider;
 
                 // Validate critical configuration
                 ValidateConfiguration();
@@ -75,48 +84,48 @@ namespace SmartVoiceAgent.Ui
                 _mainViewModel.SetTrayIconService(_trayIconService);
 
                 // Connect UI Log Service to ViewModel
-                _uiLogService = (UiLogService?)_host.Services.GetService<IUiLogService>();
+                _uiLogService = (UiLogService?)services.GetService<IUiLogService>();
                 _uiLogService?.SetViewModel(_mainViewModel);
 
                 // Connect Command Input Service to ViewModel
-                var commandInput = _host.Services.GetRequiredService<ICommandInputService>();
+                var commandInput = services.GetRequiredService<ICommandInputService>();
                 _mainViewModel.SetCommandInputService(commandInput);
 
                 // Connect VoiceAgent Host Control to ViewModel
-                var hostControl = _host.Services.GetRequiredService<IVoiceAgentHostControl>();
+                var hostControl = services.GetRequiredService<IVoiceAgentHostControl>();
                 _mainViewModel.SetVoiceAgentHostControl(hostControl);
 
                 // Connect Skill Health Service to the skills dashboard
-                var skillHealthService = _host.Services.GetRequiredService<ISkillHealthService>();
+                var skillHealthService = services.GetRequiredService<ISkillHealthService>();
                 _mainViewModel.SetSkillHealthService(skillHealthService);
 
-                var skillEvalHarness = _host.Services.GetRequiredService<ISkillEvalHarness>();
-                var skillEvalCaseCatalog = _host.Services.GetRequiredService<ISkillEvalCaseCatalog>();
+                var skillEvalHarness = services.GetRequiredService<ISkillEvalHarness>();
+                var skillEvalCaseCatalog = services.GetRequiredService<ISkillEvalCaseCatalog>();
                 _mainViewModel.SetSkillEvalServices(skillEvalHarness, skillEvalCaseCatalog);
 
-                var skillPolicyManager = _host.Services.GetRequiredService<ISkillPolicyManager>();
+                var skillPolicyManager = services.GetRequiredService<ISkillPolicyManager>();
                 _mainViewModel.SetSkillPolicyManager(skillPolicyManager);
 
-                var skillImportService = _host.Services.GetRequiredService<ISkillImportService>();
+                var skillImportService = services.GetRequiredService<ISkillImportService>();
                 _mainViewModel.SetSkillImportService(skillImportService);
 
-                var skillTestService = _host.Services.GetRequiredService<ISkillTestService>();
+                var skillTestService = services.GetRequiredService<ISkillTestService>();
                 _mainViewModel.SetSkillTestService(skillTestService);
 
-                var skillConfirmationService = _host.Services.GetRequiredService<ISkillConfirmationService>();
+                var skillConfirmationService = services.GetRequiredService<ISkillConfirmationService>();
                 _mainViewModel.SetSkillConfirmationService(skillConfirmationService);
 
-                var skillExecutionHistoryService = _host.Services.GetRequiredService<ISkillExecutionHistoryService>();
+                var skillExecutionHistoryService = services.GetRequiredService<ISkillExecutionHistoryService>();
                 _mainViewModel.SetSkillExecutionHistoryService(skillExecutionHistoryService);
 
-                var skillPlannerTraceStore = _host.Services.GetRequiredService<ISkillPlannerTraceStore>();
+                var skillPlannerTraceStore = services.GetRequiredService<ISkillPlannerTraceStore>();
                 _mainViewModel.SetSkillPlannerTraceStore(skillPlannerTraceStore);
 
-                var skillExecutionPipeline = _host.Services.GetRequiredService<ISkillExecutionPipeline>();
+                var skillExecutionPipeline = services.GetRequiredService<ISkillExecutionPipeline>();
                 _mainViewModel.SetSkillExecutionPipeline(skillExecutionPipeline);
 
                 // Setup Voice Command Service
-                SetupVoiceCommandService(_mainViewModel);
+                SetupVoiceCommandService(_mainViewModel, services);
 
                 // Apply startup behavior settings
                 ApplyStartupBehavior(desktop, settingsService);
@@ -134,7 +143,10 @@ namespace SmartVoiceAgent.Ui
                     if (_host != null)
                     {
                         await _host.StopAsync();
+                        _applicationScope?.Dispose();
+                        _applicationScope = null;
                         _host.Dispose();
+                        _host = null;
                     }
                     _errorHandlingService?.LogInformation("Application shutdown complete");
                 };
@@ -348,7 +360,12 @@ namespace SmartVoiceAgent.Ui
         /// <summary>
         /// Sets up the voice command service
         /// </summary>
-        private void SetupVoiceCommandService(MainWindowViewModel viewModel)
+        private IServiceProvider? GetCurrentServiceProvider()
+        {
+            return _applicationScope?.ServiceProvider ?? _host?.Services;
+        }
+
+        private void SetupVoiceCommandService(MainWindowViewModel viewModel, IServiceProvider services)
         {
             if (_host == null) return;
 
@@ -356,12 +373,12 @@ namespace SmartVoiceAgent.Ui
             {
                 _errorHandlingService?.LogInformation("Initializing Voice Command Service...");
                 
-                var wakeWordService = _host.Services.GetRequiredService<IWakeWordDetectionService>();
-                var voiceRecognitionFactory = _host.Services.GetRequiredService<IVoiceRecognitionFactory>();
-                var sttService = _host.Services.GetRequiredService<IMultiSTTService>();
-                var noiseSuppression = _host.Services.GetRequiredService<INoiseSuppressionService>();
-                var commandInput = _host.Services.GetRequiredService<ICommandInputService>();
-                var uiLogService = _host.Services.GetRequiredService<IUiLogService>();
+                var wakeWordService = services.GetRequiredService<IWakeWordDetectionService>();
+                var voiceRecognitionFactory = services.GetRequiredService<IVoiceRecognitionFactory>();
+                var sttService = services.GetRequiredService<IMultiSTTService>();
+                var noiseSuppression = services.GetRequiredService<INoiseSuppressionService>();
+                var commandInput = services.GetRequiredService<ICommandInputService>();
+                var uiLogService = services.GetRequiredService<IUiLogService>();
 
                 var voiceCommandService = new VoiceCommandService(
                     wakeWordService,
