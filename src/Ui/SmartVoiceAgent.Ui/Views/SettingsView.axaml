@@ -179,7 +179,7 @@
                             </StackPanel>
                         </Grid>
 
-                        <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto" ColumnSpacing="10" RowSpacing="10">
+                        <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" ColumnSpacing="10" RowSpacing="10">
                             <StackPanel Grid.Row="0" Grid.Column="0" Spacing="6">
                                 <TextBlock Text="Provider"
                                            FontSize="11"
@@ -214,15 +214,7 @@
                                          PlaceholderText="custom/model-id"/>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Spacing="6">
-                                <TextBlock Text="Endpoint"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                                <TextBox Text="{Binding AiEndpoint, Mode=TwoWay}"
-                                         PlaceholderText="https://openrouter.ai/api/v1"/>
-                            </StackPanel>
-
-                            <StackPanel Grid.Row="2" Grid.Column="0" Spacing="6">
+                            <StackPanel Grid.Row="1" Grid.Column="0" Spacing="6">
                                 <TextBlock Text="API Key"
                                            FontSize="11"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
@@ -235,7 +227,7 @@
                                            TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="2" Grid.Column="1" VerticalAlignment="Bottom">
+                            <StackPanel Grid.Row="1" Grid.Column="1" VerticalAlignment="Bottom">
                                 <Button Command="{Binding TestAiConnectionCommand}"
                                         HorizontalAlignment="Stretch"
                                         Background="{DynamicResource CardBgHoverBrush}"
@@ -264,7 +256,7 @@
                             </StackPanel>
                         </Grid>
 
-                        <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto, Auto" ColumnSpacing="10" RowSpacing="10">
+                        <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" ColumnSpacing="10" RowSpacing="10">
                             <StackPanel Grid.Row="0" Grid.Column="0" Spacing="6">
                                 <TextBlock Text="Provider"
                                            FontSize="11"
@@ -300,14 +292,6 @@
                             </StackPanel>
 
                             <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Spacing="6">
-                                <TextBlock Text="Endpoint"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                                <TextBox Text="{Binding ChatEndpoint, Mode=TwoWay}"
-                                         PlaceholderText="https://openrouter.ai/api/v1"/>
-                            </StackPanel>
-
-                            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Spacing="6">
                                 <TextBlock Text="API Key"
                                            FontSize="11"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
