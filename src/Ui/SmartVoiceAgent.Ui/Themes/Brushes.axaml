@@ -23,12 +23,14 @@
     <SolidColorBrush x:Key="AccentCyanGlowBrush" Color="{DynamicResource AccentCyanGlow}" />
     <SolidColorBrush x:Key="AccentGreenBrush" Color="{DynamicResource AccentGreen}" />
     <SolidColorBrush x:Key="AccentGreenGlowBrush" Color="{DynamicResource AccentGreenGlow}" />
+    <SolidColorBrush x:Key="AccentGreenOnBrush" Color="{DynamicResource AccentGreenOn}" />
     <SolidColorBrush x:Key="AccentPurpleBrush" Color="{DynamicResource AccentPurple}" />
     <SolidColorBrush x:Key="AccentPurpleGlowBrush" Color="{DynamicResource AccentPurpleGlow}" />
     <SolidColorBrush x:Key="AccentOrangeBrush" Color="{DynamicResource AccentOrange}" />
     <SolidColorBrush x:Key="AccentOrangeGlowBrush" Color="{DynamicResource AccentOrangeGlow}" />
     <SolidColorBrush x:Key="AccentErrorBrush" Color="{DynamicResource AccentError}" />
     <SolidColorBrush x:Key="AccentErrorGlowBrush" Color="{DynamicResource AccentErrorGlow}" />
+    <SolidColorBrush x:Key="AccentErrorOnBrush" Color="{DynamicResource AccentErrorOn}" />
 
     <!-- Log brushes -->
     <SolidColorBrush x:Key="LogTextBrush" Color="{DynamicResource LogText}" />

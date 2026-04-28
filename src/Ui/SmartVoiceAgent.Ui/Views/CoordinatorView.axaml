@@ -30,8 +30,7 @@
                             BorderBrush="{Binding OrbColor, Mode=OneWay}"
                             BorderThickness="1"
                             CornerRadius="4"
-                            Padding="8,4"
-                            Opacity="0.3">
+                            Padding="8,4">
                         <TextBlock Text="KERNEL v3.5"
                                    FontSize="11"
                                    FontFamily="Consolas"

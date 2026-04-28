@@ -168,7 +168,7 @@
                     <Ellipse Grid.Column="0"
                              Width="10"
                              Height="10"
-                             Fill="#F59E0B"
+                             Fill="{DynamicResource AccentOrangeBrush}"
                              VerticalAlignment="Top"
                              Margin="0,4,0,0"
                              IsVisible="{Binding !IsSkillEvalHealthy}"/>

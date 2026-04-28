@@ -1,4 +1,5 @@
 ﻿using Avalonia.Media;
+using Avalonia.Styling;
 using ReactiveUI;
 using SolidColorBrush = Avalonia.Media.SolidColorBrush;
 using SmartVoiceAgent.Core.Interfaces;
@@ -107,9 +108,23 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private IBrush GetThemeTextBrush()
         {
             var app = global::Avalonia.Application.Current;
-            // Return cached brush based on theme
-            return app?.ActualThemeVariant == Avalonia.Styling.ThemeVariant.Dark 
-                ? DarkThemeTextColor 
+            return GetThemeTextBrush(app?.ActualThemeVariant == ThemeVariant.Dark
+                ? ThemeVariant.Dark
+                : ThemeVariant.Light);
+        }
+
+        public void RefreshThemeColors(ThemeVariant themeVariant)
+        {
+            if (IsOnline)
+            {
+                LabelColor = GetThemeTextBrush(themeVariant);
+            }
+        }
+
+        private static IBrush GetThemeTextBrush(ThemeVariant themeVariant)
+        {
+            return themeVariant == ThemeVariant.Dark
+                ? DarkThemeTextColor
                 : LightThemeTextColor;
         }
 
@@ -196,8 +211,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         
         private void OnThemeChanged(object? sender, System.EventArgs e)
         {
-            // Theme changed - raise property changed for theme-dependent properties
-            this.RaisePropertyChanged(nameof(LabelColor));
+            var app = global::Avalonia.Application.Current;
+            RefreshThemeColors(app?.ActualThemeVariant == ThemeVariant.Dark
+                ? ThemeVariant.Dark
+                : ThemeVariant.Light);
         }
 
         /* ========================= */

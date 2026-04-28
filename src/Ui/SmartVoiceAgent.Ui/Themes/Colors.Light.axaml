@@ -19,12 +19,14 @@
     <Color x:Key="AccentCyanGlow">#1A0891B2</Color>
     <Color x:Key="AccentGreen">#059669</Color>
     <Color x:Key="AccentGreenGlow">#1A059669</Color>
+    <Color x:Key="AccentGreenOn">#000000</Color>
     <Color x:Key="AccentPurple">#7C3AED</Color>
     <Color x:Key="AccentPurpleGlow">#1A7C3AED</Color>
     <Color x:Key="AccentOrange">#EA580C</Color>
     <Color x:Key="AccentOrangeGlow">#1AEA580C</Color>
     <Color x:Key="AccentError">#DC2626</Color>
     <Color x:Key="AccentErrorGlow">#1ADC2626</Color>
+    <Color x:Key="AccentErrorOn">#FFFFFF</Color>
 
     <!-- Log colors -->
     <Color x:Key="LogText">#0284C7</Color>
