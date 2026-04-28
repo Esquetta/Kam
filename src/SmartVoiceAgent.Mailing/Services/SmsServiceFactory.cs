@@ -154,7 +154,7 @@ public static class SmsServiceFactoryExtensions
 
         // Register factory and service
         services.AddSingleton<ISmsServiceFactory, SmsServiceFactory>();
-        services.AddScoped<ISmsService>(sp => 
+        services.AddSingleton<ISmsService>(sp =>
         {
             var factory = sp.GetRequiredService<ISmsServiceFactory>();
             return factory.GetService();
@@ -191,7 +191,7 @@ public static class SmsServiceFactoryExtensions
         });
 
         services.AddSingleton<ISmsServiceFactory, SmsServiceFactory>();
-        services.AddScoped<ISmsService>(sp =>
+        services.AddSingleton<ISmsService>(sp =>
         {
             var factory = sp.GetRequiredService<ISmsServiceFactory>();
             return factory.GetService();
@@ -220,7 +220,7 @@ public static class SmsServiceFactoryExtensions
         });
 
         services.AddSingleton<ISmsServiceFactory, SmsServiceFactory>();
-        services.AddScoped<ISmsService>(sp =>
+        services.AddSingleton<ISmsService>(sp =>
         {
             var factory = sp.GetRequiredService<ISmsServiceFactory>();
             return factory.GetService();

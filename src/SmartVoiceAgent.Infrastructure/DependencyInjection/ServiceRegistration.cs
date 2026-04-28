@@ -30,6 +30,7 @@ using SmartVoiceAgent.Infrastructure.Services.Message;
 using SmartVoiceAgent.Infrastructure.Services.WebResearch;
 using SmartVoiceAgent.Infrastructure.Services.Voice;
 using SmartVoiceAgent.Infrastructure.Services.Audio;
+using SmartVoiceAgent.Mailing.Extensions;
 
 namespace SmartVoiceAgent.Infrastructure.DependencyInjection;
 
@@ -109,6 +110,9 @@ public static class ServiceRegistration
         services.AddSingleton<ISkillPolicyManager, SkillPolicyManager>();
         services.AddSingleton<ICommandRuntimeService, SkillFirstCommandRuntimeService>();
         
+        // Register communication providers configured by UI settings or user secrets.
+        services.AddMailingServices(configuration);
+
         // Register Message Services (Email, SMS, etc.)
         services.AddScoped<IMessageServiceFactory, MessageServiceFactory>();
 

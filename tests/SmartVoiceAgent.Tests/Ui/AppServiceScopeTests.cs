@@ -6,6 +6,7 @@ using SmartVoiceAgent.Application.DependencyInjection;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Infrastructure.DependencyInjection;
 using SmartVoiceAgent.Infrastructure.Extensions;
+using SmartVoiceAgent.Mailing.Interfaces;
 using SmartVoiceAgent.Ui;
 
 namespace SmartVoiceAgent.Tests.Ui;
@@ -28,7 +29,15 @@ public class AppServiceScopeTests
                     ["AIService:Provider"] = "OpenAI",
                     ["AIService:Endpoint"] = "https://api.openai.com/v1",
                     ["AIService:ApiKey"] = "test-key",
-                    ["AIService:ModelId"] = "gpt-4o-mini"
+                    ["AIService:ModelId"] = "gpt-4o-mini",
+                    ["Email:Provider"] = "Gmail",
+                    ["Email:Username"] = "user@example.com",
+                    ["Email:AppPassword"] = "app-password",
+                    ["Email:FromAddress"] = "user@example.com",
+                    ["Sms:Provider"] = "Twilio",
+                    ["Sms:TwilioAccountSid"] = "AC123",
+                    ["Sms:TwilioAuthToken"] = "twilio-token",
+                    ["Sms:TwilioPhoneNumber"] = "+15551234567"
                 });
             })
             .ConfigureServices((context, services) =>
@@ -45,5 +54,7 @@ public class AppServiceScopeTests
         scope.ServiceProvider.GetRequiredService<ISkillEvalHarness>().Should().NotBeNull();
         scope.ServiceProvider.GetRequiredService<ISkillTestService>().Should().NotBeNull();
         scope.ServiceProvider.GetRequiredService<ISkillExecutionPipeline>().Should().NotBeNull();
+        scope.ServiceProvider.GetRequiredService<IEmailService>().Should().NotBeNull();
+        scope.ServiceProvider.GetRequiredService<ISmsService>().Should().NotBeNull();
     }
 }

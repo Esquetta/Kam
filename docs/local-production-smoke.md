@@ -20,10 +20,10 @@ Useful variants:
 - Restores `Kam.sln`.
 - Builds the solution in `Release`.
 - Runs the test project in `Release`.
-- Checks required AI planner keys without printing secret values:
+- Checks required AI planner configuration without printing secret values. The check accepts either `dotnet user-secrets` / environment configuration or the enabled planner profile saved from the Settings screen:
   - `AIService:ApiKey`
   - `AIService:ModelId`
-  - `AIService:Endpoint`
+  - `AIService:Endpoint` / `AIService:EndPoint`
 - Publishes the Avalonia UI to `artifacts/local-production-smoke/<timestamp>/publish`.
 - Writes a smoke summary to `artifacts/local-production-smoke/<timestamp>/summary.md`.
 

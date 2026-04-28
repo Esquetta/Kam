@@ -19,6 +19,7 @@ $runId = Get-Date -Format "yyyyMMdd-HHmmss"
 $artifactRoot = Join-Path $repoRoot "artifacts\local-production-smoke\$runId"
 $publishDir = Join-Path $artifactRoot "publish"
 $summaryPath = Join-Path $artifactRoot "summary.md"
+$uiSettingsPath = Join-Path $env:LOCALAPPDATA "SmartVoiceAgent\settings.json"
 $summary = New-Object System.Collections.Generic.List[string]
 
 function Add-SummaryLine {
@@ -59,14 +60,14 @@ function Invoke-SmokeStep {
 
 function Get-UserSecretKeys {
     if ($PlanOnly) {
-        return @()
+        return @(Get-UserSecretKeysFromFile)
     }
 
     $output = & dotnet user-secrets list --project $uiProject 2>&1
     $exitCode = if ($LASTEXITCODE -is [int]) { $LASTEXITCODE } else { 0 }
     if ($exitCode -ne 0) {
         Add-SummaryLine "- AI config: user-secrets check failed, environment variables will still be checked."
-        return @()
+        return @(Get-UserSecretKeysFromFile)
     }
 
     return @($output | ForEach-Object {
@@ -77,27 +78,216 @@ function Get-UserSecretKeys {
     } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 }
 
+function Get-UserSecretKeysFromFile {
+    try {
+        [xml]$projectXml = Get-Content -Path $uiProject
+        $ids = @($projectXml.Project.PropertyGroup |
+            ForEach-Object { $_.UserSecretsId } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+
+        if ($ids.Count -eq 0) {
+            return @()
+        }
+
+        $secretsPath = Join-Path $env:APPDATA "Microsoft\UserSecrets\$($ids[0])\secrets.json"
+        if (-not (Test-Path $secretsPath)) {
+            return @()
+        }
+
+        $keys = New-Object System.Collections.Generic.List[string]
+        $json = Get-Content -Raw -Path $secretsPath | ConvertFrom-Json
+        Add-JsonConfigurationKeys -Node $json -Prefix "" -Keys $keys
+        return @($keys)
+    }
+    catch {
+        return @()
+    }
+}
+
+function Add-JsonConfigurationKeys {
+    param(
+        [object]$Node,
+        [string]$Prefix,
+        [System.Collections.Generic.List[string]]$Keys
+    )
+
+    if ($null -eq $Node) {
+        return
+    }
+
+    if ($Node -is [System.Management.Automation.PSCustomObject]) {
+        foreach ($property in $Node.PSObject.Properties) {
+            $key = if ([string]::IsNullOrWhiteSpace($Prefix)) {
+                $property.Name
+            }
+            else {
+                "${Prefix}:$($property.Name)"
+            }
+
+            if ($property.Value -is [System.Management.Automation.PSCustomObject]) {
+                Add-JsonConfigurationKeys -Node $property.Value -Prefix $key -Keys $Keys
+            }
+            else {
+                $Keys.Add($key) | Out-Null
+            }
+        }
+    }
+}
+
+function Get-PropertyValue {
+    param(
+        [object]$Object,
+        [string]$Name
+    )
+
+    if ($null -eq $Object) {
+        return $null
+    }
+
+    $property = $Object.PSObject.Properties |
+        Where-Object { $_.Name -eq $Name } |
+        Select-Object -First 1
+
+    if ($null -eq $property) {
+        return $null
+    }
+
+    return $property.Value
+}
+
+function Test-ConfigurationKeyPresent {
+    param(
+        [string[]]$Aliases,
+        [string[]]$SecretKeys
+    )
+
+    foreach ($alias in $Aliases) {
+        if ($SecretKeys -contains $alias) {
+            return $true
+        }
+
+        $envKey = $alias.Replace(":", "__")
+        if (-not [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($envKey))) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Test-ProfileHasPlannerRole {
+    param([object]$Profile)
+
+    $roles = @(Get-PropertyValue -Object $Profile -Name "Roles")
+    foreach ($role in $roles) {
+        if ($null -eq $role) {
+            continue
+        }
+
+        $roleText = $role.ToString()
+        if ($roleText.Equals("Planner", [StringComparison]::OrdinalIgnoreCase) -or $roleText -eq "0") {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Test-ProfileEnabled {
+    param([object]$Profile)
+
+    $enabled = Get-PropertyValue -Object $Profile -Name "Enabled"
+    if ($enabled -is [bool]) {
+        return $enabled
+    }
+
+    return $null -ne $enabled -and $enabled.ToString().Equals("true", [StringComparison]::OrdinalIgnoreCase)
+}
+
+function Test-OllamaProvider {
+    param([object]$Provider)
+
+    if ($null -eq $Provider) {
+        return $false
+    }
+
+    $providerText = $Provider.ToString()
+    return $providerText.Equals("Ollama", [StringComparison]::OrdinalIgnoreCase) -or $providerText -eq "2"
+}
+
+function Test-UiPlannerProfileConfiguration {
+    if (-not (Test-Path $uiSettingsPath)) {
+        return $false
+    }
+
+    try {
+        $settings = Get-Content -Raw -Path $uiSettingsPath | ConvertFrom-Json
+        $profiles = @(Get-PropertyValue -Object $settings -Name "ModelProviderProfiles")
+        if ($profiles.Count -eq 0) {
+            return $false
+        }
+
+        $activePlannerProfileId = Get-PropertyValue -Object $settings -Name "ActivePlannerProfileId"
+        $profile = $null
+        if (-not [string]::IsNullOrWhiteSpace($activePlannerProfileId)) {
+            $profile = $profiles |
+                Where-Object {
+                    $id = Get-PropertyValue -Object $_ -Name "Id"
+                    $null -ne $id -and $id.ToString().Equals($activePlannerProfileId.ToString(), [StringComparison]::OrdinalIgnoreCase)
+                } |
+                Select-Object -First 1
+        }
+
+        if ($null -eq $profile) {
+            $profile = $profiles |
+                Where-Object { Test-ProfileHasPlannerRole -Profile $_ } |
+                Select-Object -First 1
+        }
+
+        if ($null -eq $profile -or -not (Test-ProfileEnabled -Profile $profile)) {
+            return $false
+        }
+
+        $provider = Get-PropertyValue -Object $profile -Name "Provider"
+        $endpoint = Get-PropertyValue -Object $profile -Name "Endpoint"
+        $apiKey = Get-PropertyValue -Object $profile -Name "ApiKey"
+        $modelId = Get-PropertyValue -Object $profile -Name "ModelId"
+        $hasApiKey = (Test-OllamaProvider -Provider $provider) -or -not [string]::IsNullOrWhiteSpace($apiKey)
+
+        return $hasApiKey `
+            -and -not [string]::IsNullOrWhiteSpace($modelId) `
+            -and -not [string]::IsNullOrWhiteSpace($endpoint)
+    }
+    catch {
+        Add-SummaryLine "- AI config: UI settings file could not be parsed."
+        return $false
+    }
+}
+
 function Test-AiConfiguration {
     $requiredKeys = @(
-        "AIService:ApiKey",
-        "AIService:ModelId",
-        "AIService:Endpoint"
+        @{ Name = "AIService:ApiKey"; Aliases = @("AIService:ApiKey") },
+        @{ Name = "AIService:ModelId"; Aliases = @("AIService:ModelId") },
+        @{ Name = "AIService:Endpoint"; Aliases = @("AIService:Endpoint", "AIService:EndPoint") }
     )
     $secretKeys = @(Get-UserSecretKeys)
     $missing = New-Object System.Collections.Generic.List[string]
 
     foreach ($key in $requiredKeys) {
-        $envKey = $key.Replace(":", "__")
-        $hasSecret = $secretKeys -contains $key
-        $hasEnv = -not [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($envKey))
-        if (-not ($hasSecret -or $hasEnv)) {
-            $missing.Add($key) | Out-Null
+        if (-not (Test-ConfigurationKeyPresent -Aliases $key.Aliases -SecretKeys $secretKeys)) {
+            $missing.Add($key.Name) | Out-Null
         }
     }
 
     if ($missing.Count -eq 0) {
         Add-SummaryLine "- AI config: required planner keys are present in user-secrets or environment."
         Write-Host "==> AI config keys present" -ForegroundColor Green
+        return
+    }
+
+    if (Test-UiPlannerProfileConfiguration) {
+        Add-SummaryLine "- AI config: enabled planner profile is present in UI settings."
+        Write-Host "==> AI config planner profile present in UI settings" -ForegroundColor Green
         return
     }
 

@@ -109,4 +109,66 @@ public class AiRuntimeConfigurationMapperTests
 
         overrides.Should().BeEmpty();
     }
+
+    [Fact]
+    public void CreateIntegrationOverrides_TodoistKey_MapsMcpOptions()
+    {
+        using var settings = new JsonSettingsService(CreateTempSettingsDirectory());
+        settings.TodoistApiKey = "todoist-test-token";
+
+        var overrides = AiRuntimeConfigurationMapper.CreateIntegrationOverrides(settings);
+
+        overrides.Should().Contain("McpOptions:TodoistApiKey", "todoist-test-token");
+        overrides.Should().Contain("McpOptions:TodoistServerLink", AiRuntimeConfigurationMapper.DefaultTodoistMcpServerLink);
+    }
+
+    [Fact]
+    public void CreateIntegrationOverrides_EmailSettings_MapsMailRuntimeConfiguration()
+    {
+        using var settings = new JsonSettingsService(CreateTempSettingsDirectory());
+        settings.EmailProvider = "Gmail";
+        settings.SmtpHost = "smtp.gmail.com";
+        settings.SmtpPort = 587;
+        settings.SmtpUsername = "user@example.com";
+        settings.SmtpPassword = "app-password";
+        settings.SenderEmail = "sender@example.com";
+        settings.SmtpEnableSsl = true;
+
+        var overrides = AiRuntimeConfigurationMapper.CreateIntegrationOverrides(settings);
+
+        overrides.Should().Contain("Email:Provider", "Gmail");
+        overrides.Should().Contain("Email:Host", "smtp.gmail.com");
+        overrides.Should().Contain("Email:SmtpHost", "smtp.gmail.com");
+        overrides.Should().Contain("Email:Port", "587");
+        overrides.Should().Contain("Email:SmtpPort", "587");
+        overrides.Should().Contain("Email:Username", "user@example.com");
+        overrides.Should().Contain("Email:Password", "app-password");
+        overrides.Should().Contain("Email:AppPassword", "app-password");
+        overrides.Should().Contain("Email:FromAddress", "sender@example.com");
+        overrides.Should().Contain("Email:EnableSsl", "True");
+    }
+
+    [Fact]
+    public void CreateIntegrationOverrides_CompleteTwilioSettings_MapsSmsRuntimeConfiguration()
+    {
+        using var settings = new JsonSettingsService(CreateTempSettingsDirectory());
+        settings.TwilioAccountSid = "AC123";
+        settings.TwilioAuthToken = "twilio-token";
+        settings.TwilioPhoneNumber = "+15551234567";
+
+        var overrides = AiRuntimeConfigurationMapper.CreateIntegrationOverrides(settings);
+
+        overrides.Should().Contain("Sms:Provider", "Twilio");
+        overrides.Should().Contain("Sms:TwilioAccountSid", "AC123");
+        overrides.Should().Contain("Sms:TwilioAuthToken", "twilio-token");
+        overrides.Should().Contain("Sms:TwilioPhoneNumber", "+15551234567");
+    }
+
+    private static string CreateTempSettingsDirectory()
+    {
+        return Path.Combine(
+            Path.GetTempPath(),
+            "kam-runtime-mapper-tests",
+            Guid.NewGuid().ToString("N"));
+    }
 }

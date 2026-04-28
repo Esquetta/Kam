@@ -212,7 +212,7 @@ namespace SmartVoiceAgent.Ui
                     // - appsettings.json
                     // - UserSecrets (when Environment is Development)
                     // - EnvironmentVariables
-                    AddUserAiRuntimeConfiguration(config);
+                    AddUserRuntimeConfiguration(config);
                 })
                 .ConfigureServices((context, services) =>
                 {
@@ -236,15 +236,24 @@ namespace SmartVoiceAgent.Ui
                 .Build();
         }
 
-        private static void AddUserAiRuntimeConfiguration(IConfigurationBuilder config)
+        private static void AddUserRuntimeConfiguration(IConfigurationBuilder config)
         {
             try
             {
                 using var settingsService = new JsonSettingsService();
-                var overrides = AiRuntimeConfigurationMapper.CreateAiServiceOverrides(
-                    settingsService.ModelProviderProfiles,
-                    settingsService.ActivePlannerProfileId,
-                    settingsService.ActiveChatProfileId);
+                var overrides = new System.Collections.Generic.Dictionary<string, string?>();
+                foreach (var item in AiRuntimeConfigurationMapper.CreateAiServiceOverrides(
+                             settingsService.ModelProviderProfiles,
+                             settingsService.ActivePlannerProfileId,
+                             settingsService.ActiveChatProfileId))
+                {
+                    overrides[item.Key] = item.Value;
+                }
+
+                foreach (var item in AiRuntimeConfigurationMapper.CreateIntegrationOverrides(settingsService))
+                {
+                    overrides[item.Key] = item.Value;
+                }
 
                 if (overrides.Count > 0)
                 {

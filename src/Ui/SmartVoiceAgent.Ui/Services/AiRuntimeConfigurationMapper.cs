@@ -8,6 +8,8 @@ namespace SmartVoiceAgent.Ui.Services;
 
 public static class AiRuntimeConfigurationMapper
 {
+    public const string DefaultTodoistMcpServerLink = "https://todoist.mcpverse.dev/mcp";
+
     public static IReadOnlyDictionary<string, string?> CreateAiServiceOverrides(
         IReadOnlyList<ModelProviderProfile> profiles,
         string activePlannerProfileId,
@@ -27,6 +29,47 @@ public static class AiRuntimeConfigurationMapper
         if (chatProfile is not null && chatProfile.Enabled && chatProfile.Validate().IsValid)
         {
             AddProfileOverrides(overrides, "AIService:Chat", chatProfile);
+        }
+
+        return overrides;
+    }
+
+    public static IReadOnlyDictionary<string, string?> CreateIntegrationOverrides(ISettingsService settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        var overrides = new Dictionary<string, string?>();
+
+        if (!string.IsNullOrWhiteSpace(settings.TodoistApiKey))
+        {
+            overrides["McpOptions:TodoistApiKey"] = settings.TodoistApiKey;
+            overrides["McpOptions:TodoistServerLink"] = DefaultTodoistMcpServerLink;
+        }
+
+        if (!string.IsNullOrWhiteSpace(settings.SmtpUsername)
+            && !string.IsNullOrWhiteSpace(settings.SmtpPassword))
+        {
+            AddIfNotBlank(overrides, "Email:Provider", settings.EmailProvider);
+            AddIfNotBlank(overrides, "Email:Host", settings.SmtpHost);
+            AddIfNotBlank(overrides, "Email:SmtpHost", settings.SmtpHost);
+            overrides["Email:Port"] = settings.SmtpPort.ToString(CultureInfo.InvariantCulture);
+            overrides["Email:SmtpPort"] = settings.SmtpPort.ToString(CultureInfo.InvariantCulture);
+            overrides["Email:Username"] = settings.SmtpUsername;
+            overrides["Email:Password"] = settings.SmtpPassword;
+            overrides["Email:AppPassword"] = settings.SmtpPassword;
+            AddIfNotBlank(overrides, "Email:FromAddress", settings.SenderEmail);
+            AddIfNotBlank(overrides, "Email:FromName", "Kam");
+            overrides["Email:EnableSsl"] = settings.SmtpEnableSsl.ToString(CultureInfo.InvariantCulture);
+        }
+
+        if (!string.IsNullOrWhiteSpace(settings.TwilioAccountSid)
+            && !string.IsNullOrWhiteSpace(settings.TwilioAuthToken)
+            && !string.IsNullOrWhiteSpace(settings.TwilioPhoneNumber))
+        {
+            overrides["Sms:Provider"] = "Twilio";
+            overrides["Sms:TwilioAccountSid"] = settings.TwilioAccountSid;
+            overrides["Sms:TwilioAuthToken"] = settings.TwilioAuthToken;
+            overrides["Sms:TwilioPhoneNumber"] = settings.TwilioPhoneNumber;
         }
 
         return overrides;
@@ -64,5 +107,16 @@ public static class AiRuntimeConfigurationMapper
         }
 
         return profile.Provider == ModelProviderType.Ollama ? "ollama" : string.Empty;
+    }
+
+    private static void AddIfNotBlank(
+        IDictionary<string, string?> overrides,
+        string key,
+        string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            overrides[key] = value;
+        }
     }
 }
