@@ -59,7 +59,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             Title = "SETTINGS";
             _selectedLanguageIndex = mainViewModel?.SelectedLanguageIndex ?? 0;
             _settingsService = settingsService;
-            _modelCatalogService = modelCatalogService ?? new OpenAiCompatibleModelCatalogService();
+            _modelCatalogService = modelCatalogService ?? CompositeModelCatalogService.CreateDefault();
             _ownsModelCatalogService = modelCatalogService is null;
             _audioDeviceService = new AudioDeviceService();
             
@@ -110,6 +110,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private bool _isAiProfileValid;
         private IReadOnlyList<string> _aiModelOptions = CreateDefaultModelOptions("OpenRouter", "openai/gpt-4.1-mini");
         private IReadOnlyList<string> _chatModelOptions = CreateDefaultModelOptions("OpenRouter", "openai/gpt-4.1-mini");
+        private IReadOnlyList<ModelCatalogEntry> _aiModelCatalogEntries = CreateDefaultModelCatalogEntries("OpenRouter", "openai/gpt-4.1-mini");
+        private IReadOnlyList<ModelCatalogEntry> _chatModelCatalogEntries = CreateDefaultModelCatalogEntries("OpenRouter", "openai/gpt-4.1-mini");
         private bool _isRefreshingAiModels;
         private bool _isRefreshingChatModels;
         private bool _isPlannerModelCatalogBacked = true;
@@ -260,6 +262,18 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             private set => this.RaiseAndSetIfChanged(ref _chatModelOptions, value);
         }
 
+        public IReadOnlyList<ModelCatalogEntry> AiModelCatalogEntries
+        {
+            get => _aiModelCatalogEntries;
+            private set => this.RaiseAndSetIfChanged(ref _aiModelCatalogEntries, value);
+        }
+
+        public IReadOnlyList<ModelCatalogEntry> ChatModelCatalogEntries
+        {
+            get => _chatModelCatalogEntries;
+            private set => this.RaiseAndSetIfChanged(ref _chatModelCatalogEntries, value);
+        }
+
         public bool IsPlannerModelCatalogBacked
         {
             get => _isPlannerModelCatalogBacked;
@@ -337,6 +351,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 _chatApiKey = chatProfile.ApiKey;
                 _aiModelOptions = CreateDefaultModelOptions(_aiProvider, _aiModelId);
                 _chatModelOptions = CreateDefaultModelOptions(_chatProvider, _chatModelId);
+                _aiModelCatalogEntries = CreateDefaultModelCatalogEntries(_aiProvider, _aiModelId);
+                _chatModelCatalogEntries = CreateDefaultModelCatalogEntries(_chatProvider, _chatModelId);
                 _isPlannerModelCatalogBacked = IsCatalogBackedProvider(_aiProvider);
                 _isChatModelCatalogBacked = IsCatalogBackedProvider(_chatProvider);
 
@@ -417,27 +433,23 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
             SetCatalogBacked(role, true);
 
-            if (profile.Provider != ModelProviderType.Ollama && string.IsNullOrWhiteSpace(profile.ApiKey))
-            {
-                SetModelOptions(role, CreateDefaultModelOptions(profile.Provider.ToString(), profile.ModelId));
-                AiProfileStatus = "Enter an API key, then refresh the model list.";
-                return;
-            }
-
             try
             {
                 SetIsRefreshingModels(role, true);
-                var modelIds = await _modelCatalogService.GetModelIdsAsync(profile).ConfigureAwait(true);
-                SetModelOptions(role, modelIds.Count > 0
-                    ? modelIds
-                    : CreateDefaultModelOptions(profile.Provider.ToString(), profile.ModelId));
+                var models = await _modelCatalogService.GetModelsAsync(profile).ConfigureAwait(true);
+                SetModelOptions(role, models.Count > 0
+                    ? models
+                    : CreateDefaultModelCatalogEntries(profile.Provider.ToString(), profile.ModelId));
 
-                AiProfileStatus = $"{(isPlanner ? "Planner" : "Chat")} model list loaded from {profile.Provider}.";
+                var hasLiveAvailability = models.Any(model => model.IsAvailable);
+                AiProfileStatus = hasLiveAvailability
+                    ? $"{(isPlanner ? "Planner" : "Chat")} model list loaded from {profile.Provider}."
+                    : $"{(isPlanner ? "Planner" : "Chat")} model registry loaded. Add an API key to verify live availability.";
                 SaveAiProfileSettings();
             }
             catch (Exception ex)
             {
-                SetModelOptions(role, CreateDefaultModelOptions(profile.Provider.ToString(), profile.ModelId));
+                SetModelOptions(role, CreateDefaultModelCatalogEntries(profile.Provider.ToString(), profile.ModelId));
                 AiProfileStatus = $"Model list could not be loaded: {ex.Message}";
             }
             finally
@@ -547,22 +559,29 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 this.RaiseAndSetIfChanged(ref _chatModelId, model, nameof(ChatModelId));
             }
 
-            SetModelOptions(role, CreateDefaultModelOptions(provider.ToString(), model));
+            SetModelOptions(role, CreateDefaultModelCatalogEntries(provider.ToString(), model));
         }
 
         private void SetModelOptions(ModelProviderRole role, IReadOnlyList<string> modelIds)
         {
+            SetModelOptions(role, CreateModelCatalogEntries(ParseProvider(role == ModelProviderRole.Planner ? _aiProvider : _chatProvider), modelIds, "default"));
+        }
+
+        private void SetModelOptions(ModelProviderRole role, IReadOnlyList<ModelCatalogEntry> models)
+        {
             var isPlanner = role == ModelProviderRole.Planner;
             var currentModel = isPlanner ? _aiModelId : _chatModelId;
-            var options = MergeModelOptions(modelIds, currentModel);
+            var options = MergeModelOptions(models.Select(model => model.ModelId), currentModel);
             if (options.Count == 0)
             {
                 return;
             }
 
+            var catalogEntries = MergeCatalogEntries(models, options, isPlanner ? _aiProvider : _chatProvider);
             if (isPlanner)
             {
                 AiModelOptions = options;
+                AiModelCatalogEntries = catalogEntries;
                 if (!options.Contains(_aiModelId, StringComparer.OrdinalIgnoreCase))
                 {
                     AiModelId = options[0];
@@ -571,6 +590,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             else
             {
                 ChatModelOptions = options;
+                ChatModelCatalogEntries = catalogEntries;
                 if (!options.Contains(_chatModelId, StringComparer.OrdinalIgnoreCase))
                 {
                     ChatModelId = options[0];
@@ -684,6 +704,77 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             };
 
             return MergeModelOptions(defaults, currentModel);
+        }
+
+        private static IReadOnlyList<ModelCatalogEntry> CreateDefaultModelCatalogEntries(string provider, string currentModel)
+        {
+            var providerType = ParseProvider(provider);
+            return CreateModelCatalogEntries(providerType, CreateDefaultModelOptions(provider, currentModel), "default");
+        }
+
+        private static IReadOnlyList<ModelCatalogEntry> CreateModelCatalogEntries(
+            ModelProviderType provider,
+            IEnumerable<string> modelIds,
+            string source)
+        {
+            return modelIds
+                .Where(modelId => !string.IsNullOrWhiteSpace(modelId))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(modelId => new ModelCatalogEntry
+                {
+                    Provider = provider,
+                    ProviderId = GetCatalogProviderId(provider, modelId),
+                    ModelId = modelId,
+                    DisplayName = modelId,
+                    Source = source,
+                    Capabilities = ["text-input", "text-output"],
+                    IsAvailable = source.StartsWith("provider-live", StringComparison.OrdinalIgnoreCase)
+                })
+                .ToArray();
+        }
+
+        private static IReadOnlyList<ModelCatalogEntry> MergeCatalogEntries(
+            IReadOnlyList<ModelCatalogEntry> models,
+            IReadOnlyList<string> modelIds,
+            string provider)
+        {
+            var modelById = models
+                .Where(model => !string.IsNullOrWhiteSpace(model.ModelId))
+                .GroupBy(model => model.ModelId, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+            var providerType = ParseProvider(provider);
+
+            return modelIds
+                .Select(modelId => modelById.TryGetValue(modelId, out var model)
+                    ? model
+                    : new ModelCatalogEntry
+                    {
+                        Provider = providerType,
+                        ProviderId = GetCatalogProviderId(providerType, modelId),
+                        ModelId = modelId,
+                        DisplayName = modelId,
+                        Source = "current-selection",
+                        Capabilities = ["text-input", "text-output"],
+                        IsAvailable = false
+                    })
+                .ToArray();
+        }
+
+        private static string GetCatalogProviderId(ModelProviderType provider, string modelId)
+        {
+            if (provider == ModelProviderType.OpenRouter
+                && modelId.Contains('/', StringComparison.Ordinal))
+            {
+                return modelId.Split('/')[0];
+            }
+
+            return provider switch
+            {
+                ModelProviderType.OpenAI => "openai",
+                ModelProviderType.OpenRouter => "openrouter",
+                ModelProviderType.Ollama => "ollama",
+                _ => "openai-compatible"
+            };
         }
 
         private static IReadOnlyList<string> MergeModelOptions(IEnumerable<string> modelIds, string currentModel)

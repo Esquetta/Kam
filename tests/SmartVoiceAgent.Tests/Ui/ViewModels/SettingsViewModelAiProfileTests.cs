@@ -98,7 +98,29 @@ public class SettingsViewModelAiProfileTests : IDisposable
         using var settingsService = new JsonSettingsService(_settingsDirectory);
         using var viewModel = new SettingsViewModel(
             settingsService,
-            new StubModelCatalogService("gpt-5.2", "gpt-4.1-mini"))
+            new StubModelCatalogService([
+                new ModelCatalogEntry
+                {
+                    Provider = ModelProviderType.OpenAI,
+                    ProviderId = "openai",
+                    ModelId = "gpt-5.2",
+                    DisplayName = "GPT-5.2",
+                    Source = "provider-live+models.dev",
+                    IsAvailable = true,
+                    Capabilities = ["reasoning", "tool-calling"]
+                },
+                new ModelCatalogEntry
+                {
+                    Provider = ModelProviderType.OpenAI,
+                    ProviderId = "openai",
+                    ModelId = "gpt-4.1-mini",
+                    DisplayName = "GPT-4.1 mini",
+                    Source = "provider-live+models.dev",
+                    IsAvailable = true,
+                    InputPricePerMillionTokens = 0.4m,
+                    OutputPricePerMillionTokens = 1.6m
+                }
+            ]))
         {
             AiProvider = "OpenAI",
             AiApiKey = "sk-test"
@@ -108,17 +130,21 @@ public class SettingsViewModelAiProfileTests : IDisposable
 
         viewModel.AiEndpoint.Should().Be("https://api.openai.com/v1");
         viewModel.AiModelOptions.Should().Equal("gpt-5.2", "gpt-4.1-mini");
+        viewModel.AiModelCatalogEntries.Should().ContainSingle(model =>
+            model.ModelId == "gpt-4.1-mini"
+            && model.DisplayName == "GPT-4.1 mini"
+            && model.InputPricePerMillionTokens == 0.4m);
         viewModel.AiModelId.Should().Be("gpt-4.1-mini");
         viewModel.IsPlannerModelCatalogBacked.Should().BeTrue();
     }
 
-    private sealed class StubModelCatalogService(params string[] modelIds) : IModelCatalogService
+    private sealed class StubModelCatalogService(IReadOnlyList<ModelCatalogEntry> models) : IModelCatalogService
     {
-        public Task<IReadOnlyList<string>> GetModelIdsAsync(
+        public Task<IReadOnlyList<ModelCatalogEntry>> GetModelsAsync(
             ModelProviderProfile profile,
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult<IReadOnlyList<string>>(modelIds);
+            return Task.FromResult(models);
         }
     }
 

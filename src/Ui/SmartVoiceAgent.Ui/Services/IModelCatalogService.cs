@@ -7,7 +7,7 @@ namespace SmartVoiceAgent.Ui.Services;
 
 public interface IModelCatalogService
 {
-    Task<IReadOnlyList<string>> GetModelIdsAsync(
+    Task<IReadOnlyList<ModelCatalogEntry>> GetModelsAsync(
         ModelProviderProfile profile,
         CancellationToken cancellationToken = default);
 }
