@@ -51,8 +51,17 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 if (_isInitialized) // Double-check after acquiring lock
                     return;
 
+                if (!TryCreateTodoistEndpoint(out var endpoint))
+                {
+                    _logger?.LogInformation(
+                        "Todoist MCP is not configured. Task MCP tools are disabled.");
+                    _mcpTools = Array.Empty<AIFunction>();
+                    _isInitialized = true;
+                    return;
+                }
+
                 _logger?.LogInformation("Initializing TaskAgentTools with MCP server: {Server}",
-                    _mcpOptions.TodoistServerLink);
+                    endpoint);
 
                 var stopwatch = Stopwatch.StartNew();
 
@@ -61,7 +70,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                     using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                     cts.CancelAfter(InitializationTimeout);
 
-                    var client = await InitializeWithRetryAsync(cts.Token);
+                    var client = await InitializeWithRetryAsync(endpoint, cts.Token);
                     _mcpTools = await ListToolsWithRetryAsync(client, cts.Token);
 
                     _isInitialized = true;
@@ -74,14 +83,20 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 }
                 catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                 {
-                    _logger?.LogError("MCP initialization timed out after {Timeout}s",
+                    _logger?.LogWarning("MCP initialization timed out after {Timeout}s. Task MCP tools are disabled.",
                         InitializationTimeout.TotalSeconds);
                     _mcpTools = Array.Empty<AIFunction>();
+                    _isInitialized = true;
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogError(ex, "Failed to initialize MCP client");
+                    _logger?.LogWarning(ex, "MCP client unavailable. Task MCP tools are disabled.");
                     _mcpTools = Array.Empty<AIFunction>();
+                    _isInitialized = true;
                 }
             }
             finally
@@ -93,7 +108,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         /// <summary>
         /// Initializes MCP client with exponential backoff retry.
         /// </summary>
-        private async Task<McpClient> InitializeWithRetryAsync(CancellationToken cancellationToken)
+        private async Task<McpClient> InitializeWithRetryAsync(Uri endpoint, CancellationToken cancellationToken)
         {
             var retryCount = 0;
             var delay = InitialRetryDelay;
@@ -107,7 +122,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                     var client = await McpClient.CreateAsync(
                         clientTransport: new HttpClientTransport(new()
                         {
-                            Endpoint = new Uri(_mcpOptions.TodoistServerLink),
+                            Endpoint = endpoint,
                             Name = "todoist.mcpverse.dev",
                             AdditionalHeaders = new Dictionary<string, string>
                             {
@@ -178,6 +193,48 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 or TimeoutException
                 or IOException
                 or System.Net.Sockets.SocketException;
+        }
+
+        private bool TryCreateTodoistEndpoint(out Uri endpoint)
+        {
+            endpoint = null!;
+
+            if (string.IsNullOrWhiteSpace(_mcpOptions.TodoistApiKey)
+                || string.IsNullOrWhiteSpace(_mcpOptions.TodoistServerLink))
+            {
+                return false;
+            }
+
+            var serverLink = _mcpOptions.TodoistServerLink.Trim();
+            if (Uri.TryCreate(serverLink, UriKind.Absolute, out var absoluteEndpoint))
+            {
+                if (IsHttpEndpoint(absoluteEndpoint))
+                {
+                    endpoint = absoluteEndpoint;
+                    return true;
+                }
+
+                return false;
+            }
+
+            return TryCreateHttpEndpoint($"https://{serverLink}", out endpoint);
+        }
+
+        private static bool TryCreateHttpEndpoint(string value, out Uri endpoint)
+        {
+            if (Uri.TryCreate(value, UriKind.Absolute, out endpoint!)
+                && IsHttpEndpoint(endpoint))
+            {
+                return true;
+            }
+
+            endpoint = null!;
+            return false;
+        }
+
+        private static bool IsHttpEndpoint(Uri endpoint)
+        {
+            return endpoint.Scheme == Uri.UriSchemeHttp || endpoint.Scheme == Uri.UriSchemeHttps;
         }
 
         /// <summary>
