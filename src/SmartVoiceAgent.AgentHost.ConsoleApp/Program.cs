@@ -16,7 +16,7 @@ using MediatR;
 
 #region Main Entry Point
 Console.WriteLine("╔═══════════════════════════════════════════════════════════╗");
-Console.WriteLine("║         KAM Neural Core - Console Test Application        ║");
+Console.WriteLine("║          Kam Agent Host - Console Test Application        ║");
 Console.WriteLine("╚═══════════════════════════════════════════════════════════╝");
 Console.WriteLine();
 

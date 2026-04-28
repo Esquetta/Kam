@@ -31,7 +31,7 @@
                             BorderThickness="1"
                             CornerRadius="4"
                             Padding="8,4">
-                        <TextBlock Text="KERNEL v3.5"
+                        <TextBlock Text="AGENT v1.0"
                                    FontSize="11"
                                    FontFamily="Consolas"
                                    Foreground="{Binding OrbColor, Mode=OneWay}"
@@ -51,7 +51,7 @@
                 </StackPanel>
             </StackPanel>
 
-            <!-- Neural Orb -->
+            <!-- Assistant Orb -->
             <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,20,0,60">
                 <Viewbox Width="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveScaleConverter}, ConverterParameter=260}" 
                          Height="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveScaleConverter}, ConverterParameter=260}">
@@ -97,7 +97,7 @@
                                        LetterSpacing="2"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
-                        <TextBlock Text="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='19:18:35  Local kernel initialized|19:18:35  Service offline'}"
+                        <TextBlock Text="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='19:18:35  Agent workspace ready|19:18:35  Service offline'}"
                                    Foreground="{Binding ResearchStatusColor, Mode=OneWay}"
                                    Opacity="0.8"
                                    FontSize="10"
@@ -129,7 +129,7 @@
                                        LetterSpacing="2"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
-                        <TextBlock Text="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='19:18:42  Semantic engine active|19:18:42  Engine offline'}"
+                        <TextBlock Text="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='19:18:42  Reasoning engine active|19:18:42  Engine offline'}"
                                    Foreground="{Binding AnalyzerStatusColor, Mode=OneWay}"
                                    Opacity="0.8"
                                    FontSize="10"
@@ -161,7 +161,7 @@
                                        LetterSpacing="2"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
-                        <TextBlock Text="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='18:18:38  Scheduler ready|18:18:38  Scheduler offline'}"
+                        <TextBlock Text="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='18:18:38  Task engine ready|18:18:38  Task engine offline'}"
                                    Foreground="{Binding TasksStatusColor, Mode=OneWay}"
                                    Opacity="0.8"
                                    FontSize="10"

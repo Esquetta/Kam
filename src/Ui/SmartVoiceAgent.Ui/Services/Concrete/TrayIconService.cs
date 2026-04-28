@@ -56,7 +56,7 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
                 _trayIcon = new TrayIcon
                 {
                     Icon = LoadIconFromAssets(),
-                    ToolTipText = "Kam - AI Voice Assistant",
+                    ToolTipText = "Kam - AI Workstation Assistant",
                     IsVisible = true
                 };
 

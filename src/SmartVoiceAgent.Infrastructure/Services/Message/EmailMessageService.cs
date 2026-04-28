@@ -63,8 +63,8 @@ namespace SmartVoiceAgent.Infrastructure.Services.Message
             {
                 _logger?.LogInformation("📧 Sending email to: {Recipient}", recipient);
                 
-                var fromAddress = _configuration["Email:FromAddress"] ?? "kam@neuralcore.ai";
-                var fromName = _configuration["Email:FromName"] ?? "KAM Neural Core";
+                var fromAddress = _configuration["Email:FromAddress"] ?? "kam@example.com";
+                var fromName = _configuration["Email:FromName"] ?? "Kam";
                 
                 var mailMessage = new MailMessage
                 {

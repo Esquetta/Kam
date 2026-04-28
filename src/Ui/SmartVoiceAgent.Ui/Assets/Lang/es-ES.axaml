@@ -2,19 +2,19 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     
     <!-- General -->
-    <x:String x:Key="Lang.AppName">KAM NEURAL CORE</x:String>
+    <x:String x:Key="Lang.AppName">Kam</x:String>
     <x:String x:Key="Lang.AppDesc">Sistema avanzado de agente de voz impulsado por IA con arquitectura modular</x:String>
     
     <!-- Coordinator -->
-    <x:String x:Key="Lang.Coordinator.Title">COORDINADOR</x:String>
-    <x:String x:Key="Lang.Coordinator.Subtitle">KERNEL v3.5 // ENLACE NEURONAL ESTABLE</x:String>
-    <x:String x:Key="Lang.Coordinator.Research">INVESTIGACIÓN</x:String>
-    <x:String x:Key="Lang.Coordinator.Analyzer">ANALIZADOR</x:String>
+    <x:String x:Key="Lang.Coordinator.Title">CENTRO DE COMANDO</x:String>
+    <x:String x:Key="Lang.Coordinator.Subtitle">ESPACIO DE AGENTE LISTO</x:String>
+    <x:String x:Key="Lang.Coordinator.Research">CODING</x:String>
+    <x:String x:Key="Lang.Coordinator.Analyzer">VISION</x:String>
     <x:String x:Key="Lang.Coordinator.Tasks">TAREAS</x:String>
     
     <!-- Settings -->
     <x:String x:Key="Lang.Settings.Title">Configuración</x:String>
-    <x:String x:Key="Lang.Settings.Subtitle">Administre la configuración del kernel y sus preferencias.</x:String>
+    <x:String x:Key="Lang.Settings.Subtitle">Administre el espacio de agente y sus preferencias.</x:String>
 
     <x:String x:Key="Lang.Settings.General">GENERAL</x:String>
     <x:String x:Key="Lang.Settings.Appearance">APARIENCIA</x:String>
@@ -24,7 +24,7 @@
     <x:String x:Key="Lang.Settings.LanguageDesc">Seleccionar idioma de interfaz</x:String>
 
     <x:String x:Key="Lang.Settings.Startup">Comportamiento de inicio</x:String>
-    <x:String x:Key="Lang.Settings.StartupDesc">Inicializar automáticamente el enlace neuronal al arrancar el sistema</x:String>
+    <x:String x:Key="Lang.Settings.StartupDesc">Iniciar el espacio de agente al arrancar el sistema</x:String>
     <x:String x:Key="Lang.Settings.Security">Nivel de seguridad</x:String>
     <x:String x:Key="Lang.Settings.SecurityDesc">Modo actual: Monitoreo pasivo</x:String>
     <x:String x:Key="Lang.Settings.Change">CAMBIAR</x:String>
@@ -34,8 +34,8 @@
     <x:String x:Key="Lang.Settings.ReducedMotionDesc">Desactivar efectos de partículas avanzados</x:String>
 
     <x:String x:Key="Lang.Settings.System">SISTEMA</x:String>
-    <x:String x:Key="Lang.Settings.KernelVersion">Versión del Kernel</x:String>
-    <x:String x:Key="Lang.Settings.KernelVersionVal">v3.5.0 // Enlace Neuronal Estable</x:String>
+    <x:String x:Key="Lang.Settings.KernelVersion">Version de Runtime</x:String>
+    <x:String x:Key="Lang.Settings.KernelVersionVal">v1.0.0 // Espacio de Agente Listo</x:String>
 
     <x:String x:Key="Lang.Settings.About">ACERCA DE</x:String>
     

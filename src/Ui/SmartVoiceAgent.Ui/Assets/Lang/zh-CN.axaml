@@ -2,19 +2,19 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     
     <!-- General -->
-    <x:String x:Key="Lang.AppName">KAM NEURAL CORE</x:String>
+    <x:String x:Key="Lang.AppName">Kam</x:String>
     <x:String x:Key="Lang.AppDesc">具有模块化架构的高级AI语音代理系统</x:String>
     
     <!-- Coordinator -->
-    <x:String x:Key="Lang.Coordinator.Title">协调器</x:String>
-    <x:String x:Key="Lang.Coordinator.Subtitle">KERNEL v3.5 // 神经链接稳定</x:String>
-    <x:String x:Key="Lang.Coordinator.Research">研究</x:String>
-    <x:String x:Key="Lang.Coordinator.Analyzer">分析器</x:String>
+    <x:String x:Key="Lang.Coordinator.Title">COMMAND CENTER</x:String>
+    <x:String x:Key="Lang.Coordinator.Subtitle">AGENT WORKSPACE READY</x:String>
+    <x:String x:Key="Lang.Coordinator.Research">CODING</x:String>
+    <x:String x:Key="Lang.Coordinator.Analyzer">VISION</x:String>
     <x:String x:Key="Lang.Coordinator.Tasks">任务</x:String>
     
     <!-- Settings -->
     <x:String x:Key="Lang.Settings.Title">设置</x:String>
-    <x:String x:Key="Lang.Settings.Subtitle">管理您的内核配置和偏好设置。</x:String>
+    <x:String x:Key="Lang.Settings.Subtitle">Manage your agent workspace and preferences.</x:String>
 
     <x:String x:Key="Lang.Settings.General">通用</x:String>
     <x:String x:Key="Lang.Settings.Appearance">外观</x:String>
@@ -24,7 +24,7 @@
     <x:String x:Key="Lang.Settings.LanguageDesc">选择界面语言</x:String>
 
     <x:String x:Key="Lang.Settings.Startup">启动行为</x:String>
-    <x:String x:Key="Lang.Settings.StartupDesc">系统启动时自动初始化神经链接</x:String>
+    <x:String x:Key="Lang.Settings.StartupDesc">Start the agent workspace when the system boots</x:String>
     <x:String x:Key="Lang.Settings.Security">安全级别</x:String>
     <x:String x:Key="Lang.Settings.SecurityDesc">当前模式：被动监控</x:String>
     <x:String x:Key="Lang.Settings.Change">更改</x:String>
@@ -34,8 +34,8 @@
     <x:String x:Key="Lang.Settings.ReducedMotionDesc">禁用高级粒子效果</x:String>
 
     <x:String x:Key="Lang.Settings.System">系统</x:String>
-    <x:String x:Key="Lang.Settings.KernelVersion">内核版本</x:String>
-    <x:String x:Key="Lang.Settings.KernelVersionVal">v3.5.0 // 神经链接稳定</x:String>
+    <x:String x:Key="Lang.Settings.KernelVersion">Runtime Version</x:String>
+    <x:String x:Key="Lang.Settings.KernelVersionVal">v1.0.0 // Agent Workspace Ready</x:String>
 
     <x:String x:Key="Lang.Settings.About">关于</x:String>
     

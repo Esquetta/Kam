@@ -15,6 +15,28 @@ public sealed class MainWindowMetadataTests
         mainWindow.Attribute("Title")?.Value.Should().NotContain("COORDINATOR");
     }
 
+    [Fact]
+    public void MainWindow_LogPanelUsesProductCopy()
+    {
+        var mainWindow = XDocument.Load(FindMainWindowXamlPath()).Root;
+
+        var visibleText = mainWindow!
+            .Descendants()
+            .Where(element => element.Name.LocalName is "TextBlock" or "Button")
+            .SelectMany(element => element.Attributes())
+            .Select(attribute => attribute.Value)
+            .ToArray();
+
+        visibleText.Should().Contain("ACTIVITY_LOG");
+        visibleText.Should().Contain("PLAN_TRACE");
+        visibleText.Should().Contain("SKILL_RESULTS");
+        visibleText.Should().NotContain(value =>
+            value.Contains("KERNEL_LOG", StringComparison.Ordinal)
+            || value.Contains("PLANNER_TRACE", StringComparison.Ordinal)
+            || value.Contains("RESULT_VIEWER", StringComparison.Ordinal)
+            || value.Contains("Coordinator AI", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static string FindMainWindowXamlPath()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

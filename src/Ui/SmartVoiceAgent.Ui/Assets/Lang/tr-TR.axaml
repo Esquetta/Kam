@@ -2,19 +2,19 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     
     <!-- General -->
-    <x:String x:Key="Lang.AppName">KAM NÖRAL ÇEKİRDEK</x:String>
-    <x:String x:Key="Lang.AppDesc">Modüler mimariye sahip gelişmiş yapay zeka sesli asistan sistemi</x:String>
+    <x:String x:Key="Lang.AppName">Kam</x:String>
+    <x:String x:Key="Lang.AppDesc">Moduler skill mimarisine sahip AI calisma alani asistani</x:String>
     
     <!-- Coordinator -->
-    <x:String x:Key="Lang.Coordinator.Title">KOORDİNATÖR</x:String>
-    <x:String x:Key="Lang.Coordinator.Subtitle">ÇEKİRDEK v3.5 // NÖRAL BAĞLANTI STABİL</x:String>
-    <x:String x:Key="Lang.Coordinator.Research">ARAŞTIRMA</x:String>
-    <x:String x:Key="Lang.Coordinator.Analyzer">ANALİZÖR</x:String>
-    <x:String x:Key="Lang.Coordinator.Tasks">GÖREVLER</x:String>
+    <x:String x:Key="Lang.Coordinator.Title">KOMUT MERKEZI</x:String>
+    <x:String x:Key="Lang.Coordinator.Subtitle">AGENT CALISMA ALANI HAZIR</x:String>
+    <x:String x:Key="Lang.Coordinator.Research">KODLAMA</x:String>
+    <x:String x:Key="Lang.Coordinator.Analyzer">GORSEL</x:String>
+    <x:String x:Key="Lang.Coordinator.Tasks">GOREVLER</x:String>
     
     <!-- Settings -->
     <x:String x:Key="Lang.Settings.Title">Ayarlar</x:String>
-    <x:String x:Key="Lang.Settings.Subtitle">Çekirdek yapılandırmasını ve tercihlerinizi yönetin.</x:String>
+    <x:String x:Key="Lang.Settings.Subtitle">Agent calisma alani ve tercihlerinizi yonetin.</x:String>
 
     <x:String x:Key="Lang.Settings.General">GENEL</x:String>
     <x:String x:Key="Lang.Settings.Appearance">GÖRÜNÜM</x:String>
@@ -24,7 +24,7 @@
     <x:String x:Key="Lang.Settings.LanguageDesc">Arayüz dilini seçin</x:String>
 
     <x:String x:Key="Lang.Settings.Startup">Başlangıç Davranışı</x:String>
-    <x:String x:Key="Lang.Settings.StartupDesc">Sistem açılışında nöral bağlantıyı otomatik başlat</x:String>
+    <x:String x:Key="Lang.Settings.StartupDesc">Sistem acilisinda agent calisma alanini baslat</x:String>
     <x:String x:Key="Lang.Settings.Security">Güvenlik Seviyesi</x:String>
     <x:String x:Key="Lang.Settings.SecurityDesc">Mevcut mod: Pasif İzleme</x:String>
     <x:String x:Key="Lang.Settings.Change">DEĞİŞTİR</x:String>
@@ -34,8 +34,8 @@
     <x:String x:Key="Lang.Settings.ReducedMotionDesc">Gelişmiş partikül efektlerini devre dışı bırak</x:String>
 
     <x:String x:Key="Lang.Settings.System">SİSTEM</x:String>
-    <x:String x:Key="Lang.Settings.KernelVersion">Çekirdek Sürümü</x:String>
-    <x:String x:Key="Lang.Settings.KernelVersionVal">v3.5.0 // Nöral Bağlantı Stabil</x:String>
+    <x:String x:Key="Lang.Settings.KernelVersion">Runtime Surumu</x:String>
+    <x:String x:Key="Lang.Settings.KernelVersionVal">v1.0.0 // Agent Calisma Alani Hazir</x:String>
 
     <x:String x:Key="Lang.Settings.About">HAKKINDA</x:String>
     

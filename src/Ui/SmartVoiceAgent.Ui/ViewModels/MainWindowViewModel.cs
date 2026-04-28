@@ -176,7 +176,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /* ========================= */
-        /* NEURAL ORB */
+        /* ASSISTANT ORB */
         /* ========================= */
 
         private IBrush _currentOrbColor = Brush.Parse("#00D4FF");
@@ -442,8 +442,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 ActiveView = NavView.Coordinator;
 
                 // Initial system log only - no simulation
-                AddLog("KERNEL_INITIALIZED... v3.5");
-                AddLog("NEURAL_LINK_STABLE");
+                AddLog("AGENT_RUNTIME_READY");
+                AddLog("WORKSPACE_READY");
             }, DispatcherPriority.Background);
         }
 
@@ -749,7 +749,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             service.AboutRequested += (s, e) =>
             {
                 // Show about info in coordinator or log
-                AddLog("Kam - AI Voice Assistant v1.0");
+                AddLog("Kam - AI Workstation Assistant v1.0");
                 AddLog("Built with .NET 9.0 and Avalonia UI");
             };
 
@@ -933,7 +933,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             }
 
             _skillPlannerTraceStore.Clear();
-            AddLog("PLANNER_TRACE_CLEARED");
+            AddLog("PLAN_TRACE_CLEARED");
         }
 
         private bool MatchesSkillExecutionHistoryFilters(SkillExecutionHistoryEntry entry)
@@ -1124,7 +1124,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 if (LogEntries.Count > 100)
                     LogEntries.RemoveAt(0);
 
-                _trayIconService?.UpdateToolTip($"KAM NEURAL - {message}");
+                _trayIconService?.UpdateToolTip($"Kam - {message}");
                 
                 // Notify that log was updated (for auto-scroll)
                 LogUpdated?.Invoke(this, EventArgs.Empty);

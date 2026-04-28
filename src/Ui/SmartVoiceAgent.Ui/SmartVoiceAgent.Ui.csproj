@@ -13,8 +13,8 @@
     <!-- Assembly Information - appears in Task Manager, file properties, etc. -->
     <AssemblyTitle>Kam</AssemblyTitle>
     <AssemblyProduct>Kam</AssemblyProduct>
-    <AssemblyDescription>AI Voice Assistant</AssemblyDescription>
-    <AssemblyCompany>KAM Neural Core</AssemblyCompany>
+    <AssemblyDescription>AI Workstation Assistant</AssemblyDescription>
+    <AssemblyCompany>Kam</AssemblyCompany>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
   </PropertyGroup>
