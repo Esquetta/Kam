@@ -5,6 +5,7 @@ using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using SmartVoiceAgent.Infrastructure.Mcp;
 using System.Diagnostics;
+using System.Net.Sockets;
 
 namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 {
@@ -91,6 +92,15 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
                     throw;
+                }
+                catch (Exception ex) when (IsEndpointUnavailableException(ex))
+                {
+                    _logger?.LogWarning(
+                        "MCP endpoint {Server} is unavailable ({Reason}). Task MCP tools are disabled.",
+                        endpoint,
+                        GetEndpointUnavailableReason(ex));
+                    _mcpTools = Array.Empty<AIFunction>();
+                    _isInitialized = true;
                 }
                 catch (Exception ex)
                 {
@@ -189,10 +199,44 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         /// </summary>
         private static bool IsRetryableException(Exception ex)
         {
+            if (IsEndpointUnavailableException(ex))
+            {
+                return false;
+            }
+
             return ex is HttpRequestException
                 or TimeoutException
                 or IOException
-                or System.Net.Sockets.SocketException;
+                or SocketException;
+        }
+
+        private static bool IsEndpointUnavailableException(Exception ex)
+        {
+            return FindSocketException(ex) is
+            {
+                SocketErrorCode: SocketError.HostNotFound or SocketError.NoData
+            };
+        }
+
+        private static string GetEndpointUnavailableReason(Exception ex)
+        {
+            return FindSocketException(ex)?.SocketErrorCode.ToString() ?? ex.GetType().Name;
+        }
+
+        private static SocketException? FindSocketException(Exception ex)
+        {
+            var current = ex;
+            while (current is not null)
+            {
+                if (current is SocketException socketException)
+                {
+                    return socketException;
+                }
+
+                current = current.InnerException;
+            }
+
+            return null;
         }
 
         private bool TryCreateTodoistEndpoint(out Uri endpoint)
