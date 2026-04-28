@@ -214,28 +214,43 @@
                                          PlaceholderText="custom/model-id"/>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="1" Grid.Column="0" Spacing="6">
-                                <TextBlock Text="API Key"
+                            <Grid Grid.Row="1"
+                                  Grid.Column="0"
+                                  Grid.ColumnSpan="2"
+                                  ColumnDefinitions="*, Auto"
+                                  RowDefinitions="Auto, Auto, Auto"
+                                  ColumnSpacing="10"
+                                  RowSpacing="6">
+                                <TextBlock Grid.Row="0"
+                                           Grid.Column="0"
+                                           Grid.ColumnSpan="2"
+                                           Text="API Key"
                                            FontSize="11"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
-                                <TextBox Text="{Binding AiApiKey, Mode=TwoWay}"
+                                <TextBox Grid.Row="1"
+                                         Grid.Column="0"
+                                         Text="{Binding AiApiKey, Mode=TwoWay}"
                                          PasswordChar="*"
                                          PlaceholderText="sk-..."/>
-                                <TextBlock Text="{Binding MaskedAiApiKey}"
-                                           FontSize="10"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           TextTrimming="CharacterEllipsis"/>
-                            </StackPanel>
-
-                            <StackPanel Grid.Row="1" Grid.Column="1" VerticalAlignment="Bottom">
-                                <Button Command="{Binding TestAiConnectionCommand}"
+                                <Button Grid.Row="1"
+                                        Grid.Column="1"
+                                        Command="{Binding TestAiConnectionCommand}"
+                                        MinWidth="180"
                                         HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Stretch"
                                         Background="{DynamicResource CardBgHoverBrush}"
                                         Foreground="{DynamicResource TextSecondaryBrush}"
                                         Padding="16,9">
                                     <TextBlock Text="Test Connection" FontSize="12" FontWeight="Medium"/>
                                 </Button>
-                            </StackPanel>
+                                <TextBlock Grid.Row="2"
+                                           Grid.Column="0"
+                                           Grid.ColumnSpan="2"
+                                           Text="{Binding MaskedAiApiKey}"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </Grid>
                         </Grid>
                         <Grid ColumnDefinitions="Auto, *" Margin="0,8,0,0">
                             <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">

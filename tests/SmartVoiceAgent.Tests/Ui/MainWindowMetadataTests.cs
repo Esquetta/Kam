@@ -6,12 +6,12 @@ namespace SmartVoiceAgent.Tests.Ui;
 public sealed class MainWindowMetadataTests
 {
     [Fact]
-    public void MainWindow_TitleUsesProductNameInsteadOfCoordinatorSurfaceText()
+    public void MainWindow_TitleDoesNotRenderProductNameOverSystemStatus()
     {
         var mainWindow = XDocument.Load(FindMainWindowXamlPath()).Root;
 
         mainWindow.Should().NotBeNull();
-        mainWindow!.Attribute("Title")?.Value.Should().Be("Kam");
+        mainWindow!.Attribute("Title")?.Value.Should().BeEmpty();
         mainWindow.Attribute("Title")?.Value.Should().NotContain("COORDINATOR");
     }
 
