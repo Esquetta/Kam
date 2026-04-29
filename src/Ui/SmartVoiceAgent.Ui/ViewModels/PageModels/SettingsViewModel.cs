@@ -20,6 +20,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private readonly ISettingsService _settingsService;
         private readonly IModelCatalogService _modelCatalogService;
         private readonly IModelConnectionTestService _modelConnectionTestService;
+        private readonly IAutoStartRegistrationService _autoStartRegistrationService;
         private readonly bool _ownsModelCatalogService;
         private readonly bool _ownsModelConnectionTestService;
         private readonly AudioDeviceService _audioDeviceService;
@@ -35,16 +36,16 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public ReactiveCommand<Unit, Unit> RefreshAiModelsCommand { get; }
         public ReactiveCommand<Unit, Unit> RefreshChatModelsCommand { get; }
 
-        public SettingsViewModel() : this(new JsonSettingsService(), null, null, null)
+        public SettingsViewModel() : this(new JsonSettingsService(), null, null, null, null)
         {
         }
 
-        public SettingsViewModel(ISettingsService settingsService) : this(settingsService, null, null, null)
+        public SettingsViewModel(ISettingsService settingsService) : this(settingsService, null, null, null, null)
         {
         }
 
         public SettingsViewModel(ISettingsService settingsService, IModelCatalogService modelCatalogService)
-            : this(settingsService, null, modelCatalogService, null)
+            : this(settingsService, null, modelCatalogService, null, null)
         {
         }
 
@@ -52,11 +53,20 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             ISettingsService settingsService,
             IModelCatalogService modelCatalogService,
             IModelConnectionTestService modelConnectionTestService)
-            : this(settingsService, null, modelCatalogService, modelConnectionTestService)
+            : this(settingsService, null, modelCatalogService, modelConnectionTestService, null)
         {
         }
 
-        public SettingsViewModel(MainWindowViewModel mainViewModel) : this(new JsonSettingsService(), mainViewModel, null, null)
+        public SettingsViewModel(
+            ISettingsService settingsService,
+            IModelCatalogService modelCatalogService,
+            IModelConnectionTestService modelConnectionTestService,
+            IAutoStartRegistrationService autoStartRegistrationService)
+            : this(settingsService, null, modelCatalogService, modelConnectionTestService, autoStartRegistrationService)
+        {
+        }
+
+        public SettingsViewModel(MainWindowViewModel mainViewModel) : this(new JsonSettingsService(), mainViewModel, null, null, null)
         {
         }
 
@@ -64,7 +74,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             ISettingsService settingsService,
             MainWindowViewModel? mainViewModel,
             IModelCatalogService? modelCatalogService,
-            IModelConnectionTestService? modelConnectionTestService)
+            IModelConnectionTestService? modelConnectionTestService,
+            IAutoStartRegistrationService? autoStartRegistrationService)
         {
             _mainViewModel = mainViewModel;
             Title = "SETTINGS";
@@ -72,6 +83,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _settingsService = settingsService;
             _modelCatalogService = modelCatalogService ?? CompositeModelCatalogService.CreateDefault();
             _modelConnectionTestService = modelConnectionTestService ?? new ModelConnectionTestService();
+            _autoStartRegistrationService = autoStartRegistrationService ?? new WindowsAutoStartRegistrationService();
             _ownsModelCatalogService = modelCatalogService is null;
             _ownsModelConnectionTestService = modelConnectionTestService is null;
             _audioDeviceService = new AudioDeviceService();
@@ -1275,41 +1287,17 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /// </summary>
         public bool AutoStart
         {
-            get => CheckRegistryAutoStart();
+            get => _autoStartRegistrationService.IsEnabled(_settingsService.AutoStart);
             set
             {
-                var current = CheckRegistryAutoStart();
+                var current = _autoStartRegistrationService.IsEnabled(_settingsService.AutoStart);
                 if (current != value)
                 {
                     _settingsService.AutoStart = value;
                     this.RaisePropertyChanged();
-                    ApplyAutoStartSetting(value);
+                    _autoStartRegistrationService.SetEnabled(value, GetExecutablePath());
                 }
             }
-        }
-
-        /// <summary>
-        /// Checks if auto-start is enabled in the registry
-        /// </summary>
-        private bool CheckRegistryAutoStart()
-        {
-            try
-            {
-                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
-                    @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", false);
-                
-                if (key != null)
-                {
-                    // Check for "Kam" registry value (previously "KAM Neural Core", "SmartVoiceAgent")
-                    var value1 = key.GetValue("Kam");
-                    var value2 = key.GetValue("KAM Neural Core");
-                    var value3 = key.GetValue("SmartVoiceAgent");
-                    return value1 != null || value2 != null || value3 != null;
-                }
-            }
-            catch { }
-            
-            return _settingsService.AutoStart;
         }
 
         /// <summary>
@@ -1378,59 +1366,6 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             this.RaisePropertyChanged(nameof(StartMinimized));
             this.RaisePropertyChanged(nameof(StartupBehavior));
             this.RaisePropertyChanged(nameof(ShowOnStartup));
-        }
-
-        /// <summary>
-        /// Applies the auto-start setting to the system registry
-        /// </summary>
-        private void ApplyAutoStartSetting(bool enable)
-        {
-            try
-            {
-                // Get the correct executable path
-                string? executablePath = GetExecutablePath();
-                
-                if (string.IsNullOrEmpty(executablePath) || !File.Exists(executablePath))
-                {
-                    System.Diagnostics.Debug.WriteLine($"Auto-start: Could not find valid executable path");
-                    return;
-                }
-
-                // Quote the path if it contains spaces (required for Task Manager to recognize it)
-                if (executablePath.Contains(' ') && !executablePath.StartsWith("\""))
-                {
-                    executablePath = $"\"{executablePath}\"";
-                }
-                
-                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
-                    @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
-                
-                if (key != null)
-                {
-                    if (enable)
-                    {
-                        // Use "Kam" as the registry value name (appears in Task Manager Startup Apps)
-                        key.SetValue("Kam", executablePath);
-                        System.Diagnostics.Debug.WriteLine($"Auto-start enabled: {executablePath}");
-                    }
-                    else
-                    {
-                        // Try to delete current and old names for compatibility
-                        try { key.DeleteValue("Kam", false); } catch { }
-                        try { key.DeleteValue("KAM Neural Core", false); } catch { }
-                        try { key.DeleteValue("SmartVoiceAgent", false); } catch { }
-                        System.Diagnostics.Debug.WriteLine("Auto-start disabled");
-                    }
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine("Auto-start: Could not open registry key");
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Failed to set auto-start: {ex}");
-            }
         }
 
         /// <summary>

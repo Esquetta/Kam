@@ -171,6 +171,26 @@ public class SettingsViewModelAiProfileTests : IDisposable
         viewModel.IsPlannerModelCatalogBacked.Should().BeTrue();
     }
 
+    [Fact]
+    public void AutoStart_UsesRegistrationServiceAndPersistsUserChoice()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        settingsService.AutoStart = true;
+        var autoStartService = new StubAutoStartRegistrationService(isEnabled: false);
+        using var viewModel = new SettingsViewModel(
+            settingsService,
+            new StubModelCatalogService([]),
+            new StubModelConnectionTestService(ModelConnectionTestResult.Passed(12)),
+            autoStartService);
+
+        viewModel.AutoStart.Should().BeFalse();
+
+        viewModel.AutoStart = true;
+
+        settingsService.AutoStart.Should().BeTrue();
+        autoStartService.SetRequests.Should().ContainSingle(request => request.Enable);
+    }
+
     private static SettingsViewModel CreateViewModel(
         ISettingsService settingsService,
         IModelConnectionTestService? connectionTestService = null)
@@ -201,6 +221,20 @@ public class SettingsViewModelAiProfileTests : IDisposable
         {
             Requests.Add(profile);
             return Task.FromResult(result);
+        }
+    }
+
+    private sealed class StubAutoStartRegistrationService(bool isEnabled) : IAutoStartRegistrationService
+    {
+        public List<(bool Enable, string? ExecutablePath)> SetRequests { get; } = [];
+
+        public bool IsSupported => true;
+
+        public bool IsEnabled(bool fallback) => isEnabled;
+
+        public void SetEnabled(bool enable, string? executablePath)
+        {
+            SetRequests.Add((enable, executablePath));
         }
     }
 
