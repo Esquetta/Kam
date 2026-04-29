@@ -63,7 +63,7 @@
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <Grid RowDefinitions="Auto, Auto, Auto, Auto, *"
+        <Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto"
               RowSpacing="16"
               Margin="0,18,0,24"
               MaxWidth="980"
@@ -164,7 +164,73 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <Border Grid.Row="2"
+            <Border Grid.Row="2" Classes="DiagnosticPanel">
+                <Grid RowDefinitions="Auto, Auto" RowSpacing="14">
+                    <Grid ColumnDefinitions="*, Auto" ColumnSpacing="16">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="LIVE PRODUCTION TEST"
+                                       FontSize="12"
+                                       FontFamily="Consolas"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource AccentCyanBrush}"
+                                       LetterSpacing="2"/>
+                            <TextBlock Text="{Binding LiveTestNextAction}"
+                                       FontSize="13"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <Border Grid.Column="1"
+                                Padding="12,6"
+                                CornerRadius="6"
+                                Background="{DynamicResource SurfaceBgBrush}"
+                                BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                BorderThickness="1"
+                                VerticalAlignment="Top">
+                            <TextBlock Text="{Binding LiveTestStatus}"
+                                       FontSize="12"
+                                       FontFamily="Consolas"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        </Border>
+                    </Grid>
+
+                    <ItemsControl Grid.Row="1" ItemsSource="{Binding LiveTestSteps}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:RuntimeDiagnosticItemViewModel">
+                                <Border Classes="DiagnosticRow"
+                                        Classes.Ready="{Binding IsReady}"
+                                        Classes.Warning="{Binding IsWarning}"
+                                        Classes.Blocked="{Binding IsBlocked}">
+                                    <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="10">
+                                        <Ellipse Grid.Column="0" Classes="StatusDot ReadyDot" IsVisible="{Binding IsReady}"/>
+                                        <Ellipse Grid.Column="0" Classes="StatusDot WarningDot" IsVisible="{Binding IsWarning}"/>
+                                        <Ellipse Grid.Column="0" Classes="StatusDot BlockedDot" IsVisible="{Binding IsBlocked}"/>
+                                        <StackPanel Grid.Column="1" Spacing="3">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="12"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding Detail}"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding Value}"
+                                                   FontSize="12"
+                                                   FontFamily="Consolas"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   TextAlignment="Right"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="3"
                     Classes="DiagnosticPanel"
                     IsVisible="{Binding HasBlockingItems}">
                 <StackPanel Spacing="10">
@@ -188,7 +254,7 @@
                 </StackPanel>
             </Border>
 
-            <Grid Grid.Row="3"
+            <Grid Grid.Row="4"
                   ColumnDefinitions="*, *"
                   RowDefinitions="Auto, Auto"
                   ColumnSpacing="16"

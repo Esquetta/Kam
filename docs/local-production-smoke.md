@@ -36,7 +36,10 @@ Useful variants:
    - `PLANNER_TRACE` with raw model response and parse status.
    - `RESULT_VIEWER` with normalized execution result.
 5. Open Skills and confirm health cards show recent success rate, average duration, last failure detail, and execution history.
-6. Run smoke evals from the Skills screen.
+6. Open Runtime Diagnostics and use the Live Production Test panel as the manual gate:
+   - `READY_FOR_LIVE_TEST` means core AI, live model connection, host, skill smoke, and command-loop evidence are ready.
+   - `NEEDS_ACTION` means follow the panel's next action before treating the local session as production-ready.
+7. Run smoke evals from the Skills screen.
 
 ## Notes
 

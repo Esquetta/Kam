@@ -383,6 +383,140 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
             && card.IsWarning);
     }
 
+    [Fact]
+    public async Task LiveTestSession_WithVerifiedCoreSignals_ReportsReadyForLiveProductionTest()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        settingsService.ModelProviderProfiles =
+        [
+            new ModelProviderProfile
+            {
+                Id = "planner",
+                Provider = ModelProviderType.OpenAI,
+                Endpoint = "https://api.openai.com/v1",
+                ApiKey = "sk-secret-value",
+                ModelId = "gpt-5.2",
+                Roles = [ModelProviderRole.Planner],
+                Enabled = true
+            }
+        ];
+        settingsService.ActivePlannerProfileId = "planner";
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            new StaticHostControl(isRunning: true),
+            modelConnectionTestService: new RecordingModelConnectionTestService(
+                ModelConnectionTestResult.Passed(4)),
+            skillEvalHarness: new RecordingSkillEvalHarness(new SkillEvalSummary
+            {
+                Total = 1,
+                Passed = 1,
+                Failed = 0,
+                Results =
+                [
+                    new SkillEvalResult
+                    {
+                        Name = "files exists",
+                        SkillId = "files.exists",
+                        Passed = true,
+                        ExpectedStatus = SkillExecutionStatus.Succeeded,
+                        ActualStatus = SkillExecutionStatus.Succeeded,
+                        Message = "OK",
+                        DurationMilliseconds = 9
+                    }
+                ]
+            }),
+            skillEvalCaseCatalog: new StaticSkillEvalCaseCatalog(),
+            skillExecutionHistoryService: new StaticSkillExecutionHistoryService(
+            [
+                new SkillExecutionHistoryEntry
+                {
+                    SkillId = "files.read",
+                    Status = SkillExecutionStatus.Succeeded,
+                    Success = true,
+                    ResultSummary = "README loaded.",
+                    DurationMilliseconds = 18
+                }
+            ]),
+            skillPlannerTraceStore: new StaticSkillPlannerTraceStore(
+            [
+                new SkillPlannerTraceEntry
+                {
+                    IsValid = true,
+                    SkillId = "files.read",
+                    Confidence = 0.93,
+                    DurationMilliseconds = 12
+                }
+            ]));
+
+        await viewModel.RefreshAsync();
+        await viewModel.RunSkillSmokeAsync();
+
+        viewModel.IsLiveTestReady.Should().BeTrue();
+        viewModel.LiveTestStatus.Should().Be("READY_FOR_LIVE_TEST");
+        viewModel.LiveTestNextAction.Should().Be("Start a local production session.");
+        viewModel.LiveTestSteps.Should().HaveCount(5);
+        viewModel.LiveTestSteps.Should().OnlyContain(step => step.IsReady);
+    }
+
+    [Fact]
+    public async Task LiveTestSession_WithoutCommandEvidence_ShowsNextActionForCommandLoop()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        settingsService.ModelProviderProfiles =
+        [
+            new ModelProviderProfile
+            {
+                Id = "planner",
+                Provider = ModelProviderType.OpenAI,
+                Endpoint = "https://api.openai.com/v1",
+                ApiKey = "sk-secret-value",
+                ModelId = "gpt-5.2",
+                Roles = [ModelProviderRole.Planner],
+                Enabled = true
+            }
+        ];
+        settingsService.ActivePlannerProfileId = "planner";
+
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            new StaticHostControl(isRunning: true),
+            modelConnectionTestService: new RecordingModelConnectionTestService(
+                ModelConnectionTestResult.Passed(4)),
+            skillEvalHarness: new RecordingSkillEvalHarness(new SkillEvalSummary
+            {
+                Total = 1,
+                Passed = 1,
+                Failed = 0,
+                Results =
+                [
+                    new SkillEvalResult
+                    {
+                        Name = "files exists",
+                        SkillId = "files.exists",
+                        Passed = true,
+                        ExpectedStatus = SkillExecutionStatus.Succeeded,
+                        ActualStatus = SkillExecutionStatus.Succeeded,
+                        Message = "OK",
+                        DurationMilliseconds = 9
+                    }
+                ]
+            }),
+            skillEvalCaseCatalog: new StaticSkillEvalCaseCatalog(),
+            skillExecutionHistoryService: new StaticSkillExecutionHistoryService([]),
+            skillPlannerTraceStore: new StaticSkillPlannerTraceStore([]));
+
+        await viewModel.RefreshAsync();
+        await viewModel.RunSkillSmokeAsync();
+
+        viewModel.IsLiveTestReady.Should().BeFalse();
+        viewModel.LiveTestStatus.Should().Be("NEEDS_ACTION");
+        viewModel.LiveTestNextAction.Should().Be("Submit a real command to verify planner and skill execution.");
+        viewModel.LiveTestSteps.Should().Contain(step =>
+            step.Name == "Command Loop"
+            && step.Value == "Needs command"
+            && step.IsWarning);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_settingsDirectory))
