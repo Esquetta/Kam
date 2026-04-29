@@ -593,6 +593,12 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
                 ? "Health service summarizes installed skill readiness."
                 : "Smoke eval harness verifies executable skill behavior.",
             GetSkillSummarySeverity()));
+        var commandLoopSummary = GetCommandLoopSummary();
+        SummaryCards.Add(new RuntimeDiagnosticItemViewModel(
+            "Command Loop",
+            commandLoopSummary.Value,
+            commandLoopSummary.Detail,
+            commandLoopSummary.Severity));
         SummaryCards.Add(new RuntimeDiagnosticItemViewModel(
             "Integrations",
             $"{IntegrationItems.Count(item => item.IsReady)}/{IntegrationItems.Count} configured",
@@ -692,6 +698,35 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             : RuntimeDiagnosticSeverity.Warning;
     }
 
+    private CommandLoopSummary GetCommandLoopSummary()
+    {
+        var plannerTrace = RuntimeItems.FirstOrDefault(item =>
+            item.Name.Equals("Planner Trace", StringComparison.OrdinalIgnoreCase));
+        var skillResult = RuntimeItems.FirstOrDefault(item =>
+            item.Name.Equals("Skill Result", StringComparison.OrdinalIgnoreCase));
+
+        if (plannerTrace?.IsBlocked == true || skillResult?.IsBlocked == true)
+        {
+            return new CommandLoopSummary(
+                "Action needed",
+                "Latest planner trace or skill result is blocked.",
+                RuntimeDiagnosticSeverity.Blocked);
+        }
+
+        if (plannerTrace?.IsReady == true && skillResult?.IsReady == true)
+        {
+            return new CommandLoopSummary(
+                "Ready",
+                "Latest command produced a valid plan and normalized result.",
+                RuntimeDiagnosticSeverity.Ready);
+        }
+
+        return new CommandLoopSummary(
+            "Needs command",
+            "Submit a command to verify planner and skill execution together.",
+            RuntimeDiagnosticSeverity.Warning);
+    }
+
     private static string BuildSkillSmokeFailureDetail(SkillEvalSummary summary)
     {
         var failedResult = summary.Results.FirstOrDefault(result => !result.Passed);
@@ -748,6 +783,11 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     {
         return durationMilliseconds <= 0 ? "<1 ms" : $"{durationMilliseconds} ms";
     }
+
+    private sealed record CommandLoopSummary(
+        string Value,
+        string Detail,
+        RuntimeDiagnosticSeverity Severity);
 
     private static bool RequiresApiKey(ModelProviderType provider) => provider != ModelProviderType.Ollama;
 

@@ -314,6 +314,10 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
             && item.Value == "Succeeded"
             && item.IsReady
             && item.Detail.Contains("README loaded", StringComparison.OrdinalIgnoreCase));
+        viewModel.SummaryCards.Should().Contain(card =>
+            card.Name == "Command Loop"
+            && card.Value == "Ready"
+            && card.IsReady);
     }
 
     [Fact]
@@ -358,6 +362,25 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
             item.Contains("Planner trace invalid", StringComparison.OrdinalIgnoreCase));
         viewModel.BlockingItems.Should().Contain(item =>
             item.Contains("Last skill execution failed", StringComparison.OrdinalIgnoreCase));
+        viewModel.SummaryCards.Should().Contain(card =>
+            card.Name == "Command Loop"
+            && card.Value == "Action needed"
+            && card.IsBlocked);
+    }
+
+    [Fact]
+    public void Constructor_WithoutCommandLoopEvidence_ReportsCommandLoopNeedsCommand()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            skillExecutionHistoryService: new StaticSkillExecutionHistoryService([]),
+            skillPlannerTraceStore: new StaticSkillPlannerTraceStore([]));
+
+        viewModel.SummaryCards.Should().Contain(card =>
+            card.Name == "Command Loop"
+            && card.Value == "Needs command"
+            && card.IsWarning);
     }
 
     public void Dispose()

@@ -48,5 +48,6 @@ Then launch and manually verify:
 - Runtime Diagnostics > Run Skill Smoke reports all smoke evals passing.
 - A simple command produces a planner trace and a normalized skill result.
 - Runtime Diagnostics > Local Runtime shows the latest Planner Trace and Skill Result as ready after that command.
+- Runtime Diagnostics > Command Loop summary card shows Ready after the same command.
 - Skills page evals run and report health.
 - Optional integrations are tested only when their credentials are intentionally configured.
