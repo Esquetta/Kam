@@ -39,7 +39,8 @@ Useful variants:
 6. Open Runtime Diagnostics and use the Live Production Test panel as the manual gate:
    - `READY_FOR_LIVE_TEST` means core AI, live model connection, host, skill smoke, and command-loop evidence are ready.
    - `NEEDS_ACTION` means follow the panel's next action before treating the local session as production-ready.
-7. Run smoke evals from the Skills screen.
+7. Use Copy Report from Runtime Diagnostics when sharing a local readiness snapshot. The report is intentionally sanitized and does not include API keys or endpoint values.
+8. Run smoke evals from the Skills screen.
 
 ## Notes
 

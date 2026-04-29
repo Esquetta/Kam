@@ -50,5 +50,6 @@ Then launch and manually verify:
 - Runtime Diagnostics > Local Runtime shows the latest Planner Trace and Skill Result as ready after that command.
 - Runtime Diagnostics > Command Loop summary card shows Ready after the same command.
 - Runtime Diagnostics > Live Production Test shows `READY_FOR_LIVE_TEST`. If it shows `NEEDS_ACTION`, follow the next action shown in that panel.
+- Runtime Diagnostics > Copy Report produces a secrets-free readiness report for support/debugging.
 - Skills page evals run and report health.
 - Optional integrations are tested only when their credentials are intentionally configured.

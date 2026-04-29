@@ -629,7 +629,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     _skillEvalHarness,
                     _skillEvalCaseCatalog,
                     _skillExecutionHistoryService,
-                    _skillPlannerTraceStore),
+                    _skillPlannerTraceStore,
+                    CopyRuntimeDiagnosticsText),
                 NavView.Plugins => CreatePluginsViewModel(),
                 NavView.Integrations => new IntegrationsViewModel(),
                 NavView.Settings => new SettingsViewModel(this),
@@ -1029,6 +1030,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 AddLog($"COPY_FAILED: {ex.Message}");
             }
+        }
+
+        private void CopyRuntimeDiagnosticsText(string label, string text)
+        {
+            CopySkillExecutionText(label, text);
         }
 
         private void RerunSkillExecution(SkillExecutionHistoryItemViewModel item)

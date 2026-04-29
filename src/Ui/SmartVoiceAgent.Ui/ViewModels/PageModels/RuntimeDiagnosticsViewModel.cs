@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -23,6 +24,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     private readonly ISkillEvalCaseCatalog? _skillEvalCaseCatalog;
     private readonly ISkillExecutionHistoryService? _skillExecutionHistoryService;
     private readonly ISkillPlannerTraceStore? _skillPlannerTraceStore;
+    private readonly Action<string, string>? _copyReport;
 
     private string _coreReadinessStatus = "ACTION_NEEDED";
     private string _hostStatus = "Unknown";
@@ -31,6 +33,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     private string _skillSmokeSummaryValue = string.Empty;
     private string _liveTestStatus = "NEEDS_ACTION";
     private string _liveTestNextAction = "Fix blocking model settings before live commands.";
+    private string _readinessReportCopyStatus = "Report not copied.";
     private string _lastRefreshText = "Not refreshed";
     private bool _isRefreshing;
     private bool _isRunningSkillSmoke;
@@ -50,7 +53,8 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         ISkillEvalHarness? skillEvalHarness = null,
         ISkillEvalCaseCatalog? skillEvalCaseCatalog = null,
         ISkillExecutionHistoryService? skillExecutionHistoryService = null,
-        ISkillPlannerTraceStore? skillPlannerTraceStore = null)
+        ISkillPlannerTraceStore? skillPlannerTraceStore = null,
+        Action<string, string>? copyReport = null)
     {
         _settingsService = settingsService;
         _hostControl = hostControl;
@@ -60,10 +64,12 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         _skillEvalCaseCatalog = skillEvalCaseCatalog;
         _skillExecutionHistoryService = skillExecutionHistoryService;
         _skillPlannerTraceStore = skillPlannerTraceStore;
+        _copyReport = copyReport;
 
         Title = "Runtime Diagnostics";
         RefreshCommand = ReactiveCommand.CreateFromTask(RefreshAsync);
         RunSkillSmokeCommand = ReactiveCommand.CreateFromTask(RunSkillSmokeAsync);
+        CopyReadinessReportCommand = ReactiveCommand.Create(CopyReadinessReport);
 
         if (_hostControl is not null)
         {
@@ -86,6 +92,8 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     public ICommand RefreshCommand { get; }
 
     public ICommand RunSkillSmokeCommand { get; }
+
+    public ICommand CopyReadinessReportCommand { get; }
 
     public ObservableCollection<RuntimeDiagnosticItemViewModel> SummaryCards { get; } = [];
 
@@ -145,6 +153,12 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     {
         get => _isLiveTestReady;
         private set => this.RaiseAndSetIfChanged(ref _isLiveTestReady, value);
+    }
+
+    public string ReadinessReportCopyStatus
+    {
+        get => _readinessReportCopyStatus;
+        private set => this.RaiseAndSetIfChanged(ref _readinessReportCopyStatus, value);
     }
 
     public string LastRefreshText
@@ -277,6 +291,51 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         {
             IsRunningSkillSmoke = false;
         }
+    }
+
+    public string BuildReadinessReport()
+    {
+        var report = new StringBuilder();
+        report.AppendLine("Kam Runtime Readiness Report");
+        report.AppendLine($"Generated: {DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss zzz}");
+        report.AppendLine($"Core Status: {CoreReadinessStatus}");
+        report.AppendLine($"Live Test: {LiveTestStatus}");
+        report.AppendLine($"Next Action: {LiveTestNextAction}");
+        report.AppendLine();
+
+        AppendReportSection(report, "Live Production Test", LiveTestSteps);
+        AppendReportSection(report, "Summary", SummaryCards);
+        AppendReportSection(report, "AI Runtime", AiRuntimeItems);
+        AppendReportSection(report, "Local Runtime", RuntimeItems);
+        AppendReportSection(report, "Integrations", IntegrationItems);
+
+        report.AppendLine("Blocking Items");
+        if (BlockingItems.Count == 0)
+        {
+            report.AppendLine("- None");
+        }
+        else
+        {
+            foreach (var item in BlockingItems)
+            {
+                report.AppendLine($"- {item}");
+            }
+        }
+
+        return report.ToString().TrimEnd();
+    }
+
+    private void CopyReadinessReport()
+    {
+        var report = BuildReadinessReport();
+        if (_copyReport is null)
+        {
+            ReadinessReportCopyStatus = "Clipboard unavailable.";
+            return;
+        }
+
+        _copyReport("readiness_report", report);
+        ReadinessReportCopyStatus = "Readiness report copied.";
     }
 
     private ModelProviderProfile? RefreshLocalState()
@@ -744,6 +803,32 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             "Command Loop" => "Submit a real command to verify planner and skill execution.",
             _ => "Resolve the first non-ready live test step."
         };
+    }
+
+    private static void AppendReportSection(
+        StringBuilder report,
+        string title,
+        IEnumerable<RuntimeDiagnosticItemViewModel> items)
+    {
+        report.AppendLine(title);
+
+        var hasItems = false;
+        foreach (var item in items)
+        {
+            hasItems = true;
+            report.AppendLine($"- {item.Name}: {item.Value}");
+            if (!string.IsNullOrWhiteSpace(item.Detail))
+            {
+                report.AppendLine($"  {item.Detail}");
+            }
+        }
+
+        if (!hasItems)
+        {
+            report.AppendLine("- None");
+        }
+
+        report.AppendLine();
     }
 
     private static ModelProviderProfile? FindProfile(

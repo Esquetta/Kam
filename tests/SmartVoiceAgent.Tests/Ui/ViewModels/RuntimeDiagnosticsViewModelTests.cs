@@ -517,6 +517,123 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
             && step.IsWarning);
     }
 
+    [Fact]
+    public async Task BuildReadinessReport_WithConfiguredRuntime_IncludesReadinessEvidenceWithoutSecrets()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        settingsService.ModelProviderProfiles =
+        [
+            new ModelProviderProfile
+            {
+                Id = "planner",
+                Provider = ModelProviderType.OpenAI,
+                Endpoint = "https://api.openai.com/v1",
+                ApiKey = "sk-secret-value",
+                ModelId = "gpt-5.2",
+                Roles = [ModelProviderRole.Planner],
+                Enabled = true
+            }
+        ];
+        settingsService.ActivePlannerProfileId = "planner";
+        settingsService.TodoistApiKey = "todoist-secret";
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            new StaticHostControl(isRunning: true),
+            modelConnectionTestService: new RecordingModelConnectionTestService(
+                ModelConnectionTestResult.Passed(4)),
+            skillEvalHarness: new RecordingSkillEvalHarness(new SkillEvalSummary
+            {
+                Total = 1,
+                Passed = 1,
+                Failed = 0,
+                Results =
+                [
+                    new SkillEvalResult
+                    {
+                        Name = "files exists",
+                        SkillId = "files.exists",
+                        Passed = true,
+                        ExpectedStatus = SkillExecutionStatus.Succeeded,
+                        ActualStatus = SkillExecutionStatus.Succeeded,
+                        Message = "OK",
+                        DurationMilliseconds = 9
+                    }
+                ]
+            }),
+            skillEvalCaseCatalog: new StaticSkillEvalCaseCatalog(),
+            skillExecutionHistoryService: new StaticSkillExecutionHistoryService(
+            [
+                new SkillExecutionHistoryEntry
+                {
+                    SkillId = "files.read",
+                    Status = SkillExecutionStatus.Succeeded,
+                    Success = true,
+                    ResultSummary = "README loaded.",
+                    DurationMilliseconds = 18
+                }
+            ]),
+            skillPlannerTraceStore: new StaticSkillPlannerTraceStore(
+            [
+                new SkillPlannerTraceEntry
+                {
+                    IsValid = true,
+                    SkillId = "files.read",
+                    Confidence = 0.93,
+                    DurationMilliseconds = 12
+                }
+            ]));
+
+        await viewModel.RefreshAsync();
+        await viewModel.RunSkillSmokeAsync();
+
+        var report = viewModel.BuildReadinessReport();
+
+        report.Should().Contain("Kam Runtime Readiness Report");
+        report.Should().Contain("Live Test: READY_FOR_LIVE_TEST");
+        report.Should().Contain("Core AI: Ready");
+        report.Should().Contain("Model Connection: Verified");
+        report.Should().Contain("Skill Smoke: 1/1 passing");
+        report.Should().Contain("Command Loop: Ready");
+        report.Should().Contain("Planner Model: OpenAI / gpt-5.2");
+        report.Should().Contain("Planner API Key: Present");
+        report.Should().Contain("Todoist: Configured");
+        report.Should().NotContain("sk-secret-value");
+        report.Should().NotContain("todoist-secret");
+        report.Should().NotContain("https://api.openai.com/v1");
+    }
+
+    [Fact]
+    public void CopyReadinessReportCommand_InvokesCopyCallbackWithSanitizedReport()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        settingsService.ModelProviderProfiles =
+        [
+            new ModelProviderProfile
+            {
+                Id = "planner",
+                Provider = ModelProviderType.OpenAI,
+                Endpoint = "https://api.openai.com/v1",
+                ApiKey = "sk-secret-value",
+                ModelId = "gpt-5.2",
+                Roles = [ModelProviderRole.Planner],
+                Enabled = true
+            }
+        ];
+        settingsService.ActivePlannerProfileId = "planner";
+        var copied = new List<(string Label, string Text)>();
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            copyReport: (label, text) => copied.Add((label, text)));
+
+        viewModel.CopyReadinessReportCommand.Execute(null);
+
+        copied.Should().ContainSingle();
+        copied[0].Label.Should().Be("readiness_report");
+        copied[0].Text.Should().Contain("Kam Runtime Readiness Report");
+        copied[0].Text.Should().NotContain("sk-secret-value");
+        viewModel.ReadinessReportCopyStatus.Should().Be("Readiness report copied.");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_settingsDirectory))
