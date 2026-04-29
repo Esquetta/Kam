@@ -283,14 +283,38 @@
 
                 <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="DiagnosticPanel">
                     <Grid RowDefinitions="Auto, Auto" RowSpacing="12">
-                        <Grid ColumnDefinitions="*, Auto">
+                        <Grid ColumnDefinitions="*, Auto, Auto" ColumnSpacing="12">
                             <TextBlock Text="LOCAL RUNTIME"
                                        FontSize="12"
                                        FontFamily="Consolas"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        LetterSpacing="2"/>
-                            <TextBlock Grid.Column="1"
+                            <StackPanel Grid.Column="1"
+                                        Orientation="Horizontal"
+                                        Spacing="10"
+                                        VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SkillSmokeStatus}"
+                                           FontSize="11"
+                                           FontFamily="Consolas"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           VerticalAlignment="Center"/>
+                                <Button Command="{Binding RunSkillSmokeCommand}"
+                                        MinWidth="132"
+                                        Height="30"
+                                        Padding="12,0"
+                                        CornerRadius="6"
+                                        Background="{DynamicResource CardBgHoverBrush}"
+                                        BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                        BorderThickness="1">
+                                    <TextBlock Text="Run Skill Smoke"
+                                               Foreground="{DynamicResource TextPrimaryBrush}"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center"/>
+                                </Button>
+                            </StackPanel>
+                            <TextBlock Grid.Column="2"
                                        Text="{Binding LastRefreshText}"
                                        FontSize="11"
                                        FontFamily="Consolas"

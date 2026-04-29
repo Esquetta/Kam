@@ -197,6 +197,85 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
             && item.Contains("HTTP 401 Unauthorized", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public async Task RunSkillSmokeAsync_WithPassingEvalSummary_ReportsRuntimeSkillSmokeReady()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var evalHarness = new RecordingSkillEvalHarness(new SkillEvalSummary
+        {
+            Total = 2,
+            Passed = 2,
+            Failed = 0,
+            Results =
+            [
+                new SkillEvalResult
+                {
+                    Name = "files exists",
+                    SkillId = "files.exists",
+                    Passed = true,
+                    ExpectedStatus = SkillExecutionStatus.Succeeded,
+                    ActualStatus = SkillExecutionStatus.Succeeded,
+                    Message = "OK",
+                    DurationMilliseconds = 12
+                }
+            ]
+        });
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            skillEvalHarness: evalHarness,
+            skillEvalCaseCatalog: new StaticSkillEvalCaseCatalog());
+
+        await viewModel.RunSkillSmokeAsync();
+
+        evalHarness.RunCount.Should().Be(1);
+        viewModel.SkillSmokeStatus.Should().Be("2/2 smoke evals passing");
+        viewModel.RuntimeItems.Should().Contain(item =>
+            item.Name == "Skill Smoke"
+            && item.Value == "2/2 passing"
+            && item.IsReady);
+        viewModel.SummaryCards.Should().Contain(card =>
+            card.Name == "Skills" && card.Value == "2/2 smoke");
+    }
+
+    [Fact]
+    public async Task RunSkillSmokeAsync_WithFailingEvalSummary_ReportsBlockingRuntimeIssue()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            skillEvalHarness: new RecordingSkillEvalHarness(new SkillEvalSummary
+            {
+                Total = 2,
+                Passed = 1,
+                Failed = 1,
+                Results =
+                [
+                    new SkillEvalResult
+                    {
+                        Name = "shell blocked",
+                        SkillId = "shell.run",
+                        Passed = false,
+                        ExpectedStatus = SkillExecutionStatus.Succeeded,
+                        ActualStatus = SkillExecutionStatus.PermissionDenied,
+                        Message = "Permission denied.",
+                        DurationMilliseconds = 4
+                    }
+                ]
+            }),
+            skillEvalCaseCatalog: new StaticSkillEvalCaseCatalog());
+
+        await viewModel.RunSkillSmokeAsync();
+
+        viewModel.SkillSmokeStatus.Should().Be("1/2 smoke evals passing");
+        viewModel.RuntimeItems.Should().Contain(item =>
+            item.Name == "Skill Smoke"
+            && item.Value == "1/2 passing"
+            && item.IsBlocked);
+        viewModel.BlockingItems.Should().Contain(item =>
+            item.Contains("Skill smoke failed", StringComparison.OrdinalIgnoreCase)
+            && item.Contains("1/2", StringComparison.OrdinalIgnoreCase));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_settingsDirectory))
@@ -262,6 +341,42 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
         {
             ProfileIds.Add(profile.Id);
             return Task.FromResult(_result);
+        }
+    }
+
+    private sealed class RecordingSkillEvalHarness : ISkillEvalHarness
+    {
+        private readonly SkillEvalSummary _summary;
+
+        public RecordingSkillEvalHarness(SkillEvalSummary summary)
+        {
+            _summary = summary;
+        }
+
+        public int RunCount { get; private set; }
+
+        public Task<SkillEvalSummary> RunAsync(
+            IEnumerable<SkillEvalCase> cases,
+            CancellationToken cancellationToken = default)
+        {
+            RunCount++;
+            cases.Should().NotBeEmpty();
+            return Task.FromResult(_summary);
+        }
+    }
+
+    private sealed class StaticSkillEvalCaseCatalog : ISkillEvalCaseCatalog
+    {
+        public IReadOnlyCollection<SkillEvalCase> CreateSmokeCases()
+        {
+            return
+            [
+                new SkillEvalCase
+                {
+                    Name = "files exists",
+                    Plan = SkillPlan.FromObject("files.exists", new { path = "README.md" })
+                }
+            ];
         }
     }
 }

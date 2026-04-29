@@ -19,12 +19,17 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     private readonly IVoiceAgentHostControl? _hostControl;
     private readonly ISkillHealthService? _skillHealthService;
     private readonly IModelConnectionTestService? _modelConnectionTestService;
+    private readonly ISkillEvalHarness? _skillEvalHarness;
+    private readonly ISkillEvalCaseCatalog? _skillEvalCaseCatalog;
 
     private string _coreReadinessStatus = "ACTION_NEEDED";
     private string _hostStatus = "Unknown";
     private string _skillStatus = "Unavailable";
+    private string _skillSmokeStatus = "Not run";
+    private string _skillSmokeSummaryValue = string.Empty;
     private string _lastRefreshText = "Not refreshed";
     private bool _isRefreshing;
+    private bool _isRunningSkillSmoke;
     private bool _isCoreReady;
 
     public RuntimeDiagnosticsViewModel()
@@ -36,15 +41,20 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         ISettingsService settingsService,
         IVoiceAgentHostControl? hostControl = null,
         ISkillHealthService? skillHealthService = null,
-        IModelConnectionTestService? modelConnectionTestService = null)
+        IModelConnectionTestService? modelConnectionTestService = null,
+        ISkillEvalHarness? skillEvalHarness = null,
+        ISkillEvalCaseCatalog? skillEvalCaseCatalog = null)
     {
         _settingsService = settingsService;
         _hostControl = hostControl;
         _skillHealthService = skillHealthService;
         _modelConnectionTestService = modelConnectionTestService;
+        _skillEvalHarness = skillEvalHarness;
+        _skillEvalCaseCatalog = skillEvalCaseCatalog;
 
         Title = "Runtime Diagnostics";
         RefreshCommand = ReactiveCommand.CreateFromTask(RefreshAsync);
+        RunSkillSmokeCommand = ReactiveCommand.CreateFromTask(RunSkillSmokeAsync);
 
         if (_hostControl is not null)
         {
@@ -55,6 +65,8 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     }
 
     public ICommand RefreshCommand { get; }
+
+    public ICommand RunSkillSmokeCommand { get; }
 
     public ObservableCollection<RuntimeDiagnosticItemViewModel> SummaryCards { get; } = [];
 
@@ -90,6 +102,12 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         private set => this.RaiseAndSetIfChanged(ref _skillStatus, value);
     }
 
+    public string SkillSmokeStatus
+    {
+        get => _skillSmokeStatus;
+        private set => this.RaiseAndSetIfChanged(ref _skillSmokeStatus, value);
+    }
+
     public string LastRefreshText
     {
         get => _lastRefreshText;
@@ -100,6 +118,12 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     {
         get => _isRefreshing;
         private set => this.RaiseAndSetIfChanged(ref _isRefreshing, value);
+    }
+
+    public bool IsRunningSkillSmoke
+    {
+        get => _isRunningSkillSmoke;
+        private set => this.RaiseAndSetIfChanged(ref _isRunningSkillSmoke, value);
     }
 
     public bool HasBlockingItems => BlockingItems.Count > 0;
@@ -152,12 +176,60 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         }
     }
 
+    public async Task RunSkillSmokeAsync()
+    {
+        if (IsRunningSkillSmoke)
+        {
+            return;
+        }
+
+        if (_skillEvalHarness is null || _skillEvalCaseCatalog is null)
+        {
+            SkillSmokeStatus = "Smoke eval services unavailable";
+            _skillSmokeSummaryValue = "Unavailable";
+            ReplaceRuntimeItem(
+                "Skill Smoke",
+                "Unavailable",
+                "Skill eval harness is not registered in this runtime.",
+                RuntimeDiagnosticSeverity.Warning);
+            RebuildSummary();
+            return;
+        }
+
+        IsRunningSkillSmoke = true;
+        try
+        {
+            var summary = await _skillEvalHarness.RunAsync(
+                _skillEvalCaseCatalog.CreateSmokeCases()).ConfigureAwait(true);
+            ApplySkillSmokeSummary(summary);
+            LastRefreshText = $"Skill smoke {DateTimeOffset.Now:HH:mm:ss}";
+        }
+        catch (Exception ex)
+        {
+            SkillSmokeStatus = "Smoke evals failed to run";
+            _skillSmokeSummaryValue = "Failed";
+            ReplaceRuntimeItem(
+                "Skill Smoke",
+                "Failed",
+                ex.Message,
+                RuntimeDiagnosticSeverity.Blocked);
+            AddBlockingItem($"Skill smoke failed: {ex.Message}");
+            RebuildSummary();
+        }
+        finally
+        {
+            IsRunningSkillSmoke = false;
+        }
+    }
+
     private ModelProviderProfile? RefreshLocalState()
     {
         AiRuntimeItems.Clear();
         IntegrationItems.Clear();
         RuntimeItems.Clear();
         BlockingItems.Clear();
+        SkillSmokeStatus = "Not run";
+        _skillSmokeSummaryValue = string.Empty;
 
         var profiles = _settingsService.ModelProviderProfiles.ToArray();
         var plannerProfile = FindProfile(
@@ -356,6 +428,43 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
                 : (needsReview > 0 ? RuntimeDiagnosticSeverity.Warning : RuntimeDiagnosticSeverity.Ready));
     }
 
+    private void ApplySkillSmokeSummary(SkillEvalSummary summary)
+    {
+        if (summary.Total <= 0)
+        {
+            SkillSmokeStatus = "No smoke evals configured";
+            _skillSmokeSummaryValue = "No smoke";
+            ReplaceRuntimeItem(
+                "Skill Smoke",
+                "No cases",
+                "Smoke eval catalog returned no cases.",
+                RuntimeDiagnosticSeverity.Warning);
+            RebuildSummary();
+            return;
+        }
+
+        SkillSmokeStatus = $"{summary.Passed}/{summary.Total} smoke evals passing";
+        _skillSmokeSummaryValue = $"{summary.Passed}/{summary.Total} smoke";
+
+        var isPassing = summary.Failed == 0;
+        var detail = isPassing
+            ? $"Smoke eval harness executed {summary.Total} cases."
+            : BuildSkillSmokeFailureDetail(summary);
+
+        ReplaceRuntimeItem(
+            "Skill Smoke",
+            $"{summary.Passed}/{summary.Total} passing",
+            detail,
+            isPassing ? RuntimeDiagnosticSeverity.Ready : RuntimeDiagnosticSeverity.Blocked);
+
+        if (!isPassing)
+        {
+            AddBlockingItem($"Skill smoke failed: {summary.Passed}/{summary.Total} passing.");
+        }
+
+        RebuildSummary();
+    }
+
     private void RebuildSummary()
     {
         SummaryCards.Clear();
@@ -368,11 +477,11 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             IsCoreReady ? RuntimeDiagnosticSeverity.Ready : RuntimeDiagnosticSeverity.Blocked));
         SummaryCards.Add(new RuntimeDiagnosticItemViewModel(
             "Skills",
-            SkillStatus,
-            "Health service summarizes installed skill readiness.",
-            SkillStatus.Contains("healthy", StringComparison.OrdinalIgnoreCase)
-                ? RuntimeDiagnosticSeverity.Ready
-                : RuntimeDiagnosticSeverity.Warning));
+            string.IsNullOrWhiteSpace(_skillSmokeSummaryValue) ? SkillStatus : _skillSmokeSummaryValue,
+            string.IsNullOrWhiteSpace(_skillSmokeSummaryValue)
+                ? "Health service summarizes installed skill readiness."
+                : "Smoke eval harness verifies executable skill behavior.",
+            GetSkillSummarySeverity()));
         SummaryCards.Add(new RuntimeDiagnosticItemViewModel(
             "Integrations",
             $"{IntegrationItems.Count(item => item.IsReady)}/{IntegrationItems.Count} configured",
@@ -450,6 +559,34 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             "Reflects the local hosted agent service state.",
             isRunning ? RuntimeDiagnosticSeverity.Ready : RuntimeDiagnosticSeverity.Blocked);
         RebuildSummary();
+    }
+
+    private RuntimeDiagnosticSeverity GetSkillSummarySeverity()
+    {
+        var skillSmokeItem = RuntimeItems.FirstOrDefault(item =>
+            item.Name.Equals("Skill Smoke", StringComparison.OrdinalIgnoreCase));
+        if (skillSmokeItem is not null)
+        {
+            return skillSmokeItem.Severity;
+        }
+
+        return SkillStatus.Contains("healthy", StringComparison.OrdinalIgnoreCase)
+            ? RuntimeDiagnosticSeverity.Ready
+            : RuntimeDiagnosticSeverity.Warning;
+    }
+
+    private static string BuildSkillSmokeFailureDetail(SkillEvalSummary summary)
+    {
+        var failedResult = summary.Results.FirstOrDefault(result => !result.Passed);
+        if (failedResult is null)
+        {
+            return $"{summary.Failed} smoke evals failed.";
+        }
+
+        var skillId = string.IsNullOrWhiteSpace(failedResult.SkillId)
+            ? failedResult.Name
+            : failedResult.SkillId;
+        return $"{skillId}: {failedResult.Message}";
     }
 
     private static bool RequiresApiKey(ModelProviderType provider) => provider != ModelProviderType.Ollama;
