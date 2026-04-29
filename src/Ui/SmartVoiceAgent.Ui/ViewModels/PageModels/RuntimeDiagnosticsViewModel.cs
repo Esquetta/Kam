@@ -18,6 +18,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     private readonly ISettingsService _settingsService;
     private readonly IVoiceAgentHostControl? _hostControl;
     private readonly ISkillHealthService? _skillHealthService;
+    private readonly IModelConnectionTestService? _modelConnectionTestService;
 
     private string _coreReadinessStatus = "ACTION_NEEDED";
     private string _hostStatus = "Unknown";
@@ -34,11 +35,13 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     public RuntimeDiagnosticsViewModel(
         ISettingsService settingsService,
         IVoiceAgentHostControl? hostControl = null,
-        ISkillHealthService? skillHealthService = null)
+        ISkillHealthService? skillHealthService = null,
+        IModelConnectionTestService? modelConnectionTestService = null)
     {
         _settingsService = settingsService;
         _hostControl = hostControl;
         _skillHealthService = skillHealthService;
+        _modelConnectionTestService = modelConnectionTestService;
 
         Title = "Runtime Diagnostics";
         RefreshCommand = ReactiveCommand.CreateFromTask(RefreshAsync);
@@ -116,7 +119,14 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         IsRefreshing = true;
         try
         {
-            RefreshLocalState();
+            var plannerProfile = RefreshLocalState();
+
+            if (plannerProfile is not null
+                && _modelConnectionTestService is not null
+                && IsReadyForLiveConnectionTest(plannerProfile))
+            {
+                await ApplyPlannerLiveConnectionAsync(plannerProfile);
+            }
 
             if (_skillHealthService is not null)
             {
@@ -142,7 +152,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         }
     }
 
-    private void RefreshLocalState()
+    private ModelProviderProfile? RefreshLocalState()
     {
         AiRuntimeItems.Clear();
         IntegrationItems.Clear();
@@ -164,6 +174,8 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         ApplyIntegrationDiagnostics();
         ApplyHostDiagnostics();
         RebuildSummary();
+
+        return plannerProfile;
     }
 
     private void ApplyPlannerDiagnostics(ModelProviderProfile? plannerProfile)
@@ -300,6 +312,30 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
                 : (_hostControl.IsRunning ? RuntimeDiagnosticSeverity.Ready : RuntimeDiagnosticSeverity.Blocked)));
     }
 
+    private async Task ApplyPlannerLiveConnectionAsync(ModelProviderProfile plannerProfile)
+    {
+        var result = await _modelConnectionTestService!.TestAsync(plannerProfile).ConfigureAwait(true);
+        if (result.Success)
+        {
+            AiRuntimeItems.Add(new RuntimeDiagnosticItemViewModel(
+                "Planner Live Connection",
+                "Verified",
+                $"{result.LiveModelCount} live models returned by provider.",
+                RuntimeDiagnosticSeverity.Ready));
+            return;
+        }
+
+        var message = SanitizeDiagnosticMessage(result.Message, plannerProfile.ApiKey);
+        IsCoreReady = false;
+        CoreReadinessStatus = "ACTION_NEEDED";
+        AddBlockingItem($"Planner live connection failed: {message}");
+        AiRuntimeItems.Add(new RuntimeDiagnosticItemViewModel(
+            "Planner Live Connection",
+            "Failed",
+            message,
+            RuntimeDiagnosticSeverity.Blocked));
+    }
+
     private void ApplySkillHealth(IReadOnlyCollection<SkillHealthReport> reports)
     {
         var total = reports.Count;
@@ -421,4 +457,19 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     private static bool HasValue(string value) => !string.IsNullOrWhiteSpace(value);
 
     private static string ValueOrMissing(string value) => HasValue(value) ? value : "Missing";
+
+    private static bool IsReadyForLiveConnectionTest(ModelProviderProfile profile)
+    {
+        return profile.Enabled && profile.Validate().IsValid;
+    }
+
+    private static string SanitizeDiagnosticMessage(string message, string secret)
+    {
+        if (string.IsNullOrWhiteSpace(message) || string.IsNullOrWhiteSpace(secret))
+        {
+            return message;
+        }
+
+        return message.Replace(secret, "[redacted]", StringComparison.Ordinal);
+    }
 }

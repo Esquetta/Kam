@@ -126,6 +126,77 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
             card.Name == "Skills" && card.Value == "1/2 healthy");
     }
 
+    [Fact]
+    public async Task RefreshAsync_WithLivePlannerConnectionSuccess_ReportsVerifiedModelConnection()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        settingsService.ModelProviderProfiles =
+        [
+            new ModelProviderProfile
+            {
+                Id = "planner",
+                Provider = ModelProviderType.OpenAI,
+                Endpoint = "https://api.openai.com/v1",
+                ApiKey = "sk-secret-value",
+                ModelId = "gpt-5.2",
+                Roles = [ModelProviderRole.Planner],
+                Enabled = true
+            }
+        ];
+        settingsService.ActivePlannerProfileId = "planner";
+        var connectionTestService = new RecordingModelConnectionTestService(
+            ModelConnectionTestResult.Passed(42));
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            modelConnectionTestService: connectionTestService);
+
+        await viewModel.RefreshAsync();
+
+        connectionTestService.ProfileIds.Should().ContainSingle().Which.Should().Be("planner");
+        viewModel.IsCoreReady.Should().BeTrue();
+        viewModel.CoreReadinessStatus.Should().Be("READY");
+        viewModel.AiRuntimeItems.Should().Contain(item =>
+            item.Name == "Planner Live Connection"
+            && item.Value == "Verified"
+            && item.Detail.Contains("42 live models", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task RefreshAsync_WithLivePlannerConnectionFailure_BlocksCoreReadiness()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        settingsService.ModelProviderProfiles =
+        [
+            new ModelProviderProfile
+            {
+                Id = "planner",
+                Provider = ModelProviderType.OpenAI,
+                Endpoint = "https://api.openai.com/v1",
+                ApiKey = "sk-secret-value",
+                ModelId = "gpt-5.2",
+                Roles = [ModelProviderRole.Planner],
+                Enabled = true
+            }
+        ];
+        settingsService.ActivePlannerProfileId = "planner";
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            modelConnectionTestService: new RecordingModelConnectionTestService(
+                ModelConnectionTestResult.Failed("HTTP 401 Unauthorized")));
+
+        await viewModel.RefreshAsync();
+
+        viewModel.IsCoreReady.Should().BeFalse();
+        viewModel.CoreReadinessStatus.Should().Be("ACTION_NEEDED");
+        viewModel.AiRuntimeItems.Should().Contain(item =>
+            item.Name == "Planner Live Connection"
+            && item.Value == "Failed"
+            && item.Detail.Contains("HTTP 401 Unauthorized", StringComparison.OrdinalIgnoreCase));
+        viewModel.BlockingItems.Should().Contain(item =>
+            item.Contains("Planner live connection failed", StringComparison.OrdinalIgnoreCase)
+            && item.Contains("HTTP 401 Unauthorized", StringComparison.OrdinalIgnoreCase));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_settingsDirectory))
@@ -171,6 +242,26 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_reports);
+        }
+    }
+
+    private sealed class RecordingModelConnectionTestService : IModelConnectionTestService
+    {
+        private readonly ModelConnectionTestResult _result;
+
+        public RecordingModelConnectionTestService(ModelConnectionTestResult result)
+        {
+            _result = result;
+        }
+
+        public List<string> ProfileIds { get; } = [];
+
+        public Task<ModelConnectionTestResult> TestAsync(
+            ModelProviderProfile profile,
+            CancellationToken cancellationToken = default)
+        {
+            ProfileIds.Add(profile.Id);
+            return Task.FromResult(_result);
         }
     }
 }

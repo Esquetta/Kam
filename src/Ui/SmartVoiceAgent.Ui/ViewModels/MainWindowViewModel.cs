@@ -41,6 +41,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private ISkillExecutionHistoryService? _skillExecutionHistoryService;
         private ISkillExecutionPipeline? _skillExecutionPipeline;
         private ISkillPlannerTraceStore? _skillPlannerTraceStore;
+        private readonly IModelConnectionTestService _modelConnectionTestService = new ModelConnectionTestService();
 
         private const int MaxSkillExecutionHistoryScanCount = 50;
         private const int MaxSkillExecutionHistoryDisplayCount = 8;
@@ -623,7 +624,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 NavView.Diagnostics => new RuntimeDiagnosticsViewModel(
                     new JsonSettingsService(),
                     _hostControl,
-                    _skillHealthService),
+                    _skillHealthService,
+                    _modelConnectionTestService),
                 NavView.Plugins => CreatePluginsViewModel(),
                 NavView.Integrations => new IntegrationsViewModel(),
                 NavView.Settings => new SettingsViewModel(this),
@@ -1308,6 +1310,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
             }
 
             _voiceCommandService?.Dispose();
+            if (_modelConnectionTestService is IDisposable disposableModelConnectionTestService)
+            {
+                disposableModelConnectionTestService.Dispose();
+            }
         }
     }
 

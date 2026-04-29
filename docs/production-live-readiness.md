@@ -44,6 +44,7 @@ Run:
 Then launch and manually verify:
 
 - Settings > AI Runtime Test Connection shows a successful live model catalog check.
+- Runtime Diagnostics > Refresh shows Core AI as ready and Planner Live Connection as verified.
 - A simple command produces a planner trace and a normalized skill result.
 - Skills page evals run and report health.
 - Optional integrations are tested only when their credentials are intentionally configured.
