@@ -276,6 +276,90 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
             && item.Contains("1/2", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public void Constructor_WithRecentPlannerTraceAndSkillExecution_ReportsCommandLoopEvidence()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            skillExecutionHistoryService: new StaticSkillExecutionHistoryService(
+            [
+                new SkillExecutionHistoryEntry
+                {
+                    SkillId = "files.read",
+                    Status = SkillExecutionStatus.Succeeded,
+                    Success = true,
+                    ResultSummary = "README loaded.",
+                    DurationMilliseconds = 18
+                }
+            ]),
+            skillPlannerTraceStore: new StaticSkillPlannerTraceStore(
+            [
+                new SkillPlannerTraceEntry
+                {
+                    IsValid = true,
+                    SkillId = "files.read",
+                    Confidence = 0.94,
+                    DurationMilliseconds = 12
+                }
+            ]));
+
+        viewModel.RuntimeItems.Should().Contain(item =>
+            item.Name == "Planner Trace"
+            && item.Value == "Valid"
+            && item.IsReady
+            && item.Detail.Contains("files.read", StringComparison.OrdinalIgnoreCase));
+        viewModel.RuntimeItems.Should().Contain(item =>
+            item.Name == "Skill Result"
+            && item.Value == "Succeeded"
+            && item.IsReady
+            && item.Detail.Contains("README loaded", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Constructor_WithInvalidPlannerTraceAndFailedSkillExecution_ReportsCommandLoopBlockers()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            skillExecutionHistoryService: new StaticSkillExecutionHistoryService(
+            [
+                new SkillExecutionHistoryEntry
+                {
+                    SkillId = "shell.run",
+                    Status = SkillExecutionStatus.PermissionDenied,
+                    Success = false,
+                    ErrorCode = "shell_command_blocked",
+                    ResultSummary = "Command blocked.",
+                    DurationMilliseconds = 7
+                }
+            ]),
+            skillPlannerTraceStore: new StaticSkillPlannerTraceStore(
+            [
+                new SkillPlannerTraceEntry
+                {
+                    IsValid = false,
+                    ErrorMessage = "Planner response must be a single JSON object.",
+                    DurationMilliseconds = 9
+                }
+            ]));
+
+        viewModel.RuntimeItems.Should().Contain(item =>
+            item.Name == "Planner Trace"
+            && item.Value == "Invalid"
+            && item.IsBlocked
+            && item.Detail.Contains("single JSON object", StringComparison.OrdinalIgnoreCase));
+        viewModel.RuntimeItems.Should().Contain(item =>
+            item.Name == "Skill Result"
+            && item.Value == "Permission Denied"
+            && item.IsBlocked
+            && item.Detail.Contains("shell_command_blocked", StringComparison.OrdinalIgnoreCase));
+        viewModel.BlockingItems.Should().Contain(item =>
+            item.Contains("Planner trace invalid", StringComparison.OrdinalIgnoreCase));
+        viewModel.BlockingItems.Should().Contain(item =>
+            item.Contains("Last skill execution failed", StringComparison.OrdinalIgnoreCase));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_settingsDirectory))
@@ -377,6 +461,66 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
                     Plan = SkillPlan.FromObject("files.exists", new { path = "README.md" })
                 }
             ];
+        }
+    }
+
+    private sealed class StaticSkillExecutionHistoryService : ISkillExecutionHistoryService
+    {
+        private readonly IReadOnlyList<SkillExecutionHistoryEntry> _entries;
+
+        public StaticSkillExecutionHistoryService(IReadOnlyList<SkillExecutionHistoryEntry> entries)
+        {
+            _entries = entries;
+        }
+
+        public event EventHandler? Changed;
+
+        public IReadOnlyList<SkillExecutionHistoryEntry> GetRecent(int maxCount = 50)
+        {
+            return _entries.Take(maxCount).ToArray();
+        }
+
+        public SkillExecutionHistoryEntry Record(
+            SkillPlan plan,
+            SkillResult result,
+            DateTimeOffset? timestamp = null)
+        {
+            var entry = new SkillExecutionHistoryEntry();
+            Changed?.Invoke(this, EventArgs.Empty);
+            return entry;
+        }
+
+        public void Clear()
+        {
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private sealed class StaticSkillPlannerTraceStore : ISkillPlannerTraceStore
+    {
+        private readonly IReadOnlyList<SkillPlannerTraceEntry> _entries;
+
+        public StaticSkillPlannerTraceStore(IReadOnlyList<SkillPlannerTraceEntry> entries)
+        {
+            _entries = entries;
+        }
+
+        public event EventHandler? Changed;
+
+        public IReadOnlyList<SkillPlannerTraceEntry> GetRecent(int maxCount = 20)
+        {
+            return _entries.Take(maxCount).ToArray();
+        }
+
+        public SkillPlannerTraceEntry Record(SkillPlannerTraceEntry entry)
+        {
+            Changed?.Invoke(this, EventArgs.Empty);
+            return entry;
+        }
+
+        public void Clear()
+        {
+            Changed?.Invoke(this, EventArgs.Empty);
         }
     }
 }

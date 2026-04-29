@@ -21,6 +21,8 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     private readonly IModelConnectionTestService? _modelConnectionTestService;
     private readonly ISkillEvalHarness? _skillEvalHarness;
     private readonly ISkillEvalCaseCatalog? _skillEvalCaseCatalog;
+    private readonly ISkillExecutionHistoryService? _skillExecutionHistoryService;
+    private readonly ISkillPlannerTraceStore? _skillPlannerTraceStore;
 
     private string _coreReadinessStatus = "ACTION_NEEDED";
     private string _hostStatus = "Unknown";
@@ -43,7 +45,9 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         ISkillHealthService? skillHealthService = null,
         IModelConnectionTestService? modelConnectionTestService = null,
         ISkillEvalHarness? skillEvalHarness = null,
-        ISkillEvalCaseCatalog? skillEvalCaseCatalog = null)
+        ISkillEvalCaseCatalog? skillEvalCaseCatalog = null,
+        ISkillExecutionHistoryService? skillExecutionHistoryService = null,
+        ISkillPlannerTraceStore? skillPlannerTraceStore = null)
     {
         _settingsService = settingsService;
         _hostControl = hostControl;
@@ -51,6 +55,8 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         _modelConnectionTestService = modelConnectionTestService;
         _skillEvalHarness = skillEvalHarness;
         _skillEvalCaseCatalog = skillEvalCaseCatalog;
+        _skillExecutionHistoryService = skillExecutionHistoryService;
+        _skillPlannerTraceStore = skillPlannerTraceStore;
 
         Title = "Runtime Diagnostics";
         RefreshCommand = ReactiveCommand.CreateFromTask(RefreshAsync);
@@ -59,6 +65,16 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         if (_hostControl is not null)
         {
             _hostControl.StateChanged += OnHostStateChanged;
+        }
+
+        if (_skillExecutionHistoryService is not null)
+        {
+            _skillExecutionHistoryService.Changed += OnCommandLoopEvidenceChanged;
+        }
+
+        if (_skillPlannerTraceStore is not null)
+        {
+            _skillPlannerTraceStore.Changed += OnCommandLoopEvidenceChanged;
         }
 
         RefreshLocalState();
@@ -131,6 +147,24 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     public override void OnNavigatedTo()
     {
         _ = RefreshAsync();
+    }
+
+    public override void OnNavigatedFrom()
+    {
+        if (_hostControl is not null)
+        {
+            _hostControl.StateChanged -= OnHostStateChanged;
+        }
+
+        if (_skillExecutionHistoryService is not null)
+        {
+            _skillExecutionHistoryService.Changed -= OnCommandLoopEvidenceChanged;
+        }
+
+        if (_skillPlannerTraceStore is not null)
+        {
+            _skillPlannerTraceStore.Changed -= OnCommandLoopEvidenceChanged;
+        }
     }
 
     public async Task RefreshAsync()
@@ -245,6 +279,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         ApplyChatDiagnostics(chatProfile, plannerProfile);
         ApplyIntegrationDiagnostics();
         ApplyHostDiagnostics();
+        ApplyCommandLoopDiagnostics();
         RebuildSummary();
 
         return plannerProfile;
@@ -382,6 +417,82 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             _hostControl is null
                 ? RuntimeDiagnosticSeverity.Warning
                 : (_hostControl.IsRunning ? RuntimeDiagnosticSeverity.Ready : RuntimeDiagnosticSeverity.Blocked)));
+    }
+
+    private void ApplyCommandLoopDiagnostics()
+    {
+        ApplyPlannerTraceDiagnostic();
+        ApplySkillResultDiagnostic();
+    }
+
+    private void ApplyPlannerTraceDiagnostic()
+    {
+        var trace = _skillPlannerTraceStore?.GetRecent(1).FirstOrDefault();
+        if (trace is null)
+        {
+            ReplaceRuntimeItem(
+                "Planner Trace",
+                "No trace",
+                _skillPlannerTraceStore is null
+                    ? "Planner trace store is not attached to this diagnostics view."
+                    : "Submit a command to produce planner JSON evidence.",
+                RuntimeDiagnosticSeverity.Warning);
+            return;
+        }
+
+        if (trace.IsValid)
+        {
+            ReplaceRuntimeItem(
+                "Planner Trace",
+                "Valid",
+                $"{ValueOrMissing(trace.SkillId)}, confidence {trace.Confidence:0.00}, {FormatDuration(trace.DurationMilliseconds)}.",
+                RuntimeDiagnosticSeverity.Ready);
+            return;
+        }
+
+        ReplaceRuntimeItem(
+            "Planner Trace",
+            "Invalid",
+            string.IsNullOrWhiteSpace(trace.ErrorMessage)
+                ? "Planner produced an invalid trace."
+                : trace.ErrorMessage,
+            RuntimeDiagnosticSeverity.Blocked);
+        AddBlockingItem("Planner trace invalid: model did not produce a usable skill plan.");
+    }
+
+    private void ApplySkillResultDiagnostic()
+    {
+        var entry = _skillExecutionHistoryService?.GetRecent(1).FirstOrDefault();
+        if (entry is null)
+        {
+            ReplaceRuntimeItem(
+                "Skill Result",
+                "No result",
+                _skillExecutionHistoryService is null
+                    ? "Skill execution history service is not attached to this diagnostics view."
+                    : "Run a command or smoke eval to produce normalized skill result evidence.",
+                RuntimeDiagnosticSeverity.Warning);
+            return;
+        }
+
+        var statusText = FormatSkillExecutionStatus(entry.Status);
+        var detail = BuildSkillResultDetail(entry);
+        if (entry.Success)
+        {
+            ReplaceRuntimeItem(
+                "Skill Result",
+                statusText,
+                detail,
+                RuntimeDiagnosticSeverity.Ready);
+            return;
+        }
+
+        ReplaceRuntimeItem(
+            "Skill Result",
+            statusText,
+            detail,
+            RuntimeDiagnosticSeverity.Blocked);
+        AddBlockingItem($"Last skill execution failed: {entry.SkillId} ({statusText}).");
     }
 
     private async Task ApplyPlannerLiveConnectionAsync(ModelProviderProfile plannerProfile)
@@ -561,6 +672,12 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         RebuildSummary();
     }
 
+    private void OnCommandLoopEvidenceChanged(object? sender, EventArgs e)
+    {
+        ApplyCommandLoopDiagnostics();
+        RebuildSummary();
+    }
+
     private RuntimeDiagnosticSeverity GetSkillSummarySeverity()
     {
         var skillSmokeItem = RuntimeItems.FirstOrDefault(item =>
@@ -587,6 +704,49 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             ? failedResult.Name
             : failedResult.SkillId;
         return $"{skillId}: {failedResult.Message}";
+    }
+
+    private static string BuildSkillResultDetail(SkillExecutionHistoryEntry entry)
+    {
+        var parts = new List<string>
+        {
+            $"{ValueOrMissing(entry.SkillId)}, {FormatDuration(entry.DurationMilliseconds)}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(entry.ResultSummary))
+        {
+            parts.Add(entry.ResultSummary);
+        }
+
+        if (!string.IsNullOrWhiteSpace(entry.ErrorCode))
+        {
+            parts.Add($"error {entry.ErrorCode}");
+        }
+
+        return string.Join(". ", parts) + ".";
+    }
+
+    private static string FormatSkillExecutionStatus(SkillExecutionStatus status)
+    {
+        return status switch
+        {
+            SkillExecutionStatus.Cancelled => "Cancelled",
+            SkillExecutionStatus.Disabled => "Disabled",
+            SkillExecutionStatus.ExecutorNotFound => "Executor Missing",
+            SkillExecutionStatus.Failed => "Failed",
+            SkillExecutionStatus.PermissionDenied => "Permission Denied",
+            SkillExecutionStatus.ReviewRequired => "Review Required",
+            SkillExecutionStatus.SkillNotFound => "Skill Missing",
+            SkillExecutionStatus.Succeeded => "Succeeded",
+            SkillExecutionStatus.TimedOut => "Timed Out",
+            SkillExecutionStatus.ValidationFailed => "Validation Failed",
+            _ => status.ToString()
+        };
+    }
+
+    private static string FormatDuration(long durationMilliseconds)
+    {
+        return durationMilliseconds <= 0 ? "<1 ms" : $"{durationMilliseconds} ms";
     }
 
     private static bool RequiresApiKey(ModelProviderType provider) => provider != ModelProviderType.Ollama;

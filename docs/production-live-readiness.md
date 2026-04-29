@@ -47,5 +47,6 @@ Then launch and manually verify:
 - Runtime Diagnostics > Refresh shows Core AI as ready and Planner Live Connection as verified.
 - Runtime Diagnostics > Run Skill Smoke reports all smoke evals passing.
 - A simple command produces a planner trace and a normalized skill result.
+- Runtime Diagnostics > Local Runtime shows the latest Planner Trace and Skill Result as ready after that command.
 - Skills page evals run and report health.
 - Optional integrations are tested only when their credentials are intentionally configured.
