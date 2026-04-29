@@ -65,6 +65,18 @@ public sealed class BuiltInSkillEvalCaseCatalog : ISkillEvalCaseCatalog
                 "web.search",
                 new { query = "Kam voice automation", lang = "en", results = 3 }),
             Case(
+                "window.active reads active window context",
+                "window.active",
+                new { }),
+            Case(
+                "window.list reads bounded visible windows",
+                "window.list",
+                new { maxWindows = 5 }),
+            Case(
+                "accessibility.tree reads bounded screen context",
+                "accessibility.tree",
+                new { maxScreens = 1, maxNodes = 20, includeObjects = false }),
+            Case(
                 "communication.email.validate validates an address",
                 "communication.email.validate",
                 new { email = "test@example.com" }),

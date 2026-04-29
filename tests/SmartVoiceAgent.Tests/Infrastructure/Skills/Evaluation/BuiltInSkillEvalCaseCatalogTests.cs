@@ -25,6 +25,9 @@ public class BuiltInSkillEvalCaseCatalogTests
         cases.Should().Contain(testCase => testCase.Plan.SkillId.StartsWith("clipboard."));
         cases.Should().Contain(testCase => testCase.Plan.SkillId.StartsWith("workspace."));
         cases.Should().Contain(testCase => testCase.Plan.SkillId.StartsWith("code."));
+        cases.Should().Contain(testCase => testCase.Plan.SkillId == "window.active");
+        cases.Should().Contain(testCase => testCase.Plan.SkillId == "window.list");
+        cases.Should().Contain(testCase => testCase.Plan.SkillId == "accessibility.tree");
     }
 
     [Fact]

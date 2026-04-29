@@ -46,6 +46,7 @@ Then launch and manually verify:
 - Settings > AI Runtime Test Connection shows a successful live model catalog check.
 - Runtime Diagnostics > Refresh shows Core AI as ready and Planner Live Connection as verified.
 - Runtime Diagnostics > Run Skill Smoke reports all smoke evals passing.
+- Skill Smoke includes bounded file/workspace/web, active-window, window-list, and accessibility-tree checks.
 - A simple command produces a planner trace and a normalized skill result.
 - Runtime Diagnostics > Local Runtime shows the latest Planner Trace and Skill Result as ready after that command.
 - Runtime Diagnostics > Command Loop summary card shows Ready after the same command.
