@@ -37,6 +37,17 @@ public sealed class MainWindowMetadataTests
             || value.Contains("Coordinator AI", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public void MainWindow_ExposesRuntimeDiagnosticsNavigation()
+    {
+        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+
+        mainWindowText.Should().Contain("NavigateToDiagnosticsCommand");
+        mainWindowText.Should().Contain("RuntimeDiagnosticsViewModel");
+        mainWindowText.Should().Contain("RuntimeDiagnosticsView");
+        mainWindowText.Should().Contain("ToolTip.Tip=\"Runtime Diagnostics\"");
+    }
+
     private static string FindMainWindowXamlPath()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

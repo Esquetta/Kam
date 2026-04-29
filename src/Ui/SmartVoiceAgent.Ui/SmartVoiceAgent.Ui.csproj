@@ -53,6 +53,9 @@
     <Compile Update="Views\PluginsView.axaml.cs">
       <DependentUpon>PluginsView.axaml</DependentUpon>
     </Compile>
+    <Compile Update="Views\RuntimeDiagnosticsView.axaml.cs">
+      <DependentUpon>RuntimeDiagnosticsView.axaml</DependentUpon>
+    </Compile>
     <Compile Update="Views\SettingsView.axaml.cs">
       <DependentUpon>SettingsView.axaml</DependentUpon>
     </Compile>

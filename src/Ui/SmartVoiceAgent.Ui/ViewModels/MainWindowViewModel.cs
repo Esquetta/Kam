@@ -141,6 +141,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /* ========================= */
 
         public ICommand NavigateToCoordinatorCommand { get; }
+        public ICommand NavigateToDiagnosticsCommand { get; }
         public ICommand NavigateToPluginsCommand { get; }
         public ICommand NavigateToIntegrationsCommand { get; }
         public ICommand NavigateToSettingsCommand { get; }
@@ -417,6 +418,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             // Commands
             NavigateToCoordinatorCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Coordinator));
+            NavigateToDiagnosticsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Diagnostics));
             NavigateToPluginsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Plugins));
             NavigateToIntegrationsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Integrations));
             NavigateToSettingsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Settings));
@@ -618,6 +620,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
             CurrentViewModel = view switch
             {
                 NavView.Coordinator => new CoordinatorViewModel(_hostControl, this),
+                NavView.Diagnostics => new RuntimeDiagnosticsViewModel(
+                    new JsonSettingsService(),
+                    _hostControl,
+                    _skillHealthService),
                 NavView.Plugins => CreatePluginsViewModel(),
                 NavView.Integrations => new IntegrationsViewModel(),
                 NavView.Settings => new SettingsViewModel(this),

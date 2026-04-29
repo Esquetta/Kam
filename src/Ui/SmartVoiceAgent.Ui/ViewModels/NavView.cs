@@ -3,6 +3,7 @@
     public enum NavView
     {
         Coordinator,
+        Diagnostics,
         Network,
         Plugins,
         Integrations,
