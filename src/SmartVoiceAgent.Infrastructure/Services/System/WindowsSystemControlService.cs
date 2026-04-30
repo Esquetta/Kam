@@ -425,6 +425,11 @@ try {
             };
 
             using var process = Process.Start(processInfo);
+            if (process is null)
+            {
+                return false;
+            }
+
             await process.WaitForExitAsync();
             return process.ExitCode == 0;
         }
@@ -449,6 +454,11 @@ try {
             };
 
             using var process = Process.Start(processInfo);
+            if (process is null)
+            {
+                return string.Empty;
+            }
+
             var output = await process.StandardOutput.ReadToEndAsync();
             var error = await process.StandardError.ReadToEndAsync();
             await process.WaitForExitAsync();
@@ -480,6 +490,11 @@ try {
             };
 
             using var process = Process.Start(processInfo);
+            if (process is null)
+            {
+                return false;
+            }
+
             await process.WaitForExitAsync();
             return process.ExitCode == 0;
         }

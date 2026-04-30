@@ -103,7 +103,13 @@ public class LinuxSystemControlService : ISystemControlService
             var brightnessPath = await GetBrightnessControlPathAsync();
             if (!string.IsNullOrEmpty(brightnessPath))
             {
-                var maxBrightnessPath = Path.Combine(Path.GetDirectoryName(brightnessPath), "max_brightness");
+                var brightnessDirectory = Path.GetDirectoryName(brightnessPath);
+                if (string.IsNullOrEmpty(brightnessDirectory))
+                {
+                    return false;
+                }
+
+                var maxBrightnessPath = Path.Combine(brightnessDirectory, "max_brightness");
                 if (File.Exists(maxBrightnessPath))
                 {
                     var maxBrightnessStr = await File.ReadAllTextAsync(maxBrightnessPath);
@@ -162,7 +168,13 @@ public class LinuxSystemControlService : ISystemControlService
             if (!string.IsNullOrEmpty(brightnessPath))
             {
                 var currentBrightnessStr = await File.ReadAllTextAsync(brightnessPath);
-                var maxBrightnessPath = Path.Combine(Path.GetDirectoryName(brightnessPath), "max_brightness");
+                var brightnessDirectory = Path.GetDirectoryName(brightnessPath);
+                if (string.IsNullOrEmpty(brightnessDirectory))
+                {
+                    return 0;
+                }
+
+                var maxBrightnessPath = Path.Combine(brightnessDirectory, "max_brightness");
 
                 if (File.Exists(maxBrightnessPath))
                 {
