@@ -4,8 +4,8 @@
 /// </summary>
 public record ApplicationInstallInfo(
     bool IsInstalled,
-    string ExecutablePath,
+    string? ExecutablePath,
     string DisplayName,
-    string Version = null,
+    string? Version = null,
     DateTime? InstallDate = null
 );

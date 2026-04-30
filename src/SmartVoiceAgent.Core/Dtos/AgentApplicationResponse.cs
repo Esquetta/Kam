@@ -5,8 +5,8 @@
 public record AgentApplicationResponse(
     bool Success,
     string Message,
-    string ApplicationName = null,
-    string ExecutablePath = null,
+    string? ApplicationName = null,
+    string? ExecutablePath = null,
     bool IsInstalled = false,
     bool IsRunning = false
 );

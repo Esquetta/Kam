@@ -111,7 +111,7 @@ public class CommandHandlerService : ICommandHandlerService
         }
     }
 
-    public async Task<List<AvailableCommand>> GetAvailableCommandsAsync(string language, string category = null)
+    public async Task<List<AvailableCommand>> GetAvailableCommandsAsync(string language, string? category = null)
     {
         var commands = new List<AvailableCommand>();
 
