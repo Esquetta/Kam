@@ -13,7 +13,7 @@ namespace SmartVoiceAgent.Infrastructure.Services;
 /// </summary>
 public class IntentDetectorService : IIntentDetectionService
 {
-    private readonly LoggerServiceBase _logger;
+    private readonly LoggerServiceBase? _logger;
     private readonly IntentConfig _config;
     private readonly Dictionary<string, List<IntentPattern>> _intentPatterns;
     private readonly Dictionary<string, Regex> _entityRegexes;
@@ -28,6 +28,9 @@ public class IntentDetectorService : IIntentDetectionService
 
     public IntentDetectorService()
     {
+        _config = new IntentConfig();
+        _intentPatterns = LoadIntentPatterns();
+        _entityRegexes = LoadEntityRegexes();
     }
 
     public async Task<IntentResult> DetectIntentAsync(string text, string language, CancellationToken cancellationToken = default)
@@ -44,7 +47,7 @@ public class IntentDetectorService : IIntentDetectionService
             var normalizedText = NormalizeText(text);
 
             // First, try context-aware application detection
-            var appIntent = DetectApplicationIntent(normalizedText, text);
+            var appIntent = DetectApplicationIntent(normalizedText, text, language);
             if (appIntent != null)
             {
                 return appIntent;
@@ -87,7 +90,7 @@ public class IntentDetectorService : IIntentDetectionService
         }
         catch (Exception ex)
         {
-            _logger.Error($"Intent detection failed: {ex.Message}");
+            _logger?.Error($"Intent detection failed: {ex.Message}");
             return new IntentResult
             {
                 Intent = CommandType.Unknown,
@@ -108,6 +111,7 @@ public class IntentDetectorService : IIntentDetectionService
             new IntentPattern(CommandType.PlayMusic, new[] { "music", "song", "play" }),
             new IntentPattern(CommandType.SendMessage, new[] { "message", "send", "sms" }),
             new IntentPattern(CommandType.SearchWeb, new[] { "search", "google", "find" }),
+            new IntentPattern(CommandType.ControlDevice, new[] { "turn", "light", "lights", "volume", "brightness", "device" }),
             new IntentPattern(CommandType.CloseApplication, new[] { "close", "stop", "kill" }),
             new IntentPattern(CommandType.AddTask, new[] { "add", "create", "new", "task", "reminder" }),
             new IntentPattern(CommandType.UpdateTask, new[] { "update", "change", "edit", "modify" }),
@@ -122,6 +126,7 @@ public class IntentDetectorService : IIntentDetectionService
             new IntentPattern(CommandType.PlayMusic, new[] { "müzik", "şarkı", "çal", "müzik çal", "şarkı çal" }),
             new IntentPattern(CommandType.SendMessage, new[] { "mesaj", "gönder" }),
             new IntentPattern(CommandType.SearchWeb, new[] { "ara", "bul", "google" }),
+            new IntentPattern(CommandType.ControlDevice, new[] { "ışık", "ışıkları", "ses", "parlaklık", "cihaz", "kıs", "artır" }),
             new IntentPattern(CommandType.CloseApplication, new[] { "kapat", "durdur", "sonlandır" }),
             new IntentPattern(CommandType.AddTask, new[] { "ekle", "oluştur", "yeni", "görev", "hatırlatıcı" }),
             new IntentPattern(CommandType.UpdateTask, new[] { "güncelle", "değiştir", "düzenle" }),
@@ -131,7 +136,7 @@ public class IntentDetectorService : IIntentDetectionService
         }
         };
     }
-    private IntentResult DetectApplicationIntent(string normalizedText, string originalText)
+    private IntentResult? DetectApplicationIntent(string normalizedText, string originalText, string language)
     {
         var applicationKeywords = new[]
         {
@@ -151,7 +156,7 @@ public class IntentDetectorService : IIntentDetectionService
                 Intent = CommandType.OpenApplication,
                 Confidence = 0.95f,
                 OriginalText = originalText,
-                Language = "tr"
+                Language = language
             };
         }
 
@@ -204,8 +209,8 @@ public class IntentDetectorService : IIntentDetectionService
 
     private List<IntentPattern> GetPatternsForLanguage(string language)
     {
-        return _intentPatterns.ContainsKey(language)
-            ? _intentPatterns[language]
+        return !string.IsNullOrWhiteSpace(language) && _intentPatterns.TryGetValue(language, out var patterns)
+            ? patterns
             : _intentPatterns["en"];
     }
 
@@ -235,13 +240,23 @@ public class IntentDetectorService : IIntentDetectionService
         // Special handling for music patterns - be more specific
         if (pattern.Intent == CommandType.PlayMusic)
         {
+            var hasMusicTerm = normalizedText.Contains("müzik") ||
+                               normalizedText.Contains("şarkı") ||
+                               normalizedText.Contains("music") ||
+                               normalizedText.Contains("song");
+            var hasPlayVerb = normalizedText.Contains("çal") ||
+                              normalizedText.Contains("oynat") ||
+                              normalizedText.Contains("play");
+            var hasOpenVerb = normalizedText.Contains("aç") ||
+                              normalizedText.Contains("open") ||
+                              normalizedText.Contains("launch");
+
             // Only trigger for explicit music commands, not application opening
-            if ((normalizedText.Contains("müzik") || normalizedText.Contains("şarkı")) &&
-                (normalizedText.Contains("çal") || normalizedText.Contains("oynat")))
+            if (hasMusicTerm && hasPlayVerb)
             {
                 score += 0.8;
             }
-            else if (normalizedText.Contains("çal") && !normalizedText.Contains("aç"))
+            else if (hasPlayVerb && !hasOpenVerb)
             {
                 score += 0.6;
             }

@@ -10,36 +10,26 @@ namespace SmartVoiceAgent.Tests.Infrastructure.Services
 
         public IntentDetectorServiceTests()
         {
-            // Use the parameterless constructor but note that some code paths
-            // may throw due to uninitialized dependencies
             _intentDetectorService = new IntentDetectorService();
         }
 
         [Theory]
-        [InlineData("müzik çal", CommandType.PlayMusic)]
-        [InlineData("google ara", CommandType.SearchWeb)]
-        [InlineData("ışıkları kapat", CommandType.ControlDevice)]
-        public async Task DetectIntentAsync_Returns_CorrectCommandType(string input, CommandType expected)
+        [InlineData("play music", CommandType.PlayMusic)]
+        [InlineData("search google", CommandType.SearchWeb)]
+        [InlineData("turn off lights", CommandType.ControlDevice)]
+        [InlineData("open chrome", CommandType.OpenApplication)]
+        public async Task DetectIntentAsync_DefaultConfiguration_ReturnsExpectedCommandType(string input, CommandType expected)
         {
-            // Note: These tests may fail due to the service requiring proper DI setup
-            // They are kept here as a reference for what the service should detect
-            try
-            {
-                var result = await _intentDetectorService.DetectIntentAsync(input, "tr");
-                result.Intent.Should().Be(expected);
-            }
-            catch (NullReferenceException)
-            {
-                // Service requires proper DI configuration - skip this test
-                // In a real scenario, we would use proper mocking
-                true.Should().BeTrue(); // Mark as passed for now
-            }
+            var result = await _intentDetectorService.DetectIntentAsync(input, "en");
+
+            result.Intent.Should().Be(expected);
         }
 
         [Fact]
         public async Task DetectIntentAsync_EmptyInput_ReturnsUnknown()
         {
             var result = await _intentDetectorService.DetectIntentAsync("", "tr");
+
             result.Intent.Should().Be(CommandType.Unknown);
         }
     }

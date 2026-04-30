@@ -119,7 +119,7 @@ public class ContextAwareIntentDetectionService : IIntentDetectionService
         return baseResult;
     }
 
-    private string ExtractApplicationFromText(string text)
+    private string? ExtractApplicationFromText(string text)
     {
         var appNames = new[] { "spotify", "chrome", "firefox", "notepad", "word", "excel", "vlc", "calculator" };
         var textLower = text.ToLower();
@@ -143,7 +143,7 @@ public class ContextAwareIntentDetectionService : IIntentDetectionService
         return appNames.Any(app => contextLower.Contains(app));
     }
 
-    private string ExtractApplicationFromContext(string contextInfo)
+    private string? ExtractApplicationFromContext(string contextInfo)
     {
         if (string.IsNullOrEmpty(contextInfo)) return null;
 
@@ -193,7 +193,7 @@ public class ContextAwareIntentDetectionService : IIntentDetectionService
         return contextInfo.ToLower().Contains("preferred_music_app:");
     }
 
-    private string ExtractPreferredMusicApp(string contextInfo)
+    private string? ExtractPreferredMusicApp(string contextInfo)
     {
         if (string.IsNullOrEmpty(contextInfo)) return null;
 
@@ -218,7 +218,7 @@ public class ContextAwareIntentDetectionService : IIntentDetectionService
         return null;
     }
 
-    private Dictionary<string, object> CreateApplicationEntities(string appName)
+    private Dictionary<string, object> CreateApplicationEntities(string? appName)
     {
         var entities = new Dictionary<string, object>();
 
