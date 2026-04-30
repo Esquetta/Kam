@@ -140,12 +140,17 @@ public class ControlDeviceCommandHandler : IRequestHandler<ControlDeviceCommand,
                 success = await systemControl.UnmuteSystemVolumeAsync();
                 return (success, "Volume unmuted");
 
+            case "status":
+            case "durum":
+                currentLevel = await systemControl.GetSystemVolumeAsync();
+                return (true, $"Volume is {currentLevel}%");
+
             case "set":
                 // For set, we'd need a value parameter - handled via specific command
                 return (false, "Use 'set volume to X' format with a specific level");
 
             default:
-                return (false, $"Unknown volume action: {action}. Try: increase, decrease, mute, unmute");
+                return (false, $"Unknown volume action: {action}. Try: increase, decrease, mute, unmute, status");
         }
     }
 

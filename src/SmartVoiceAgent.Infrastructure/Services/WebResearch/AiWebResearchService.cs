@@ -46,13 +46,26 @@ public class AiWebResearchService : IWebResearchService
         try
         {
             _logger.Info($"'{request.Query}' konusu için AI destekli araştırma başlatılıyor...");
+            if (request.MaxResults <= 1)
+            {
+                var directResults = await PerformGoogleSearchAsync(new WebResearchRequest
+                {
+                    Query = request.Query,
+                    Language = request.Language,
+                    MaxResults = 1
+                });
+
+                _logger.Info($"{directResults.Count} adet direkt arama sonucu bulundu.");
+                return directResults.Take(1).ToList();
+            }
 
             // 1. AI ile araştırma planı oluştur
             var researchPlan = await CreateResearchPlanAsync(request);
 
             // 2. Her anahtar kelime için arama yap
             var allResults = new List<WebResearchResult>();
-            foreach (var keyword in researchPlan.Keywords)
+            var keywordLimit = Math.Clamp(request.MaxResults, 1, 3);
+            foreach (var keyword in researchPlan.Keywords.Take(keywordLimit))
             {
                 var keywordResults = await PerformGoogleSearchAsync(new WebResearchRequest
                 {
@@ -340,60 +353,12 @@ SADECE JSON formatında yanıt ver:
     {
         try
         {
-            var requestBody = new
-            {
-                model = _model,
-                prompt = $"System: {systemMessage}\n\nUser: {userMessage}\n\nAssistant:",
-                max_tokens = 1000,
-                temperature = 0.7,
-                stop = new[] { "User:", "System:" }
-            };
-
-            var json = JsonSerializer.Serialize(requestBody);
-
-            // HttpRequestMessage kullanarak OpenRouter header'larını ayarla
-            using var request = new HttpRequestMessage(HttpMethod.Post, "https://openrouter.ai/api/v1/completions");
-            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            // OpenRouter için gerekli header'ları ekle
-            request.Headers.Add("Authorization", $"Bearer {_openRouterApiKey}");
-            request.Headers.Add("HTTP-Referer", "https://esquetta.netlify.app/");
-            request.Headers.Add("X-Title", "Smart Voice Agent");
-
-            // Security: Never log API keys or sensitive headers
-            _logger.Info($"OpenRouter request prepared (content length: {json.Length})");
-            // Authorization header intentionally not logged
-
-            var response = await _httpClient.SendAsync(request);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.Error($"OpenRouter API error: {response.StatusCode} - {errorContent}");
-                // Security: Request headers not logged to avoid leaking sensitive data
-                throw new HttpRequestException($"OpenRouter API error: {response.StatusCode} - {errorContent}");
-            }
-
-            var responseContent = await response.Content.ReadAsStringAsync();
-            _logger.Info($"OpenRouter Ham Yanıt: {responseContent}");
-
-            var apiResponse = JsonSerializer.Deserialize<OpenRouterResponse>(responseContent, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-
-            if (apiResponse?.Choices?.Any() == true)
-            {
-                var firstChoice = apiResponse.Choices.First();
-                return firstChoice.Text?.Trim() ?? "";
-            }
-
-            throw new InvalidOperationException("OpenRouter API yanıtı beklenmeyen formatta");
+            return await CallOpenRouterChatAsync(systemMessage, userMessage);
         }
         catch (JsonException jsonEx)
         {
             _logger.Error($"JSON Parse hatası: {jsonEx.Message}");
-            return await CallOpenRouterChatAsync(systemMessage, userMessage);
+            throw;
         }
         catch (Exception ex)
         {

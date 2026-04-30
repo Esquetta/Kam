@@ -28,7 +28,8 @@ public sealed class WebSearchSkillExecutor : ISkillExecutor
         var result = await _tools.SearchWebAsync(
             SkillPlanArgumentReader.GetString(plan, "query"),
             SkillPlanArgumentReader.GetString(plan, "lang", "tr"),
-            SkillPlanArgumentReader.GetInt(plan, "results", 5));
+            SkillPlanArgumentReader.GetInt(plan, "results", 5),
+            SkillPlanArgumentReader.GetBool(plan, "openResults"));
 
         return AgentToolSkillResult.FromMessage(result);
     }

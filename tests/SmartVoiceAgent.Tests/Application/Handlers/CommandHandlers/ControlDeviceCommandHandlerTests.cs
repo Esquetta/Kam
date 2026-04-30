@@ -122,6 +122,26 @@ namespace SmartVoiceAgent.Tests.Application.Handlers.CommandHandlers
             _systemControlMock.Verify(s => s.UnmuteSystemVolumeAsync(), Times.Once);
         }
 
+        [Theory]
+        [InlineData("status")]
+        [InlineData("durum")]
+        public async Task Handle_VolumeStatus_ReturnsCurrentVolume(string action)
+        {
+            // Arrange
+            _systemControlMock.Setup(s => s.GetSystemVolumeAsync())
+                .ReturnsAsync(42);
+
+            var command = new ControlDeviceCommand("volume", action);
+
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Success.Should().BeTrue();
+            result.Message.Should().Contain("Volume is 42%");
+            _systemControlMock.Verify(s => s.GetSystemVolumeAsync(), Times.Once);
+        }
+
         #endregion
 
         #region Brightness Control Tests

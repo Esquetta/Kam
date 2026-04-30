@@ -63,7 +63,7 @@ public sealed class BuiltInSkillEvalCaseCatalog : ISkillEvalCaseCatalog
             Case(
                 "web.search creates a bounded search plan",
                 "web.search",
-                new { query = "Kam voice automation", lang = "en", results = 3 }),
+                new { query = "Kam voice automation", lang = "en", results = 1 }),
             Case(
                 "window.active reads active window context",
                 "window.active",

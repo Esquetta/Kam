@@ -75,14 +75,14 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<SystemAgentTools>();
         services.AddSingleton<TaskAgentTools>();
-        services.AddSingleton<WebSearchAgentTools>();
+        services.AddScoped<WebSearchAgentTools>();
         services.AddSingleton<FileAgentTools>();
         services.AddSingleton<CommunicationAgentTools>();
         services.AddSingleton<ClipboardTools>();
         services.AddSingleton<SystemInformationTools>();
         services.AddSingleton<ISkillExecutor, SystemAgentSkillExecutor>();
         services.AddSingleton<ISkillExecutor, FileSkillExecutor>();
-        services.AddSingleton<ISkillExecutor, WebSearchSkillExecutor>();
+        services.AddScoped<ISkillExecutor, WebSearchSkillExecutor>();
         services.AddSingleton<ISkillExecutor, CommunicationSkillExecutor>();
         services.AddSingleton<ISkillExecutor, ClipboardSkillExecutor>();
         services.AddSingleton<ISkillExecutor, SystemInformationSkillExecutor>();

@@ -11,7 +11,7 @@ public class OcrService : IOcrService
 
     public OcrService(LoggerServiceBase loggerServiceBase)
     {
-        _tessDataPath = @"./tessdata";
+        _tessDataPath = ResolveTessDataPath();
         _logger = loggerServiceBase;
     }
 
@@ -20,6 +20,12 @@ public class OcrService : IOcrService
     {
         try
         {
+            if (!File.Exists(Path.Combine(_tessDataPath, "eng.traineddata")))
+            {
+                _logger.Warn($"OCR tessdata not found at '{_tessDataPath}'. Returning an empty OCR result.");
+                return [];
+            }
+
             return await Task.Run(() =>
             {
                 var results = new List<OcrLine>();
@@ -62,7 +68,35 @@ public class OcrService : IOcrService
         catch (Exception ex)
         {
             _logger.Error($"Error while performing OCR. {ex.Message}");
-            throw;
+            return [];
         }
+    }
+
+    private static string ResolveTessDataPath()
+    {
+        var environmentPath = Environment.GetEnvironmentVariable("TESSDATA_PREFIX");
+        var candidates = new[]
+        {
+            environmentPath,
+            Path.Combine(AppContext.BaseDirectory, "tessdata"),
+            Path.Combine(Environment.CurrentDirectory, "tessdata"),
+            "./tessdata"
+        };
+
+        foreach (var candidate in candidates)
+        {
+            if (string.IsNullOrWhiteSpace(candidate))
+            {
+                continue;
+            }
+
+            var fullPath = Path.GetFullPath(candidate);
+            if (File.Exists(Path.Combine(fullPath, "eng.traineddata")))
+            {
+                return fullPath;
+            }
+        }
+
+        return Path.Combine(AppContext.BaseDirectory, "tessdata");
     }
 }
