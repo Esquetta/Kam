@@ -8,7 +8,7 @@ param(
     [switch]$Launch,
     [switch]$PlanOnly,
     [switch]$SelfTestWarningParser,
-    [int]$MaxBuildWarnings = 30
+    [int]$MaxBuildWarnings = 20
 )
 
 Set-StrictMode -Version Latest

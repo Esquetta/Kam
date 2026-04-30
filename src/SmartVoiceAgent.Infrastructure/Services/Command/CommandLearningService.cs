@@ -70,7 +70,7 @@ public class CommandLearningService : ICommandLearningService
             _logger.Info($"Successfully learned command: {learnedCommand.CommandText}");
             return true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             _logger.Error($"Error learning command: {learnedCommand?.CommandText}");
             return false;
@@ -135,7 +135,7 @@ public class CommandLearningService : ICommandLearningService
 
             return false;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             _logger.Error($"Error removing command: {commandId}");
             return false;
@@ -165,7 +165,7 @@ public class CommandLearningService : ICommandLearningService
             }
             return false;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             _logger.Error($"Error updating usage for command: {commandId}");
             return false;
@@ -256,7 +256,7 @@ public class CommandLearningService : ICommandLearningService
                 _logger.Info($"Loaded {commands.Count} commands from storage");
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             _logger.Error("Error loading commands from storage");
         }
@@ -281,7 +281,7 @@ public class CommandLearningService : ICommandLearningService
             await File.WriteAllTextAsync(_commandStoragePath, json);
             _logger.Debug($"Saved {commands.Count} commands to storage");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             _logger.Error("Error saving commands to storage");
             throw;
