@@ -27,9 +27,9 @@ public class DynamicAppExtractionService
 
     public class CachedAppInfo
     {
-        public string Name { get; set; }
-        public string Path { get; set; }
-        public string ExecutableName { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Path { get; set; } = string.Empty;
+        public string ExecutableName { get; set; } = string.Empty;
         public List<string> Aliases { get; set; } = new List<string>();
         public int Priority { get; set; } = 1;
         public string Category { get; set; } = "general";
@@ -38,7 +38,7 @@ public class DynamicAppExtractionService
     /// <summary>
     /// Ana metod - kullanıcı girdisinden uygulama adını çıkarır
     /// </summary>
-    public async Task<string> ExtractApplicationNameAsync(string userInput)
+    public async Task<string?> ExtractApplicationNameAsync(string userInput)
     {
         if (string.IsNullOrWhiteSpace(userInput))
             return null;
@@ -174,7 +174,7 @@ public class DynamicAppExtractionService
     /// </summary>
     private CachedAppInfo CreateCachedAppInfo(AppInfoDTO app)
     {
-        var fileName = Path.GetFileNameWithoutExtension(app.Path);
+        var fileName = Path.GetFileNameWithoutExtension(app.Path) ?? app.Name;
         var directory = Path.GetFileName(Path.GetDirectoryName(app.Path)) ?? "";
 
         var cachedApp = new CachedAppInfo
@@ -369,7 +369,7 @@ public class DynamicAppExtractionService
     }
 
     // Eşleştirme metodları
-    private CachedAppInfo FindExactMatch(string cleanedText)
+    private CachedAppInfo? FindExactMatch(string cleanedText)
     {
         return _applicationCache.Values
             .Where(app => string.Equals(app.Name, cleanedText, StringComparison.OrdinalIgnoreCase) ||
@@ -378,9 +378,9 @@ public class DynamicAppExtractionService
             .FirstOrDefault();
     }
 
-    private string FindAliasMatch(string cleanedText)
+    private string? FindAliasMatch(string cleanedText)
     {
-        if (_aliasCache.TryGetValue(cleanedText, out string exactAlias))
+        if (_aliasCache.TryGetValue(cleanedText, out var exactAlias))
             return exactAlias;
 
         // Kısmi alias eşleştirmesi
@@ -392,7 +392,7 @@ public class DynamicAppExtractionService
         return partialAlias.Value;
     }
 
-    private CachedAppInfo FindPartialMatch(string cleanedText)
+    private CachedAppInfo? FindPartialMatch(string cleanedText)
     {
         var matches = _applicationCache.Values
             .Where(app =>
@@ -411,7 +411,7 @@ public class DynamicAppExtractionService
         return matches.FirstOrDefault();
     }
 
-    private CachedAppInfo FindFuzzyMatch(string cleanedText)
+    private CachedAppInfo? FindFuzzyMatch(string cleanedText)
     {
         var matches = _applicationCache.Values
             .Select(app => new
@@ -426,7 +426,7 @@ public class DynamicAppExtractionService
         return matches.FirstOrDefault()?.App;
     }
 
-    private async Task<string> SearchRealTimeAsync(string cleanedText)
+    private async Task<string?> SearchRealTimeAsync(string cleanedText)
     {
         try
         {
@@ -437,8 +437,10 @@ public class DynamicAppExtractionService
                 var method = windowsService.GetType().GetMethod("FindApplicationExecutableAsync");
                 if (method != null)
                 {
-                    var task = (Task<string>)method.Invoke(windowsService, new object[] { cleanedText });
-                    return await task;
+                    if (method.Invoke(windowsService, new object[] { cleanedText }) is Task<string?> task)
+                    {
+                        return await task;
+                    }
                 }
             }
         }
@@ -551,7 +553,7 @@ public class DynamicAppExtractionService
         }
     }
 
-    private string ExtractExecutableNameFromPath(string fullPath)
+    private string? ExtractExecutableNameFromPath(string fullPath)
     {
         if (string.IsNullOrEmpty(fullPath))
             return null;

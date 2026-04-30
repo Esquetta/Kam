@@ -91,7 +91,7 @@ public class CommandHandlerService : ICommandHandlerService
                 {
                     Success = true,
                     Message = $"{commandType} komutu başarıyla çalıştırıldı",
-                    Data = result,
+                    Data = result ?? new object(),
                     OriginalInput = request.OriginalText
                 };
             }
@@ -141,13 +141,13 @@ public class CommandHandlerService : ICommandHandlerService
             [CommandType.OpenApplication] = async (req) => new OpenApplicationCommand(
                 ExtractEntity(req.Entities, "applicationName") ??
                 ExtractEntity(req.Entities, "app_name") ??
-                await ExtractAppNameFromTextAsync(req.OriginalText)
+                await ExtractAppNameFromTextAsync(req.OriginalText) ?? string.Empty
             ),
 
             [CommandType.CloseApplication] = async (req) => new CloseApplicationCommand(
                 ExtractEntity(req.Entities, "applicationName") ??
                 ExtractEntity(req.Entities, "app_name") ??
-                await ExtractAppNameFromTextAsync(req.OriginalText)
+                await ExtractAppNameFromTextAsync(req.OriginalText) ?? string.Empty
             ),
 
             [CommandType.SendMessage] = async (req) => new SendMessageCommand(
@@ -199,13 +199,13 @@ public class CommandHandlerService : ICommandHandlerService
     }
 
     // Enhanced entity extraction helpers
-    private string ExtractEntity(Dictionary<string, object> entities, string key)
+    private string? ExtractEntity(Dictionary<string, object> entities, string key)
     {
         return entities?.TryGetValue(key, out var value) == true ? value?.ToString() : null;
     }
 
     // Updated application name extraction using the enhanced service
-    private async Task<string> ExtractAppNameFromTextAsync(string text)
+    private async Task<string?> ExtractAppNameFromTextAsync(string text)
     {
         return await _appExtractionService.ExtractApplicationNameAsync(text);
     }
@@ -273,7 +273,7 @@ public class CommandHandlerService : ICommandHandlerService
         return "toggle";
     }
 
-    private string ExtractRecipientFromText(string text)
+    private string? ExtractRecipientFromText(string text)
     {
         // Use pre-compiled regex patterns
         foreach (var pattern in RecipientPatterns)
