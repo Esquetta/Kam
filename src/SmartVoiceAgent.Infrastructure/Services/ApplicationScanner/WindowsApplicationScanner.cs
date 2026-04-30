@@ -134,7 +134,7 @@ public class WindowsApplicationScanner : IApplicationScanner
         });
     }
 
-    public async Task<string> GetApplicationPathAsync(string appName)
+    public async Task<string?> GetApplicationPathAsync(string appName)
     {
         var appInfo = await FindApplicationAsync(appName);
         return appInfo.IsInstalled ? appInfo.ExecutablePath : null;
@@ -167,7 +167,7 @@ public class WindowsApplicationScanner : IApplicationScanner
         return processes;
     }
 
-    private string GetExecutablePath(string installLocation, string displayIcon, string uninstallString)
+    private string? GetExecutablePath(string? installLocation, string? displayIcon, string? uninstallString)
     {
         // Try install location first
         if (!string.IsNullOrEmpty(installLocation) && Directory.Exists(installLocation))
@@ -196,7 +196,7 @@ public class WindowsApplicationScanner : IApplicationScanner
         return null;
     }
 
-    private bool IsApplicationRunning(string appName, string executablePath, Dictionary<string, string> runningProcesses)
+    private bool IsApplicationRunning(string appName, string? executablePath, Dictionary<string, string> runningProcesses)
     {
         if (string.IsNullOrEmpty(executablePath))
             return false;

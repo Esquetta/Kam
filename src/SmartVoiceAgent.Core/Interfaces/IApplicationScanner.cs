@@ -26,7 +26,7 @@ public interface IApplicationScanner
     /// </summary>
     /// <param name="appName">The application name.</param>
     /// <returns>The executable path if found, null otherwise.</returns>
-    Task<string> GetApplicationPathAsync(string appName);
+    Task<string?> GetApplicationPathAsync(string appName);
 }
 
 public interface IApplicationScannerServiceFactory

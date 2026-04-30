@@ -83,7 +83,7 @@ public class LinuxApplicationScanner : IApplicationScanner
                             var appInfo = ParseDesktopFile(desktopFile);
                             if (appInfo != null && appInfo.Name.ToLower().Contains(appNameLower))
                             {
-                                string version = null;
+                                string? version = null;
                                 DateTime? installDate = null;
 
                                 try
@@ -131,18 +131,18 @@ public class LinuxApplicationScanner : IApplicationScanner
         });
     }
 
-    public async Task<string> GetApplicationPathAsync(string appName)
+    public async Task<string?> GetApplicationPathAsync(string appName)
     {
         var appInfo = await FindApplicationAsync(appName);
         return appInfo.IsInstalled ? appInfo.ExecutablePath : null;
     }
 
 
-    private AppInfoDTO ParseDesktopFile(string filePath)
+    private AppInfoDTO? ParseDesktopFile(string filePath)
     {
         var lines = File.ReadAllLines(filePath);
-        string name = null;
-        string exec = null;
+        string? name = null;
+        string? exec = null;
         bool noDisplay = false;
 
         foreach (var line in lines)
@@ -171,7 +171,7 @@ public class LinuxApplicationScanner : IApplicationScanner
         return new AppInfoDTO(name, executablePath ?? exec, false);
     }
 
-    private string FindExecutableInPath(string command)
+    private string? FindExecutableInPath(string command)
     {
         var pathEnv = Environment.GetEnvironmentVariable("PATH");
         if (string.IsNullOrEmpty(pathEnv)) return null;
@@ -214,7 +214,7 @@ public class LinuxApplicationScanner : IApplicationScanner
         return processes;
     }
 
-    private bool IsApplicationRunning(string appName, string executablePath, HashSet<string> runningProcesses)
+    private bool IsApplicationRunning(string appName, string? executablePath, HashSet<string> runningProcesses)
     {
         if (string.IsNullOrEmpty(executablePath))
             return false;

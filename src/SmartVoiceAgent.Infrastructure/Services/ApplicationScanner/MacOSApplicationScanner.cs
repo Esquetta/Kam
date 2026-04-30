@@ -84,7 +84,7 @@ public class MacOSApplicationScanner : IApplicationScanner
                             if (appInfo != null && appInfo.Name.ToLower().Contains(appNameLower))
                             {
                                 var infoPlistPath = Path.Combine(appBundle, "Contents", "Info.plist");
-                                string version = null;
+                                string? version = null;
                                 DateTime? installDate = null;
 
                                 if (File.Exists(infoPlistPath))
@@ -129,13 +129,13 @@ public class MacOSApplicationScanner : IApplicationScanner
         });
     }
 
-    public async Task<string> GetApplicationPathAsync(string appName)
+    public async Task<string?> GetApplicationPathAsync(string appName)
     {
         var appInfo = await FindApplicationAsync(appName);
         return appInfo.IsInstalled ? appInfo.ExecutablePath : null;
     }
 
-    private AppInfoDTO ParseAppBundle(string bundlePath)
+    private AppInfoDTO? ParseAppBundle(string bundlePath)
     {
         var infoPlistPath = Path.Combine(bundlePath, "Contents", "Info.plist");
         if (!File.Exists(infoPlistPath))
@@ -160,7 +160,7 @@ public class MacOSApplicationScanner : IApplicationScanner
         }
     }
 
-    private string ExtractPlistValue(string plistContent, string key)
+    private string? ExtractPlistValue(string plistContent, string key)
     {
         var keyTag = $"<key>{key}</key>";
         var keyIndex = plistContent.IndexOf(keyTag);
