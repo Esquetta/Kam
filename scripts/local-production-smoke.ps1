@@ -3,6 +3,7 @@ param(
     [string]$Configuration = "Release",
     [string]$Runtime = "win-x64",
     [switch]$SkipTests,
+    [switch]$SkipSkillSmoke,
     [switch]$SkipPublish,
     [switch]$RequireAiConfig,
     [switch]$Launch,
@@ -17,10 +18,12 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $solution = Join-Path $repoRoot "Kam.sln"
 $uiProject = Join-Path $repoRoot "src\Ui\SmartVoiceAgent.Ui\SmartVoiceAgent.Ui.csproj"
+$agentHostProject = Join-Path $repoRoot "src\SmartVoiceAgent.AgentHost.ConsoleApp\SmartVoiceAgent.AgentHost.ConsoleApp.csproj"
 $runId = Get-Date -Format "yyyyMMdd-HHmmss"
 $artifactRoot = Join-Path $repoRoot "artifacts\local-production-smoke\$runId"
 $publishDir = Join-Path $artifactRoot "publish"
 $summaryPath = Join-Path $artifactRoot "summary.md"
+$skillSmokeSummaryPath = Join-Path $artifactRoot "skill-smoke.md"
 $uiSettingsPath = Join-Path $env:LOCALAPPDATA "SmartVoiceAgent\settings.json"
 $summary = New-Object System.Collections.Generic.List[string]
 
@@ -398,6 +401,14 @@ else {
 }
 
 Test-AiConfiguration
+
+if (-not $SkipSkillSmoke) {
+    Invoke-SmokeStep "skill smoke" @("dotnet", "run", "--project", $agentHostProject, "--configuration", $Configuration, "--no-build", "--", "--skill-smoke", "--summary", $skillSmokeSummaryPath)
+    Add-SummaryLine "- skillSmokeSummary: $skillSmokeSummaryPath"
+}
+else {
+    Add-SummaryLine "- skill smoke: skipped"
+}
 
 if (-not $SkipPublish) {
     Invoke-SmokeStep "publish" @("dotnet", "publish", $uiProject, "--configuration", $Configuration, "--runtime", $Runtime, "--self-contained", "false", "--output", $publishDir)

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using SmartVoiceAgent.Application.DependencyInjection;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.AgentHost.ConsoleApp;
 using SmartVoiceAgent.Infrastructure.DependencyInjection;
 using SmartVoiceAgent.Infrastructure.Extensions;
 using SmartVoiceAgent.Mailing.Entities;
@@ -15,10 +16,14 @@ using MediatR;
 #endregion
 
 #region Main Entry Point
-Console.WriteLine("╔═══════════════════════════════════════════════════════════╗");
-Console.WriteLine("║          Kam Agent Host - Console Test Application        ║");
-Console.WriteLine("╚═══════════════════════════════════════════════════════════╝");
-Console.WriteLine();
+var skillSmokeRequested = SkillSmokeCommand.IsRequested(args);
+if (!skillSmokeRequested)
+{
+    Console.WriteLine("╔═══════════════════════════════════════════════════════════╗");
+    Console.WriteLine("║          Kam Agent Host - Console Test Application        ║");
+    Console.WriteLine("╚═══════════════════════════════════════════════════════════╝");
+    Console.WriteLine();
+}
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration(config =>
@@ -36,6 +41,17 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddMailingServices(configuration);
     })
     .Build();
+
+if (skillSmokeRequested)
+{
+    using var scope = host.Services.CreateScope();
+    var command = ActivatorUtilities.CreateInstance<SkillSmokeCommand>(scope.ServiceProvider);
+    Environment.ExitCode = await command.RunAsync(
+        SkillSmokeCommand.ParseOptions(args),
+        Console.Out,
+        Console.Error);
+    return;
+}
 
 // Test mode selector
 Console.WriteLine("Select test mode:");

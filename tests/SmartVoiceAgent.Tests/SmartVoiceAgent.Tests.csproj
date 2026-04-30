@@ -29,6 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\SmartVoiceAgent.AgentHost.ConsoleApp\SmartVoiceAgent.AgentHost.ConsoleApp.csproj" />
     <ProjectReference Include="..\..\src\SmartVoiceAgent.Infrastructure\SmartVoiceAgent.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Ui\SmartVoiceAgent.Ui\SmartVoiceAgent.Ui.csproj" />
   </ItemGroup>
