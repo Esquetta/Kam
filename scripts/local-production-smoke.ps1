@@ -7,7 +7,8 @@ param(
     [switch]$RequireAiConfig,
     [switch]$Launch,
     [switch]$PlanOnly,
-    [int]$MaxBuildWarnings = 800
+    [switch]$SelfTestWarningParser,
+    [int]$MaxBuildWarnings = 400
 )
 
 Set-StrictMode -Version Latest
@@ -30,6 +31,50 @@ if ($MaxBuildWarnings -lt 0) {
 function Add-SummaryLine {
     param([string]$Line)
     $summary.Add($Line) | Out-Null
+}
+
+function Get-SmokeBuildWarningCount {
+    param([object[]]$Output)
+
+    $summaryCounts = @($Output | ForEach-Object {
+        $line = $_.ToString()
+        $match = [regex]::Match($line, "^\s*(\d+)\s+Warning\(s\)\s*$")
+        if ($match.Success) {
+            [int]$match.Groups[1].Value
+        }
+    })
+
+    if ($summaryCounts.Count -gt 0) {
+        return [int]$summaryCounts[-1]
+    }
+
+    return @($Output | Where-Object { $_.ToString() -match ": warning " }).Count
+}
+
+function Test-SmokeWarningParser {
+    $duplicatedBuildOutput = @(
+        "D:\repo\Example.cs(10,20): warning CS8602: first pass [D:\repo\Example.csproj]",
+        "D:\repo\Example.cs(10,20): warning CS8602: summary pass [D:\repo\Example.csproj]",
+        "    1 Warning(s)",
+        "    0 Error(s)"
+    )
+
+    $summaryCount = Get-SmokeBuildWarningCount -Output $duplicatedBuildOutput
+    if ($summaryCount -ne 1) {
+        throw "Expected MSBuild summary warning count 1, got $summaryCount."
+    }
+
+    $streamOnlyOutput = @(
+        "D:\repo\One.cs(1,1): warning CS0001: first [D:\repo\One.csproj]",
+        "D:\repo\Two.cs(2,2): warning CS0002: second [D:\repo\Two.csproj]"
+    )
+
+    $streamCount = Get-SmokeBuildWarningCount -Output $streamOnlyOutput
+    if ($streamCount -ne 2) {
+        throw "Expected stream warning count 2 when no MSBuild summary exists, got $streamCount."
+    }
+
+    Write-Host "Warning parser self-test passed" -ForegroundColor Green
 }
 
 function Invoke-SmokeStep {
@@ -65,7 +110,7 @@ function Invoke-SmokeStep {
     Add-SummaryLine "  - duration: $($timer.Elapsed.TotalSeconds.ToString('0.0'))s"
 
     if ($MaxWarnings -ge 0) {
-        $warningCount = @($output | Where-Object { $_.ToString() -match ": warning " }).Count
+        $warningCount = Get-SmokeBuildWarningCount -Output $output
         Add-SummaryLine "  - warnings: $warningCount"
         Add-SummaryLine "  - maxWarnings: $MaxWarnings"
 
@@ -319,6 +364,11 @@ function Test-AiConfiguration {
     }
 
     Write-Host "==> AI config warning: $message" -ForegroundColor Yellow
+}
+
+if ($SelfTestWarningParser) {
+    Test-SmokeWarningParser
+    return
 }
 
 if (-not (Test-Path $solution)) {
