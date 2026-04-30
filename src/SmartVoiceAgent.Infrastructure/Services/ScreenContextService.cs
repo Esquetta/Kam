@@ -4,10 +4,12 @@ using SmartVoiceAgent.Core.Dtos.Screen;
 using SmartVoiceAgent.Core.Interfaces;
 using System.Collections.Concurrent;
 using System.Drawing;
+using System.Runtime.Versioning;
 using System.Security.Cryptography;
 
 namespace SmartVoiceAgent.Infrastructure.Services;
 
+[SupportedOSPlatform("windows6.1")]
 public class ScreenContextService : IScreenContextService
 {
     private readonly IScreenCaptureService _screenCaptureService;

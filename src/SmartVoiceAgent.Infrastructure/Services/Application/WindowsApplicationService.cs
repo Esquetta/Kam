@@ -6,11 +6,13 @@ using SmartVoiceAgent.Infrastructure.Security;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Management;
+using System.Runtime.Versioning;
 using System.Security;
 using System.Text.RegularExpressions;
 
 namespace SmartVoiceAgent.Infrastructure.Services.Application
 {
+    [SupportedOSPlatform("windows")]
     public class WindowsApplicationService : IApplicationService
     {
         private readonly Dictionary<string, string> _applicationCache = new();

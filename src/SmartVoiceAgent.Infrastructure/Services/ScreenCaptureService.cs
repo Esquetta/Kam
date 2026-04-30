@@ -7,9 +7,11 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
 namespace SmartVoiceAgent.Infrastructure.Services;
 
+[SupportedOSPlatform("windows6.1")]
 public class ScreenCaptureService : IScreenCaptureService
 {
     private readonly LoggerServiceBase _logger;

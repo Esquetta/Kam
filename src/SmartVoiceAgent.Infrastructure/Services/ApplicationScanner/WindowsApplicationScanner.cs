@@ -3,11 +3,13 @@ using SmartVoiceAgent.Core.Dtos;
 using SmartVoiceAgent.Core.Interfaces;
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.Versioning;
 
 namespace SmartVoiceAgent.Infrastructure.Services.ApplicationScanner;
 /// <summary>
 /// Windows-specific application scanner implementation.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class WindowsApplicationScanner : IApplicationScanner
 {
     private readonly string[] _registryKeys = {

@@ -3,6 +3,7 @@ using SmartVoiceAgent.Core.Dtos;
 using SmartVoiceAgent.Core.Interfaces;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Runtime.Versioning;
 
 namespace SmartVoiceAgent.Infrastructure.Services;
 
@@ -10,6 +11,7 @@ namespace SmartVoiceAgent.Infrastructure.Services;
 /// Object detection service using basic image analysis.
 /// For production use, replace with ML.NET, ONNX Runtime, or TensorFlow.NET.
 /// </summary>
+[SupportedOSPlatform("windows6.1")]
 public class ObjectDetectionService : IObjectDetectionService
 {
     private readonly LoggerServiceBase _logger;

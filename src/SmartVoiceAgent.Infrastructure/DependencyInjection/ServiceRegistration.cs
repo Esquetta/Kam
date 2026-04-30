@@ -31,6 +31,7 @@ using SmartVoiceAgent.Infrastructure.Services.WebResearch;
 using SmartVoiceAgent.Infrastructure.Services.Voice;
 using SmartVoiceAgent.Infrastructure.Services.Audio;
 using SmartVoiceAgent.Mailing.Extensions;
+using System.Runtime.Versioning;
 
 namespace SmartVoiceAgent.Infrastructure.DependencyInjection;
 
@@ -76,10 +77,13 @@ public static class ServiceRegistration
         services.AddScoped<SemanticIntentDetectionService>();
 
 
-        services.AddScoped<IScreenCaptureService, ScreenCaptureService>();
         services.AddScoped<IOcrService, OcrService>();
         services.AddScoped<IActiveWindowService, ActiveWindowService>();
-        services.AddScoped<IScreenContextService, ScreenContextService>();
+
+        if (OperatingSystem.IsWindowsVersionAtLeast(6, 1))
+        {
+            AddWindowsScreenServices(services);
+        }
 
 
         // Register context-aware service with proper dependencies
@@ -156,5 +160,12 @@ public static class ServiceRegistration
         services.AddSingleton<ISkillImportService, SkillImportService>();
 
         return services;
+    }
+
+    [SupportedOSPlatform("windows6.1")]
+    private static void AddWindowsScreenServices(IServiceCollection services)
+    {
+        services.AddScoped<IScreenCaptureService, ScreenCaptureService>();
+        services.AddScoped<IScreenContextService, ScreenContextService>();
     }
 }
