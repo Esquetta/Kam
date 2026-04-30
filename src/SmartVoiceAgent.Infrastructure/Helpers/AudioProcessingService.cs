@@ -10,16 +10,14 @@ namespace SmartVoiceAgent.Infrastructure.Helpers
     public class AudioProcessingService : IDisposable
     {
         private readonly LoggerServiceBase _logger;
-        private readonly ISTTServiceFactory sTTServiceFactory;
         private readonly ISpeechToTextService _sttService;
 
         public AudioProcessingService(
             LoggerServiceBase logger,
-           ISTTServiceFactory sTTServiceFactory)
+            ISTTServiceFactory sttServiceFactory)
         {
             _logger = logger;
-            this._sttService = sTTServiceFactory.CreateService(STTProvider.HuggingFace);
-
+            _sttService = sttServiceFactory.CreateService(STTProvider.HuggingFace);
         }
 
         public async Task<SpeechResult> ProcessAudioFromRecording(byte[] rawAudioData, CancellationToken cancellationToken = default)

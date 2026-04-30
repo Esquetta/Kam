@@ -23,11 +23,25 @@ public class ConsoleUiLogService : IUiLogService
 
         var sourceStr = string.IsNullOrEmpty(source) ? "" : $"[{source}] ";
         Console.WriteLine($"{prefix} {sourceStr}{message}");
+        OnLogEntry?.Invoke(this, new UiLogEntry
+        {
+            Message = message,
+            Level = level,
+            Source = source
+        });
     }
 
     public void LogAgentUpdate(string agentName, string message, bool isComplete = false)
     {
-        var prefix = isComplete ? "✓" : "►";
-        Console.WriteLine($"{prefix} [{agentName.ToUpper()}] {message}");
+        var prefix = isComplete ? "OK" : ">";
+        Console.WriteLine($"{prefix} [{agentName.ToUpperInvariant()}] {message}");
+        OnLogEntry?.Invoke(this, new UiLogEntry
+        {
+            Message = message,
+            Level = isComplete ? LogLevel.Information : LogLevel.Debug,
+            AgentName = agentName,
+            IsAgentUpdate = true,
+            IsComplete = isComplete
+        });
     }
 }
