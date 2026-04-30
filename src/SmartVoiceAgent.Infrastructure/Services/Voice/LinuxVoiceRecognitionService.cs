@@ -3,9 +3,9 @@ using System.Diagnostics;
 
 public class LinuxVoiceRecognitionService : VoiceRecognitionServiceBase
 {
-    private Process _recordProcess;
-    private Task _readTask;
-    private CancellationTokenSource _cancellationTokenSource;
+    private Process? _recordProcess;
+    private Task? _readTask;
+    private CancellationTokenSource? _cancellationTokenSource;
 
     protected override void StartListeningInternal()
     {
@@ -30,9 +30,10 @@ public class LinuxVoiceRecognitionService : VoiceRecognitionServiceBase
             try
             {
                 var buffer = new byte[4096];
-                while (!_cancellationTokenSource.Token.IsCancellationRequested)
+                var cancellationToken = _cancellationTokenSource.Token;
+                while (!cancellationToken.IsCancellationRequested)
                 {
-                    int bytesRead = await _recordProcess.StandardOutput.BaseStream.ReadAsync(buffer, 0, buffer.Length, _cancellationTokenSource.Token);
+                    int bytesRead = await _recordProcess.StandardOutput.BaseStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
                     if (bytesRead > 0)
                     {
                         var actualData = new byte[bytesRead];

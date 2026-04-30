@@ -4,7 +4,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Voice;
 
 public class WindowsVoiceRecognitionService : VoiceRecognitionServiceBase
 {
-    private WaveInEvent _waveIn;
+    private WaveInEvent? _waveIn;
 
     protected override void StartListeningInternal()
     {
@@ -35,7 +35,7 @@ public class WindowsVoiceRecognitionService : VoiceRecognitionServiceBase
         }
     }
 
-    private void OnDataAvailable(object sender, WaveInEventArgs e)
+    private void OnDataAvailable(object? sender, WaveInEventArgs e)
     {
         try
         {
@@ -57,7 +57,7 @@ public class WindowsVoiceRecognitionService : VoiceRecognitionServiceBase
         }
     }
 
-    private void OnRecordingStoppedHandler(object sender, StoppedEventArgs e)
+    private void OnRecordingStoppedHandler(object? sender, StoppedEventArgs e)
     {
         try
         {

@@ -15,10 +15,10 @@ public interface IVoiceRecognitionService : IDisposable
     bool IsListening { get; }
 
     // Events
-    event EventHandler<byte[]> OnVoiceCaptured;
-    event EventHandler<Exception> OnError;
-    event EventHandler OnListeningStarted;
-    event EventHandler OnListeningStopped;
+    event EventHandler<byte[]>? OnVoiceCaptured;
+    event EventHandler<Exception>? OnError;
+    event EventHandler? OnListeningStarted;
+    event EventHandler? OnListeningStopped;
 }
 
 

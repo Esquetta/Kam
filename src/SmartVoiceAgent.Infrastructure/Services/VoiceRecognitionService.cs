@@ -22,7 +22,7 @@ public class VoiceRecognitionService : IVoiceRecognitionService
     private readonly object _lock = new();
     
     // Audio buffer for accumulating voice data
-    private MemoryStream _currentRecording;
+    private MemoryStream? _currentRecording;
     private DateTime _recordingStartTime;
     private readonly TimeSpan _maxRecordingDuration = TimeSpan.FromSeconds(30);
     private readonly TimeSpan _minRecordingDuration = TimeSpan.FromMilliseconds(500);
@@ -40,12 +40,12 @@ public class VoiceRecognitionService : IVoiceRecognitionService
         } 
     }
 
-    public event EventHandler<byte[]> OnVoiceCaptured;
-    public event EventHandler<Exception> OnError;
-    public event EventHandler OnRecordingStarted;
-    public event EventHandler OnRecordingStopped;
-    public event EventHandler OnListeningStarted;
-    public event EventHandler OnListeningStopped;
+    public event EventHandler<byte[]>? OnVoiceCaptured;
+    public event EventHandler<Exception>? OnError;
+    public event EventHandler? OnRecordingStarted;
+    public event EventHandler? OnRecordingStopped;
+    public event EventHandler? OnListeningStarted;
+    public event EventHandler? OnListeningStopped;
 
     public VoiceRecognitionService(
         ILogger<VoiceRecognitionService> logger,
@@ -136,8 +136,8 @@ public class VoiceRecognitionService : IVoiceRecognitionService
     {
         var tcs = new TaskCompletionSource<string>();
         
-        EventHandler<byte[]> voiceCapturedHandler = null;
-        EventHandler<Exception> errorHandler = null;
+        EventHandler<byte[]>? voiceCapturedHandler = null;
+        EventHandler<Exception>? errorHandler = null;
         
         voiceCapturedHandler = async (s, audioData) =>
         {
@@ -187,8 +187,8 @@ public class VoiceRecognitionService : IVoiceRecognitionService
     {
         var tcs = new TaskCompletionSource<byte[]>();
         
-        EventHandler<byte[]> voiceCapturedHandler = null;
-        EventHandler<Exception> errorHandler = null;
+        EventHandler<byte[]>? voiceCapturedHandler = null;
+        EventHandler<Exception>? errorHandler = null;
         
         voiceCapturedHandler = (s, data) =>
         {
@@ -271,7 +271,7 @@ public class VoiceRecognitionService : IVoiceRecognitionService
         }
     }
 
-    private void OnAudioVoiceCaptured(object sender, byte[] audioData)
+    private void OnAudioVoiceCaptured(object? sender, byte[] audioData)
     {
         try
         {
@@ -284,7 +284,10 @@ public class VoiceRecognitionService : IVoiceRecognitionService
             }
             
             // Forward the event to subscribers
-            OnVoiceCaptured?.Invoke(this, audioData);
+            if (audioData != null)
+            {
+                OnVoiceCaptured?.Invoke(this, audioData);
+            }
         }
         catch (Exception ex)
         {
@@ -293,19 +296,19 @@ public class VoiceRecognitionService : IVoiceRecognitionService
         }
     }
 
-    private void OnAudioError(object sender, Exception ex)
+    private void OnAudioError(object? sender, Exception ex)
     {
         _logger.LogError(ex, "Audio capture error");
         OnError?.Invoke(this, ex);
     }
 
-    private void OnAudioListeningStarted(object sender, EventArgs e)
+    private void OnAudioListeningStarted(object? sender, EventArgs e)
     {
         OnListeningStarted?.Invoke(this, e);
         OnRecordingStarted?.Invoke(this, e);
     }
 
-    private void OnAudioListeningStopped(object sender, EventArgs e)
+    private void OnAudioListeningStopped(object? sender, EventArgs e)
     {
         OnRecordingStopped?.Invoke(this, e);
         OnListeningStopped?.Invoke(this, e);
