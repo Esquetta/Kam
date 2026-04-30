@@ -51,7 +51,7 @@ public sealed class SkillRuntimeContextProvider : ISkillRuntimeContextProvider
         try
         {
             var activeWindow = await _activeWindowService.GetActiveWindowInfoAsync();
-            context.ActiveWindow = MapWindow(activeWindow);
+            context.ActiveWindow = activeWindow is null ? null : MapWindow(activeWindow);
         }
         catch
         {

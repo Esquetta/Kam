@@ -49,9 +49,9 @@ public sealed class SkillRuntimeContextProviderTests
             _activeWindow = activeWindow;
         }
 
-        public Task<ActiveWindowInfo> GetActiveWindowInfoAsync()
+        public Task<ActiveWindowInfo?> GetActiveWindowInfoAsync()
         {
-            return Task.FromResult(_activeWindow);
+            return Task.FromResult<ActiveWindowInfo?>(_activeWindow);
         }
 
         public Task<IEnumerable<ActiveWindowInfo>> GetAllWindowsAsync()

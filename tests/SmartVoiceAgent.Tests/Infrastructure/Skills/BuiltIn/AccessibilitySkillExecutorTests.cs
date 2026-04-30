@@ -73,9 +73,9 @@ public class AccessibilitySkillExecutorTests
 
     private sealed class FakeActiveWindowService : IActiveWindowService
     {
-        public Task<ActiveWindowInfo> GetActiveWindowInfoAsync()
+        public Task<ActiveWindowInfo?> GetActiveWindowInfoAsync()
         {
-            return Task.FromResult(new ActiveWindowInfo
+            return Task.FromResult<ActiveWindowInfo?>(new ActiveWindowInfo
             {
                 Title = "Kam Editor",
                 ProcessName = "Code",

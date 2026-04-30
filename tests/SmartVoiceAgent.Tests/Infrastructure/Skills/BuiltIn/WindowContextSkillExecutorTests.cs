@@ -50,9 +50,9 @@ public class WindowContextSkillExecutorTests
             HasFocus = true
         };
 
-        public Task<ActiveWindowInfo> GetActiveWindowInfoAsync()
+        public Task<ActiveWindowInfo?> GetActiveWindowInfoAsync()
         {
-            return Task.FromResult(_active);
+            return Task.FromResult<ActiveWindowInfo?>(_active);
         }
 
         public Task<IEnumerable<ActiveWindowInfo>> GetAllWindowsAsync()

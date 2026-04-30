@@ -77,7 +77,7 @@ public class ActiveWindowService : IActiveWindowService
     #endregion
 
     /// <inheritdoc />
-    public async Task<ActiveWindowInfo> GetActiveWindowInfoAsync()
+    public async Task<ActiveWindowInfo?> GetActiveWindowInfoAsync()
     {
         try
         {
@@ -144,7 +144,7 @@ public class ActiveWindowService : IActiveWindowService
     /// <summary>
     /// Gets window information for a specific window handle
     /// </summary>
-    private ActiveWindowInfo GetWindowInfo(IntPtr hWnd)
+    private ActiveWindowInfo? GetWindowInfo(IntPtr hWnd)
     {
         try
         {
@@ -179,7 +179,7 @@ public class ActiveWindowService : IActiveWindowService
                 {
                     executablePath = process.MainModule?.FileName ?? "Unknown";
                 }
-                catch (Win32Exception ex)
+                catch (Win32Exception)
                 {
                     // Access denied for some system processes
                     executablePath = $"Access Denied (PID: {processId})";
