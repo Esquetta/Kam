@@ -5,6 +5,7 @@ using ValidationException = Core.CrossCuttingConcerns.Exceptions.Types.Validatio
 namespace SmartVoiceAgent.Application.Behaviors.Validation
 {
     public class RequestValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+        where TRequest : notnull
     {
         private readonly IEnumerable<IValidator<TRequest>> _validators;
         public RequestValidationBehavior(IEnumerable<IValidator<TRequest>> validators)
@@ -14,7 +15,7 @@ namespace SmartVoiceAgent.Application.Behaviors.Validation
 
         public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
         {
-            ValidationContext<object> context = new(request);
+            ValidationContext<TRequest> context = new(request);
             IEnumerable<ValidationExceptionModel> errors = _validators
                 .Select(validator => validator.Validate(context))
                 .SelectMany(result => result.Errors)
