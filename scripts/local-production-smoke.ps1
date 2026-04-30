@@ -6,7 +6,8 @@ param(
     [switch]$SkipPublish,
     [switch]$RequireAiConfig,
     [switch]$Launch,
-    [switch]$PlanOnly
+    [switch]$PlanOnly,
+    [int]$MaxBuildWarnings = 800
 )
 
 Set-StrictMode -Version Latest
@@ -22,6 +23,10 @@ $summaryPath = Join-Path $artifactRoot "summary.md"
 $uiSettingsPath = Join-Path $env:LOCALAPPDATA "SmartVoiceAgent\settings.json"
 $summary = New-Object System.Collections.Generic.List[string]
 
+if ($MaxBuildWarnings -lt 0) {
+    throw "-MaxBuildWarnings must be zero or greater."
+}
+
 function Add-SummaryLine {
     param([string]$Line)
     $summary.Add($Line) | Out-Null
@@ -30,7 +35,8 @@ function Add-SummaryLine {
 function Invoke-SmokeStep {
     param(
         [string]$Name,
-        [string[]]$Command
+        [string[]]$Command,
+        [int]$MaxWarnings = -1
     )
 
     $commandText = $Command -join " "
@@ -48,11 +54,26 @@ function Invoke-SmokeStep {
     }
 
     $timer = [System.Diagnostics.Stopwatch]::StartNew()
-    & $exe @arguments
+    $output = & $exe @arguments 2>&1
     $exitCode = if ($LASTEXITCODE -is [int]) { $LASTEXITCODE } else { 0 }
     $timer.Stop()
 
+    foreach ($line in $output) {
+        Write-Host $line
+    }
+
     Add-SummaryLine "  - duration: $($timer.Elapsed.TotalSeconds.ToString('0.0'))s"
+
+    if ($MaxWarnings -ge 0) {
+        $warningCount = @($output | Where-Object { $_.ToString() -match ": warning " }).Count
+        Add-SummaryLine "  - warnings: $warningCount"
+        Add-SummaryLine "  - maxWarnings: $MaxWarnings"
+
+        if ($warningCount -gt $MaxWarnings) {
+            throw "$Name produced $warningCount warnings, exceeding threshold $MaxWarnings."
+        }
+    }
+
     if ($exitCode -ne 0) {
         throw "$Name failed with exit code $exitCode."
     }
@@ -311,12 +332,13 @@ Add-SummaryLine "- timestamp: $(Get-Date -Format o)"
 Add-SummaryLine "- configuration: $Configuration"
 Add-SummaryLine "- runtime: $Runtime"
 Add-SummaryLine "- planOnly: $PlanOnly"
+Add-SummaryLine "- maxBuildWarnings: $MaxBuildWarnings"
 Add-SummaryLine ""
 Add-SummaryLine "## Steps"
 
 Invoke-SmokeStep "dotnet info" @("dotnet", "--info")
 Invoke-SmokeStep "restore" @("dotnet", "restore", $solution)
-Invoke-SmokeStep "build" @("dotnet", "build", $solution, "--configuration", $Configuration, "--no-restore")
+Invoke-SmokeStep "build" @("dotnet", "build", $solution, "--configuration", $Configuration, "--no-restore", "--no-incremental") -MaxWarnings $MaxBuildWarnings
 
 if (-not $SkipTests) {
     Invoke-SmokeStep "tests" @("dotnet", "test", (Join-Path $repoRoot "tests\SmartVoiceAgent.Tests\SmartVoiceAgent.Tests.csproj"), "--configuration", $Configuration, "--no-build")
