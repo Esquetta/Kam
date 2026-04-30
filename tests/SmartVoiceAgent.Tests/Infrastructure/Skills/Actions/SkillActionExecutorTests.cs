@@ -125,7 +125,7 @@ public sealed class SkillActionExecutorTests
         public Task<ApplicationInstallInfo> CheckApplicationInstallationAsync(string appName) =>
             Task.FromResult(new ApplicationInstallInfo(true, appName, appName));
 
-        public Task<string> GetApplicationExecutablePathAsync(string appName) =>
-            Task.FromResult(appName);
+        public Task<string?> GetApplicationExecutablePathAsync(string appName) =>
+            Task.FromResult<string?>(appName);
     }
 }

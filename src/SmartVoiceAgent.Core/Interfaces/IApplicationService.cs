@@ -35,6 +35,6 @@ public interface IApplicationService
     /// </summary>
     /// <param name="appName">The name of the application.</param>
     /// <returns>The executable path if found, null otherwise.</returns>
-    Task<string> GetApplicationExecutablePathAsync(string appName);
+    Task<string?> GetApplicationExecutablePathAsync(string appName);
 
 }

@@ -46,6 +46,6 @@ public class AppSkillExecutorTests
         public Task<ApplicationInstallInfo> CheckApplicationInstallationAsync(string appName) =>
             Task.FromResult(new ApplicationInstallInfo(true, "spotify.exe", appName));
 
-        public Task<string> GetApplicationExecutablePathAsync(string appName) => Task.FromResult("spotify.exe");
+        public Task<string?> GetApplicationExecutablePathAsync(string appName) => Task.FromResult<string?>("spotify.exe");
     }
 }

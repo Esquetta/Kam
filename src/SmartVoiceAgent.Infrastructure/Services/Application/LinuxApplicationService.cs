@@ -76,7 +76,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             var apps = output.Split('\n')
                              .Where(line => !string.IsNullOrWhiteSpace(line))
                              .Select(line => ParseProcessLine(line))
-                             .Where(app => app != null)
+                             .OfType<AppInfoDTO>()
                              .ToList();
 
             return Task.FromResult<IEnumerable<AppInfoDTO>>(apps);
@@ -85,7 +85,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
         /// <summary>
         /// Linux'ta uygulama executable dosyasını bulur - hibrit arama sistemi
         /// </summary>
-        public async Task<string> FindApplicationExecutableAsync(string appName)
+        public async Task<string?> FindApplicationExecutableAsync(string appName)
         {
             // 1. Önce real-time hızlı arama yap
             var quickResult = await PerformQuickSearchAsync(appName);
@@ -122,7 +122,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
         /// <summary>
         /// Hızlı real-time arama - en yaygın lokasyonları kontrol eder
         /// </summary>
-        private async Task<string> PerformQuickSearchAsync(string appName)
+        private async Task<string?> PerformQuickSearchAsync(string appName)
         {
             // Running processes'lerde ara
             var runningResult = SearchInRunningProcesses(appName);
@@ -164,7 +164,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
         /// <summary>
         /// Çalışan processlerde ara
         /// </summary>
-        private string SearchInRunningProcesses(string appName)
+        private string? SearchInRunningProcesses(string appName)
         {
             var output = ExecuteBashCommand("ps -e -o comm,cmd --no-headers");
             var lines = output.Split('\n').Where(line => !string.IsNullOrWhiteSpace(line));
@@ -202,7 +202,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
         /// <summary>
         /// Desktop entries'de ara (.desktop dosyaları)
         /// </summary>
-        private async Task<string> SearchInDesktopEntriesAsync(string appName)
+        private async Task<string?> SearchInDesktopEntriesAsync(string appName)
         {
             var desktopPaths = new[]
             {
@@ -222,7 +222,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return null;
         }
 
-        private async Task<string> SearchDesktopFilesInDirectory(string directory, string appName)
+        private async Task<string?> SearchDesktopFilesInDirectory(string directory, string appName)
         {
             try
             {
@@ -253,7 +253,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return null;
         }
 
-        private async Task<string> GetExecLineFromDesktopFile(string desktopFile)
+        private async Task<string?> GetExecLineFromDesktopFile(string desktopFile)
         {
             try
             {
@@ -267,7 +267,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             }
         }
 
-        private string ExtractExecutableFromExecLine(string execLine)
+        private string? ExtractExecutableFromExecLine(string execLine)
         {
             try
             {
@@ -307,7 +307,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
         /// <summary>
         /// Yaygın executable dizinlerinde ara
         /// </summary>
-        private async Task<string> SearchInCommonExecutableDirectoriesAsync(string appName)
+        private async Task<string?> SearchInCommonExecutableDirectoriesAsync(string appName)
         {
             var commonDirs = new[]
             {
@@ -359,7 +359,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return null;
         }
 
-        private async Task<string> SearchInOptDirectory(string appName)
+        private async Task<string?> SearchInOptDirectory(string appName)
         {
             try
             {
@@ -406,7 +406,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
         /// <summary>
         /// Detaylı arama - cache'de bulunamazsa kullanılır
         /// </summary>
-        private async Task<string> PerformDetailedSearchAsync(string appName)
+        private async Task<string?> PerformDetailedSearchAsync(string appName)
         {
             // locate komutu ile ara (varsa)
             var locateResult = ExecuteBashCommand($"locate -i '{appName}' | grep -E '/(bin|sbin)/' | head -1").Trim();
@@ -433,7 +433,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return null;
         }
 
-        private async Task<string> SearchInSnapPackagesAsync(string appName)
+        private async Task<string?> SearchInSnapPackagesAsync(string appName)
         {
             try
             {
@@ -467,7 +467,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return null;
         }
 
-        private async Task<string> SearchInFlatpakAsync(string appName)
+        private async Task<string?> SearchInFlatpakAsync(string appName)
         {
             try
             {
@@ -618,12 +618,12 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             }
         }
 
-        private string SearchInCache(string appName)
+        private string? SearchInCache(string appName)
         {
             var searchKey = appName.ToLower();
 
             // Exact match
-            if (_applicationCache.TryGetValue(searchKey, out string exactMatch))
+            if (_applicationCache.TryGetValue(searchKey, out var exactMatch))
             {
                 return exactMatch;
             }
@@ -635,7 +635,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return partialMatch.Value;
         }
 
-        private string SearchInPathEnvironment(string appName)
+        private string? SearchInPathEnvironment(string appName)
         {
             var pathVariable = Environment.GetEnvironmentVariable("PATH");
             if (string.IsNullOrEmpty(pathVariable)) return null;
@@ -683,7 +683,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
         }
 
         // Existing methods...
-        private AppInfoDTO ParseProcessLine(string line)
+        private AppInfoDTO? ParseProcessLine(string line)
         {
             try
             {
@@ -769,13 +769,13 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             var apps = output.Split('\n')
                              .Where(line => !string.IsNullOrWhiteSpace(line))
                              .Select(line => ParseRunningProcessLine(line))
-                             .Where(app => app != null)
+                             .OfType<AppInfoDTO>()
                              .ToList();
 
             return Task.FromResult<IEnumerable<AppInfoDTO>>(apps);
         }
 
-        private AppInfoDTO ParseRunningProcessLine(string line)
+        private AppInfoDTO? ParseRunningProcessLine(string line)
         {
             try
             {
@@ -819,7 +819,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             }
         }
 
-        private string GetDisplayNameFromDesktopFile(string executablePath)
+        private string? GetDisplayNameFromDesktopFile(string executablePath)
         {
             var desktopPaths = new[]
             {
@@ -858,7 +858,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return null;
         }
 
-        private string GetApplicationVersion(string executablePath)
+        private string? GetApplicationVersion(string executablePath)
         {
             try
             {
@@ -928,7 +928,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             }
         }
 
-        public async Task<string> GetApplicationExecutablePathAsync(string appName)
+        public async Task<string?> GetApplicationExecutablePathAsync(string appName)
         {
             var installInfo = await CheckApplicationInstallationAsync(appName);
             return installInfo.IsInstalled ? installInfo.ExecutablePath : null;

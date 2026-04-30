@@ -127,7 +127,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
         /// <summary>
         /// Verilen uygulama adından executable dosyasını bulur - hibrit arama sistemi
         /// </summary>
-        public async Task<string> FindApplicationExecutableAsync(string appName)
+        public async Task<string?> FindApplicationExecutableAsync(string appName)
         {
             // 1. Önce real-time hızlı arama yap (cache olmadan)
             var quickResult = await PerformQuickSearchAsync(appName);
@@ -164,7 +164,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
         /// <summary>
         /// Hızlı real-time arama - en yaygın lokasyonları kontrol eder
         /// </summary>
-        private async Task<string> PerformQuickSearchAsync(string appName)
+        private async Task<string?> PerformQuickSearchAsync(string appName)
         {
             // Running processes'lerde ara (en hızlı)
             var runningResult = SearchInRunningProcesses(appName);
@@ -196,7 +196,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
         /// <summary>
         /// Çalışan processlerde ara
         /// </summary>
-        private string SearchInRunningProcesses(string appName)
+        private string? SearchInRunningProcesses(string appName)
         {
             var processes = Process.GetProcesses();
             foreach (var process in processes)
@@ -225,7 +225,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
         /// <summary>
         /// Registry App Paths'de ara - VSCode burada kayıtlı
         /// </summary>
-        private async Task<string> SearchInRegistryAppPathsAsync(string appName)
+        private async Task<string?> SearchInRegistryAppPathsAsync(string appName)
         {
             var registryPaths = new[]
             {
@@ -245,7 +245,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return null;
         }
 
-        private async Task<string> SearchInRegistryPath(RegistryKey baseKey, string subKeyPath, string appName)
+        private async Task<string?> SearchInRegistryPath(RegistryKey baseKey, string subKeyPath, string appName)
         {
             try
             {
@@ -276,7 +276,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
         /// <summary>
         /// Start Menu'de hızlı arama
         /// </summary>
-        private async Task<string> SearchInStartMenuAsync(string appName)
+        private async Task<string?> SearchInStartMenuAsync(string appName)
         {
             var startMenuPaths = new[]
             {
@@ -295,7 +295,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return null;
         }
 
-        private async Task<string> SearchShortcutsInDirectory(string directory, string appName)
+        private async Task<string?> SearchShortcutsInDirectory(string directory, string appName)
         {
             try
             {
@@ -324,7 +324,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
         /// <summary>
         /// Yaygın program dizinlerinde yüzeysel arama
         /// </summary>
-        private async Task<string> SearchInCommonProgramDirectoriesAsync(string appName)
+        private async Task<string?> SearchInCommonProgramDirectoriesAsync(string appName)
         {
             var commonDirs = new[]
             {
@@ -368,7 +368,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
         /// <summary>
         /// Detaylı arama - cache'de bulunamazsa kullanılır
         /// </summary>
-        private async Task<string> PerformDetailedSearchAsync(string appName)
+        private async Task<string?> PerformDetailedSearchAsync(string appName)
         {
             // Tüm program dizinlerinde derin arama
             var allProgramDirs = GetAllProgramDirectories();
@@ -395,7 +395,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return null;
         }
 
-        private async Task<string> SearchInDirectoryDeep(string directory, string appName)
+        private async Task<string?> SearchInDirectoryDeep(string directory, string appName)
         {
             try
             {
@@ -422,7 +422,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return null;
         }
 
-        private async Task<string> SearchInGamingPlatformsAsync(string appName)
+        private async Task<string?> SearchInGamingPlatformsAsync(string appName)
         {
             // Steam'de ara
             var steamResult = await SearchInSteamAsync(appName);
@@ -435,7 +435,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return null;
         }
 
-        private async Task<string> SearchInSteamAsync(string appName)
+        private async Task<string?> SearchInSteamAsync(string appName)
         {
             try
             {
@@ -454,7 +454,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return null;
         }
 
-        private async Task<string> SearchInEpicGamesAsync(string appName)
+        private async Task<string?> SearchInEpicGamesAsync(string appName)
         {
             var manifestsPath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
@@ -666,7 +666,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return directories;
         }
 
-        private string FindBestExecutable(string[] exeFiles, string appName)
+        private string? FindBestExecutable(string[] exeFiles, string appName)
         {
             if (exeFiles.Length == 0) return null;
 
@@ -699,12 +699,12 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return exeFiles.OrderByDescending(f => new FileInfo(f).Length).First();
         }
 
-        private string SearchInCache(string appName)
+        private string? SearchInCache(string appName)
         {
             var searchKey = appName.ToLower();
 
             // Exact match
-            if (_applicationCache.TryGetValue(searchKey, out string exactMatch))
+            if (_applicationCache.TryGetValue(searchKey, out var exactMatch))
             {
                 return exactMatch;
             }
@@ -716,7 +716,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return partialMatch.Value;
         }
 
-        private string SearchInPathEnvironment(string appName)
+        private string? SearchInPathEnvironment(string appName)
         {
             var pathVariable = Environment.GetEnvironmentVariable("PATH");
             if (string.IsNullOrEmpty(pathVariable)) return null;
@@ -745,7 +745,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return null;
         }
 
-        private async Task<string> SearchInDesktopAsync(string appName)
+        private async Task<string?> SearchInDesktopAsync(string appName)
         {
             var desktopPaths = new[]
             {
@@ -775,15 +775,16 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return null;
         }
 
-        private string GetShortcutTarget(string lnkPath)
+        private string? GetShortcutTarget(string lnkPath)
         {
             try
             {
                 // WScript.Shell kullan
-                Type shellType = Type.GetTypeFromProgID("WScript.Shell");
+                Type? shellType = Type.GetTypeFromProgID("WScript.Shell");
                 if (shellType != null)
                 {
-                    dynamic shell = Activator.CreateInstance(shellType);
+                    dynamic? shell = Activator.CreateInstance(shellType);
+                    if (shell == null) return null;
                     var shortcut = shell.CreateShortcut(lnkPath);
                     return shortcut.TargetPath;
                 }
@@ -810,7 +811,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
                 return fallbackName;
             }
         }
-        private string GetApplicationVersion(string executablePath)
+        private string? GetApplicationVersion(string executablePath)
         {
             try
             {
@@ -868,7 +869,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             }
         }
 
-        public async Task<string> GetApplicationExecutablePathAsync(string appName)
+        public async Task<string?> GetApplicationExecutablePathAsync(string appName)
         {
             var installInfo = await CheckApplicationInstallationAsync(appName);
             return installInfo.IsInstalled ? installInfo.ExecutablePath : null;

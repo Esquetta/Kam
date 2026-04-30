@@ -62,7 +62,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
                              .Skip(1) // Header satırını atla
                              .Where(line => !string.IsNullOrWhiteSpace(line))
                              .Select(line => ParseProcessLine(line))
-                             .Where(app => app != null)
+                             .OfType<AppInfoDTO>()
                              .DistinctBy(app => app.Name) // Aynı isimde birden fazla process varsa birini al
                              .ToList();
 
@@ -118,7 +118,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return !string.IsNullOrWhiteSpace(output);
         }
 
-        private AppInfoDTO ParseProcessLine(string line)
+        private AppInfoDTO? ParseProcessLine(string line)
         {
             try
             {
@@ -281,13 +281,13 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             }
         }
 
-        public async Task<string> GetApplicationExecutablePathAsync(string appName)
+        public async Task<string?> GetApplicationExecutablePathAsync(string appName)
         {
             var installInfo = await CheckApplicationInstallationAsync(appName);
             return installInfo.IsInstalled ? installInfo.ExecutablePath : null;
         }
 
-        private async Task<string> FindApplicationExecutableAsync(string appName)
+        private async Task<string?> FindApplicationExecutableAsync(string appName)
         {
             // .app bundle'ları ara
             var appPaths = new[]
@@ -358,7 +358,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             }
         }
 
-        private string GetApplicationVersion(string executablePath)
+        private string? GetApplicationVersion(string executablePath)
         {
             try
             {
@@ -408,7 +408,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return null;
         }
 
-        private string ExtractPlistValue(string plistContent, string key)
+        private string? ExtractPlistValue(string plistContent, string key)
         {
             var keyTag = $"<key>{key}</key>";
             var keyIndex = plistContent.IndexOf(keyTag);
@@ -424,7 +424,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             return plistContent.Substring(valueStart, valueEnd - valueStart);
         }
 
-        private string SearchInPathEnvironment(string appName)
+        private string? SearchInPathEnvironment(string appName)
         {
             var pathVariable = Environment.GetEnvironmentVariable("PATH");
             if (string.IsNullOrEmpty(pathVariable)) return null;

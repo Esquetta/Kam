@@ -36,6 +36,6 @@ public sealed class ApplicationService : IApplicationService
     public Task<ApplicationInstallInfo> CheckApplicationInstallationAsync(string appName) =>
         _innerService.CheckApplicationInstallationAsync(appName);
 
-    public Task<string> GetApplicationExecutablePathAsync(string appName) =>
+    public Task<string?> GetApplicationExecutablePathAsync(string appName) =>
         _innerService.GetApplicationExecutablePathAsync(appName);
 }

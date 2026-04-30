@@ -113,7 +113,7 @@ public sealed class SkillRuntimeContextProviderTests
         public Task<ApplicationInstallInfo> CheckApplicationInstallationAsync(string appName) =>
             Task.FromResult(new ApplicationInstallInfo(true, "notepad.exe", appName));
 
-        public Task<string> GetApplicationExecutablePathAsync(string appName) =>
-            Task.FromResult("notepad.exe");
+        public Task<string?> GetApplicationExecutablePathAsync(string appName) =>
+            Task.FromResult<string?>("notepad.exe");
     }
 }

@@ -39,7 +39,7 @@ public class ApplicationServiceTests
         public Task<ApplicationInstallInfo> CheckApplicationInstallationAsync(string appName) =>
             Task.FromResult(new ApplicationInstallInfo(false, string.Empty, appName));
 
-        public Task<string> GetApplicationExecutablePathAsync(string appName) =>
-            Task.FromResult(string.Empty);
+        public Task<string?> GetApplicationExecutablePathAsync(string appName) =>
+            Task.FromResult<string?>(string.Empty);
     }
 }
