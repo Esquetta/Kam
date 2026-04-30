@@ -4,7 +4,7 @@ public record ScreenContext
 {
     // monitor / screen metadata
     public int ScreenIndex { get; init; }
-    public string DeviceName { get; init; }
+    public string DeviceName { get; init; } = string.Empty;
     public bool IsPrimary { get; init; }
     public int Width { get; init; }
     public int Height { get; init; }
@@ -17,7 +17,7 @@ public record ScreenContext
     public List<ObjectDetectionItem> Objects { get; init; } = new();
 
     // content metadata
-    public string ScreenshotHash { get; init; }
+    public string ScreenshotHash { get; init; } = string.Empty;
     public DateTimeOffset Timestamp { get; init; }
 
     // normalized rectangle representing the captured area in local monitor coordinates (0..1)

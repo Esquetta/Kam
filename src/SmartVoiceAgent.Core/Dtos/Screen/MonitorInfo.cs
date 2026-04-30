@@ -7,5 +7,5 @@ public class MonitorInfo
     public Rectangle Bounds { get; set; }
     public Rectangle WorkingArea { get; set; }
     public bool IsPrimary { get; set; }
-    public string DeviceName { get; set; }
+    public string DeviceName { get; set; } = string.Empty;
 }

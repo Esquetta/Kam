@@ -4,7 +4,7 @@ namespace SmartVoiceAgent.Core.Dtos;
 public record ScreenInfo
 {
     public int Index { get; init; }
-    public string DeviceName { get; init; }
+    public string DeviceName { get; init; } = string.Empty;
     public Rectangle Bounds { get; init; }
     public Rectangle WorkingArea { get; init; }
     public bool IsPrimary { get; init; }

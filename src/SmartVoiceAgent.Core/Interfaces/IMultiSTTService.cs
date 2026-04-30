@@ -129,7 +129,7 @@ public class ProviderFallbackEventArgs : System.EventArgs
 public class ProviderHealthChangedEventArgs : System.EventArgs
 {
     public STTProvider Provider { get; set; }
-    public ProviderHealthStatus OldStatus { get; set; }
-    public ProviderHealthStatus NewStatus { get; set; }
+    public ProviderHealthStatus OldStatus { get; set; } = new();
+    public ProviderHealthStatus NewStatus { get; set; } = new();
     public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
 }
