@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
 using SmartVoiceAgent.Ui.Services;
@@ -6,6 +7,11 @@ using System;
 using System.Globalization;
 
 namespace SmartVoiceAgent.Ui.Converters;
+
+internal static class OneWayConverter
+{
+    public static object ConvertBackNoOp() => BindingOperations.DoNothing;
+}
 
 /// <summary>
 /// Converts a value based on the current responsive breakpoint
@@ -20,7 +26,7 @@ public class ResponsiveColumnConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return OneWayConverter.ConvertBackNoOp();
     }
 }
 
@@ -51,7 +57,7 @@ public class BoolToStatusBrushConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return OneWayConverter.ConvertBackNoOp();
     }
 }
 
@@ -67,7 +73,7 @@ public class StringIsNotNullOrEmptyConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return OneWayConverter.ConvertBackNoOp();
     }
 }
 
@@ -83,7 +89,7 @@ public class CompactModeConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return OneWayConverter.ConvertBackNoOp();
     }
 }
 
@@ -99,7 +105,7 @@ public class MediumModeConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return OneWayConverter.ConvertBackNoOp();
     }
 }
 
@@ -115,7 +121,7 @@ public class ExpandedModeConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return OneWayConverter.ConvertBackNoOp();
     }
 }
 
@@ -131,7 +137,7 @@ public class LogPanelVisibilityConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return OneWayConverter.ConvertBackNoOp();
     }
 }
 
@@ -155,7 +161,7 @@ public class LogPanelWidthConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return OneWayConverter.ConvertBackNoOp();
     }
 }
 
@@ -187,7 +193,7 @@ public class ResponsiveScaleConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return OneWayConverter.ConvertBackNoOp();
     }
 
     private static bool TryParseDouble(object? value, out double result)
@@ -237,7 +243,7 @@ public class ResponsiveFontSizeConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return OneWayConverter.ConvertBackNoOp();
     }
 
     private static bool TryParseDouble(object? value, out double result)
@@ -273,7 +279,7 @@ public class ReducedMotionConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return OneWayConverter.ConvertBackNoOp();
     }
 }
 
@@ -315,7 +321,7 @@ public class BoolToOpacityConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return OneWayConverter.ConvertBackNoOp();
     }
 }
 
@@ -339,7 +345,7 @@ public class BoolToBoxShadowConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return OneWayConverter.ConvertBackNoOp();
     }
 }
 
@@ -363,7 +369,7 @@ public class BoolToStatusTextConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return OneWayConverter.ConvertBackNoOp();
     }
 }
 
@@ -379,7 +385,7 @@ public class StringEqualsConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return OneWayConverter.ConvertBackNoOp();
     }
 }
 
@@ -403,6 +409,6 @@ public class BrushToGlowBrushConverter : IValueConverter
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return OneWayConverter.ConvertBackNoOp();
     }
 }
