@@ -37,7 +37,7 @@ public class WebResearchService : IWebResearchService
             _logger.Info($"{results.Count} adet sonuç bulundu.");
             return results;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             _logger.Error($"Google Search API'si ile arama yapılırken hata oluştu.");
             throw;
@@ -121,17 +121,17 @@ public class WebResearchService : IWebResearchService
                 {
                     if (results.Count >= request.MaxResults) break;
 
-                    var title = item.TryGetProperty("title", out var titleProp) ? titleProp.GetString() : "";
+                    var title = item.TryGetProperty("title", out var titleProp) ? titleProp.GetString() : null;
                     var link = item.TryGetProperty("link", out var linkProp) ? linkProp.GetString() : "";
-                    var snippet = item.TryGetProperty("snippet", out var snippetProp) ? snippetProp.GetString() : "";
+                    var snippet = item.TryGetProperty("snippet", out var snippetProp) ? snippetProp.GetString() : null;
 
                     if (!string.IsNullOrEmpty(link) && IsValidUrl(link))
                     {
                         results.Add(new WebResearchResult
                         {
-                            Title = title,
+                            Title = string.IsNullOrWhiteSpace(title) ? "Başlık Yok" : title,
                             Url = link,
-                            Description = snippet,
+                            Description = string.IsNullOrWhiteSpace(snippet) ? "Açıklama Yok" : snippet,
                             SearchDate = DateTime.Now
                         });
                     }

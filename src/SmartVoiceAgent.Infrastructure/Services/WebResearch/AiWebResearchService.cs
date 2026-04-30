@@ -539,17 +539,17 @@ SADECE JSON formatında yanıt ver:
                 {
                     if (results.Count >= request.MaxResults) break;
 
-                    var title = item.TryGetProperty("title", out var titleProp) ? titleProp.GetString() : "";
+                    var title = item.TryGetProperty("title", out var titleProp) ? titleProp.GetString() : null;
                     var link = item.TryGetProperty("link", out var linkProp) ? linkProp.GetString() : "";
-                    var snippet = item.TryGetProperty("snippet", out var snippetProp) ? snippetProp.GetString() : "";
+                    var snippet = item.TryGetProperty("snippet", out var snippetProp) ? snippetProp.GetString() : null;
 
                     if (!string.IsNullOrEmpty(link) && IsValidUrl(link))
                     {
                         results.Add(new WebResearchResult
                         {
-                            Title = CleanText(title) ?? "Başlık Yok",
+                            Title = string.IsNullOrWhiteSpace(title) ? "Başlık Yok" : CleanText(title),
                             Url = link,
-                            Description = CleanText(snippet) ?? "Açıklama Yok",
+                            Description = string.IsNullOrWhiteSpace(snippet) ? "Açıklama Yok" : CleanText(snippet),
                             SearchDate = DateTime.Now
                         });
                     }
