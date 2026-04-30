@@ -79,7 +79,7 @@ public class ScreenContextService : IScreenContextService
 
         var results = await Task.WhenAll(tasks);
 
-        var contexts = results.Where(r => r != null).ToList()!;
+        var contexts = results.OfType<ScreenContext>().ToList();
 
         _logger.Info($"Balanced-mode: Completed analysis for {contexts.Count} monitors.");
 

@@ -126,7 +126,7 @@ public class ScreenCaptureService : IScreenCaptureService
             });
 
             var results = await Task.WhenAll(tasks);
-            frames.AddRange(results.Where(f => f != null));
+            frames.AddRange(results.OfType<ScreenCaptureFrame>());
 
             _logger.Info($"Successfully captured {frames.Count} screen(s)");
             return frames.AsReadOnly();
