@@ -3,15 +3,10 @@
 public class RabbitMQConfiguration
 {
     public int Port { get; set; }
-    public string? Exchange { get; set; }
-    public string? Username { get; set; }
-    public string? Password { get; set; }
-    public string? ExchangeType { get; set; }
-    public string? RouteKey { get; set; }
-    public List<string> Hostnames { get; set; }
-
-    public RabbitMQConfiguration()
-    {
-        Hostnames = new List<string>();
-    }
+    public string Exchange { get; set; } = string.Empty;
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+    public string ExchangeType { get; set; } = string.Empty;
+    public string RouteKey { get; set; } = string.Empty;
+    public List<string> Hostnames { get; set; } = [];
 }
