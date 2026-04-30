@@ -19,10 +19,12 @@ public class AiIntentDetectionService : IIntentDetectionService
     public AiIntentDetectionService(
         HttpClient httpClient,
         LoggerServiceBase logger,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IntentDetectorService fallbackService)
     {
         _httpClient = httpClient;
         _logger = logger;
+        _fallbackService = fallbackService;
 
         _openRouterApiKey = configuration.GetSection("OpenRouter:ApiKey").Get<string>()
             ?? throw new NullReferenceException("OpenRouter ApiKey not found in configuration.");
