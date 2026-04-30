@@ -64,7 +64,8 @@ public class TwilioSmsService : SmsServiceBase
     {
         var url = $"{TwilioApiBase}/Accounts/{_settings.TwilioAccountSid}/Messages.json";
         
-        var from = message.From ?? _settings.TwilioPhoneNumber;
+        var from = message.From ?? _settings.TwilioPhoneNumber
+            ?? throw new InvalidOperationException("Twilio Phone Number is not configured");
         
         var content = new FormUrlEncodedContent(new Dictionary<string, string>
         {
