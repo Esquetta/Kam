@@ -32,10 +32,13 @@
 	<Window.Styles>
 		<!-- NavBtn Base Style -->
 		<Style Selector="Button.NavBtn">
+			<Setter Property="MinWidth" Value="40"/>
 			<Setter Property="Width" Value="40"/>
 			<Setter Property="Height" Value="40"/>
 			<Setter Property="Margin" Value="0,4"/>
 			<Setter Property="HorizontalAlignment" Value="Center"/>
+			<Setter Property="HorizontalContentAlignment" Value="Center"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
 			<Setter Property="Padding" Value="0"/>
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderThickness" Value="0"/>
@@ -46,6 +49,9 @@
 		<Style Selector="Button.NavBtn /template/ ContentPresenter#PART_ContentPresenter">
 			<Setter Property="CornerRadius" Value="8"/>
 			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="HorizontalContentAlignment" Value="Center"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+			<Setter Property="Padding" Value="0"/>
 			<Setter Property="Transitions">
 				<Transitions>
 					<BrushTransition Property="Background" Duration="0:0:0.2"/>
@@ -488,7 +494,8 @@
 															Orientation="Horizontal"
 															VerticalAlignment="Top"
 															Spacing="6">
-													<Button Width="28" Height="28"
+													<Button Classes="IconButton"
+															Width="28" Height="28"
 															Background="Transparent"
 															BorderBrush="{DynamicResource AccentGreenBrush}"
 															BorderThickness="1"
@@ -502,7 +509,8 @@
 															  Width="15" Height="15"
 															  Stretch="Uniform"/>
 													</Button>
-													<Button Width="28" Height="28"
+													<Button Classes="IconButton"
+															Width="28" Height="28"
 															Background="Transparent"
 															BorderBrush="{DynamicResource AccentErrorBrush}"
 															BorderThickness="1"
@@ -551,6 +559,7 @@
 											   VerticalAlignment="Center"/>
 								</StackPanel>
 								<Button Grid.Column="1"
+										Classes="IconButton"
 										Width="24" Height="24"
 										Background="Transparent"
 										BorderBrush="{DynamicResource BorderSubtleBrush}"
@@ -667,6 +676,7 @@
 											   VerticalAlignment="Center"/>
 								</StackPanel>
 								<Button Grid.Column="1"
+										Classes="IconButton"
 										Width="24" Height="24"
 										Background="Transparent"
 										BorderBrush="{DynamicResource BorderSubtleBrush}"
@@ -709,6 +719,7 @@
 										  BorderThickness="1"
 										  Padding="8,3"/>
 								<Button Grid.Row="0" Grid.Column="2"
+										Classes="IconButton"
 										Width="30" Height="30"
 										Background="Transparent"
 										BorderBrush="{DynamicResource BorderSubtleBrush}"
@@ -795,7 +806,8 @@
 																Orientation="Horizontal"
 																Spacing="6"
 																Margin="0,8,0,0">
-														<Button Width="24" Height="24"
+														<Button Classes="IconButton"
+																Width="24" Height="24"
 																Background="Transparent"
 																BorderBrush="{DynamicResource BorderSubtleBrush}"
 																BorderThickness="1"
@@ -809,7 +821,8 @@
 																  Width="13" Height="13"
 																  Stretch="Uniform"/>
 														</Button>
-														<Button Width="24" Height="24"
+														<Button Classes="IconButton"
+																Width="24" Height="24"
 																Background="Transparent"
 																BorderBrush="{DynamicResource BorderSubtleBrush}"
 																BorderThickness="1"
@@ -824,7 +837,8 @@
 																  Width="13" Height="13"
 																  Stretch="Uniform"/>
 														</Button>
-														<Button Width="24" Height="24"
+														<Button Classes="IconButton"
+																Width="24" Height="24"
 																Background="Transparent"
 																BorderBrush="{DynamicResource AccentErrorBrush}"
 																BorderThickness="1"
@@ -839,7 +853,8 @@
 																  Width="13" Height="13"
 																  Stretch="Uniform"/>
 														</Button>
-														<Button Width="24" Height="24"
+														<Button Classes="IconButton"
+																Width="24" Height="24"
 																Background="Transparent"
 																BorderBrush="{DynamicResource AccentCyanDimBrush}"
 																BorderThickness="1"
@@ -974,6 +989,7 @@
 							
 							<!-- Mic Button -->
 							<Button Grid.Column="3"
+									Classes="IconButton"
 									Width="28" Height="28"
 									Margin="8,0,0,0"
 									Background="Transparent"

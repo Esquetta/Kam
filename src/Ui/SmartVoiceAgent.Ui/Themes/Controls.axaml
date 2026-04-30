@@ -72,6 +72,29 @@
     </Style>
 
     <!-- ========================= -->
+    <!-- ICON BUTTON -->
+    <!-- ========================= -->
+
+    <Style Selector="Button.IconButton">
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style Selector="Button.IconButton /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <Style Selector="Button.IconButton Path">
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Stretch" Value="Uniform" />
+    </Style>
+
+    <!-- ========================= -->
     <!-- TOGGLE SWITCH -->
     <!-- ========================= -->
 

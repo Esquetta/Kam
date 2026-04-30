@@ -427,7 +427,11 @@
                                 Margin="8">
                             <Grid RowDefinitions="Auto, *, Auto">
                                 <!-- Icon with Glow -->
-                                <Grid Grid.Row="0" Width="40" Height="40" HorizontalAlignment="Left" Margin="0,0,0,24">
+                                <Grid Grid.Row="0"
+                                      Classes="PluginIconBadge"
+                                      Width="40" Height="40"
+                                      HorizontalAlignment="Left"
+                                      Margin="0,0,0,24">
                                     <Ellipse Width="40" Height="40" Fill="{Binding GlowColor}">
                                         <Ellipse.Effect>
                                             <BlurEffect Radius="8"/>
@@ -437,9 +441,13 @@
                                     <Ellipse Classes="PulsingDot"
                                              Width="16" Height="16"
                                              Fill="{Binding IconColor}"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center"
                                              IsVisible="{Binding IsActive}"/>
                                     <Ellipse Width="16" Height="16"
                                              Fill="{DynamicResource TextMutedBrush}"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center"
                                              IsVisible="{Binding !IsActive}"/>
                                 </Grid>
 
@@ -566,10 +574,12 @@
                                                        MaxLines="2"/>
                                         </StackPanel>
                                     </Border>
-                                    <StackPanel Orientation="Horizontal"
+                                    <StackPanel Classes="PluginActionBar"
+                                                Orientation="Horizontal"
                                                 Spacing="6"
                                                 Margin="0,12,0,0">
-                                        <Button Width="28" Height="28"
+                                        <Button Classes="IconButton"
+                                                Width="28" Height="28"
                                                 Background="Transparent"
                                                 BorderBrush="{DynamicResource AccentCyanDimBrush}"
                                                 BorderThickness="1"
@@ -583,7 +593,8 @@
                                                   Width="15" Height="15"
                                                   Stretch="Uniform"/>
                                         </Button>
-                                        <Button Width="28" Height="28"
+                                        <Button Classes="IconButton"
+                                                Width="28" Height="28"
                                                 Background="Transparent"
                                                 BorderBrush="{DynamicResource AccentCyanBrush}"
                                                 BorderThickness="1"
@@ -598,7 +609,8 @@
                                                   Width="14" Height="14"
                                                   Stretch="Uniform"/>
                                         </Button>
-                                        <Button Width="28" Height="28"
+                                        <Button Classes="IconButton"
+                                                Width="28" Height="28"
                                                 Background="Transparent"
                                                 BorderBrush="{DynamicResource AccentCyanDimBrush}"
                                                 BorderThickness="1"
@@ -613,7 +625,8 @@
                                                   Width="15" Height="15"
                                                   Stretch="Uniform"/>
                                         </Button>
-                                        <Button Width="28" Height="28"
+                                        <Button Classes="IconButton"
+                                                Width="28" Height="28"
                                                 Background="Transparent"
                                                 BorderBrush="{DynamicResource AccentGreenBrush}"
                                                 BorderThickness="1"
@@ -628,7 +641,8 @@
                                                   Width="14" Height="14"
                                                   Stretch="Uniform"/>
                                         </Button>
-                                        <Button Width="28" Height="28"
+                                        <Button Classes="IconButton"
+                                                Width="28" Height="28"
                                                 Background="Transparent"
                                                 BorderBrush="{DynamicResource AccentCyanBrush}"
                                                 BorderThickness="1"
@@ -643,7 +657,8 @@
                                                   Width="15" Height="15"
                                                   Stretch="Uniform"/>
                                         </Button>
-                                        <Button Width="28" Height="28"
+                                        <Button Classes="IconButton"
+                                                Width="28" Height="28"
                                                 Background="Transparent"
                                                 BorderBrush="{DynamicResource TextMutedBrush}"
                                                 BorderThickness="1"
@@ -658,7 +673,8 @@
                                                   Width="14" Height="14"
                                                   Stretch="Uniform"/>
                                         </Button>
-                                        <Button Width="28" Height="28"
+                                        <Button Classes="IconButton"
+                                                Width="28" Height="28"
                                                 Background="Transparent"
                                                 BorderBrush="{DynamicResource AccentErrorBrush}"
                                                 BorderThickness="1"
