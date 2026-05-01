@@ -1,423 +1,218 @@
-# 🤖 Smart Voice Agent
+# Kam
 
-> **Kam** (formerly KAM Neural Core) - An advanced AI-powered voice assistant with multi-agent collaboration, system control, and intelligent task management capabilities.
-> 
-> *Current Version: 1.0.0 // Stable Release*
+Kam is a desktop AI agent for operating a workstation through voice, text, skills, and local context. It is designed to sit between a coding-agent style workflow and a daily assistant: it can plan with an OpenAI-compatible model, execute bounded desktop skills, inspect local context, and surface production-readiness evidence through an Avalonia UI.
 
-[![.NET Version](https://img.shields.io/badge/.NET-9.0-blue.svg)](https://dotnet.microsoft.com/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)](https://github.com/yourusername/SmartVoiceAgent)
+[![.NET CI](https://github.com/Esquetta/Kam/actions/workflows/dotnet.yml/badge.svg)](https://github.com/Esquetta/Kam/actions/workflows/dotnet.yml)
+[![.NET](https://img.shields.io/badge/.NET-9.0-512BD4)](https://dotnet.microsoft.com/)
+[![UI](https://img.shields.io/badge/UI-Avalonia-0B84F3)](https://avaloniaui.net/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-## 📸 Interface Preview
+## Product Direction
 
-<div align="center">
-  <img src="assets/dashboard.png" alt="Coordinator Dashboard" width="800"/>
-  <p><em>Coordinator Dashboard - Real-time System Monitoring</em></p>
-  
-  <br/>
-  
-  <img src="assets/plugins.png" alt="Plugin Manager" width="800"/>
-  <p><em>Plugin System - Modular Extension Management</em></p>
+Kam is evolving into a product-grade local agent runtime:
 
-  <br/>
+- Model-flexible: users can select OpenAI, OpenRouter, Ollama, or another OpenAI-compatible provider from the app.
+- Skill-first: commands are planned as JSON skill plans and executed through a validated skill pipeline instead of relying on unstable provider function-calling behavior.
+- Workstation-native: Windows is the first production target; the Avalonia UI and platform-service boundaries keep macOS support viable.
+- Evidence-driven: Runtime Diagnostics, skill health, execution history, and local production smoke scripts make readiness visible.
+- Safe by default: destructive desktop/file/shell actions are constrained by policy, validation, confirmation, and execution history.
 
-  <img src="assets/settings.png" alt="System Settings" width="800"/>
-  <p><em>System Configuration</em></p>
-</div>
+## Interface
 
-## 🌟 Features
+<p align="center">
+  <img src="assets/dashboard.png" alt="Kam coordinator dashboard" width="840">
+</p>
 
-### 🎙️ Voice Recognition & Processing
-- **Multi-Platform Voice Input**: Windows (NAudio), Linux (arecord), macOS (sox)
-- **Advanced Voice Detection**: Adaptive threshold with noise filtering
-- **Multiple STT Providers**: HuggingFace, OpenAI Whisper, Ollama
-- **Real-time Audio Processing**: Circular buffer with intelligent speech detection
+<p align="center">
+  <img src="assets/plugins.png" alt="Kam skills and plugin manager" width="840">
+</p>
 
-### 🤖 Multi-Agent AI System
-- **Coordinator Agent**: Intelligent request routing and workflow orchestration
-- **SystemAgent**: Application control, device management, system operations
-- **TaskAgent**: Task management with Todoist integration via MCP
-- **WebSearchAgent**: AI-powered web research and information retrieval
-- **AnalyticsAgent**: Performance monitoring and usage insights
+<p align="center">
+  <img src="assets/settings.png" alt="Kam settings and AI runtime configuration" width="840">
+</p>
 
-### 💡 Advanced AI Capabilities
-- **Hybrid Intent Detection**: AI + Semantic + Context-aware + Pattern-based
-- **Context Management**: Conversation history and user preference learning
-- **Dynamic Command Handling**: Flexible entity extraction and execution
-- **Multi-Model Support**: OpenRouter, HuggingFace, local Ollama integration
+## Capabilities
 
-### 🖥️ System Control
-- **Application Management**: Open, close, list installed applications
-- **Device Control**: Volume, brightness, WiFi, Bluetooth
-- **Power Management**: Shutdown, restart, sleep, lock
-- **Screen Capture**: Multi-monitor support with OCR and object detection
+### AI Runtime
 
-### 🔧 Enterprise Features
-- **CQRS Pattern**: MediatR-based command/query separation
-- **Caching Layer**: Distributed caching with smart invalidation
-- **Logging**: MongoDB, Serilog with multiple sinks
-- **Validation**: FluentValidation pipeline
-- **Performance Monitoring**: Built-in metrics and analytics
+- Planner model profile for JSON-only skill plans.
+- Separate chat / skill execution profile for richer imported skills.
+- Live model catalog refresh for OpenAI-compatible providers.
+- Connection test feedback without exposing API keys or endpoints.
 
-## 📋 Prerequisites
+### Skills And Tools
 
-- **.NET 9.0 SDK** or later
-- **Operating System**: Windows 10/11, Ubuntu 20.04+, or macOS 11+
-- **API Keys** (optional but recommended):
-  - OpenRouter API key for AI features
-  - HuggingFace API key for advanced models
-  - Google Custom Search API for web research
-  - Todoist API for task management
+- Built-in app, file, workspace, shell, clipboard, web, window, accessibility, system, email, and SMS validation skills.
+- Local skill imports from folders containing `SKILL.md`.
+- Adapter direction for skills.sh, local skills, Codex-style skills, Claude-style skills, and MCP-backed tools.
+- Skill health, smoke evals, execution history, replay controls, and policy guardrails.
 
-## 🚀 Quick Start
+### Desktop Agent Runtime
 
-### 1. Clone the Repository
+- Application list/open/close/status operations.
+- Window and accessibility context.
+- Bounded file and workspace inspection.
+- Shell execution with safety policy.
+- Voice activation and microphone workflow.
+- Runtime Diagnostics panel for local production checks.
 
-```bash
+### Production Readiness
+
+- `scripts/local-production-smoke.ps1` runs restore, build, tests, AI config checks, skill smoke, publish, and optional launch.
+- Headless skill smoke currently covers installed apps, app status, system info, file/workspace/code search, clipboard, shell, web search, active window, window list, accessibility tree, email validation, and SMS validation.
+- `docs/production-live-readiness.md` defines the manual local-live gate.
+- `docs/superpowers/plans/2026-04-30-kam-production-readiness-sprint.md` tracks the release-candidate sprint.
+
+## Repository Structure
+
+```text
+Kam.sln
+src/
+  SmartVoiceAgent.Core/                 Domain models, interfaces, DTOs
+  SmartVoiceAgent.Application/          CQRS commands, handlers, validators
+  SmartVoiceAgent.Infrastructure/       agents, skills, platform services, MCP, AI integrations
+  SmartVoiceAgent.CrossCuttingConcerns/ logging, exceptions, security utilities
+  SmartVoiceAgent.AgentHost.ConsoleApp/ headless host and skill-smoke entrypoint
+  SmartVoiceAgent.Mailing/              optional email/SMS infrastructure
+  SmartVoiceAgent.Benchmarks/           performance benchmarks
+  Ui/SmartVoiceAgent.Ui/                Avalonia desktop application
+tests/
+  SmartVoiceAgent.Tests/                unit, integration, UI metadata, and smoke tests
+docs/
+  local-production-smoke.md
+  production-live-readiness.md
+  superpowers/
+scripts/
+  local-production-smoke.ps1
+assets/
+  dashboard.png
+  plugins.png
+  settings.png
+```
+
+## Requirements
+
+- Windows 10/11 for the current production target.
+- .NET 9 SDK.
+- At least one planner model path:
+  - OpenAI API key and selected model, or
+  - OpenRouter API key and selected model, or
+  - local Ollama server at `http://localhost:11434/v1`.
+
+Optional integrations:
+
+- Todoist MCP token for Todoist task operations.
+- Hugging Face API key for cloud STT / language detection.
+- SMTP credentials for email sending.
+- Twilio credentials for SMS sending.
+- Google Custom Search key and search engine id for the legacy Google-backed web research service.
+
+## Quick Start
+
+```powershell
 git clone https://github.com/Esquetta/Kam.git
-cd SmartVoiceAgent
+cd Kam
+dotnet restore Kam.sln
+dotnet build Kam.sln --configuration Release
+dotnet run --project src/Ui/SmartVoiceAgent.Ui/SmartVoiceAgent.Ui.csproj --configuration Release
 ```
 
-### 2. Configure API Keys
+Then open Settings > AI Runtime and configure one planner model profile. Prefer the UI for local setup because it stores user settings without exposing secret values in the repository.
 
-Create or edit `appsettings.json`:
+## Secret Configuration
 
-```json
-{
-  "OpenRouter": {
-    "ApiKey": "your-openrouter-api-key",
-    "Model": "microsoft/wizardlm-2-8x22b",
-    "EndPoint": "https://openrouter.ai/api/v1"
-  },
-  "HuggingFaceConfig": {
-    "ApiKey": "your-huggingface-api-key",
-    "ModelName": "openai/whisper-large-v3",
-    "MaxConcurrentRequests": 3,
-    "MaxAudioSizeBytes": 26214400
-  },
-  "WebResearch": {
-    "SearchApiKey": "your-google-api-key",
-    "SearchEngineId": "your-search-engine-id"
-  },
-  "Mcpverse": {
-    "TodoistApiKey": "your-todoist-api-key",
-    "TodoistServerLink": "https://todoist.mcpverse.dev/mcp"
-  },
-  "MongoDbConfiguration": {
-    "ConnectionString": "mongodb://localhost:27017",
-    "Database": "SmartVoiceAgentLogs",
-    "Collection": "Logs"
-  }
-}
+Do not put API keys in committed `appsettings.json` files. Use the Settings UI, user secrets, or environment variables.
+
+User-secrets example for headless smoke:
+
+```powershell
+dotnet user-secrets set "AIService:Provider" "OpenAI" --project src/Ui/SmartVoiceAgent.Ui
+dotnet user-secrets set "AIService:ApiKey" "your-api-key" --project src/Ui/SmartVoiceAgent.Ui
+dotnet user-secrets set "AIService:ModelId" "selected-model-id" --project src/Ui/SmartVoiceAgent.Ui
+dotnet user-secrets set "AIService:Endpoint" "https://api.openai.com/v1" --project src/Ui/SmartVoiceAgent.Ui
 ```
 
-### 3. Install Dependencies
+The smoke gate also accepts `AIService:EndPoint` for backward compatibility.
 
-```bash
-dotnet restore
+## Development Commands
+
+```powershell
+dotnet restore Kam.sln
+dotnet build Kam.sln --configuration Release
+dotnet test Kam.sln --configuration Release
+dotnet run --project src/SmartVoiceAgent.AgentHost.ConsoleApp --configuration Release -- --skill-smoke --summary artifacts/manual-skill-smoke.md
 ```
 
-### 4. Build the Project
+## Local Production Smoke
 
-```bash
-dotnet build
+Run the full local gate before treating a build as release-candidate quality:
+
+```powershell
+.\scripts\local-production-smoke.ps1 -Configuration Release -Runtime win-x64 -RequireAiConfig
 ```
 
-### 5. Run the Application
+Launch the published app for hands-on verification:
 
-```bash
-dotnet run --project src/Ui/SmartVoiceAgent.Ui/SmartVoiceAgent.Ui.csproj
+```powershell
+.\scripts\local-production-smoke.ps1 -Configuration Release -Runtime win-x64 -RequireAiConfig -Launch
 ```
 
-## 🏗️ Architecture
+Expected release-candidate signals:
 
-### Project Structure
+- Release build has zero warnings.
+- Full test suite passes.
+- Skill smoke passes for required built-in skills.
+- Published Avalonia app starts and responds.
+- Runtime Diagnostics reports `READY_FOR_LIVE_TEST` after a simple command creates planner trace and skill result evidence.
 
-```
-SmartVoiceAgent/
-├── src/
-│   ├── SmartVoiceAgent.Core/           # Domain entities, interfaces, enums
-│   ├── SmartVoiceAgent.Application/    # CQRS commands, queries, handlers
-│   ├── SmartVoiceAgent.Infrastructure/ # External services, AI agents, platforms
-│   ├── SmartVoiceAgent.CrossCuttingConcerns/ # Logging, exceptions
-│   └── SmartVoiceAgent.Presentation/   # Entry point, configuration
-├── tests/                               # Unit and integration tests
-└── docs/                                # Documentation
-```
+## Documentation
 
-### Key Components
+- [Local production smoke](docs/local-production-smoke.md)
+- [Production live readiness](docs/production-live-readiness.md)
+- [Production readiness sprint](docs/superpowers/plans/2026-04-30-kam-production-readiness-sprint.md)
+- [Skill-first runtime design](docs/superpowers/specs/2026-04-26-kam-skill-first-runtime-design.md)
+- [Agent guide](AGENTS.md)
+- [Security policy](SECURITY.md)
 
-#### 1. Multi-Agent System
-```
-User Input → Coordinator Agent → [SystemAgent | TaskAgent | WebSearchAgent] → Response
-                    ↓
-            AnalyticsAgent (monitoring)
-```
+## Security Model
 
-#### 2. Intent Detection Pipeline
-```
-User Speech → STT → Hybrid Intent Detection → Dynamic Command Handler → Execution
-                     ├─ AI-based
-                     ├─ Semantic similarity
-                     ├─ Context-aware
-                     └─ Pattern matching
-```
+Kam is a local automation agent, so safety is part of the core product surface:
 
-#### 3. Command Processing
-```
-Voice Input → Audio Processing → Speech-to-Text → Intent Detection → 
-Command Routing → MediatR Pipeline → Handler → Response
-```
+- API keys and provider credentials stay in user settings, user secrets, or environment variables.
+- Planner output is parsed and validated before skill execution.
+- Skill arguments are validated before execution.
+- High-risk file/shell/desktop actions require policy checks and confirmation paths.
+- Runtime diagnostics and support reports must not expose API keys, bearer tokens, or passwords.
 
-## 📚 Usage Examples
+See [SECURITY.md](SECURITY.md) for reporting guidance and implementation notes.
 
-### Voice Commands
+## Current Release Focus
 
-```typescript
-// Application Control
-"Spotify'ı aç"           → Opens Spotify
-"Chrome'u kapat"         → Closes Chrome
-"Uygulamaları listele"   → Lists installed apps
+The next release-candidate sprint is focused on:
 
-// Task Management
-"Yarın saat 9'a toplantı ekle"  → Creates task in Todoist
-"Görevlerimi göster"             → Lists tasks
-"Alışveriş görevini sil"        → Deletes task
+1. CI parity with the local production smoke gate.
+2. Live model profile readiness.
+3. Runtime Diagnostics as the release source of truth.
+4. Complete built-in skill smoke coverage.
+5. JSON planner and command-loop reliability.
+6. Desktop automation safety boundaries.
+7. Publish/launch artifact hardening.
+8. Product UX polish.
+9. Secret redaction across logs, traces, and support reports.
+10. Release-candidate rehearsal and checklist.
 
-// Web Research
-"Python öğrenmek için kaynaklar ara"  → AI-powered web research
-"Son teknoloji haberlerini bul"       → Opens relevant news
+## Contributing
 
-// System Control
-"Sesi artır"              → Increases volume
-"Ekranı kapat"            → Turns off screen
-"WiFi'yi aç"              → Enables WiFi
+Before sending changes:
+
+```powershell
+dotnet test Kam.sln --configuration Release
+.\scripts\local-production-smoke.ps1 -Configuration Release -Runtime win-x64 -RequireAiConfig
+git diff --check
 ```
 
-### Programmatic Usage
+Keep commits scoped by product slice: runtime, UI, skills, diagnostics, docs, or release tooling.
 
-```csharp
-// Using the Multi-Agent System
-var groupChat = await GroupChatAgentFactory.CreateGroupChatAsync(
-    apiKey: configuration["AiAgent:Apikey"],
-    model: configuration["AiAgent:Model"],
-    serviceProvider: serviceProvider,
-    endpoint: configuration["AiAgent:EndPoint"],
-    configuration
-);
+## License
 
-await groupChat.SendWithAnalyticsAsync("Spotify'ı aç");
-
-// Using Intent Detection
-var intentResult = await intentDetectionService.DetectIntentAsync(
-    "Yarına toplantı ekle", 
-    "tr"
-);
-
-// Using Command Handler
-var command = new OpenApplicationCommand("Chrome");
-var result = await mediator.Send(command);
-
-// Using Web Research
-var research = await webResearchService.SearchAndOpenAsync(
-    new WebResearchRequest 
-    { 
-        Query = "machine learning tutorials",
-        Language = "en",
-        MaxResults = 5 
-    }
-);
-```
-
-## 🔧 Configuration
-
-### Voice Recognition
-
-```json
-{
-  "VoiceRecognition": {
-    "Provider": "HuggingFace",
-    "SampleRate": 16000,
-    "Channels": 1,
-    "BitsPerSample": 16,
-    "BufferCapacitySeconds": 30
-  }
-}
-```
-
-### Agent System
-
-```json
-{
-  "AiAgent": {
-    "Model": "microsoft/wizardlm-2-8x22b",
-    "Temperature": 0.7,
-    "MaxTokens": 1000,
-    "EnableAnalyticsAgent": true,
-    "EnableWebSearchAgent": true,
-    "EnableContextMemory": true
-  }
-}
-```
-
-### Caching
-
-```json
-{
-  "CacheSettings": {
-    "SlidingExpiration": 5
-  }
-}
-```
-
-## 🧪 Testing
-
-### Run Tests
-
-```bash
-dotnet test tests/SmartVoiceAgent.Tests
-```
-
-### Run Benchmarks
-
-```bash
-dotnet run --project src/SmartVoiceAgent.Benchmarks --configuration Release
-```
-
-### Test Voice Recognition
-
-```csharp
-var voiceService = serviceProvider.GetService<IVoiceRecognitionService>();
-voiceService.StartListening();
-// Speak into microphone
-voiceService.StopListening();
-```
-
-## 🤝 Contributing
-
-We welcome contributions! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-### Code Standards
-
-- Follow C# coding conventions
-- Write unit tests for new features
-- Update documentation
-- Use meaningful commit messages
-
-## 📖 Documentation
-
-- [Architecture Overview](docs/ARCHITECTURE.md)
-- [Agent System Guide](docs/AGENTS.md)
-- [Responsive Design](RESPONSIVE_DESIGN.md)
-- [Security Policy](SECURITY.md)
-- [Benchmarks](src/SmartVoiceAgent.Benchmarks/README.md)
-
-## 🐛 Troubleshooting
-
-### Voice Recognition Not Working
-
-```bash
-# Check microphone permissions
-# Windows: Settings → Privacy → Microphone
-# Linux: pulseaudio -k && pulseaudio --start
-# macOS: System Preferences → Security & Privacy → Microphone
-```
-
-### API Connection Issues
-
-```bash
-# Verify API keys in appsettings.json
-# Check network connectivity
-# Review logs in MongoDB or console
-```
-
-### Application Not Opening
-
-```bash
-# Check if application is installed
-# Verify application path in registry/shortcuts
-# Run with elevated permissions if needed
-```
-
-## 📊 Performance
-
-- **Voice Detection Latency**: <100ms
-- **Intent Detection**: 200-500ms (hybrid mode)
-- **Command Execution**: 100-1000ms (depends on operation)
-- **Memory Usage**: ~150-300MB
-- **CPU Usage**: 5-15% idle, 30-50% during voice processing
-
-## 🔐 Security
-
-- API keys stored in user secrets or environment variables
-- No sensitive data logging
-- Path traversal protection
-- Command injection prevention
-- Input validation and sanitization
-- See [SECURITY.md](SECURITY.md) for details and reporting vulnerabilities
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 👥 Authors
-
-- **Esquetta** - *Initial work* - [Esquetta](https://github.com/Esquetta)
-
-## 🙏 Acknowledgments
-
-- OpenRouter for AI model access
-- HuggingFace for STT and language models
-- AutoGen for multi-agent framework
-- MediatR for CQRS implementation
-- Todoist for task management integration
-
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/Esquetta/Kam/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Esquetta/Kam/discussions)
-
-## 🗺️ Roadmap
-
-### Completed ✅
-- [x] Plugin system for extensibility
-- [x] Performance optimizations (ArrayPool, Span<T>, optimized algorithms)
-- [x] Comprehensive test suite (179 tests)
-- [x] Multi-agent AI system with function calling
-- [x] MCP integration for task management
-- [x] Responsive UI with accessibility support
-
-### In Progress 🚧
-- [ ] Smart home device integration (Home Assistant MCP)
-- [ ] CodeAgent for development tasks
-- [ ] Multi-language UI (i18n framework ready)
-
-### Planned ⏭️
-- [ ] Mobile app support (iOS/Android)
-- [ ] Custom wake word detection
-- [ ] Voice cloning for responses
-- [ ] Cloud synchronization
-- [ ] Offline mode improvements
-
----
-
-## 📊 Project Statistics
-
-| Metric | Value |
-|--------|-------|
-| **Test Coverage** | 179 tests (178 passing) |
-| **Build Status** | ✅ Success |
-| **Code Quality** | .NET 9.0, C# 12 |
-| **Architecture** | Clean Architecture + CQRS |
-| **Agents** | 5 active (System, Task, Research, Coordinator, Analytics) |
-| **Tools** | 25+ AI functions |
-
----
-
-**Made with ❤️ by the Kam Team**
+Kam is released under the MIT License. See [LICENSE](LICENSE).

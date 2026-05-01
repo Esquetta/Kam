@@ -33,7 +33,7 @@ jobs:
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: smart-voice-agent
+        name: kam-windows-release
         path: ./publish
         retention-days: 7
 

@@ -1,0 +1,45 @@
+name: Feature request
+description: Suggest a product improvement for Kam.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user workflow should Kam support better?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Describe the expected behavior and product surface.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - AI runtime / model provider
+        - Skill runtime
+        - Skill import / skills.sh
+        - MCP integration
+        - Voice and audio
+        - Desktop automation
+        - Runtime Diagnostics
+        - UI / product polish
+        - Packaging / release
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - The user can...
+        - Runtime Diagnostics shows...
+        - Tests cover...
+    validations:
+      required: false

@@ -1,130 +1,101 @@
 # Security Policy
 
-## Overview
+Kam is a local desktop automation agent. It can inspect files, run bounded shell commands, read desktop context, interact with application state, and call model providers. Security work therefore focuses on two principles:
 
-This document outlines the security measures implemented in the Smart Voice Agent project and provides guidelines for reporting security vulnerabilities.
+1. never expose secrets in logs, diagnostics, traces, or support reports;
+2. never let model output bypass deterministic skill policy, validation, and confirmation.
 
-## Security Measures
+## Supported Versions
 
-### 1. Path Traversal Protection
+Kam is pre-1.0 production-readiness software. Security fixes are applied to the `master` branch until release-candidate tags are introduced.
 
-All file system operations use path validation to prevent path traversal attacks:
+## Reporting A Vulnerability
 
-- **SecurityUtilities.IsSafeFilePath()** - Validates file paths
-- **FileAgentTools** - Validates paths before file operations
-- Default working directory enforcement
-- Blocked patterns: `..`, `//`, `\\`, URL-encoded traversal
+Do not open a public issue for security vulnerabilities.
 
-### 2. Command Injection Prevention
+Email: security@esquetta.com
 
-Application launching is protected against command injection:
+Include:
 
-- **SecurityUtilities.IsSafeApplicationName()** - Validates app names
-- Blocks dangerous characters: `;`, `|`, `&`, `>`, `<`, `` ` ``, `$`, etc.
-- Blocks command sequences: `&&`, `||`, `|`, `;`
-- Only allows alphanumeric, spaces, hyphens, and dots
+- affected version or commit hash;
+- operating system;
+- reproduction steps;
+- expected impact;
+- sanitized logs, screenshots, or readiness reports.
 
-### 3. Sensitive Data Protection
+Remove API keys, bearer tokens, passwords, private endpoints, and local private paths before sharing evidence.
 
-Logging has been hardened to prevent data leakage:
+## Security Model
 
-- API keys are never logged
-- Authorization headers are not logged
-- **SecurityUtilities.MaskSensitiveData()** - Masks sensitive data for logging
-- **SecurityUtilities.SanitizeForLog()** - Sanitizes strings for safe logging
+### Secrets
 
-### 4. URL Validation
+- API keys belong in the Settings UI, user secrets, or environment variables.
+- API keys must not be committed to `appsettings.json`, docs, screenshots, issue reports, planner traces, or execution history.
+- Runtime Diagnostics and Copy Report flows must redact API keys, bearer tokens, passwords, and provider credentials.
 
-Open redirect and URL injection attacks are prevented:
+### Skill Execution
 
-- **SecurityUtilities.IsSafeUrl()** - Validates URLs before opening
-- Only `http://` and `https://` protocols allowed
-- Blocks: `javascript:`, `data:`, `vbscript:`, `file:` protocols
-- URL length limited to 2048 characters
+Kam uses a skill-first runtime:
 
-### 5. File Extension Validation
+- model output becomes a JSON skill plan;
+- the skill id must exist in the registry;
+- arguments are validated before execution;
+- policy checks run before high-risk actions;
+- confirmation is required where the skill policy demands it;
+- normalized results and execution history are recorded.
 
-Dangerous file types are blocked:
+Provider tool/function-calling behavior is not trusted as a safety boundary.
 
-- **Executable extensions blocked**: `.exe`, `.bat`, `.cmd`, `.sh`, `.msi`, `.dll`, `.com`, `.scr`, `.ps1`
-- **Allowed extensions**: Text files, documents, images, code files
+### File And Workspace Access
 
-## Security Utilities
+- File operations validate paths before access.
+- Workspace operations are bounded by configured roots and request limits.
+- Dangerous file writes should be previewable before execution.
+- Recursive delete or broad mutation flows require explicit confirmation and policy approval.
 
-The `SecurityUtilities` class provides security validation methods:
+### Shell Execution
 
-```csharp
-// Path validation
-bool isSafe = SecurityUtilities.IsSafeFilePath(path, allowedBaseDir);
+- Shell skills are bounded by timeout, output length, working directory, and blocked-pattern policy.
+- Destructive command patterns are blocked by deterministic checks.
+- High-risk shell operations must not be replayable without a fresh confirmation path.
 
-// Application name validation  
-bool isSafe = SecurityUtilities.IsSafeApplicationName(appName);
+### Desktop Context
 
-// URL validation
-bool isSafe = SecurityUtilities.IsSafeUrl(url);
+- Window, accessibility, and screen-context skills are read-oriented unless an explicit action skill is invoked.
+- Desktop automation must keep user-visible evidence in Runtime Diagnostics or skill execution history.
+- Future browser-control integrations must follow the same bounded skill policy.
 
-// Data masking for logging
-string masked = SecurityUtilities.MaskSensitiveData(apiKey);
+### Network And Provider Access
 
-// Log sanitization
-string safe = SecurityUtilities.SanitizeForLog(userInput);
-```
+- OpenAI-compatible provider endpoints are configured by the user.
+- Endpoint and key values are not shown in normal UI status text.
+- Web/page skills should block private-network and localhost access unless policy explicitly allows it.
 
-## Configuration Security
+## Developer Checklist
 
-### API Keys and Secrets
+- [ ] Validate all skill arguments before execution.
+- [ ] Add negative tests for blocked or unsafe inputs.
+- [ ] Do not log API keys, bearer tokens, passwords, auth headers, or private endpoints.
+- [ ] Keep safety decisions deterministic; do not ask the model whether an action is safe.
+- [ ] Add or update smoke coverage for new production skills.
+- [ ] Run `dotnet test Kam.sln --configuration Release`.
+- [ ] For release-facing changes, run `.\scripts\local-production-smoke.ps1 -Configuration Release -Runtime win-x64 -RequireAiConfig`.
 
-- API keys are stored in User Secrets (not in code)
-- Connection strings use encrypted storage
-- No hardcoded credentials in source code
+## Useful Files
 
-### Registry Operations
+- `src/SmartVoiceAgent.CrossCuttingConcerns/Security/SecurityUtilities.cs`
+- `src/SmartVoiceAgent.Infrastructure/Skills/Execution/SkillExecutionPipeline.cs`
+- `src/SmartVoiceAgent.Infrastructure/Skills/Execution/SkillArgumentValidator.cs`
+- `src/SmartVoiceAgent.Infrastructure/Skills/Policy/SkillRuntimePolicyOptions.cs`
+- `src/SmartVoiceAgent.Infrastructure/Skills/Actions/SkillActionPermissionPolicy.cs`
+- `src/SmartVoiceAgent.Infrastructure/Skills/BuiltIn/AgentTools/ShellSkillExecutor.cs`
+- `src/SmartVoiceAgent.Infrastructure/Skills/BuiltIn/AgentTools/FileSkillExecutor.cs`
+- `docs/production-live-readiness.md`
+- `docs/local-production-smoke.md`
 
-- Auto-start registry entries are validated
-- Only HKCU (Current User) registry is modified
-- No elevated privileges required
+## Current Release Security Focus
 
-## Reporting Security Issues
-
-If you discover a security vulnerability:
-
-1. **Do NOT** open a public issue
-2. Email security concerns to: [security@esquetta.com](mailto:security@esquetta.com)
-3. Include:
-   - Description of the vulnerability
-   - Steps to reproduce
-   - Potential impact
-   - Suggested fix (if any)
-
-## Security Checklist for Developers
-
-- [ ] Validate all user inputs
-- [ ] Never log sensitive data (API keys, passwords)
-- [ ] Use parameterized queries for database operations
-- [ ] Validate file paths before operations
-- [ ] Sanitize application names before execution
-- [ ] Use HTTPS for all API communications
-- [ ] Validate URLs before opening in browser
-- [ ] Review Process.Start calls for injection risks
-
-## Known Security Considerations
-
-1. **Platform-Specific Code**: Some features use platform APIs (Windows Registry, P/Invoke) that have platform-specific security models
-2. **Process Execution**: Opening applications inherently involves executing processes - input validation is critical
-3. **File System Access**: The agent can read/write files - path validation restricts operations to safe directories
-
-## Security Updates
-
-| Date | Change |
-|------|--------|
-| 2026-01-29 | Added embedded application icon and updated assembly info for Task Manager display |
-| 2026-01-29 | Updated registry auto-start entry naming to "Kam" with backward compatibility |
-| 2026-01-28 | Added SecurityUtilities class with path traversal and command injection protection |
-| 2026-01-28 | Removed sensitive data logging from AI services |
-| 2026-01-28 | Added file extension validation |
-
-## References
-
-- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
-- [CWE/SANS Top 25](https://cwe.mitre.org/top25/)
-- [Microsoft Security Best Practices](https://docs.microsoft.com/en-us/dotnet/standard/security/)
+- Redaction across logs, planner traces, execution history, and readiness reports.
+- Full smoke coverage for required built-in skills.
+- Deterministic planner parsing and skill validation.
+- Clear Runtime Diagnostics evidence for model, host, command-loop, and skill-health readiness.
