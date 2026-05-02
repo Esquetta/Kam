@@ -15,6 +15,14 @@ public sealed class LocalProductionSmokeScriptTests
         script.Should().Contain("--skill-smoke");
         script.Should().Contain("dotnet\", \"publish\"");
         script.Should().Contain("MaxBuildWarnings");
+        script.Should().Contain("ReleaseCandidate");
+        script.Should().Contain("AllowDirtyWorktree");
+        script.Should().Contain("git\", \"rev-parse\", \"HEAD\"");
+        script.Should().Contain("git\", \"status\", \"--porcelain\", \"--untracked-files=no\"");
+        script.Should().Contain("Reject-PlaceholderReleaseCandidate");
+        script.Should().Contain("summary.md");
+        script.Should().Contain("skill-smoke.md");
+        script.Should().Contain("SmartVoiceAgent.Ui.exe");
     }
 
     [Fact]
@@ -28,7 +36,11 @@ public sealed class LocalProductionSmokeScriptTests
         workflow.Should().Contain("-SkipTests");
         workflow.Should().Contain("-SkipSkillSmoke");
         workflow.Should().Contain("-RequireAiConfig:$false");
+        workflow.Should().Contain("-ReleaseCandidate");
         workflow.Should().Contain("kam-windows-release");
+        workflow.Should().Contain("kam-production-smoke-evidence");
+        workflow.Should().Contain("summary.md");
+        workflow.Should().Contain("skill-smoke.md");
     }
 
     private static string FindRepoFile(params string[] segments)

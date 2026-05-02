@@ -450,7 +450,7 @@ git push
 - Modify: `docs/local-production-smoke.md`
 - Test: `tests/SmartVoiceAgent.Tests/Release/LocalProductionSmokeScriptTests.cs`
 
-- [ ] **Step 1: Add release artifact assertions**
+- [x] **Step 1: Add release artifact assertions**
 
 Extend `LocalProductionSmokeScriptTests` to assert the script writes:
 
@@ -458,13 +458,13 @@ Extend `LocalProductionSmokeScriptTests` to assert the script writes:
 - `skill-smoke.md`
 - `publish\SmartVoiceAgent.Ui.exe`
 
-- [ ] **Step 2: Run red test**
+- [x] **Step 2: Run red test**
 
 ```powershell
 dotnet test tests\SmartVoiceAgent.Tests\SmartVoiceAgent.Tests.csproj --configuration Release --filter FullyQualifiedName~LocalProductionSmokeScriptTests
 ```
 
-- [ ] **Step 3: Update smoke summary**
+- [x] **Step 3: Update smoke summary**
 
 Ensure `summary.md` records:
 
@@ -474,7 +474,7 @@ Ensure `summary.md` records:
 - publish directory
 - launch process id when `-Launch` is used
 
-- [ ] **Step 4: Verify live publish**
+- [x] **Step 4: Verify live publish**
 
 ```powershell
 .\scripts\local-production-smoke.ps1 -Configuration Release -Runtime win-x64 -RequireAiConfig -Launch

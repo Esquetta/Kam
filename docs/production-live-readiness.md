@@ -38,11 +38,12 @@ The smoke gate also accepts the legacy spelling `AIService:EndPoint`.
 Run:
 
 ```powershell
-.\scripts\local-production-smoke.ps1 -Configuration Release -Runtime win-x64 -RequireAiConfig
+.\scripts\local-production-smoke.ps1 -Configuration Release -Runtime win-x64 -RequireAiConfig -ReleaseCandidate rc-local-20260502
 ```
 
 Then launch and manually verify:
 
+- The generated `artifacts/local-production-smoke/<timestamp>/summary.md` records the release candidate id, git commit, tracked worktree state, skill-smoke summary path, and published `SmartVoiceAgent.Ui.exe` path.
 - Settings > AI Runtime Test Connection shows a successful live model catalog check.
 - Runtime Diagnostics > Refresh shows Core AI as ready and Planner Live Connection as verified.
 - Runtime Diagnostics > Run Skill Smoke reports all smoke evals passing.

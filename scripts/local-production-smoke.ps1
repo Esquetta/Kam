@@ -9,6 +9,8 @@ param(
     [switch]$Launch,
     [switch]$PlanOnly,
     [switch]$SelfTestWarningParser,
+    [string]$ReleaseCandidate = "",
+    [switch]$AllowDirtyWorktree,
     [int]$MaxBuildWarnings = 0
 )
 
@@ -34,6 +36,89 @@ if ($MaxBuildWarnings -lt 0) {
 function Add-SummaryLine {
     param([string]$Line)
     $summary.Add($Line) | Out-Null
+}
+
+function Write-SmokeSummary {
+    if ($PlanOnly) {
+        $summary | ForEach-Object { Write-Host $_ }
+        return
+    }
+
+    $summary | Set-Content -Path $summaryPath -Encoding UTF8
+    Write-Host "Smoke summary: $summaryPath" -ForegroundColor Green
+}
+
+function Resolve-ReleaseCandidate {
+    if ([string]::IsNullOrWhiteSpace($ReleaseCandidate)) {
+        return "local-$runId"
+    }
+
+    return $ReleaseCandidate.Trim()
+}
+
+function Reject-PlaceholderReleaseCandidate {
+    param([string]$Candidate)
+
+    $blocked = @("latest", "current", "dev", "test", "release", "head", "main", "master", "local")
+    if ($blocked -contains $Candidate.ToLowerInvariant()) {
+        throw "-ReleaseCandidate must be concrete. '$Candidate' is too ambiguous for release evidence."
+    }
+}
+
+function Get-GitCommit {
+    $command = @("git", "rev-parse", "HEAD")
+    $arguments = $command[1..($command.Count - 1)]
+    $output = & $command[0] @arguments 2>&1
+    $exitCode = if ($LASTEXITCODE -is [int]) { $LASTEXITCODE } else { 0 }
+    if ($exitCode -ne 0) {
+        return "unavailable"
+    }
+
+    return ($output | Select-Object -First 1).ToString().Trim()
+}
+
+function Get-TrackedWorktreeStatus {
+    $command = @("git", "status", "--porcelain", "--untracked-files=no")
+    $arguments = $command[1..($command.Count - 1)]
+    $output = & $command[0] @arguments 2>&1
+    $exitCode = if ($LASTEXITCODE -is [int]) { $LASTEXITCODE } else { 0 }
+    if ($exitCode -ne 0) {
+        return @("git-status-unavailable")
+    }
+
+    return @($output | ForEach-Object { $_.ToString() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+}
+
+function Test-ReleaseSourceState {
+    $candidate = Resolve-ReleaseCandidate
+    Reject-PlaceholderReleaseCandidate -Candidate $candidate
+
+    $gitCommit = Get-GitCommit
+    $trackedChanges = @(Get-TrackedWorktreeStatus)
+    $trackedWorktree = if ($trackedChanges.Count -eq 0) { "clean" } else { "dirty" }
+
+    Add-SummaryLine "- releaseCandidate: $candidate"
+    Add-SummaryLine "- gitCommit: $gitCommit"
+    Add-SummaryLine "- trackedWorktree: $trackedWorktree"
+    if ($trackedChanges.Count -gt 0) {
+        Add-SummaryLine "- trackedWorktreeChanges:"
+        foreach ($change in $trackedChanges) {
+            Add-SummaryLine "  - ``$change``"
+        }
+    }
+
+    if ($trackedChanges.Count -gt 0 -and -not $AllowDirtyWorktree) {
+        Add-SummaryLine "- sourceState: rejected dirty tracked worktree"
+        Write-SmokeSummary
+        throw "Tracked worktree has local changes. Commit or stash them, or pass -AllowDirtyWorktree for an explicit non-release validation run."
+    }
+
+    if ($trackedChanges.Count -gt 0) {
+        Add-SummaryLine "- sourceState: dirty tracked worktree allowed"
+    }
+    else {
+        Add-SummaryLine "- sourceState: clean"
+    }
 }
 
 function Get-SmokeBuildWarningCount {
@@ -386,8 +471,13 @@ Add-SummaryLine "- configuration: $Configuration"
 Add-SummaryLine "- runtime: $Runtime"
 Add-SummaryLine "- planOnly: $PlanOnly"
 Add-SummaryLine "- maxBuildWarnings: $MaxBuildWarnings"
+Add-SummaryLine "- summaryPath: $summaryPath"
+Add-SummaryLine "- skillSmokeSummary: $skillSmokeSummaryPath"
+Add-SummaryLine "- publishExecutable: $(Join-Path $publishDir "SmartVoiceAgent.Ui.exe")"
 Add-SummaryLine ""
 Add-SummaryLine "## Steps"
+
+Test-ReleaseSourceState
 
 Invoke-SmokeStep "dotnet info" @("dotnet", "--info")
 Invoke-SmokeStep "restore" @("dotnet", "restore", $solution)
@@ -413,6 +503,11 @@ else {
 if (-not $SkipPublish) {
     Invoke-SmokeStep "publish" @("dotnet", "publish", $uiProject, "--configuration", $Configuration, "--runtime", $Runtime, "--self-contained", "false", "--output", $publishDir)
     Add-SummaryLine "- publishDir: $publishDir"
+    $exePath = Join-Path $publishDir "SmartVoiceAgent.Ui.exe"
+    Add-SummaryLine "- publishedExecutable: $exePath"
+    if (-not $PlanOnly -and -not (Test-Path $exePath)) {
+        throw "Published application executable was not found: $exePath"
+    }
 }
 else {
     Add-SummaryLine "- publish: skipped"
@@ -440,9 +535,8 @@ Add-SummaryLine "## Result"
 Add-SummaryLine "- status: completed"
 
 if (-not $PlanOnly) {
-    $summary | Set-Content -Path $summaryPath -Encoding UTF8
-    Write-Host "Smoke summary: $summaryPath" -ForegroundColor Green
+    Write-SmokeSummary
 }
 else {
-    $summary | ForEach-Object { Write-Host $_ }
+    Write-SmokeSummary
 }

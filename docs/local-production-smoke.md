@@ -5,14 +5,14 @@ This runbook is the local gate before a hands-on production-style test of Kam.
 ## Command
 
 ```powershell
-.\scripts\local-production-smoke.ps1 -Configuration Release -Runtime win-x64 -RequireAiConfig
+.\scripts\local-production-smoke.ps1 -Configuration Release -Runtime win-x64 -RequireAiConfig -ReleaseCandidate rc-local-20260502
 ```
 
 Useful variants:
 
 ```powershell
-.\scripts\local-production-smoke.ps1 -PlanOnly
-.\scripts\local-production-smoke.ps1 -Configuration Release -Runtime win-x64 -Launch
+.\scripts\local-production-smoke.ps1 -PlanOnly -ReleaseCandidate rc-plan-20260502 -AllowDirtyWorktree
+.\scripts\local-production-smoke.ps1 -Configuration Release -Runtime win-x64 -RequireAiConfig -ReleaseCandidate rc-local-20260502 -Launch
 ```
 
 ## What It Checks
@@ -20,6 +20,13 @@ Useful variants:
 - Restores `Kam.sln`.
 - Builds the solution in `Release`.
 - Runs the test project in `Release`.
+- Records release evidence:
+  - concrete release candidate id
+  - current git commit
+  - tracked worktree state
+  - smoke `summary.md` path
+  - skill smoke `skill-smoke.md` path
+  - published `SmartVoiceAgent.Ui.exe` path
 - Checks required AI planner configuration without printing secret values. The check accepts either `dotnet user-secrets` / environment configuration or the enabled planner profile saved from the Settings screen:
   - `AIService:ApiKey`
   - `AIService:ModelId`
@@ -45,5 +52,7 @@ Useful variants:
 
 ## Notes
 
+- `-ReleaseCandidate` must be a concrete identifier such as `rc-local-20260502`, a commit-based CI id, or a build number. Ambiguous values such as `latest` are rejected.
+- Tracked local changes are rejected by default because release evidence must map to a reproducible source state. Use `-AllowDirtyWorktree` only for explicit non-release validation while developing the gate itself.
 - Warnings from legacy nullable/XML-doc/platform analyzers can still appear during build. Treat command exit code and new test failures as the release gate.
 - Use `-RequireAiConfig` for a real production-style run. Without it, missing AI keys are reported as warnings so build-only checks can still run on clean machines.
