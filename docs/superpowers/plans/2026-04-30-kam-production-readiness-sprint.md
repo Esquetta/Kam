@@ -59,11 +59,11 @@ Manual release gate:
 - Modify: `.github/workflows/dotnet.yml`
 - Modify: `scripts/local-production-smoke.ps1`
 - Test: `tests/SmartVoiceAgent.Tests/AgentHost/SkillSmokeCommandTests.cs`
-- Test: add or extend `tests/SmartVoiceAgent.Tests/Release/LocalProductionSmokeScriptTests.cs`
+- Test: add or extend `tests/SmartVoiceAgent.Tests/ReleaseChecks/LocalProductionSmokeScriptTests.cs`
 
-- [ ] **Step 1: Add script metadata tests**
+- [x] **Step 1: Add script metadata tests**
 
-Create `tests/SmartVoiceAgent.Tests/Release/LocalProductionSmokeScriptTests.cs` with assertions that the smoke script contains the release gates used by CI:
+Create `tests/SmartVoiceAgent.Tests/ReleaseChecks/LocalProductionSmokeScriptTests.cs` with assertions that the smoke script contains the release gates used by CI:
 
 ```csharp
 using FluentAssertions;
@@ -104,7 +104,7 @@ public sealed class LocalProductionSmokeScriptTests
 }
 ```
 
-- [ ] **Step 2: Run red test**
+- [x] **Step 2: Run red test**
 
 Run:
 
@@ -114,7 +114,7 @@ dotnet test tests\SmartVoiceAgent.Tests\SmartVoiceAgent.Tests.csproj --configura
 
 Expected before implementation: pass if current script already contains the gates, otherwise fail with the missing string.
 
-- [ ] **Step 3: Update CI to run the same release gates**
+- [x] **Step 3: Update CI to run the same release gates**
 
 Change `.github/workflows/dotnet.yml` so the build job:
 
@@ -126,7 +126,7 @@ Change `.github/workflows/dotnet.yml` so the build job:
 
 Do not require real API keys in CI. CI proves build/test/publish parity; local release smoke proves live model readiness.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run:
 
@@ -140,10 +140,10 @@ Expected:
 - release metadata test passes
 - plan output includes restore, build, tests, skill smoke, publish
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
-git add .github\workflows\dotnet.yml scripts\local-production-smoke.ps1 tests\SmartVoiceAgent.Tests\Release\LocalProductionSmokeScriptTests.cs
+git add .github\workflows\dotnet.yml scripts\local-production-smoke.ps1 tests\SmartVoiceAgent.Tests\ReleaseChecks\LocalProductionSmokeScriptTests.cs
 git commit -m "Align CI with production smoke gates"
 git push
 ```

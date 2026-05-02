@@ -27,14 +27,15 @@ jobs:
     - name: Test
       run: dotnet test tests/SmartVoiceAgent.Tests/SmartVoiceAgent.Tests.csproj --configuration Release --no-build --verbosity normal
     
-    - name: Publish UI
-      run: dotnet publish src/Ui/SmartVoiceAgent.Ui/SmartVoiceAgent.Ui.csproj --configuration Release --no-restore --output ./publish
+    - name: Local production smoke
+      shell: pwsh
+      run: ./scripts/local-production-smoke.ps1 -Configuration Release -Runtime win-x64 -SkipTests -SkipSkillSmoke -RequireAiConfig:$false
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: kam-windows-release
-        path: ./publish
+        path: artifacts/local-production-smoke/**/publish/**
         retention-days: 7
 
   security-scan:
