@@ -8,6 +8,7 @@ public static class SkillRuntimePolicyOptions
     public const string WebAllowedHosts = "web.allowedHosts";
     public const string WebBlockedHosts = "web.blockedHosts";
     public const string WebAllowPrivateNetwork = "web.allowPrivateNetwork";
+    public const string SmokeSkipReason = "smoke.skipReason";
 
     private static readonly char[] ListSeparators = [';', ',', '\r', '\n'];
 
@@ -36,26 +37,41 @@ public static class SkillRuntimePolicyOptions
 
     public static string Describe(string skillId, IReadOnlyDictionary<string, string> runtimeOptions)
     {
+        var smokeCoverageText = runtimeOptions.TryGetValue(SmokeSkipReason, out var smokeSkipReason)
+            && !string.IsNullOrWhiteSpace(smokeSkipReason)
+            ? $"Smoke coverage: not applicable - {smokeSkipReason.Trim()}"
+            : string.Empty;
+
         if (!IsEditableSkill(skillId))
         {
-            return "Runtime policy: not configurable for this skill.";
+            return string.IsNullOrWhiteSpace(smokeCoverageText)
+                ? "Runtime policy: not configurable for this skill."
+                : smokeCoverageText;
         }
 
         var options = runtimeOptions
             .Where(option => !string.IsNullOrWhiteSpace(option.Key)
                 && !string.IsNullOrWhiteSpace(option.Value))
+            .Where(option => !option.Key.Equals(SmokeSkipReason, StringComparison.OrdinalIgnoreCase))
             .OrderBy(option => option.Key, StringComparer.OrdinalIgnoreCase)
             .Select(option => $"{option.Key}={option.Value}")
             .ToArray();
 
         if (options.Length > 0)
         {
-            return $"Runtime policy: {string.Join(" | ", options)}";
+            var runtimeText = $"Runtime policy: {string.Join(" | ", options)}";
+            return string.IsNullOrWhiteSpace(smokeCoverageText)
+                ? runtimeText
+                : $"{runtimeText} | {smokeCoverageText}";
         }
 
-        return skillId.Equals("shell.run", StringComparison.OrdinalIgnoreCase)
+        var defaultText = skillId.Equals("shell.run", StringComparison.OrdinalIgnoreCase)
             ? $"Runtime policy: set {ShellBlockedPatterns}, {ShellAllowedCommands}, or {ShellAllowedWorkingDirectories}."
             : $"Runtime policy: set {WebAllowedHosts}, {WebBlockedHosts}, or {WebAllowPrivateNetwork}.";
+
+        return string.IsNullOrWhiteSpace(smokeCoverageText)
+            ? defaultText
+            : $"{defaultText} | {smokeCoverageText}";
     }
 
     public static IReadOnlyCollection<string> SplitList(string? value)

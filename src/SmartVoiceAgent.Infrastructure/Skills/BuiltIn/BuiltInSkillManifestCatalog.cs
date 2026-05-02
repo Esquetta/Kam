@@ -1,4 +1,5 @@
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Infrastructure.Skills.Policy;
 
 namespace SmartVoiceAgent.Infrastructure.Skills.BuiltIn;
 
@@ -14,14 +15,16 @@ public static class BuiltInSkillManifestCatalog
                 SkillRiskLevel.High,
                 [SkillPermission.ProcessLaunch],
                 [RequiredString("applicationName", "Application display name or executable alias.")],
-                timeoutMilliseconds: 10000),
+                timeoutMilliseconds: 10000,
+                runtimeOptions: SmokeNotApplicable("Launches a real desktop application.")),
             Create(
                 "apps.close",
                 "Close Application",
                 SkillRiskLevel.High,
                 [SkillPermission.ProcessControl],
                 [RequiredString("applicationName", "Application display name or executable alias.")],
-                timeoutMilliseconds: 10000),
+                timeoutMilliseconds: 10000,
+                runtimeOptions: SmokeNotApplicable("Closes a real desktop application.")),
             Create(
                 "apps.status",
                 "Application Status",
@@ -66,7 +69,8 @@ public static class BuiltInSkillManifestCatalog
                 SkillRiskLevel.Medium,
                 [SkillPermission.ProcessLaunch],
                 [RequiredString("trackName", "Track, playlist, or search query to play.")],
-                timeoutMilliseconds: 15000),
+                timeoutMilliseconds: 15000,
+                runtimeOptions: SmokeNotApplicable("Launches external media playback.")),
             Create(
                 "system.device.control",
                 "Control Device",
@@ -125,7 +129,8 @@ public static class BuiltInSkillManifestCatalog
                     RequiredString("processNameOrId", "Process name or PID to terminate."),
                     OptionalBool("force", "Force kill immediately.")
                 ],
-                timeoutMilliseconds: 10000),
+                timeoutMilliseconds: 10000,
+                runtimeOptions: SmokeNotApplicable("Terminates a real operating system process.")),
             Create(
                 "files.read",
                 "Read File",
@@ -142,7 +147,8 @@ public static class BuiltInSkillManifestCatalog
                     RequiredString("content", "Content to write."),
                     OptionalBool("append", "Append instead of overwrite."),
                     OptionalBool("openAfterWrite", "Open the file after writing.")
-                ]),
+                ],
+                runtimeOptions: SmokeNotApplicable("Writes to the user's file system.")),
             Create(
                 "files.create",
                 "Create File",
@@ -152,13 +158,15 @@ public static class BuiltInSkillManifestCatalog
                     RequiredString("filePath", "Full path to the file."),
                     OptionalString("content", "Initial content."),
                     OptionalBool("openAfterCreation", "Open the file after creation.")
-                ]),
+                ],
+                runtimeOptions: SmokeNotApplicable("Creates a real file on the user's file system.")),
             Create(
                 "files.delete",
                 "Delete File",
                 SkillRiskLevel.High,
                 [SkillPermission.FileSystemWrite],
-                [RequiredString("filePath", "Full path to the file.")]),
+                [RequiredString("filePath", "Full path to the file.")],
+                runtimeOptions: SmokeNotApplicable("Deletes a real file from the user's file system.")),
             Create(
                 "files.copy",
                 "Copy File",
@@ -169,7 +177,8 @@ public static class BuiltInSkillManifestCatalog
                     RequiredString("destinationPath", "Destination file path."),
                     OptionalBool("overwrite", "Overwrite destination file."),
                     OptionalBool("showInFolder", "Show destination in Explorer.")
-                ]),
+                ],
+                runtimeOptions: SmokeNotApplicable("Copies files and can create or overwrite user data.")),
             Create(
                 "files.move",
                 "Move File",
@@ -179,7 +188,8 @@ public static class BuiltInSkillManifestCatalog
                     RequiredString("sourcePath", "Source file path."),
                     RequiredString("destinationPath", "Destination file path."),
                     OptionalBool("overwrite", "Overwrite destination file.")
-                ]),
+                ],
+                runtimeOptions: SmokeNotApplicable("Moves files and can alter user data locations.")),
             Create(
                 "files.exists",
                 "File Exists",
@@ -272,7 +282,8 @@ public static class BuiltInSkillManifestCatalog
                     OptionalNumber("lineCount", "Number of lines to replace."),
                     RequiredString("replacement", "Replacement text for the selected range."),
                     OptionalBool("previewOnly", "Return diff without writing the file.")
-                ]),
+                ],
+                runtimeOptions: SmokeNotApplicable("Patch preview coverage is represented by workspace.diff_preview.")),
             Create(
                 "file.patch",
                 "Patch File",
@@ -284,7 +295,8 @@ public static class BuiltInSkillManifestCatalog
                     RequiredString("newText", "Replacement text."),
                     OptionalNumber("expectedOccurrences", "Expected number of exact matches."),
                     OptionalBool("previewOnly", "Return diff without writing the file.")
-                ]),
+                ],
+                runtimeOptions: SmokeNotApplicable("Patch preview coverage is represented by workspace.diff_preview.")),
             Create(
                 "workspace.tree",
                 "Workspace Tree",
@@ -335,7 +347,8 @@ public static class BuiltInSkillManifestCatalog
                 [
                     RequiredString("filePath", "Full path to the file."),
                     RequiredString("proposedContent", "Complete proposed file content to compare.")
-                ]),
+                ],
+                runtimeOptions: SmokeNotApplicable("Requires a policy-approved editable workspace root.")),
             Create(
                 "code.search",
                 "Search Code",
@@ -365,13 +378,15 @@ public static class BuiltInSkillManifestCatalog
                 [
                     RequiredString("filePath", "Full path to the file."),
                     OptionalBool("allowExecutables", "Allow executable files.")
-                ]),
+                ],
+                runtimeOptions: SmokeNotApplicable("Opens a real file with the user's default application.")),
             Create(
                 "files.show_in_explorer",
                 "Show In Explorer",
                 SkillRiskLevel.Medium,
                 [SkillPermission.ProcessLaunch, SkillPermission.FileSystemRead],
-                [RequiredString("path", "File or directory path to reveal.")]),
+                [RequiredString("path", "File or directory path to reveal.")],
+                runtimeOptions: SmokeNotApplicable("Launches Explorer and changes the active desktop.")),
             Create(
                 "directories.create",
                 "Create Directory",
@@ -380,7 +395,8 @@ public static class BuiltInSkillManifestCatalog
                 [
                     RequiredString("directoryPath", "Full path of the directory."),
                     OptionalBool("openAfterCreation", "Open folder after creation.")
-                ]),
+                ],
+                runtimeOptions: SmokeNotApplicable("Creates a real directory on the user's file system.")),
             Create(
                 "directories.open",
                 "Open Directory",
@@ -389,7 +405,8 @@ public static class BuiltInSkillManifestCatalog
                 [
                     RequiredString("directoryPath", "Directory path to open."),
                     OptionalString("selectFile", "File to select in the directory.")
-                ]),
+                ],
+                runtimeOptions: SmokeNotApplicable("Launches Explorer and changes the active desktop.")),
             Create(
                 "clipboard.get",
                 "Get Clipboard",
@@ -410,13 +427,15 @@ public static class BuiltInSkillManifestCatalog
                 SkillRiskLevel.High,
                 [SkillPermission.ClipboardWrite],
                 [RequiredString("content", "Text content to put in the clipboard.")],
-                timeoutMilliseconds: 5000),
+                timeoutMilliseconds: 5000,
+                runtimeOptions: SmokeNotApplicable("Mutates the user's clipboard contents.")),
             Create(
                 "clipboard.clear",
                 "Clear Clipboard",
                 SkillRiskLevel.High,
                 [SkillPermission.ClipboardWrite],
-                timeoutMilliseconds: 5000),
+                timeoutMilliseconds: 5000,
+                runtimeOptions: SmokeNotApplicable("Clears the user's clipboard contents.")),
             Create(
                 "web.search",
                 "Search Web",
@@ -438,7 +457,8 @@ public static class BuiltInSkillManifestCatalog
                     OptionalNumber("maxLength", "Maximum characters to return."),
                     OptionalNumber("timeoutMilliseconds", "Per-request timeout in milliseconds.")
                 ],
-                timeoutMilliseconds: 15000),
+                timeoutMilliseconds: 15000,
+                runtimeOptions: SmokeNotApplicable("Depends on external network availability and user host policy.")),
             Create(
                 "web.read_page",
                 "Read Web Page",
@@ -449,7 +469,8 @@ public static class BuiltInSkillManifestCatalog
                     OptionalNumber("maxLength", "Maximum readable text characters to return."),
                     OptionalNumber("timeoutMilliseconds", "Per-request timeout in milliseconds.")
                 ],
-                timeoutMilliseconds: 15000),
+                timeoutMilliseconds: 15000,
+                runtimeOptions: SmokeNotApplicable("Depends on external network availability and user host policy.")),
             Create(
                 "shell.run",
                 "Run Shell Command",
@@ -496,7 +517,8 @@ public static class BuiltInSkillManifestCatalog
                     RequiredString("subject", "Email subject."),
                     RequiredString("body", "Email body."),
                     OptionalBool("isHtml", "Treat body as HTML.")
-                ]),
+                ],
+                runtimeOptions: SmokeNotApplicable("Requires configured SMTP credentials and sends a real email.")),
             Create(
                 "communication.email.template.send",
                 "Send Email Template",
@@ -506,7 +528,8 @@ public static class BuiltInSkillManifestCatalog
                     RequiredString("to", "Recipient email address."),
                     RequiredString("templateName", "Template name."),
                     RequiredString("templateDataJson", "Template data as JSON.")
-                ]),
+                ],
+                runtimeOptions: SmokeNotApplicable("Requires configured SMTP credentials and sends a real email.")),
             Create(
                 "communication.email.validate",
                 "Validate Email",
@@ -521,7 +544,8 @@ public static class BuiltInSkillManifestCatalog
                 [
                     RequiredString("to", "Recipient phone number."),
                     RequiredString("message", "SMS message body.")
-                ]),
+                ],
+                runtimeOptions: SmokeNotApplicable("Requires configured SMS provider credentials and sends a real SMS.")),
             Create(
                 "communication.sms.validate",
                 "Validate Phone Number",
@@ -532,7 +556,8 @@ public static class BuiltInSkillManifestCatalog
                 "communication.sms.status",
                 "Check SMS Status",
                 SkillRiskLevel.Low,
-                [SkillPermission.Network])
+                [SkillPermission.Network],
+                runtimeOptions: SmokeNotApplicable("Depends on configured SMS provider credentials."))
         ];
     }
 
@@ -542,7 +567,8 @@ public static class BuiltInSkillManifestCatalog
         SkillRiskLevel riskLevel,
         IReadOnlyCollection<SkillPermission> permissions,
         IReadOnlyCollection<SkillArgumentDefinition>? arguments = null,
-        int timeoutMilliseconds = 10000)
+        int timeoutMilliseconds = 10000,
+        IReadOnlyDictionary<string, string>? runtimeOptions = null)
     {
         return new KamSkillManifest
         {
@@ -559,9 +585,19 @@ public static class BuiltInSkillManifestCatalog
                 .Distinct()
                 .ToList(),
             Arguments = arguments?.ToList() ?? [],
+            RuntimeOptions = runtimeOptions?.ToDictionary(
+                option => option.Key,
+                option => option.Value,
+                StringComparer.OrdinalIgnoreCase) ?? [],
             TimeoutMilliseconds = timeoutMilliseconds
         };
     }
+
+    private static IReadOnlyDictionary<string, string> SmokeNotApplicable(string reason) =>
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [SkillRuntimePolicyOptions.SmokeSkipReason] = reason
+        };
 
     private static SkillArgumentDefinition RequiredString(string name, string description) =>
         Argument(name, description, SkillArgumentType.String, required: true);

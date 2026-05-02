@@ -155,23 +155,40 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         {
             try
             {
-                var processes = Process.GetProcesses()
-                    .Where(p => !p.HasExited)
-                    .Select(p => new
+                var processes = new List<ProcessSnapshot>();
+                foreach (var process in Process.GetProcesses())
+                {
+                    try
                     {
-                        p.ProcessName,
-                        p.Id,
-                        MemoryMB = p.WorkingSet64 / 1024 / 1024,
-                        p.TotalProcessorTime
-                    });
+                        if (process.HasExited)
+                        {
+                            continue;
+                        }
 
-                processes = sortBy.ToLower() switch
+                        processes.Add(new ProcessSnapshot(
+                            process.ProcessName,
+                            process.Id,
+                            process.WorkingSet64 / 1024 / 1024,
+                            process.TotalProcessorTime));
+                    }
+                    catch (Exception ex) when (ex is InvalidOperationException
+                        or System.ComponentModel.Win32Exception
+                        or UnauthorizedAccessException)
+                    {
+                    }
+                    finally
+                    {
+                        process.Dispose();
+                    }
+                }
+
+                var sortedProcesses = sortBy.ToLower() switch
                 {
                     "cpu" => processes.OrderByDescending(p => p.TotalProcessorTime.TotalSeconds),
                     _ => processes.OrderByDescending(p => p.MemoryMB)
                 };
 
-                var topProcesses = processes.Take(count).ToList();
+                var topProcesses = sortedProcesses.Take(count).ToList();
 
                 var sb = new StringBuilder();
                 sb.AppendLine($"📊 Top {count} Processes (sorted by {sortBy})");
@@ -191,6 +208,12 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 return Task.FromResult($"❌ Failed to list processes: {ex.Message}");
             }
         }
+
+        private sealed record ProcessSnapshot(
+            string ProcessName,
+            int Id,
+            long MemoryMB,
+            TimeSpan TotalProcessorTime);
 
         /// <summary>
         /// Kills a process by name or ID.

@@ -31,6 +31,27 @@ public class BuiltInSkillEvalCaseCatalogTests
     }
 
     [Fact]
+    public void CreateSmokeCases_CoversEveryBuiltInManifestOrDocumentsSkipReason()
+    {
+        var smokeSkillIds = new BuiltInSkillEvalCaseCatalog()
+            .CreateSmokeCases()
+            .Select(testCase => testCase.Plan.SkillId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var missingSmokeCases = BuiltInSkillManifestCatalog
+            .CreateAll()
+            .Where(manifest => manifest.ExecutorType.Equals("builtin", StringComparison.OrdinalIgnoreCase))
+            .Where(manifest => !smokeSkillIds.Contains(manifest.Id))
+            .Where(manifest => !manifest.RuntimeOptions.TryGetValue("smoke.skipReason", out var reason)
+                || string.IsNullOrWhiteSpace(reason))
+            .Select(manifest => manifest.Id)
+            .ToArray();
+
+        missingSmokeCases.Should().BeEmpty(
+            "every production skill needs a release smoke case or an explicit skip reason");
+    }
+
+    [Fact]
     public async Task CreateSmokeCases_AllCasesSatisfyBuiltInManifestValidation()
     {
         var registry = new InMemorySkillRegistry();

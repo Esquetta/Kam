@@ -298,7 +298,7 @@ git push
 - Test: `tests/SmartVoiceAgent.Tests/Infrastructure/Skills/Health/SkillHealthServiceTests.cs`
 - Test: `tests/SmartVoiceAgent.Tests/Ui/ViewModels/PluginsViewModelSkillHealthTests.cs`
 
-- [ ] **Step 1: Add missing-skill coverage test**
+- [x] **Step 1: Add missing-skill coverage test**
 
 Add a test that every built-in skill manifest with `ExecutorType == "builtin"` has one smoke case unless the manifest explicitly marks smoke as not applicable.
 
@@ -308,17 +308,17 @@ Expected assertion:
 missingSmokeCases.Should().BeEmpty("every production skill needs a release smoke case or an explicit skip reason");
 ```
 
-- [ ] **Step 2: Run red test**
+- [x] **Step 2: Run red test**
 
 ```powershell
 dotnet test tests\SmartVoiceAgent.Tests\SmartVoiceAgent.Tests.csproj --configuration Release --filter "FullyQualifiedName~BuiltInSkillEvalCaseCatalogTests|FullyQualifiedName~SkillHealthServiceTests|FullyQualifiedName~PluginsViewModelSkillHealthTests"
 ```
 
-- [ ] **Step 3: Add smoke cases or explicit skip reasons**
+- [x] **Step 3: Add smoke cases or explicit skip reasons**
 
 Update `BuiltInSkillEvalCaseCatalog` so safe built-ins have bounded smoke cases. For skills that need external credentials or destructive permissions, add explicit health metadata that the UI renders as optional or blocked, not silently missing.
 
-- [ ] **Step 4: Verify headless smoke**
+- [x] **Step 4: Verify headless smoke**
 
 ```powershell
 dotnet run --project src\SmartVoiceAgent.AgentHost.ConsoleApp --configuration Release -- --skill-smoke --summary artifacts\manual-skill-smoke.md
@@ -329,7 +329,7 @@ Expected:
 - all required smoke cases pass
 - optional credential-dependent skills are reported as optional, skipped, or blocked with clear reason
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add src\SmartVoiceAgent.Infrastructure\Skills tests\SmartVoiceAgent.Tests\Infrastructure\Skills src\Ui\SmartVoiceAgent.Ui\ViewModels\PageModels\PluginItem.cs tests\SmartVoiceAgent.Tests\Ui\ViewModels\PluginsViewModelSkillHealthTests.cs

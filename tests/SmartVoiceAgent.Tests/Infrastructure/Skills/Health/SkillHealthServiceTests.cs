@@ -298,6 +298,33 @@ public class SkillHealthServiceTests
         report.LastFailureErrorCode.Should().Be("shell_command_blocked");
     }
 
+    [Fact]
+    public async Task GetHealthAsync_ExposesSmokeSkipReasonMetadata()
+    {
+        var registry = new InMemorySkillRegistry();
+        registry.Register(new KamSkillManifest
+        {
+            Id = "communication.email.send",
+            DisplayName = "Send Email",
+            Source = "builtin",
+            ExecutorType = "builtin",
+            Enabled = true,
+            RuntimeOptions = new Dictionary<string, string>
+            {
+                ["smoke.skipReason"] = "Requires configured SMTP credentials and sends a real email."
+            }
+        });
+        var service = new SkillHealthService(
+            registry,
+            [new MatchingSkillExecutor("communication.email.send")]);
+
+        var report = (await service.GetHealthAsync()).Should().ContainSingle().Subject;
+
+        report.RuntimeOptions.Should().Contain(
+            "smoke.skipReason",
+            "Requires configured SMTP credentials and sends a real email.");
+    }
+
     private sealed class MatchingSkillExecutor : ISkillExecutor
     {
         private readonly string _skillId;

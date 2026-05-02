@@ -260,6 +260,32 @@ public class PluginsViewModelSkillHealthTests
     }
 
     [Fact]
+    public void SelectPlugin_WithSmokeSkipReason_ExposesSmokeCoverageMetadata()
+    {
+        var viewModel = new PluginsViewModel(
+        [
+            new SkillHealthReport
+            {
+                SkillId = "communication.email.send",
+                DisplayName = "Send Email",
+                Source = "builtin",
+                ExecutorType = "builtin",
+                Status = SkillHealthStatus.Healthy,
+                Details = "Executor available.",
+                RuntimeOptions = new Dictionary<string, string>
+                {
+                    ["smoke.skipReason"] = "Requires configured SMTP credentials and sends a real email."
+                }
+            }
+        ]);
+
+        viewModel.SelectPlugin("communication.email.send");
+
+        viewModel.SelectedSkillPolicyGuardrail.Should().Contain("Smoke coverage: not applicable");
+        viewModel.SelectedSkillPolicyGuardrail.Should().Contain("SMTP credentials");
+    }
+
+    [Fact]
     public void SelectPlugin_WithRecentRuns_ExposesExecutionHistoryRows()
     {
         var viewModel = new PluginsViewModel(
