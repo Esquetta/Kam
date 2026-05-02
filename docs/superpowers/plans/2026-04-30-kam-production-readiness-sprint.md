@@ -434,7 +434,7 @@ Keep the policy deterministic. Do not use model judgement for safety decisions.
 dotnet test tests\SmartVoiceAgent.Tests\SmartVoiceAgent.Tests.csproj --configuration Release --filter "FullyQualifiedName~SkillActionPermissionPolicyTests|FullyQualifiedName~ShellSkillExecutorTests|FullyQualifiedName~FileSkillExecutorTests"
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add src\SmartVoiceAgent.Infrastructure\Skills\Actions src\SmartVoiceAgent.Infrastructure\Skills\BuiltIn\AgentTools src\SmartVoiceAgent.Infrastructure\Skills\Policy tests\SmartVoiceAgent.Tests\Infrastructure\Skills
@@ -487,7 +487,7 @@ Expected:
 - all required skill smoke cases passing
 - published app starts and `Get-Process SmartVoiceAgent.Ui` shows `Responding=True`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add scripts\local-production-smoke.ps1 .github\workflows\dotnet.yml docs\local-production-smoke.md tests\SmartVoiceAgent.Tests\Release\LocalProductionSmokeScriptTests.cs
@@ -506,7 +506,7 @@ git push
 - Test: `tests/SmartVoiceAgent.Tests/Ui/ThemeContrastTests.cs`
 - Test: `tests/SmartVoiceAgent.Tests/Ui/PluginsViewIconLayoutTests.cs`
 
-- [ ] **Step 1: Add UI metadata tests for release-critical copy**
+- [x] **Step 1: Add UI metadata tests for release-critical copy**
 
 Assert these labels exist:
 
@@ -522,13 +522,13 @@ Assert legacy or unclear labels are absent:
 - visible API endpoint values
 - visible API key fragments
 
-- [ ] **Step 2: Run red test**
+- [x] **Step 2: Run red test**
 
 ```powershell
 dotnet test tests\SmartVoiceAgent.Tests\SmartVoiceAgent.Tests.csproj --configuration Release --filter "FullyQualifiedName~MainWindowMetadataTests|FullyQualifiedName~ThemeContrastTests|FullyQualifiedName~PluginsViewIconLayoutTests"
 ```
 
-- [ ] **Step 3: Fix UX issues**
+- [x] **Step 3: Fix UX issues**
 
 Address only release-blocking UX:
 
@@ -538,7 +538,7 @@ Address only release-blocking UX:
 - model connection feedback
 - readiness status clarity
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 ```powershell
 dotnet test tests\SmartVoiceAgent.Tests\SmartVoiceAgent.Tests.csproj --configuration Release --filter "FullyQualifiedName~MainWindowMetadataTests|FullyQualifiedName~ThemeContrastTests|FullyQualifiedName~PluginsViewIconLayoutTests"

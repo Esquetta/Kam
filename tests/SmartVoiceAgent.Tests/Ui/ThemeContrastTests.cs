@@ -29,6 +29,17 @@ public sealed class ThemeContrastTests
         Contrast(colors["AccentErrorOn"], colors["AccentError"]).Should().BeGreaterThanOrEqualTo(4.5);
     }
 
+    [Theory]
+    [InlineData("Colors.Light.axaml")]
+    [InlineData("Colors.Dark.axaml")]
+    public void ThemePalette_ProvidesReadableMutedTextContrastOnCards(string themeFileName)
+    {
+        var colors = LoadThemeColors(themeFileName);
+
+        Contrast(colors["TextMuted"], colors["CardBg"]).Should().BeGreaterThanOrEqualTo(4.5);
+        Contrast(colors["TextMuted"], colors["SurfaceBg"]).Should().BeGreaterThanOrEqualTo(4.5);
+    }
+
     private static Dictionary<string, Color> LoadThemeColors(string themeFileName)
     {
         var document = XDocument.Load(FindThemePath(themeFileName));

@@ -35,7 +35,7 @@ public sealed class PluginsViewIconLayoutTests
 
         var actionBar = pluginsView!
             .Descendants()
-            .Single(element => element.Name.LocalName == "StackPanel"
+            .Single(element => element.Name.LocalName == "WrapPanel"
                 && AttributeValue(element, "Classes") == "PluginActionBar");
 
         var actionButtons = actionBar
@@ -46,6 +46,32 @@ public sealed class PluginsViewIconLayoutTests
         actionButtons.Should().NotBeEmpty();
         actionButtons.Should().OnlyContain(element =>
             AttributeValue(element, "Classes") == "IconButton");
+    }
+
+    [Fact]
+    public void PluginCards_ReserveEnoughHeightForHealthAndActionContent()
+    {
+        var pluginsView = XDocument.Load(FindPluginsViewXamlPath()).Root;
+
+        var cardStyles = pluginsView!
+            .Descendants()
+            .Where(element => element.Name.LocalName == "Style")
+            .Where(element =>
+                AttributeValue(element, "Selector") is "Border.PluginCard" or "Border.PluginCardInactive")
+            .ToArray();
+
+        cardStyles.Should().HaveCount(2);
+        foreach (var style in cardStyles)
+        {
+            var minHeight = style
+                .Elements()
+                .Single(element => element.Name.LocalName == "Setter"
+                    && AttributeValue(element, "Property") == "MinHeight")
+                .Attribute("Value")!
+                .Value;
+
+            int.Parse(minHeight).Should().BeGreaterThanOrEqualTo(300);
+        }
     }
 
     private static string? AttributeValue(XElement element, string attributeName)

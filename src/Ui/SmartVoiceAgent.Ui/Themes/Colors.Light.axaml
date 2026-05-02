@@ -11,7 +11,7 @@
     <Color x:Key="BorderMuted">#D4D4D8</Color>
     <Color x:Key="TextPrimary">#18181B</Color>
     <Color x:Key="TextSecondary">#3F3F46</Color>
-    <Color x:Key="TextMuted">#71717A</Color>
+    <Color x:Key="TextMuted">#52525B</Color>
 
     <!-- Accent colors -->
     <Color x:Key="AccentCyan">#0891B2</Color>
