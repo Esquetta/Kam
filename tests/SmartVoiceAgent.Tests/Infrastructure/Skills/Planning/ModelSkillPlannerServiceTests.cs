@@ -47,12 +47,9 @@ public class ModelSkillPlannerServiceTests
     }
 
     [Fact]
-    public async Task CreatePlanAsync_ResponseWithTextAroundJson_ReturnsFailure()
+    public async Task CreatePlanAsync_InvalidJson_ReturnsFailure()
     {
-        var chatClient = new RecordingChatClient("""
-        I will do that.
-        {"skillId":"apps.open","arguments":{"applicationName":"Spotify"},"confidence":0.94,"requiresConfirmation":false,"reasoning":"Open Spotify"}
-        """);
+        var chatClient = new RecordingChatClient("I will do that.");
         var registry = new InMemorySkillRegistry();
         registry.Register(new KamSkillManifest { Id = "apps.open", DisplayName = "Open Application", Enabled = true });
         var planner = new ModelSkillPlannerService(chatClient, registry);
@@ -60,7 +57,96 @@ public class ModelSkillPlannerServiceTests
         var result = await planner.CreatePlanAsync("Spotify ac");
 
         result.IsValid.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("single JSON object");
+        result.ErrorMessage.Should().Contain("valid JSON");
+    }
+
+    [Fact]
+    public async Task CreatePlanAsync_ResponseWithTextAroundJson_RepairsAndValidatesPlan()
+    {
+        var chatClient = new RecordingChatClient("""
+        I will do that.
+        {"skillId":"apps.open","arguments":{"applicationName":"Spotify"},"confidence":0.94,"requiresConfirmation":false,"reasoning":"Open Spotify"}
+        """);
+        var registry = new InMemorySkillRegistry();
+        registry.Register(new KamSkillManifest
+        {
+            Id = "apps.open",
+            DisplayName = "Open Application",
+            Enabled = true,
+            Arguments =
+            [
+                new SkillArgumentDefinition
+                {
+                    Name = "applicationName",
+                    Type = SkillArgumentType.String,
+                    Required = true
+                }
+            ]
+        });
+        var planner = new ModelSkillPlannerService(chatClient, registry);
+
+        var result = await planner.CreatePlanAsync("Spotify ac");
+
+        result.IsValid.Should().BeTrue();
+        result.Plan!.SkillId.Should().Be("apps.open");
+        result.Plan.Arguments["applicationName"].GetString().Should().Be("Spotify");
+    }
+
+    [Fact]
+    public async Task CreatePlanAsync_UnknownSkill_ReturnsFailureAndRecordsSanitizedTrace()
+    {
+        var chatClient = new RecordingChatClient("""
+        {"skillId":"unknown.skill","arguments":{"apiKey":"sk-test-secret123"},"confidence":0.94,"requiresConfirmation":false,"reasoning":"Use unknown skill"}
+        """);
+        var registry = new InMemorySkillRegistry();
+        registry.Register(new KamSkillManifest { Id = "apps.open", DisplayName = "Open Application", Enabled = true });
+        var traceStore = new InMemorySkillPlannerTraceStore();
+        var planner = new ModelSkillPlannerService(chatClient, registry, traceStore);
+
+        var result = await planner.CreatePlanAsync("do something");
+
+        result.IsValid.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("unknown skill");
+        result.SanitizedRawResponse.Should().NotContain("sk-test-secret123");
+        var trace = traceStore.GetRecent().Should().ContainSingle().Subject;
+        trace.IsValid.Should().BeFalse();
+        trace.ErrorMessage.Should().Contain("unknown skill");
+        trace.RawResponse.Should().NotContain("sk-test-secret123");
+    }
+
+    [Fact]
+    public async Task CreatePlanAsync_MissingRequiredArgument_ReturnsFailureBeforeExecution()
+    {
+        var chatClient = new RecordingChatClient("""
+        {"skillId":"apps.open","arguments":{},"confidence":0.94,"requiresConfirmation":false,"reasoning":"Open app"}
+        """);
+        var registry = new InMemorySkillRegistry();
+        registry.Register(new KamSkillManifest
+        {
+            Id = "apps.open",
+            DisplayName = "Open Application",
+            Enabled = true,
+            Arguments =
+            [
+                new SkillArgumentDefinition
+                {
+                    Name = "applicationName",
+                    Type = SkillArgumentType.String,
+                    Required = true
+                }
+            ]
+        });
+        var traceStore = new InMemorySkillPlannerTraceStore();
+        var planner = new ModelSkillPlannerService(chatClient, registry, traceStore);
+
+        var result = await planner.CreatePlanAsync("open app");
+
+        result.IsValid.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("applicationName");
+        var trace = traceStore.GetRecent().Should().ContainSingle().Subject;
+        trace.IsValid.Should().BeFalse();
+        trace.SkillId.Should().Be("apps.open");
+        trace.ErrorMessage.Should().Contain("applicationName");
     }
 
     [Fact]
@@ -100,7 +186,7 @@ public class ModelSkillPlannerServiceTests
         result.IsValid.Should().BeFalse();
         var trace = traceStore.GetRecent().Should().ContainSingle().Subject;
         trace.IsValid.Should().BeFalse();
-        trace.ErrorMessage.Should().Contain("single JSON object");
+        trace.ErrorMessage.Should().Contain("valid JSON");
         trace.RawResponse.Should().Be("I will open Spotify.");
     }
 

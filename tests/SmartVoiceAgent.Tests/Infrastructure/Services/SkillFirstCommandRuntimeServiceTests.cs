@@ -55,6 +55,62 @@ public class SkillFirstCommandRuntimeServiceTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_UnknownSkillPlan_ReturnsFailureWithoutRunningPipeline()
+    {
+        var plan = SkillPlan.FromObject("unknown.skill", new { });
+        var planner = new StubSkillPlannerService(SkillPlanParseResult.Success(plan));
+        var pipeline = new RecordingSkillExecutionPipeline(
+            _ => SkillResult.Succeeded("Should not run."));
+        var confirmation = new RecordingSkillConfirmationService();
+        var runtime = CreateRuntime(planner, pipeline, confirmation);
+
+        var result = await runtime.ExecuteAsync("run unknown skill");
+
+        result.Success.Should().BeFalse();
+        result.Status.Should().Be(SkillExecutionStatus.ValidationFailed);
+        result.ErrorCode.Should().Be("planner_invalid");
+        result.Message.Should().Contain("unknown skill");
+        pipeline.CallCount.Should().Be(0);
+        confirmation.QueueCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MissingRequiredArgument_ReturnsFailureWithoutRunningPipeline()
+    {
+        var plan = SkillPlan.FromObject("apps.open", new { });
+        var planner = new StubSkillPlannerService(SkillPlanParseResult.Success(plan));
+        var pipeline = new RecordingSkillExecutionPipeline(
+            _ => SkillResult.Succeeded("Should not run."));
+        var confirmation = new RecordingSkillConfirmationService();
+        var registry = new StubSkillRegistry(
+            new KamSkillManifest
+            {
+                Id = "apps.open",
+                DisplayName = "Open Application",
+                Enabled = true,
+                Arguments =
+                [
+                    new SkillArgumentDefinition
+                    {
+                        Name = "applicationName",
+                        Type = SkillArgumentType.String,
+                        Required = true
+                    }
+                ]
+            });
+        var runtime = CreateRuntime(planner, pipeline, confirmation, registry);
+
+        var result = await runtime.ExecuteAsync("open app");
+
+        result.Success.Should().BeFalse();
+        result.Status.Should().Be(SkillExecutionStatus.ValidationFailed);
+        result.ErrorCode.Should().Be("planner_invalid");
+        result.Message.Should().Contain("applicationName");
+        pipeline.CallCount.Should().Be(0);
+        confirmation.QueueCount.Should().Be(0);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_PlanRequiresConfirmation_QueuesRequestWithoutRunningPipeline()
     {
         var plan = SkillPlan.FromObject("files.delete", new { filePath = "C:\\temp\\notes.txt" });
@@ -270,12 +326,36 @@ public class SkillFirstCommandRuntimeServiceTests
         services.AddSingleton(planner);
         services.AddSingleton(pipeline);
         services.AddSingleton(confirmation);
-        services.AddSingleton(registry ?? new StubSkillRegistry());
+        services.AddSingleton(registry ?? CreateDefaultRegistry());
         var provider = services.BuildServiceProvider();
 
         return new SkillFirstCommandRuntimeService(
             provider.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<SkillFirstCommandRuntimeService>.Instance);
+    }
+
+    private static StubSkillRegistry CreateDefaultRegistry()
+    {
+        return new StubSkillRegistry(
+            new KamSkillManifest
+            {
+                Id = "apps.list",
+                DisplayName = "List Applications",
+                Enabled = true
+            },
+            new KamSkillManifest
+            {
+                Id = "files.delete",
+                DisplayName = "Delete File",
+                Enabled = true,
+                RiskLevel = SkillRiskLevel.High
+            },
+            new KamSkillManifest
+            {
+                Id = "local.desktop-navigation",
+                DisplayName = "Desktop Navigation",
+                Enabled = true
+            });
     }
 
     private sealed class StubSkillPlannerService : ISkillPlannerService

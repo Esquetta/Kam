@@ -347,7 +347,7 @@ git push
 - Test: `tests/SmartVoiceAgent.Tests/Infrastructure/Skills/Planning/SkillPlanParserTests.cs`
 - Test: `tests/SmartVoiceAgent.Tests/Infrastructure/Services/SkillFirstCommandRuntimeServiceTests.cs`
 
-- [ ] **Step 1: Add parser repair and failure tests**
+- [x] **Step 1: Add parser repair and failure tests**
 
 Add tests for model responses with:
 
@@ -366,13 +366,13 @@ parseResult.ErrorMessage.Should().Contain("unknown skill");
 parseResult.SanitizedRawResponse.Should().NotContain("sk-");
 ```
 
-- [ ] **Step 2: Run red test**
+- [x] **Step 2: Run red test**
 
 ```powershell
 dotnet test tests\SmartVoiceAgent.Tests\SmartVoiceAgent.Tests.csproj --configuration Release --filter "FullyQualifiedName~ModelSkillPlannerServiceTests|FullyQualifiedName~SkillPlanParserTests|FullyQualifiedName~SkillFirstCommandRuntimeServiceTests"
 ```
 
-- [ ] **Step 3: Implement planner guardrails**
+- [x] **Step 3: Implement planner guardrails**
 
 Make the planner service contract explicit:
 
@@ -383,13 +383,13 @@ Make the planner service contract explicit:
 - failure result still creates a planner trace
 - no function/tool-calling dependency is required from the provider
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 ```powershell
 dotnet test tests\SmartVoiceAgent.Tests\SmartVoiceAgent.Tests.csproj --configuration Release --filter "FullyQualifiedName~ModelSkillPlannerServiceTests|FullyQualifiedName~SkillPlanParserTests|FullyQualifiedName~SkillFirstCommandRuntimeServiceTests"
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add src\SmartVoiceAgent.Infrastructure\Skills\Planning src\SmartVoiceAgent.Infrastructure\Services\SkillFirstCommandRuntimeService.cs tests\SmartVoiceAgent.Tests\Infrastructure\Skills\Planning tests\SmartVoiceAgent.Tests\Infrastructure\Services\SkillFirstCommandRuntimeServiceTests.cs

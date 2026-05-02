@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using SmartVoiceAgent.Core.Models.Skills;
 
 namespace SmartVoiceAgent.Infrastructure.Skills.Planning;
@@ -12,47 +13,61 @@ public static class SkillPlanParser
 
     public static SkillPlanParseResult Parse(string response)
     {
+        var sanitizedRawResponse = SanitizeRawResponse(response);
         if (string.IsNullOrWhiteSpace(response))
         {
-            return SkillPlanParseResult.Failure("Response must contain valid JSON.");
+            return SkillPlanParseResult.Failure(
+                "Response must contain valid JSON.",
+                sanitizedRawResponse);
         }
 
         var json = ExtractJsonObject(RemoveMarkdownFence(response));
         if (json is null)
         {
-            return SkillPlanParseResult.Failure("Response must contain valid JSON.");
+            return SkillPlanParseResult.Failure(
+                "Response must contain valid JSON.",
+                sanitizedRawResponse);
         }
 
         try
         {
-            return DeserializePlan(json);
+            return DeserializePlan(json, sanitizedRawResponse);
         }
         catch (JsonException)
         {
-            return SkillPlanParseResult.Failure("Response must contain valid JSON.");
+            return SkillPlanParseResult.Failure(
+                "Response must contain valid JSON.",
+                sanitizedRawResponse);
         }
     }
 
     public static SkillPlanParseResult ParseStrictJsonObject(string response)
     {
+        var sanitizedRawResponse = SanitizeRawResponse(response);
         if (string.IsNullOrWhiteSpace(response))
         {
-            return SkillPlanParseResult.Failure("Planner response must be a single JSON object.");
+            return SkillPlanParseResult.Failure(
+                "Planner response must be a single JSON object.",
+                sanitizedRawResponse);
         }
 
         var trimmed = response.Trim();
         if (!trimmed.StartsWith('{') || !trimmed.EndsWith('}'))
         {
-            return SkillPlanParseResult.Failure("Planner response must be a single JSON object.");
+            return SkillPlanParseResult.Failure(
+                "Planner response must be a single JSON object.",
+                sanitizedRawResponse);
         }
 
         try
         {
-            return DeserializePlan(trimmed);
+            return DeserializePlan(trimmed, sanitizedRawResponse);
         }
         catch (JsonException)
         {
-            return SkillPlanParseResult.Failure("Response must contain valid JSON.");
+            return SkillPlanParseResult.Failure(
+                "Response must contain valid JSON.",
+                sanitizedRawResponse);
         }
     }
 
@@ -86,15 +101,31 @@ public static class SkillPlanParser
         return value[start..(end + 1)];
     }
 
-    private static SkillPlanParseResult DeserializePlan(string json)
+    private static SkillPlanParseResult DeserializePlan(string json, string sanitizedRawResponse)
     {
         var plan = JsonSerializer.Deserialize<SkillPlan>(json, JsonOptions);
         if (plan is null || string.IsNullOrWhiteSpace(plan.SkillId))
         {
-            return SkillPlanParseResult.Failure("Skill plan JSON must include a skillId.");
+            return SkillPlanParseResult.Failure(
+                "Skill plan JSON must include a skillId.",
+                sanitizedRawResponse);
         }
 
         plan.Arguments ??= [];
-        return SkillPlanParseResult.Success(plan);
+        return SkillPlanParseResult.Success(plan, sanitizedRawResponse);
+    }
+
+    private static string SanitizeRawResponse(string? response)
+    {
+        if (string.IsNullOrEmpty(response))
+        {
+            return string.Empty;
+        }
+
+        return Regex.Replace(
+            response,
+            @"\bsk-[A-Za-z0-9_\-]{8,}\b",
+            "sk-***",
+            RegexOptions.IgnoreCase);
     }
 }

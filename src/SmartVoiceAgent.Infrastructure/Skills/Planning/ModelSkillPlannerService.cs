@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.AI;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Infrastructure.Skills.Execution;
 
 namespace SmartVoiceAgent.Infrastructure.Skills.Planning;
 
@@ -64,7 +65,7 @@ public sealed class ModelSkillPlannerService : ISkillPlannerService
             throw;
         }
 
-        var result = SkillPlanParser.ParseStrictJsonObject(responseText);
+        var result = ValidatePlan(SkillPlanParser.Parse(responseText));
         RecordTrace(request, systemPrompt, responseText, result, stopwatch, skills.Length);
 
         return result;
@@ -106,6 +107,34 @@ public sealed class ModelSkillPlannerService : ISkillPlannerService
         return builder.ToString();
     }
 
+    private SkillPlanParseResult ValidatePlan(SkillPlanParseResult result)
+    {
+        if (!result.IsValid || result.Plan is null)
+        {
+            return result;
+        }
+
+        var plan = result.Plan;
+        if (!_skillRegistry.TryGet(plan.SkillId, out var manifest) || manifest is null)
+        {
+            return SkillPlanParseResult.Failure(
+                $"Planner returned unknown skill '{plan.SkillId}'.",
+                result.SanitizedRawResponse,
+                plan);
+        }
+
+        var validationError = SkillArgumentValidator.Validate(manifest, plan);
+        if (validationError is not null)
+        {
+            return SkillPlanParseResult.Failure(
+                validationError,
+                result.SanitizedRawResponse,
+                plan);
+        }
+
+        return result;
+    }
+
     private void RecordTrace(
         string userRequest,
         string systemPrompt,
@@ -125,7 +154,9 @@ public sealed class ModelSkillPlannerService : ISkillPlannerService
             Timestamp = DateTimeOffset.UtcNow,
             UserRequest = userRequest,
             SystemPrompt = systemPrompt,
-            RawResponse = rawResponse,
+            RawResponse = string.IsNullOrWhiteSpace(result.SanitizedRawResponse)
+                ? rawResponse
+                : result.SanitizedRawResponse,
             IsValid = result.IsValid,
             SkillId = result.Plan?.SkillId ?? string.Empty,
             Confidence = result.Plan?.Confidence ?? 0,

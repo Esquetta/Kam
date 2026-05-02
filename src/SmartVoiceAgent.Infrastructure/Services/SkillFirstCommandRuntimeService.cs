@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Commands;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Infrastructure.Skills.Execution;
 using System.Text.Json;
 
 namespace SmartVoiceAgent.Infrastructure.Services;
@@ -47,6 +48,15 @@ public sealed class SkillFirstCommandRuntimeService : ICommandRuntimeService
         }
 
         var plan = planResult.Plan;
+        var planValidationError = ValidatePlan(plan, skillRegistry);
+        if (!string.IsNullOrWhiteSpace(planValidationError))
+        {
+            return CommandRuntimeResult.Failed(
+                $"Could not create skill plan: {planValidationError}",
+                SkillExecutionStatus.ValidationFailed,
+                "planner_invalid",
+                plan.SkillId);
+        }
 
         try
         {
@@ -106,6 +116,16 @@ public sealed class SkillFirstCommandRuntimeService : ICommandRuntimeService
                 "runtime_exception",
                 plan.SkillId);
         }
+    }
+
+    private static string? ValidatePlan(SkillPlan plan, ISkillRegistry registry)
+    {
+        if (!registry.TryGet(plan.SkillId, out var manifest) || manifest is null)
+        {
+            return $"Planner returned unknown skill '{plan.SkillId}'.";
+        }
+
+        return SkillArgumentValidator.Validate(manifest, plan);
     }
 
     private async Task<SkillPlanParseResult> CreatePlanAsync(
