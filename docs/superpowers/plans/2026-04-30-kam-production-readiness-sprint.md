@@ -232,7 +232,7 @@ git push
 - Modify: `src/Ui/SmartVoiceAgent.Ui/Views/RuntimeDiagnosticsView.axaml`
 - Test: `tests/SmartVoiceAgent.Tests/Ui/ViewModels/RuntimeDiagnosticsViewModelTests.cs`
 
-- [ ] **Step 1: Add failing readiness tests**
+- [x] **Step 1: Add failing readiness tests**
 
 Extend `RuntimeDiagnosticsViewModelTests` to assert `READY_FOR_LIVE_TEST` only when all required evidence exists:
 
@@ -252,13 +252,13 @@ viewModel.LiveTestNextAction.Should().Be("Run a production command loop smoke.")
 
 The negative case must assert `NEEDS_ACTION` and a specific next action.
 
-- [ ] **Step 2: Run red test**
+- [x] **Step 2: Run red test**
 
 ```powershell
 dotnet test tests\SmartVoiceAgent.Tests\SmartVoiceAgent.Tests.csproj --configuration Release --filter FullyQualifiedName~RuntimeDiagnosticsViewModelTests
 ```
 
-- [ ] **Step 3: Implement deterministic readiness aggregation**
+- [x] **Step 3: Implement deterministic readiness aggregation**
 
 Update `RuntimeDiagnosticsViewModel` so the Live Production Test panel is derived from a single ordered checklist:
 
@@ -272,7 +272,7 @@ Update `RuntimeDiagnosticsViewModel` so the Live Production Test panel is derive
 
 The first failing item becomes the displayed next action.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 ```powershell
 dotnet test tests\SmartVoiceAgent.Tests\SmartVoiceAgent.Tests.csproj --configuration Release --filter FullyQualifiedName~RuntimeDiagnosticsViewModelTests
@@ -280,7 +280,7 @@ dotnet test tests\SmartVoiceAgent.Tests\SmartVoiceAgent.Tests.csproj --configura
 
 Expected: all diagnostics readiness tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add src\Ui\SmartVoiceAgent.Ui\ViewModels\PageModels\RuntimeDiagnosticsViewModel.cs src\Ui\SmartVoiceAgent.Ui\Views\RuntimeDiagnosticsView.axaml tests\SmartVoiceAgent.Tests\Ui\ViewModels\RuntimeDiagnosticsViewModelTests.cs

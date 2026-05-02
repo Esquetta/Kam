@@ -712,7 +712,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
                 : "Planner profile or credentials need attention.",
             IsCoreReady ? RuntimeDiagnosticSeverity.Ready : RuntimeDiagnosticSeverity.Blocked));
 
-        LiveTestSteps.Add(BuildModelConnectionLiveTestStep());
+        LiveTestSteps.Add(BuildPlannerLiveConnectionLiveTestStep());
         LiveTestSteps.Add(new RuntimeDiagnosticItemViewModel(
             "Agent Host",
             HostStatus,
@@ -723,6 +723,8 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
                 ? RuntimeDiagnosticSeverity.Ready
                 : (HostStatus == "Offline" ? RuntimeDiagnosticSeverity.Blocked : RuntimeDiagnosticSeverity.Warning)));
         LiveTestSteps.Add(BuildSkillSmokeLiveTestStep());
+        LiveTestSteps.Add(BuildRuntimeEvidenceLiveTestStep("Planner Trace"));
+        LiveTestSteps.Add(BuildRuntimeEvidenceLiveTestStep("Skill Result"));
 
         var commandLoopSummary = GetCommandLoopSummary();
         LiveTestSteps.Add(new RuntimeDiagnosticItemViewModel(
@@ -734,18 +736,18 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         IsLiveTestReady = LiveTestSteps.All(step => step.IsReady);
         LiveTestStatus = IsLiveTestReady ? "READY_FOR_LIVE_TEST" : "NEEDS_ACTION";
         LiveTestNextAction = IsLiveTestReady
-            ? "Start a local production session."
+            ? "Run a production command loop smoke."
             : GetLiveTestNextAction(LiveTestSteps.First(step => !step.IsReady));
     }
 
-    private RuntimeDiagnosticItemViewModel BuildModelConnectionLiveTestStep()
+    private RuntimeDiagnosticItemViewModel BuildPlannerLiveConnectionLiveTestStep()
     {
         var liveConnection = AiRuntimeItems.FirstOrDefault(item =>
             item.Name.Equals("Planner Live Connection", StringComparison.OrdinalIgnoreCase));
         if (liveConnection is not null)
         {
             return new RuntimeDiagnosticItemViewModel(
-                "Model Connection",
+                "Planner Live Connection",
                 liveConnection.Value,
                 liveConnection.Detail,
                 liveConnection.Severity);
@@ -754,14 +756,14 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         if (!IsCoreReady)
         {
             return new RuntimeDiagnosticItemViewModel(
-                "Model Connection",
+                "Planner Live Connection",
                 "Blocked",
                 "Fix core AI settings before testing the provider connection.",
                 RuntimeDiagnosticSeverity.Blocked);
         }
 
         return new RuntimeDiagnosticItemViewModel(
-            "Model Connection",
+            "Planner Live Connection",
             "Needs refresh",
             _modelConnectionTestService is null
                 ? "Live model connection test service is unavailable."
@@ -789,18 +791,42 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             RuntimeDiagnosticSeverity.Warning);
     }
 
+    private RuntimeDiagnosticItemViewModel BuildRuntimeEvidenceLiveTestStep(string name)
+    {
+        var item = RuntimeItems.FirstOrDefault(runtimeItem =>
+            runtimeItem.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (item is not null)
+        {
+            return new RuntimeDiagnosticItemViewModel(
+                item.Name,
+                item.Value,
+                item.Detail,
+                item.Severity);
+        }
+
+        return new RuntimeDiagnosticItemViewModel(
+            name,
+            "Unavailable",
+            $"{name} evidence is not attached to this diagnostics view.",
+            RuntimeDiagnosticSeverity.Warning);
+    }
+
     private static string GetLiveTestNextAction(RuntimeDiagnosticItemViewModel step)
     {
         return step.Name switch
         {
             "Core AI" => "Fix model settings in AI Runtime.",
-            "Model Connection" when step.IsBlocked => "Update model credentials, then refresh diagnostics.",
-            "Model Connection" => "Click Refresh to verify the planner model connection.",
+            "Planner Live Connection" when step.IsBlocked => "Update model credentials, then refresh diagnostics.",
+            "Planner Live Connection" => "Click Refresh to verify the planner model connection.",
             "Agent Host" => "Start the local agent host before live testing.",
             "Skill Smoke" when step.IsBlocked => "Fix failing skill smoke evals, then rerun smoke.",
             "Skill Smoke" => "Run Skill Smoke.",
+            "Planner Trace" when step.IsBlocked => "Fix the latest planner trace blocker.",
+            "Planner Trace" => "Submit a real command to produce planner JSON evidence.",
+            "Skill Result" when step.IsBlocked => "Fix the latest skill execution blocker.",
+            "Skill Result" => "Run a command or smoke eval to produce normalized skill result evidence.",
             "Command Loop" when step.IsBlocked => "Fix the latest planner or skill execution blocker.",
-            "Command Loop" => "Submit a real command to verify planner and skill execution.",
+            "Command Loop" => "Run a production command loop smoke.",
             _ => "Resolve the first non-ready live test step."
         };
     }

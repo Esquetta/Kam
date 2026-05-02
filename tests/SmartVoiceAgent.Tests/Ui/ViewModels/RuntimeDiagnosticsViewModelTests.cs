@@ -453,8 +453,15 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
 
         viewModel.IsLiveTestReady.Should().BeTrue();
         viewModel.LiveTestStatus.Should().Be("READY_FOR_LIVE_TEST");
-        viewModel.LiveTestNextAction.Should().Be("Start a local production session.");
-        viewModel.LiveTestSteps.Should().HaveCount(5);
+        viewModel.LiveTestNextAction.Should().Be("Run a production command loop smoke.");
+        viewModel.LiveTestSteps.Select(step => step.Name).Should().Equal(
+            "Core AI",
+            "Planner Live Connection",
+            "Agent Host",
+            "Skill Smoke",
+            "Planner Trace",
+            "Skill Result",
+            "Command Loop");
         viewModel.LiveTestSteps.Should().OnlyContain(step => step.IsReady);
     }
 
@@ -510,10 +517,14 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
 
         viewModel.IsLiveTestReady.Should().BeFalse();
         viewModel.LiveTestStatus.Should().Be("NEEDS_ACTION");
-        viewModel.LiveTestNextAction.Should().Be("Submit a real command to verify planner and skill execution.");
+        viewModel.LiveTestNextAction.Should().Be("Submit a real command to produce planner JSON evidence.");
         viewModel.LiveTestSteps.Should().Contain(step =>
-            step.Name == "Command Loop"
-            && step.Value == "Needs command"
+            step.Name == "Planner Trace"
+            && step.Value == "No trace"
+            && step.IsWarning);
+        viewModel.LiveTestSteps.Should().Contain(step =>
+            step.Name == "Skill Result"
+            && step.Value == "No result"
             && step.IsWarning);
     }
 
@@ -591,7 +602,7 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
         report.Should().Contain("Kam Runtime Readiness Report");
         report.Should().Contain("Live Test: READY_FOR_LIVE_TEST");
         report.Should().Contain("Core AI: Ready");
-        report.Should().Contain("Model Connection: Verified");
+        report.Should().Contain("Planner Live Connection: Verified");
         report.Should().Contain("Skill Smoke: 1/1 passing");
         report.Should().Contain("Command Loop: Ready");
         report.Should().Contain("Planner Model: OpenAI / gpt-5.2");
