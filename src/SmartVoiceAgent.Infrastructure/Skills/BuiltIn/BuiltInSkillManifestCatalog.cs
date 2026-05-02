@@ -146,7 +146,8 @@ public static class BuiltInSkillManifestCatalog
                     RequiredString("filePath", "Full path to the file."),
                     RequiredString("content", "Content to write."),
                     OptionalBool("append", "Append instead of overwrite."),
-                    OptionalBool("openAfterWrite", "Open the file after writing.")
+                    OptionalBool("openAfterWrite", "Open the file after writing."),
+                    OptionalBool("previewOnly", "Return diff without writing the file.")
                 ],
                 runtimeOptions: SmokeNotApplicable("Writes to the user's file system.")),
             Create(

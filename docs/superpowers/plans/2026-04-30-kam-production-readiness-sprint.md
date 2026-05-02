@@ -408,7 +408,7 @@ git push
 - Test: `tests/SmartVoiceAgent.Tests/Infrastructure/Skills/BuiltIn/ShellSkillExecutorTests.cs`
 - Test: `tests/SmartVoiceAgent.Tests/Infrastructure/Skills/BuiltIn/FileSkillExecutorTests.cs`
 
-- [ ] **Step 1: Add safety boundary tests**
+- [x] **Step 1: Add safety boundary tests**
 
 Add tests for:
 
@@ -418,17 +418,17 @@ Add tests for:
 - previewable write produces diff before execution
 - high-risk action cannot replay
 
-- [ ] **Step 2: Run red test**
+- [x] **Step 2: Run red test**
 
 ```powershell
 dotnet test tests\SmartVoiceAgent.Tests\SmartVoiceAgent.Tests.csproj --configuration Release --filter "FullyQualifiedName~SkillActionPermissionPolicyTests|FullyQualifiedName~ShellSkillExecutorTests|FullyQualifiedName~FileSkillExecutorTests"
 ```
 
-- [ ] **Step 3: Implement missing guardrails**
+- [x] **Step 3: Implement missing guardrails**
 
 Keep the policy deterministic. Do not use model judgement for safety decisions.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 ```powershell
 dotnet test tests\SmartVoiceAgent.Tests\SmartVoiceAgent.Tests.csproj --configuration Release --filter "FullyQualifiedName~SkillActionPermissionPolicyTests|FullyQualifiedName~ShellSkillExecutorTests|FullyQualifiedName~FileSkillExecutorTests"

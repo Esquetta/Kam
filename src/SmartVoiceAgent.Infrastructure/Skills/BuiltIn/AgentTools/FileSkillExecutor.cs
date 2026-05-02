@@ -59,7 +59,8 @@ public sealed class FileSkillExecutor : ISkillExecutor
                 SkillPlanArgumentReader.GetString(plan, "filePath"),
                 SkillPlanArgumentReader.GetString(plan, "content"),
                 SkillPlanArgumentReader.GetBool(plan, "append"),
-                SkillPlanArgumentReader.GetBool(plan, "openAfterWrite")),
+                SkillPlanArgumentReader.GetBool(plan, "openAfterWrite"),
+                SkillPlanArgumentReader.GetBool(plan, "previewOnly")),
             "files.create" => await _tools.CreateFileAsync(
                 SkillPlanArgumentReader.GetString(plan, "filePath"),
                 SkillPlanArgumentReader.GetString(plan, "content"),

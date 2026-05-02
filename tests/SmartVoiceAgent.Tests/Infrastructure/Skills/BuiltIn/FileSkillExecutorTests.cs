@@ -8,11 +8,14 @@ namespace SmartVoiceAgent.Tests.Infrastructure.Skills.BuiltIn;
 public class FileSkillExecutorTests : IDisposable
 {
     private readonly string _workspace;
+    private readonly string _outsideWorkspace;
 
     public FileSkillExecutorTests()
     {
         _workspace = Path.Combine(Path.GetTempPath(), $"kam-file-skill-{Guid.NewGuid():N}");
+        _outsideWorkspace = Path.Combine(Path.GetTempPath(), $"kam-file-skill-outside-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_workspace);
+        Directory.CreateDirectory(_outsideWorkspace);
     }
 
     [Fact]
@@ -86,6 +89,19 @@ public class FileSkillExecutorTests : IDisposable
 
         result.Success.Should().BeTrue();
         result.Message.Should().Contain("Codex-style file reader");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_FileRead_BlocksPathOutsideDefaultWorkspace()
+    {
+        var filePath = Path.Combine(_outsideWorkspace, "secret.txt");
+        await File.WriteAllTextAsync(filePath, "outside workspace");
+        var executor = new FileSkillExecutor(new FileAgentTools(_workspace));
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject("file.read", new { filePath }));
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Güvenlik");
     }
 
     [Fact]
@@ -198,6 +214,44 @@ public class FileSkillExecutorTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_FilesWritePreviewOnly_ReturnsDiffWithoutModifyingFile()
+    {
+        var filePath = Path.Combine(_workspace, "notes.md");
+        await File.WriteAllTextAsync(filePath, "# Kam\nold line");
+        var executor = new FileSkillExecutor(new FileAgentTools(_workspace));
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject(
+            "files.write",
+            new
+            {
+                filePath,
+                content = "# Kam\nnew line",
+                previewOnly = true
+            }));
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Diff Preview");
+        result.Message.Should().Contain("-old line");
+        result.Message.Should().Contain("+new line");
+        var unchanged = await File.ReadAllTextAsync(filePath);
+        unchanged.Should().Be("# Kam\nold line");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_FilesDelete_BlocksPathOutsideDefaultWorkspace()
+    {
+        var filePath = Path.Combine(_outsideWorkspace, "keep-me.txt");
+        await File.WriteAllTextAsync(filePath, "outside workspace");
+        var executor = new FileSkillExecutor(new FileAgentTools(_workspace));
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject("files.delete", new { filePath }));
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Güvenlik");
+        File.Exists(filePath).Should().BeTrue();
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WorkspaceDiffPreview_DoesNotModifyFile()
     {
         var filePath = Path.Combine(_workspace, "README.md");
@@ -236,6 +290,11 @@ public class FileSkillExecutorTests : IDisposable
         if (Directory.Exists(_workspace))
         {
             Directory.Delete(_workspace, recursive: true);
+        }
+
+        if (Directory.Exists(_outsideWorkspace))
+        {
+            Directory.Delete(_outsideWorkspace, recursive: true);
         }
     }
 }

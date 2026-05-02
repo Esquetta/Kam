@@ -41,7 +41,23 @@ public sealed class JsonSkillExecutionHistoryServiceTests : IDisposable
         recent.Single().ErrorCode.Should().Be("shell_exit_code");
         recent.Single().ArgumentsSummary.Should().Contain("command=git status");
         recent.Single().ReplayPlanJson.Should().Contain("shell.run");
-        recent.Single().CanReplay.Should().BeTrue();
+        recent.Single().CanReplay.Should().BeFalse();
+        recent.Single().ReplayBlockedReason.Should().Contain("high-risk");
+    }
+
+    [Fact]
+    public void Record_HighRiskShellRun_BlocksReplay()
+    {
+        var service = new JsonSkillExecutionHistoryService(_historyFile);
+
+        service.Record(
+            SkillPlan.FromObject("shell.run", new { command = "echo hello" }),
+            SkillResult.Succeeded("Exit Code: 0"));
+
+        var recent = service.GetRecent().Should().ContainSingle().Subject;
+        recent.SkillId.Should().Be("shell.run");
+        recent.CanReplay.Should().BeFalse();
+        recent.ReplayBlockedReason.Should().Contain("high-risk");
     }
 
     [Fact]

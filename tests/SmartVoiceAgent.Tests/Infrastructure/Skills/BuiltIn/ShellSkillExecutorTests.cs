@@ -149,6 +149,23 @@ public class ShellSkillExecutorTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_ShellRun_BlocksDeleteCommandBeforeItTouchesDisk()
+    {
+        var filePath = Path.Combine(_workspace, "keep-me.txt");
+        await File.WriteAllTextAsync(filePath, "do not delete");
+        var executor = new ShellSkillExecutor();
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject(
+            "shell.run",
+            new { command = DeleteFileCommand(filePath), workingDirectory = _workspace }));
+
+        result.Success.Should().BeFalse();
+        result.Status.Should().Be(SkillExecutionStatus.PermissionDenied);
+        result.ErrorCode.Should().Be("shell_command_blocked");
+        File.Exists(filePath).Should().BeTrue("destructive shell deletes must be blocked before execution");
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ShellRun_BlocksRuntimePolicyPatterns()
     {
         var registry = new InMemorySkillRegistry();
@@ -282,6 +299,13 @@ public class ShellSkillExecutorTests : IDisposable
         return IsWindows()
             ? "Start-Sleep -Seconds 2"
             : "sleep 2";
+    }
+
+    private static string DeleteFileCommand(string filePath)
+    {
+        return IsWindows()
+            ? $"cmd /c del /q \"{filePath}\""
+            : $"rm \"{filePath}\"";
     }
 
     private static bool IsWindows()

@@ -213,6 +213,49 @@ public class SkillFirstCommandRuntimeServiceTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_HighRiskFileWriteSkill_RunsPreviewAndQueuesConfirmationWithPreview()
+    {
+        var plan = SkillPlan.FromObject(
+            "files.write",
+            new
+            {
+                filePath = "C:\\temp\\notes.txt",
+                content = "new"
+            });
+        var planner = new StubSkillPlannerService(SkillPlanParseResult.Success(plan));
+        var pipeline = new RecordingSkillExecutionPipeline(previewPlan =>
+        {
+            previewPlan.Arguments["previewOnly"].GetBoolean().Should().BeTrue();
+            return SkillResult.Succeeded("Diff Preview:\n-old\n+new");
+        });
+        var confirmation = new RecordingSkillConfirmationService();
+        var registry = new StubSkillRegistry(
+            new KamSkillManifest
+            {
+                Id = "files.write",
+                DisplayName = "Write File",
+                Enabled = true,
+                RiskLevel = SkillRiskLevel.High
+            });
+        var runtime = CreateRuntime(planner, pipeline, confirmation, registry);
+
+        var result = await runtime.ExecuteAsync("write notes");
+
+        result.Success.Should().BeFalse();
+        result.RequiresConfirmation.Should().BeTrue();
+        result.ConfirmationId.Should().Be(confirmation.LastRequest?.Id);
+        result.SkillId.Should().Be("files.write");
+        result.ErrorCode.Should().Be("confirmation_required");
+        pipeline.CallCount.Should().Be(1);
+        pipeline.LastPlan.Should().NotBeSameAs(plan);
+        pipeline.LastPlan!.Arguments["previewOnly"].GetBoolean().Should().BeTrue();
+        confirmation.QueueCount.Should().Be(1);
+        confirmation.LastRequest.Should().NotBeNull();
+        confirmation.LastRequest!.Plan.Should().BeSameAs(plan);
+        confirmation.LastRequest.Preview.Should().Be("Diff Preview:\n-old\n+new");
+    }
+
+    [Fact]
     public async Task ExecuteAsync_FilePatchPreviewFailure_ReturnsFailureWithoutQueueingConfirmation()
     {
         var plan = SkillPlan.FromObject(

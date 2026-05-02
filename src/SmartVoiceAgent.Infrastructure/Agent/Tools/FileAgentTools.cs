@@ -16,6 +16,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         private const int MaxDiffPreviewLines = 400;
 
         private readonly string _defaultWorkingDirectory;
+        private readonly bool _restrictToDefaultWorkingDirectory;
         private readonly HashSet<string> _allowedExtensions;
         private readonly HashSet<string> _executableExtensions;
         private readonly long _maxFileSizeBytes;
@@ -26,6 +27,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         {
             _defaultWorkingDirectory = defaultWorkingDirectory ??
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Documents");
+            _restrictToDefaultWorkingDirectory = !string.IsNullOrWhiteSpace(defaultWorkingDirectory);
             _maxFileSizeBytes = maxFileSizeBytes;
 
             // Define allowed file extensions for security
@@ -61,7 +63,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 Console.WriteLine($"FileAgent: Creating file {filePath} (openAfterCreation: {openAfterCreation})");
 
                 // Security: Validate path to prevent path traversal
-                if (!SecurityUtilities.IsSafeFilePath(filePath, _defaultWorkingDirectory))
+                if (!IsSafeFilePath(filePath))
                 {
                     return "Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.";
                 }
@@ -172,7 +174,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 Console.WriteLine($"FileAgent: Opening file {filePath}");
 
                 // Security: Validate path to prevent path traversal
-                if (!SecurityUtilities.IsSafeFilePath(filePath, _defaultWorkingDirectory))
+                if (!IsSafeFilePath(filePath))
                 {
                     return "Güvenlik hatası: Dosya yolu güvenli değil. Yol dışarı çıkma veya geçersiz karakterler içeriyor.";
                 }
@@ -223,7 +225,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 Console.WriteLine($"FileAgent: Opening directory {directoryPath}");
 
                 // Security: Validate path to prevent path traversal
-                if (!SecurityUtilities.IsSafeFilePath(directoryPath, _defaultWorkingDirectory))
+                if (!IsSafeFilePath(directoryPath))
                 {
                     return "Güvenlik hatası: Dizin yolu güvenli değil. Yol dışarı çıkma veya geçersiz karakterler içeriyor.";
                 }
@@ -276,7 +278,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             try
             {
                 // Security: Validate path to prevent path traversal
-                if (!SecurityUtilities.IsSafeFilePath(path, _defaultWorkingDirectory))
+                if (!IsSafeFilePath(path))
                 {
                     return "Güvenlik hatası: Yol güvenli değil. Yol dışarı çıkma veya geçersiz karakterler içeriyor.";
                 }
@@ -321,6 +323,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             {
                 Console.WriteLine($"FileAgent: Reading file {filePath}");
 
+                if (!IsSafeFilePath(filePath))
+                {
+                    return "Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.";
+                }
+
                 if (!File.Exists(filePath))
                 {
                     return $"Hata: '{filePath}' dosyası bulunamadı.";
@@ -360,17 +367,36 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             [Description("If true, appends to existing file; otherwise overwrites")]
             bool append = false,
             [Description("If true, opens the file after writing")]
-            bool openAfterWrite = false)
+            bool openAfterWrite = false,
+            [Description("If true, returns a diff preview without writing")]
+            bool previewOnly = false)
         {
             try
             {
                 Console.WriteLine($"FileAgent: Writing to file {filePath} (append: {append})");
+
+                if (!IsSafeFilePath(filePath))
+                {
+                    return "Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.";
+                }
 
                 var fileInfo = new FileInfo(filePath);
 
                 if (!_allowedExtensions.Contains(fileInfo.Extension))
                 {
                     return $"Hata: '{fileInfo.Extension}' uzantılı dosyalara yazma desteklenmiyor.";
+                }
+
+                if (previewOnly)
+                {
+                    var original = File.Exists(filePath)
+                        ? await File.ReadAllTextAsync(filePath)
+                        : string.Empty;
+                    var proposed = append && File.Exists(filePath)
+                        ? original + content
+                        : content;
+
+                    return $"Preview only: {filePath}{Environment.NewLine}{FormatDiffPreview(filePath, original, proposed)}";
                 }
 
                 if (fileInfo.Directory != null && !fileInfo.Directory.Exists)
@@ -415,6 +441,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             {
                 Console.WriteLine($"FileAgent: Deleting file {filePath}");
 
+                if (!IsSafeFilePath(filePath))
+                {
+                    return "Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.";
+                }
+
                 if (!File.Exists(filePath))
                 {
                     return $"Hata: '{filePath}' dosyası bulunamadı.";
@@ -448,6 +479,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             try
             {
                 Console.WriteLine($"FileAgent: Copying {sourcePath} to {destinationPath}");
+
+                if (!IsSafeFilePath(sourcePath) || !IsSafeFilePath(destinationPath))
+                {
+                    return "Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.";
+                }
 
                 if (!File.Exists(sourcePath))
                 {
@@ -494,6 +530,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             try
             {
                 Console.WriteLine($"FileAgent: Moving {sourcePath} to {destinationPath}");
+
+                if (!IsSafeFilePath(sourcePath) || !IsSafeFilePath(destinationPath))
+                {
+                    return "Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.";
+                }
 
                 if (!File.Exists(sourcePath))
                 {
@@ -1211,7 +1252,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
         private string? ValidateReadableTextFile(string filePath)
         {
-            if (!SecurityUtilities.IsSafeFilePath(filePath, _defaultWorkingDirectory))
+            if (!IsSafeFilePath(filePath))
             {
                 return "Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.";
             }
@@ -1247,6 +1288,13 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             return fileInfo.IsReadOnly
                 ? $"Hata: '{filePath}' dosyası salt okunur."
                 : null;
+        }
+
+        private bool IsSafeFilePath(string path)
+        {
+            return _restrictToDefaultWorkingDirectory
+                ? SecurityUtilities.IsSafeFilePath(path, _defaultWorkingDirectory)
+                : SecurityUtilities.IsSafeFilePath(path);
         }
 
         private static string FormatDiffPreview(string filePath, string original, string proposed)

@@ -224,7 +224,8 @@ public sealed class SkillFirstCommandRuntimeService : ICommandRuntimeService
     private static bool IsPreviewableFileEditSkill(string skillId)
     {
         return skillId.Equals("file.patch", StringComparison.OrdinalIgnoreCase)
-            || skillId.Equals("file.replace_range", StringComparison.OrdinalIgnoreCase);
+            || skillId.Equals("file.replace_range", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("files.write", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsPreviewOnlyFileEditPlan(SkillPlan plan)

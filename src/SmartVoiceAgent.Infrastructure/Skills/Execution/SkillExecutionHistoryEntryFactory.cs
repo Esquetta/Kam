@@ -77,7 +77,8 @@ internal static class SkillExecutionHistoryEntryFactory
 
     private static bool IsHighRiskReplayBlocked(string skillId)
     {
-        return skillId.Equals("file.patch", StringComparison.OrdinalIgnoreCase)
+        return skillId.Equals("shell.run", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("file.patch", StringComparison.OrdinalIgnoreCase)
             || skillId.Equals("file.replace_range", StringComparison.OrdinalIgnoreCase)
             || skillId.Equals("files.create", StringComparison.OrdinalIgnoreCase)
             || skillId.Equals("files.copy", StringComparison.OrdinalIgnoreCase)
