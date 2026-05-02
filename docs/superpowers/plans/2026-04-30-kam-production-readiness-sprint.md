@@ -157,7 +157,7 @@ git push
 - Test: `tests/SmartVoiceAgent.Tests/Ui/ViewModels/SettingsViewModelAiProfileTests.cs`
 - Test: `tests/SmartVoiceAgent.Tests/Ui/Services/OpenAiCompatibleModelCatalogServiceTests.cs`
 
-- [ ] **Step 1: Add failing tests for explicit connection state**
+- [x] **Step 1: Add failing tests for explicit connection state**
 
 Extend `SettingsViewModelAiProfileTests` with cases that prove the UI can distinguish:
 
@@ -174,13 +174,13 @@ viewModel.AiProfileStatus.Should().NotContain("sk-");
 viewModel.AiConnectionTestButtonText.Should().Be("Test Connection");
 ```
 
-- [ ] **Step 2: Run red test**
+- [x] **Step 2: Run red test**
 
 ```powershell
 dotnet test tests\SmartVoiceAgent.Tests\SmartVoiceAgent.Tests.csproj --configuration Release --filter FullyQualifiedName~SettingsViewModelAiProfileTests
 ```
 
-- [ ] **Step 3: Implement state normalization**
+- [x] **Step 3: Implement state normalization**
 
 Update `SettingsViewModel` and `ModelConnectionTestService` so every provider returns a normalized result:
 
@@ -193,7 +193,7 @@ Update `SettingsViewModel` and `ModelConnectionTestService` so every provider re
 
 Never expose endpoint values or API key fragments in user-visible messages.
 
-- [ ] **Step 4: Verify provider catalog refresh**
+- [x] **Step 4: Verify provider catalog refresh**
 
 Run:
 
@@ -215,7 +215,9 @@ In the published app:
 
 Expected: status clearly shows success or an actionable sanitized failure.
 
-- [ ] **Step 6: Commit**
+Note: deferred to the release-candidate rehearsal because this step requires a stable foreground desktop session and a user-selected live profile.
+
+- [x] **Step 6: Commit**
 
 ```powershell
 git add src\Ui\SmartVoiceAgent.Ui\ViewModels\PageModels\SettingsViewModel.cs src\Ui\SmartVoiceAgent.Ui\Services\ModelConnectionTestService.cs src\Ui\SmartVoiceAgent.Ui\Services\OpenAiCompatibleModelCatalogService.cs tests\SmartVoiceAgent.Tests\Ui

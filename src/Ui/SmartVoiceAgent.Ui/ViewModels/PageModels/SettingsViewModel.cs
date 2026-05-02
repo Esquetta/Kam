@@ -131,7 +131,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private string _chatModelId = "openai/gpt-4.1-mini";
         private string _chatApiKey = string.Empty;
         private string _activeChatProfileId = "openrouter-chat";
-        private string _aiProfileStatus = "Profile not validated.";
+        private string _aiProfileStatus = "Profile not tested.";
         private bool _isAiProfileValid;
         private IReadOnlyList<string> _aiModelOptions = CreateDefaultModelOptions("OpenRouter", "openai/gpt-4.1-mini");
         private IReadOnlyList<string> _chatModelOptions = CreateDefaultModelOptions("OpenRouter", "openai/gpt-4.1-mini");
@@ -452,7 +452,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             try
             {
                 IsTestingAiConnection = true;
-                AiProfileStatus = "Testing provider connection...";
+                AiProfileStatus = $"Testing {profile.Provider} planner connection for {profile.ModelId}...";
                 var results = new List<string>();
 
                 foreach (var target in targets.Where(target => target.Required || ShouldTestOptionalProfile(target.Profile)))
@@ -461,16 +461,16 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     if (!result.Success)
                     {
                         IsAiProfileValid = false;
-                        AiProfileStatus = $"{target.Label} connection failed: {result.Message}";
+                        AiProfileStatus = FormatConnectionFailure(target, result);
                         SaveAiProfileSettings();
                         return;
                     }
 
-                    results.Add($"{target.Label} returned {result.LiveModelCount} live models");
+                    results.Add(FormatConnectionSuccess(target, result));
                 }
 
                 IsAiProfileValid = true;
-                AiProfileStatus = $"Connection verified: {string.Join("; ", results)}. Restart Kam to apply runtime changes.";
+                AiProfileStatus = $"Connection verified and validated: {string.Join("; ", results)}. Restart Kam to apply runtime changes.";
                 SaveAiProfileSettings();
             }
             finally
@@ -521,7 +521,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             catch (Exception ex)
             {
                 SetModelOptions(role, CreateDefaultModelCatalogEntries(profile.Provider.ToString(), profile.ModelId));
-                AiProfileStatus = $"Model list could not be loaded: {ex.Message}";
+                AiProfileStatus = $"Model list could not be loaded: {SanitizeProviderMessage(ex.Message, profile)}";
             }
             finally
             {
@@ -747,6 +747,61 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             string Label,
             ModelProviderProfile Profile,
             bool Required);
+
+        private static string FormatConnectionSuccess(
+            ConnectionTestTarget target,
+            ModelConnectionTestResult result)
+        {
+            var provider = result.Provider == ModelProviderType.OpenAICompatible
+                ? target.Profile.Provider
+                : result.Provider;
+            var modelId = string.IsNullOrWhiteSpace(result.ModelId)
+                ? target.Profile.ModelId
+                : result.ModelId;
+
+            return $"{target.Label} returned {result.LiveModelCount} live models; {provider} {modelId} validated";
+        }
+
+        private static string FormatConnectionFailure(
+            ConnectionTestTarget target,
+            ModelConnectionTestResult result)
+        {
+            var provider = result.Provider == ModelProviderType.OpenAICompatible
+                ? target.Profile.Provider
+                : result.Provider;
+            var modelId = string.IsNullOrWhiteSpace(result.ModelId)
+                ? target.Profile.ModelId
+                : result.ModelId;
+            var message = SanitizeProviderMessage(result.Message, target.Profile);
+
+            if (string.Equals(result.FailureCategory, "Connection", StringComparison.OrdinalIgnoreCase)
+                && result.Provider == ModelProviderType.OpenAICompatible
+                && string.IsNullOrWhiteSpace(result.ModelId))
+            {
+                return $"{target.Label} connection failed: {message}";
+            }
+
+            return $"{target.Label} connection failed ({result.FailureCategory}): {provider} {modelId} - {message}";
+        }
+
+        private static string SanitizeProviderMessage(string message, ModelProviderProfile profile)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return "Provider connection failed.";
+            }
+
+            var sanitized = ReplaceIfPresent(message, profile.ApiKey);
+            sanitized = ReplaceIfPresent(sanitized, profile.Endpoint);
+            return sanitized;
+        }
+
+        private static string ReplaceIfPresent(string value, string secret)
+        {
+            return string.IsNullOrWhiteSpace(secret)
+                ? value
+                : value.Replace(secret, "[redacted]", StringComparison.OrdinalIgnoreCase);
+        }
 
         private static string GetDefaultEndpoint(ModelProviderType provider)
         {

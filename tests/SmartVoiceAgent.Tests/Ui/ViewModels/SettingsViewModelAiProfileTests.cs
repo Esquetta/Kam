@@ -3,6 +3,7 @@ using SmartVoiceAgent.Core.Models.AI;
 using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.ViewModels.PageModels;
 using System.Reactive.Linq;
+using System.Reactive.Threading.Tasks;
 
 namespace SmartVoiceAgent.Tests.Ui.ViewModels;
 
@@ -109,6 +110,42 @@ public class SettingsViewModelAiProfileTests : IDisposable
     }
 
     [Fact]
+    public async Task TestAiConnectionCommand_NormalizesVisibleConnectionStates()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var connectionTestService = new DeferredModelConnectionTestService();
+        using var viewModel = CreateViewModel(settingsService, connectionTestService);
+        viewModel.AiProvider = "OpenAI";
+        viewModel.AiApiKey = "sk-live-secret";
+        viewModel.AiModelId = "gpt-5.2";
+
+        viewModel.AiProfileStatus.Should().Be("Profile not tested.");
+        viewModel.AiConnectionTestButtonText.Should().Be("Test Connection");
+
+        var execution = viewModel.TestAiConnectionCommand.Execute().ToTask();
+        await connectionTestService.RequestReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        viewModel.IsTestingAiConnection.Should().BeTrue();
+        viewModel.AiProfileStatus.Should().Be("Testing OpenAI planner connection for gpt-5.2...");
+        viewModel.AiConnectionTestButtonText.Should().Be("Testing...");
+
+        connectionTestService.Complete(ModelConnectionTestResult.Passed(
+            ModelProviderType.OpenAI,
+            "gpt-5.2",
+            42,
+            new DateTimeOffset(2026, 5, 2, 10, 0, 0, TimeSpan.Zero)));
+        await execution;
+
+        viewModel.IsAiProfileValid.Should().BeTrue();
+        viewModel.IsTestingAiConnection.Should().BeFalse();
+        viewModel.AiConnectionTestButtonText.Should().Be("Test Connection");
+        viewModel.AiProfileStatus.Should().Contain("validated");
+        viewModel.AiProfileStatus.Should().Contain("OpenAI");
+        viewModel.AiProfileStatus.Should().Contain("gpt-5.2");
+        viewModel.AiProfileStatus.Should().NotContain("sk-");
+    }
+
+    [Fact]
     public async Task TestAiConnectionCommand_LiveConnectionFails_ShowsProviderFailure()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);
@@ -123,6 +160,34 @@ public class SettingsViewModelAiProfileTests : IDisposable
 
         viewModel.IsAiProfileValid.Should().BeFalse();
         viewModel.AiProfileStatus.Should().Be("Planner connection failed: HTTP 401 Unauthorized");
+    }
+
+    [Fact]
+    public async Task TestAiConnectionCommand_LiveConnectionFailure_IsSanitizedAndActionable()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        using var viewModel = CreateViewModel(
+            settingsService,
+            new StubModelConnectionTestService(ModelConnectionTestResult.Failed(
+                ModelProviderType.OpenAI,
+                "gpt-5.2",
+                "HTTP 401 for sk-live-secret at https://api.openai.com/v1/models",
+                "Authentication",
+                new DateTimeOffset(2026, 5, 2, 10, 0, 0, TimeSpan.Zero))));
+        viewModel.AiProvider = "OpenAI";
+        viewModel.AiApiKey = "sk-live-secret";
+        viewModel.AiModelId = "gpt-5.2";
+
+        await viewModel.TestAiConnectionCommand.Execute().FirstAsync();
+
+        viewModel.IsAiProfileValid.Should().BeFalse();
+        viewModel.AiConnectionTestButtonText.Should().Be("Test Connection");
+        viewModel.AiProfileStatus.Should().Contain("Authentication");
+        viewModel.AiProfileStatus.Should().Contain("OpenAI");
+        viewModel.AiProfileStatus.Should().Contain("gpt-5.2");
+        viewModel.AiProfileStatus.Should().NotContain("sk-");
+        viewModel.AiProfileStatus.Should().NotContain("https://api.openai.com");
+        viewModel.AiProfileStatus.Should().Contain("[redacted]");
     }
 
     [Fact]
@@ -221,6 +286,28 @@ public class SettingsViewModelAiProfileTests : IDisposable
         {
             Requests.Add(profile);
             return Task.FromResult(result);
+        }
+    }
+
+    private sealed class DeferredModelConnectionTestService : IModelConnectionTestService
+    {
+        private readonly TaskCompletionSource<ModelConnectionTestResult> _completion =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource<ModelProviderProfile> RequestReceived { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<ModelConnectionTestResult> TestAsync(
+            ModelProviderProfile profile,
+            CancellationToken cancellationToken = default)
+        {
+            RequestReceived.TrySetResult(profile);
+            return _completion.Task.WaitAsync(cancellationToken);
+        }
+
+        public void Complete(ModelConnectionTestResult result)
+        {
+            _completion.TrySetResult(result);
         }
     }
 
