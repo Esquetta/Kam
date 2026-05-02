@@ -190,6 +190,30 @@ public class ModelSkillPlannerServiceTests
         trace.RawResponse.Should().Be("I will open Spotify.");
     }
 
+    [Fact]
+    public async Task CreatePlanAsync_RedactsSecretsFromPlannerTrace()
+    {
+        var chatClient = new RecordingChatClient("""
+        I cannot plan this. Bearer abc123 password=secret api_key=secret sk-test-secret
+        """);
+        var registry = new InMemorySkillRegistry();
+        registry.Register(new KamSkillManifest { Id = "apps.open", DisplayName = "Open Application", Enabled = true });
+        var traceStore = new InMemorySkillPlannerTraceStore();
+        var planner = new ModelSkillPlannerService(chatClient, registry, traceStore);
+
+        var result = await planner.CreatePlanAsync("use Bearer abc123 with api_key=secret");
+
+        result.IsValid.Should().BeFalse();
+        var trace = traceStore.GetRecent().Should().ContainSingle().Subject;
+        trace.UserRequest.Should().NotContain("Bearer abc123");
+        trace.UserRequest.Should().NotContain("api_key=secret");
+        trace.RawResponse.Should().NotContain("sk-test-secret");
+        trace.RawResponse.Should().NotContain("Bearer abc123");
+        trace.RawResponse.Should().NotContain("password=secret");
+        trace.RawResponse.Should().NotContain("api_key=secret");
+        trace.RawResponse.Should().Contain("[redacted]");
+    }
+
     private sealed class RecordingChatClient : IChatClient
     {
         private readonly string _response;

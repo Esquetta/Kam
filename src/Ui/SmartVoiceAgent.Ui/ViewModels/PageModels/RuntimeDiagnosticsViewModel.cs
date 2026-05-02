@@ -2,6 +2,7 @@ using ReactiveUI;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.AI;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Core.Security;
 using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.ViewModels;
 using System;
@@ -322,7 +323,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             }
         }
 
-        return report.ToString().TrimEnd();
+        return SecretRedactor.Redact(report.ToString().TrimEnd());
     }
 
     private void CopyReadinessReport()
@@ -537,7 +538,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             "Invalid",
             string.IsNullOrWhiteSpace(trace.ErrorMessage)
                 ? "Planner produced an invalid trace."
-                : trace.ErrorMessage,
+                : SecretRedactor.Redact(trace.ErrorMessage),
             RuntimeDiagnosticSeverity.Blocked);
         AddBlockingItem("Planner trace invalid: model did not produce a usable skill plan.");
     }
@@ -990,12 +991,12 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
 
         if (!string.IsNullOrWhiteSpace(entry.ResultSummary))
         {
-            parts.Add(entry.ResultSummary);
+            parts.Add(SecretRedactor.Redact(entry.ResultSummary));
         }
 
         if (!string.IsNullOrWhiteSpace(entry.ErrorCode))
         {
-            parts.Add($"error {entry.ErrorCode}");
+            parts.Add($"error {SecretRedactor.Redact(entry.ErrorCode)}");
         }
 
         return string.Join(". ", parts) + ".";

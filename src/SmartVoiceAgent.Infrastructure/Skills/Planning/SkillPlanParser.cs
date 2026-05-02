@@ -1,6 +1,6 @@
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Core.Security;
 
 namespace SmartVoiceAgent.Infrastructure.Skills.Planning;
 
@@ -117,15 +117,6 @@ public static class SkillPlanParser
 
     private static string SanitizeRawResponse(string? response)
     {
-        if (string.IsNullOrEmpty(response))
-        {
-            return string.Empty;
-        }
-
-        return Regex.Replace(
-            response,
-            @"\bsk-[A-Za-z0-9_\-]{8,}\b",
-            "sk-***",
-            RegexOptions.IgnoreCase);
+        return SecretRedactor.Redact(response);
     }
 }

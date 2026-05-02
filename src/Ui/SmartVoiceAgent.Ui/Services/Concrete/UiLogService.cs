@@ -1,4 +1,5 @@
 using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Core.Security;
 using SmartVoiceAgent.Ui.ViewModels;
 using System;
 
@@ -23,9 +24,9 @@ public class UiLogService : IUiLogService
         var entry = new UiLogEntry
         {
             Timestamp = DateTime.Now,
-            Message = message,
+            Message = SecretRedactor.Redact(message),
             Level = level,
-            Source = source,
+            Source = SecretRedactor.Redact(source),
             IsAgentUpdate = false
         };
 
@@ -41,9 +42,9 @@ public class UiLogService : IUiLogService
         var entry = new UiLogEntry
         {
             Timestamp = DateTime.Now,
-            Message = message,
+            Message = SecretRedactor.Redact(message),
             Level = LogLevel.Information,
-            AgentName = agentName,
+            AgentName = SecretRedactor.Redact(agentName),
             IsAgentUpdate = true,
             IsComplete = isComplete
         };

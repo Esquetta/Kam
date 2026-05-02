@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.AI;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Core.Security;
 using SmartVoiceAgent.Infrastructure.Skills.Execution;
 
 namespace SmartVoiceAgent.Infrastructure.Skills.Planning;
@@ -152,17 +153,17 @@ public sealed class ModelSkillPlannerService : ISkillPlannerService
         _traceStore.Record(new SkillPlannerTraceEntry
         {
             Timestamp = DateTimeOffset.UtcNow,
-            UserRequest = userRequest,
-            SystemPrompt = systemPrompt,
+            UserRequest = SecretRedactor.Redact(userRequest),
+            SystemPrompt = SecretRedactor.Redact(systemPrompt),
             RawResponse = string.IsNullOrWhiteSpace(result.SanitizedRawResponse)
-                ? rawResponse
-                : result.SanitizedRawResponse,
+                ? SecretRedactor.Redact(rawResponse)
+                : SecretRedactor.Redact(result.SanitizedRawResponse),
             IsValid = result.IsValid,
             SkillId = result.Plan?.SkillId ?? string.Empty,
             Confidence = result.Plan?.Confidence ?? 0,
             RequiresConfirmation = result.Plan?.RequiresConfirmation ?? false,
-            Reasoning = result.Plan?.Reasoning ?? string.Empty,
-            ErrorMessage = result.ErrorMessage,
+            Reasoning = SecretRedactor.Redact(result.Plan?.Reasoning),
+            ErrorMessage = SecretRedactor.Redact(result.ErrorMessage),
             DurationMilliseconds = stopwatch.ElapsedMilliseconds,
             AvailableSkillCount = availableSkillCount
         });

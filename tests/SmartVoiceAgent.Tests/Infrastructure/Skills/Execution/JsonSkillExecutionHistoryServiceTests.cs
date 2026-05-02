@@ -61,6 +61,42 @@ public sealed class JsonSkillExecutionHistoryServiceTests : IDisposable
     }
 
     [Fact]
+    public void Record_RedactsSecretsFromPersistedSupportArtifact()
+    {
+        var service = new JsonSkillExecutionHistoryService(_historyFile);
+        var shellResult = new ShellCommandResult
+        {
+            Command = "curl -H \"Authorization: Bearer abc123\" https://example.test?api_key=secret",
+            StdOut = "stdout contains password=secret",
+            StdErr = "stderr contains sk-test-secret",
+            DurationMilliseconds = 10
+        };
+
+        service.Record(
+            SkillPlan.FromObject("shell.run", new
+            {
+                command = "curl https://example.test?api_key=secret",
+                apiKey = "sk-test-secret"
+            }),
+            SkillResult.Succeeded(
+                "Completed with Bearer abc123 and password=secret.",
+                shellResult));
+
+        var persisted = File.ReadAllText(_historyFile);
+        var recent = service.GetRecent().Should().ContainSingle().Subject;
+
+        persisted.Should().NotContain("sk-test-secret");
+        persisted.Should().NotContain("Bearer abc123");
+        persisted.Should().NotContain("password=secret");
+        persisted.Should().NotContain("api_key=secret");
+        persisted.Should().Contain("[redacted]");
+        recent.ResultSummary.Should().Contain("[redacted]");
+        recent.StdOut.Should().Contain("[redacted]");
+        recent.StdErr.Should().Contain("[redacted]");
+        recent.ReplayPlanJson.Should().Contain("[redacted]");
+    }
+
+    [Fact]
     public void Clear_RemovesPersistedEntriesAndRaisesChanged()
     {
         var service = new JsonSkillExecutionHistoryService(_historyFile);

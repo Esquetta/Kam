@@ -1,6 +1,7 @@
 using System.Text.Json;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Core.Security;
 
 namespace SmartVoiceAgent.Infrastructure.Skills.Planning;
 
@@ -51,6 +52,7 @@ public sealed class JsonSkillPlannerTraceStore : ISkillPlannerTraceStore
     public SkillPlannerTraceEntry Record(SkillPlannerTraceEntry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
+        var sanitizedEntry = Sanitize(entry);
 
         lock (_gate)
         {
@@ -62,11 +64,11 @@ public sealed class JsonSkillPlannerTraceStore : ISkillPlannerTraceStore
 
             File.AppendAllText(
                 _filePath,
-                JsonSerializer.Serialize(entry, JsonOptions) + Environment.NewLine);
+                JsonSerializer.Serialize(sanitizedEntry, JsonOptions) + Environment.NewLine);
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
-        return entry;
+        return sanitizedEntry;
     }
 
     public void Clear()
@@ -92,6 +94,26 @@ public sealed class JsonSkillPlannerTraceStore : ISkillPlannerTraceStore
         {
             return null;
         }
+    }
+
+    private static SkillPlannerTraceEntry Sanitize(SkillPlannerTraceEntry entry)
+    {
+        return new SkillPlannerTraceEntry
+        {
+            Id = entry.Id,
+            Timestamp = entry.Timestamp,
+            UserRequest = SecretRedactor.Redact(entry.UserRequest),
+            SystemPrompt = SecretRedactor.Redact(entry.SystemPrompt),
+            RawResponse = SecretRedactor.Redact(entry.RawResponse),
+            IsValid = entry.IsValid,
+            SkillId = entry.SkillId,
+            Confidence = entry.Confidence,
+            RequiresConfirmation = entry.RequiresConfirmation,
+            Reasoning = SecretRedactor.Redact(entry.Reasoning),
+            ErrorMessage = SecretRedactor.Redact(entry.ErrorMessage),
+            DurationMilliseconds = entry.DurationMilliseconds,
+            AvailableSkillCount = entry.AvailableSkillCount
+        };
     }
 
     private static string CreateDefaultPath()

@@ -557,7 +557,7 @@ In the launched app, check:
 
 Expected: no clipped buttons, no overlapping text, no legacy branding, no exposed secrets.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add src\Ui\SmartVoiceAgent.Ui\Views tests\SmartVoiceAgent.Tests\Ui
@@ -576,7 +576,7 @@ git push
 - Test: `tests/SmartVoiceAgent.Tests/Infrastructure/Skills/Planning/ModelSkillPlannerServiceTests.cs`
 - Test: `tests/SmartVoiceAgent.Tests/Infrastructure/Skills/Execution/JsonSkillExecutionHistoryServiceTests.cs`
 
-- [ ] **Step 1: Add redaction tests**
+- [x] **Step 1: Add redaction tests**
 
 Add tests that inject these values into logs, traces, and execution history:
 
@@ -593,23 +593,23 @@ report.Should().NotContain("Bearer abc123");
 report.Should().Contain("[redacted]");
 ```
 
-- [ ] **Step 2: Run red test**
+- [x] **Step 2: Run red test**
 
 ```powershell
 dotnet test tests\SmartVoiceAgent.Tests\SmartVoiceAgent.Tests.csproj --configuration Release --filter "FullyQualifiedName~RuntimeDiagnosticsViewModelTests|FullyQualifiedName~JsonSkillExecutionHistoryServiceTests|FullyQualifiedName~ModelSkillPlannerServiceTests"
 ```
 
-- [ ] **Step 3: Implement shared redaction helper if needed**
+- [x] **Step 3: Implement shared redaction helper if needed**
 
 Use one helper for readiness reports, planner traces, and history output. Keep raw secret values out of persisted support artifacts.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 ```powershell
 dotnet test tests\SmartVoiceAgent.Tests\SmartVoiceAgent.Tests.csproj --configuration Release --filter "FullyQualifiedName~RuntimeDiagnosticsViewModelTests|FullyQualifiedName~JsonSkillExecutionHistoryServiceTests|FullyQualifiedName~ModelSkillPlannerServiceTests"
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add src tests

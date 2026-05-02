@@ -614,6 +614,59 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task BuildReadinessReport_RedactsSecretsFromPlannerTraceAndSkillHistoryEvidence()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        settingsService.ModelProviderProfiles =
+        [
+            new ModelProviderProfile
+            {
+                Id = "planner",
+                Provider = ModelProviderType.OpenAI,
+                ApiKey = "sk-test-secret",
+                ModelId = "gpt-5.2",
+                Roles = [ModelProviderRole.Planner],
+                Enabled = true
+            }
+        ];
+        settingsService.ActivePlannerProfileId = "planner";
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            new StaticHostControl(isRunning: true),
+            skillExecutionHistoryService: new StaticSkillExecutionHistoryService(
+            [
+                new SkillExecutionHistoryEntry
+                {
+                    SkillId = "web.fetch",
+                    Status = SkillExecutionStatus.Failed,
+                    Success = false,
+                    ErrorCode = "http_error",
+                    ResultSummary = "Request failed with Bearer abc123 and password=secret.",
+                    DurationMilliseconds = 18
+                }
+            ]),
+            skillPlannerTraceStore: new StaticSkillPlannerTraceStore(
+            [
+                new SkillPlannerTraceEntry
+                {
+                    IsValid = false,
+                    ErrorMessage = "Planner returned api_key=secret and sk-test-secret.",
+                    DurationMilliseconds = 12
+                }
+            ]));
+
+        await viewModel.RefreshAsync();
+
+        var report = viewModel.BuildReadinessReport();
+
+        report.Should().NotContain("sk-test-secret");
+        report.Should().NotContain("Bearer abc123");
+        report.Should().NotContain("password=secret");
+        report.Should().NotContain("api_key=secret");
+        report.Should().Contain("[redacted]");
+    }
+
+    [Fact]
     public void CopyReadinessReportCommand_InvokesCopyCallbackWithSanitizedReport()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);

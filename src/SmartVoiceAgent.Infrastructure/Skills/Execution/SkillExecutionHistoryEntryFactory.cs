@@ -1,5 +1,6 @@
 using System.Text.Json;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Core.Security;
 
 namespace SmartVoiceAgent.Infrastructure.Skills.Execution;
 
@@ -36,21 +37,21 @@ internal static class SkillExecutionHistoryEntryFactory
             Timestamp = timestamp ?? DateTimeOffset.UtcNow,
             SkillId = plan.SkillId,
             ArgumentsSummary = SummarizeArguments(plan),
-            ReplayPlanJson = JsonSerializer.Serialize(plan, JsonOptions),
+            ReplayPlanJson = SecretRedactor.Redact(JsonSerializer.Serialize(plan, JsonOptions)),
             CanReplay = canReplay,
             ReplayBlockedReason = replayBlockedReason,
             Success = result.Success,
             Status = result.Status,
-            ErrorCode = result.ErrorCode,
-            ResultSummary = Limit(GetResultSummary(result), MaxResultSummaryLength),
+            ErrorCode = SecretRedactor.Redact(result.ErrorCode),
+            ResultSummary = Limit(SecretRedactor.Redact(GetResultSummary(result)), MaxResultSummaryLength),
             DurationMilliseconds = result.DurationMilliseconds > 0
                 ? result.DurationMilliseconds
                 : shellResult?.DurationMilliseconds ?? 0,
-            Command = shellResult?.Command ?? string.Empty,
-            WorkingDirectory = shellResult?.WorkingDirectory ?? string.Empty,
+            Command = SecretRedactor.Redact(shellResult?.Command),
+            WorkingDirectory = SecretRedactor.Redact(shellResult?.WorkingDirectory),
             ExitCode = shellResult?.ExitCode,
-            StdOut = Limit(shellResult?.StdOut ?? string.Empty, MaxOutputLength),
-            StdErr = Limit(shellResult?.StdErr ?? string.Empty, MaxOutputLength),
+            StdOut = Limit(SecretRedactor.Redact(shellResult?.StdOut), MaxOutputLength),
+            StdErr = Limit(SecretRedactor.Redact(shellResult?.StdErr), MaxOutputLength),
             TimedOut = shellResult?.TimedOut ?? result.Status == SkillExecutionStatus.TimedOut,
             Cancelled = shellResult?.Cancelled ?? result.Status == SkillExecutionStatus.Cancelled,
             Truncated = shellResult?.Truncated ?? false
@@ -114,14 +115,14 @@ internal static class SkillExecutionHistoryEntryFactory
 
         return value.ValueKind switch
         {
-            JsonValueKind.String => Limit(value.GetString() ?? string.Empty, MaxArgumentValueLength),
+            JsonValueKind.String => Limit(SecretRedactor.Redact(value.GetString()), MaxArgumentValueLength),
             JsonValueKind.Number => value.GetRawText(),
             JsonValueKind.True => "true",
             JsonValueKind.False => "false",
             JsonValueKind.Null => "null",
             JsonValueKind.Array => $"array[{value.GetArrayLength()}]",
             JsonValueKind.Object => "object",
-            _ => value.GetRawText()
+            _ => SecretRedactor.Redact(value.GetRawText())
         };
     }
 
