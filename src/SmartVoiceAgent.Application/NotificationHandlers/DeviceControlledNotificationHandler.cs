@@ -1,5 +1,4 @@
 using Core.CrossCuttingConcerns.Logging.Serilog;
-using MediatR;
 using SmartVoiceAgent.Application.Notifications;
 
 namespace SmartVoiceAgent.Application.NotificationHandlers

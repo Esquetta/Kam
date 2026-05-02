@@ -1,5 +1,4 @@
 using FluentAssertions;
-using MediatR;
 using Moq;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Application.Handlers;
@@ -43,7 +42,7 @@ namespace SmartVoiceAgent.Tests.Application.Handlers
                 .ReturnsAsync(true);
 
             _mediatorMock
-                .Setup(m => m.Publish(It.IsAny<MessageSentNotification>(), It.IsAny<CancellationToken>()))
+                .Setup(m => m.PublishAsync(It.IsAny<MessageSentNotification>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
 
             // Act
@@ -59,7 +58,7 @@ namespace SmartVoiceAgent.Tests.Application.Handlers
                 Times.Once);
 
             _mediatorMock.Verify(
-                m => m.Publish(
+                m => m.PublishAsync(
                     It.Is<MessageSentNotification>(n => n.Recipient == recipient && n.Message == message),
                     It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -89,7 +88,7 @@ namespace SmartVoiceAgent.Tests.Application.Handlers
             result.Message.Should().Contain("Failed to send");
 
             _mediatorMock.Verify(
-                m => m.Publish(It.IsAny<MessageSentNotification>(), It.IsAny<CancellationToken>()),
+                m => m.PublishAsync(It.IsAny<MessageSentNotification>(), It.IsAny<CancellationToken>()),
                 Times.Never);
         }
 

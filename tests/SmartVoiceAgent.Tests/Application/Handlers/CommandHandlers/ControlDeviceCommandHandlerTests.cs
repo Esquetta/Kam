@@ -1,5 +1,4 @@
 using FluentAssertions;
-using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using SmartVoiceAgent.Application.Commands;
@@ -538,7 +537,7 @@ namespace SmartVoiceAgent.Tests.Application.Handlers.CommandHandlers
             await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            _mediatorMock.Verify(m => m.Publish(
+            _mediatorMock.Verify(m => m.PublishAsync(
                 It.Is<DeviceControlledNotification>(n => 
                     n.DeviceName == "volume" && 
                     n.Action == "increase" &&

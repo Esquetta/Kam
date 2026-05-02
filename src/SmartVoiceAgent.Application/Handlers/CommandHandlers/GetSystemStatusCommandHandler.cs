@@ -1,4 +1,3 @@
-using MediatR;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Entities;
 using SmartVoiceAgent.Core.Interfaces;
@@ -6,7 +5,7 @@ using System.Text.Json;
 
 namespace SmartVoiceAgent.Application.Handlers.CommandHandlers;
 
-public sealed class GetSystemStatusCommandHandler : IRequestHandler<GetSystemStatusCommand, CommandResult>
+public sealed class GetSystemStatusCommandHandler : ICommandHandler<GetSystemStatusCommand, CommandResult>
 {
     private readonly ISystemControlServiceFactory _systemControlFactory;
 

@@ -73,17 +73,17 @@ public static class ServiceCollectionExtensions
             return new SmartAgentOrchestrator(registry, logger, uiLogService);
         });
 
-        services.AddSingleton<SystemAgentTools>();
+        services.AddScoped<SystemAgentTools>();
         services.AddSingleton<TaskAgentTools>();
         services.AddScoped<WebSearchAgentTools>();
         services.AddSingleton<FileAgentTools>();
-        services.AddSingleton<CommunicationAgentTools>();
+        services.AddScoped<CommunicationAgentTools>();
         services.AddSingleton<ClipboardTools>();
         services.AddSingleton<SystemInformationTools>();
-        services.AddSingleton<ISkillExecutor, SystemAgentSkillExecutor>();
+        services.AddScoped<ISkillExecutor, SystemAgentSkillExecutor>();
         services.AddSingleton<ISkillExecutor, FileSkillExecutor>();
         services.AddScoped<ISkillExecutor, WebSearchSkillExecutor>();
-        services.AddSingleton<ISkillExecutor, CommunicationSkillExecutor>();
+        services.AddScoped<ISkillExecutor, CommunicationSkillExecutor>();
         services.AddSingleton<ISkillExecutor, ClipboardSkillExecutor>();
         services.AddSingleton<ISkillExecutor, SystemInformationSkillExecutor>();
         services.AddScoped<ISkillExecutor, ShellSkillExecutor>();

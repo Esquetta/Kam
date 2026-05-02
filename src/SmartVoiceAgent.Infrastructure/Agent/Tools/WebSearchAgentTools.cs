@@ -1,5 +1,4 @@
 using AgentFrameworkToolkit.Tools;
-using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.AI;
 using SmartVoiceAgent.Application.Commands;
@@ -48,7 +47,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             {
                 if (openResults)
                 {
-                    var result = await _mediator.Send(new SearchWebCommand(query, lang, results));
+                    var result = await _mediator.SendAsync(new SearchWebCommand(query, lang, results));
                     return result?.ToString() ?? $"No results found for '{query}'.";
                 }
 

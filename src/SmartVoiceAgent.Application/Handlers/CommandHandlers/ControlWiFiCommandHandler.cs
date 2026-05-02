@@ -1,10 +1,9 @@
-﻿using MediatR;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Entities;
 using SmartVoiceAgent.Core.Interfaces;
 
 namespace SmartVoiceAgent.Application.Handlers.CommandHandlers;
-public sealed class ControlWiFiCommandHandler : IRequestHandler<ControlWiFiCommand, CommandResult>
+public sealed class ControlWiFiCommandHandler : ICommandHandler<ControlWiFiCommand, CommandResult>
 {
     private readonly ISystemControlServiceFactory _systemControlFactory;
 

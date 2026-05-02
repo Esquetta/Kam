@@ -1,5 +1,4 @@
 using FluentAssertions;
-using MediatR;
 using Moq;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;

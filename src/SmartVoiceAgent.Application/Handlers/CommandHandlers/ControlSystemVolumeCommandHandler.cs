@@ -1,10 +1,9 @@
-﻿using MediatR;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Entities;
 using SmartVoiceAgent.Core.Interfaces;
 
 namespace SmartVoiceAgent.Application.Handlers.CommandHandlers;
-public sealed class ControlSystemVolumeCommandHandler : IRequestHandler<ControlSystemVolumeCommand, CommandResult>
+public sealed class ControlSystemVolumeCommandHandler : ICommandHandler<ControlSystemVolumeCommand, CommandResult>
 {
     private readonly ISystemControlServiceFactory _systemControlFactory;
 

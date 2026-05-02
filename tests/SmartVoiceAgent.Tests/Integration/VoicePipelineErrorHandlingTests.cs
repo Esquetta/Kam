@@ -1,5 +1,4 @@
 using FluentAssertions;
-using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -285,7 +284,7 @@ namespace SmartVoiceAgent.Tests.Integration
 
         #region Test Classes
 
-        public class TestRequest : IRequest<TestResponse> { }
+        public class TestRequest : ICommand<TestResponse> { }
         public class TestResponse 
         { 
             public string Data { get; set; } = ""; 

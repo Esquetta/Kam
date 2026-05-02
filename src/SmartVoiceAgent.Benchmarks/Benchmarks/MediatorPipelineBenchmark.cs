@@ -1,6 +1,6 @@
 using BenchmarkDotNet.Attributes;
-using MediatR;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Application.Handlers;
@@ -8,7 +8,6 @@ using SmartVoiceAgent.Application.Behaviors.Performance;
 using SmartVoiceAgent.Application.Behaviors.Logging;
 using SmartVoiceAgent.Application.Behaviors.Validation;
 using SmartVoiceAgent.Application.Pipelines.Caching;
-using SmartVoiceAgent.Application.Pipelines.Performance;
 using Core.CrossCuttingConcerns.Logging.Serilog;
 
 namespace SmartVoiceAgent.Benchmarks.Benchmarks;
@@ -24,22 +23,20 @@ public class MediatorPipelineBenchmark
     {
         var services = new ServiceCollection();
 
-        // Register MediatR
-        services.AddMediatR(cfg =>
+        // Register Cortex.Mediator
+        services.AddCortexMediator(new[] { typeof(PlayMusicCommand), typeof(PlayMusicCommandHandler) }, options =>
         {
-            cfg.RegisterServicesFromAssemblyContaining<PlayMusicCommand>();
-            cfg.RegisterServicesFromAssemblyContaining<PlayMusicCommandHandler>();
+            options.AddOpenCommandPipelineBehavior(typeof(RequestValidationBehavior<,>));
+            options.AddOpenCommandPipelineBehavior(typeof(PerformanceBehavior<,>));
+            options.AddOpenCommandPipelineBehavior(typeof(LoggingBehavior<,>));
+            options.AddOpenCommandPipelineBehavior(typeof(CachingBehavior<,>));
         });
-
-        // Register pipelines
-        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(RequestValidationBehavior<,>));
-        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(PerformanceBehavior<,>));
-        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
-        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(CachingBehavior<,>));
 
         // Register services
         services.AddSingleton<LoggerServiceBase, DummyLogger>();
         services.AddSingleton<ICacheService, DummyCacheService>();
+        services.AddSingleton<IMusicService, DummyMusicService>();
+        services.AddDistributedMemoryCache();
         
         // Configuration - use environment variables or empty config for benchmarks
         var configuration = new ConfigurationBuilder()
@@ -61,7 +58,7 @@ public class MediatorPipelineBenchmark
     public async Task Send_PlayMusicCommand()
     {
         var command = new PlayMusicCommand("Metallica");
-        await _mediator.Send(command);
+        await _mediator.SendAsync(command);
     }
 }
 
@@ -89,4 +86,13 @@ public class DummyCacheService : ICacheService
     public Task RemoveAsync(string key, CancellationToken cancellationToken = default) => Task.CompletedTask;
     public Task RemoveGroupAsync(string groupKey, CancellationToken cancellationToken = default) => Task.CompletedTask;
     public Task<bool> AnyAsync(string key, CancellationToken cancellationToken = default) => Task.FromResult(false);
+}
+
+public class DummyMusicService : IMusicService
+{
+    public Task PlayMusicAsync(string filePath, bool loop = false, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task PauseMusicAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task ResumeMusicAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task StopMusicAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task SetVolumeAsync(float volume, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

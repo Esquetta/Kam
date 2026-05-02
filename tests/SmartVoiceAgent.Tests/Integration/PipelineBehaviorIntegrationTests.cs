@@ -1,17 +1,15 @@
 using FluentAssertions;
-using MediatR;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using SmartVoiceAgent.Application.Behaviors.Performance;
 using SmartVoiceAgent.Application.Pipelines.Caching;
-using SmartVoiceAgent.Core.Contracts;
 using System.Text.Json;
 
 namespace SmartVoiceAgent.Tests.Integration
 {
     /// <summary>
-    /// Integration tests for MediatR pipeline behaviors (Caching, Performance, Validation)
+    /// Integration tests for Cortex.Mediator pipeline behaviors (Caching, Performance, Validation)
     /// </summary>
     public class PipelineBehaviorIntegrationTests
     {
@@ -46,8 +44,8 @@ namespace SmartVoiceAgent.Tests.Integration
 
             // Act - First call (cache miss)
             var handler = new TestCachedRequestHandler();
-            var next = new RequestHandlerDelegate<TestCachedResponse>(ct => handler.Handle(
-                new TestCachedRequest { CacheKey = cacheKey }, ct));
+            var next = new CommandHandlerDelegate<TestCachedResponse>(() => handler.Handle(
+                new TestCachedRequest { CacheKey = cacheKey }, CancellationToken.None));
 
             // Simulate cache hit on second call
             _mockCache.Setup(c => c.GetAsync(cacheKey, It.IsAny<CancellationToken>()))
@@ -154,32 +152,32 @@ namespace SmartVoiceAgent.Tests.Integration
             var executionOrder = new List<string>();
 
             // Simulate behavior chain
-            async Task<TestResponse> Behavior1(RequestHandlerDelegate<TestResponse> next, CancellationToken ct)
+            async Task<TestResponse> Behavior1(CommandHandlerDelegate<TestResponse> next, CancellationToken ct)
             {
                 executionOrder.Add("Behavior1-Before");
-                var result = await next(ct);
+                var result = await next();
                 executionOrder.Add("Behavior1-After");
                 return result;
             }
 
-            async Task<TestResponse> Behavior2(RequestHandlerDelegate<TestResponse> next, CancellationToken ct)
+            async Task<TestResponse> Behavior2(CommandHandlerDelegate<TestResponse> next, CancellationToken ct)
             {
                 executionOrder.Add("Behavior2-Before");
-                var result = await next(ct);
+                var result = await next();
                 executionOrder.Add("Behavior2-After");
                 return result;
             }
 
             // Act
-            RequestHandlerDelegate<TestResponse> handler = ct => Task.FromResult(new TestResponse());
+            CommandHandlerDelegate<TestResponse> handler = () => Task.FromResult(new TestResponse());
             
             // Build the pipeline: Behavior2 wraps Behavior1 which wraps handler
             async Task<TestResponse> Pipeline(CancellationToken ct)
             {
                 return await Behavior2(
-                    async ct2 => await Behavior1(
-                        async ct3 => await handler(ct3), 
-                        ct2), 
+                    async () => await Behavior1(
+                        async () => await handler(),
+                        ct),
                     ct);
             }
             
@@ -251,13 +249,13 @@ namespace SmartVoiceAgent.Tests.Integration
         public async Task Pipeline_ExceptionInHandler_BubblesUp()
         {
             // Arrange
-            RequestHandlerDelegate<TestResponse> failingHandler = ct => 
+            CommandHandlerDelegate<TestResponse> failingHandler = () =>
                 throw new InvalidOperationException("Handler failed");
 
             // Act & Assert
             await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             {
-                await failingHandler(CancellationToken.None);
+                await failingHandler();
             });
         }
 
@@ -265,9 +263,9 @@ namespace SmartVoiceAgent.Tests.Integration
         public async Task Pipeline_ExceptionInBehavior_BubblesUp()
         {
             // Arrange
-            RequestHandlerDelegate<TestResponse> handler = ct => Task.FromResult(new TestResponse());
+            CommandHandlerDelegate<TestResponse> handler = () => Task.FromResult(new TestResponse());
             
-            RequestHandlerDelegate<TestResponse> failingBehavior = async ct =>
+            CommandHandlerDelegate<TestResponse> failingBehavior = async () =>
             {
                 throw new InvalidOperationException("Behavior failed");
             };
@@ -275,7 +273,7 @@ namespace SmartVoiceAgent.Tests.Integration
             // Act & Assert
             await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             {
-                await failingBehavior(CancellationToken.None);
+                await failingBehavior();
             });
         }
 
@@ -317,10 +315,10 @@ namespace SmartVoiceAgent.Tests.Integration
 
         #region Test Classes
 
-        public class TestRequest : IRequest<TestResponse> { }
+        public class TestRequest : ICommand<TestResponse> { }
         public class TestResponse { public string Data { get; set; } = ""; }
 
-        public class TestCachedRequest : IRequest<TestCachedResponse>, ICachableRequest
+        public class TestCachedRequest : ICommand<TestCachedResponse>, ICachableRequest
         {
             public string CacheKey { get; set; } = "";
             public bool BypassCache { get; set; }
@@ -335,7 +333,7 @@ namespace SmartVoiceAgent.Tests.Integration
             public int Count { get; set; }
         }
 
-        public class TestCachedRequestHandler : IRequestHandler<TestCachedRequest, TestCachedResponse>
+        public class TestCachedRequestHandler : ICommandHandler<TestCachedRequest, TestCachedResponse>
         {
             public Task<TestCachedResponse> Handle(TestCachedRequest request, CancellationToken cancellationToken)
             {
@@ -343,7 +341,7 @@ namespace SmartVoiceAgent.Tests.Integration
             }
         }
 
-        public class SlowRequestHandler : IRequestHandler<TestRequest, TestResponse>
+        public class SlowRequestHandler : ICommandHandler<TestRequest, TestResponse>
         {
             public async Task<TestResponse> Handle(TestRequest request, CancellationToken cancellationToken)
             {
@@ -352,7 +350,7 @@ namespace SmartVoiceAgent.Tests.Integration
             }
         }
 
-        public class FastRequestHandler : IRequestHandler<TestRequest, TestResponse>
+        public class FastRequestHandler : ICommandHandler<TestRequest, TestResponse>
         {
             public Task<TestResponse> Handle(TestRequest request, CancellationToken cancellationToken)
             {

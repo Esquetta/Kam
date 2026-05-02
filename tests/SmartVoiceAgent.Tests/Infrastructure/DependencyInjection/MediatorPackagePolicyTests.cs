@@ -6,7 +6,7 @@ namespace SmartVoiceAgent.Tests.Infrastructure.DependencyInjection;
 public class MediatorPackagePolicyTests
 {
     [Fact]
-    public void ProjectFiles_DoNotReferenceLuckyPennyMediatR()
+    public void ProjectFiles_UseCortexMediatorWithoutMediatR()
     {
         var repositoryRoot = FindRepositoryRoot();
         var projectFiles = Directory.GetFiles(repositoryRoot, "*.csproj", SearchOption.AllDirectories)
@@ -14,28 +14,35 @@ public class MediatorPackagePolicyTests
                 && !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
             .ToArray();
 
-        var blockedReferences = projectFiles
-            .SelectMany(ReadMediatRReferences)
-            .Where(reference => reference.Version.Major >= 13)
-            .Select(reference => $"{Path.GetRelativePath(repositoryRoot, reference.ProjectPath)} -> MediatR {reference.Version}")
+        var mediatRReferences = projectFiles
+            .SelectMany(projectPath => ReadPackageReferences(projectPath, "MediatR"))
+            .Select(reference => $"{Path.GetRelativePath(repositoryRoot, reference.ProjectPath)} -> {reference.PackageName} {reference.Version}")
             .ToArray();
 
-        blockedReferences.Should().BeEmpty(
-            "MediatR 13+ emits LuckyPenny production license warnings; production builds must use the pinned free package line or a fully migrated free mediator");
+        mediatRReferences.Should().BeEmpty(
+            "production builds should use Cortex.Mediator instead of any MediatR package line");
+
+        var cortexReferences = projectFiles
+            .SelectMany(projectPath => ReadPackageReferences(projectPath, "Cortex.Mediator"))
+            .ToArray();
+
+        cortexReferences.Should().NotBeEmpty(
+            "the application mediator pipeline should be backed by the selected free Cortex.Mediator package");
     }
 
-    private static IEnumerable<MediatRReference> ReadMediatRReferences(string projectPath)
+    private static IEnumerable<PackageReference> ReadPackageReferences(string projectPath, string packageName)
     {
         var document = XDocument.Load(projectPath);
         return document
             .Descendants("PackageReference")
             .Where(element => string.Equals(
                 (string?)element.Attribute("Include"),
-                "MediatR",
+                packageName,
                 StringComparison.OrdinalIgnoreCase))
-            .Select(element => new MediatRReference(
+            .Select(element => new PackageReference(
                 projectPath,
-                Version.Parse((string?)element.Attribute("Version") ?? "0.0.0")));
+                packageName,
+                (string?)element.Attribute("Version") ?? string.Empty));
     }
 
     private static string FindRepositoryRoot()
@@ -54,5 +61,5 @@ public class MediatorPackagePolicyTests
         throw new DirectoryNotFoundException("Could not locate repository root.");
     }
 
-    private sealed record MediatRReference(string ProjectPath, Version Version);
+    private sealed record PackageReference(string ProjectPath, string PackageName, string Version);
 }

@@ -1,4 +1,3 @@
-﻿using MediatR;
 using SmartVoiceAgent.Application.Pipelines.Caching;
 using SmartVoiceAgent.Application.Pipelines.Performance;
 
@@ -8,7 +7,7 @@ namespace SmartVoiceAgent.Application.Commands
     /// Close process given application name.
     /// </summary>
     /// <param name="ApplicationName"></param>
-    public record CloseApplicationCommand(string ApplicationName):IRequest<CommandResultDTO>, ICachableRequest, IIntervalRequest
+    public record CloseApplicationCommand(string ApplicationName):ICommand<CommandResultDTO>, ICachableRequest, IIntervalRequest
     {
         // Caching
         public string CacheKey => $"CloseApplication-{ApplicationName}";

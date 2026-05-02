@@ -1,9 +1,8 @@
-﻿using MediatR;
 using SmartVoiceAgent.Application.Pipelines.Caching;
 using SmartVoiceAgent.Application.Pipelines.Performance;
 
 public record PlayMusicCommand(string TrackName)
-    : IRequest<CommandResultDTO>,ICachableRequest,IIntervalRequest
+    : ICommand<CommandResultDTO>,ICachableRequest,IIntervalRequest
 {
     // Caching
     public string CacheKey => $"PlayMusic-{TrackName}";

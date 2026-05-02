@@ -1,10 +1,9 @@
-﻿using MediatR;
 using SmartVoiceAgent.Application.Pipelines.Caching;
 using SmartVoiceAgent.Application.Pipelines.Performance;
 
 namespace SmartVoiceAgent.Application.Commands;
 public record SearchWebCommand(string Query,string lang,int results)
-    : IRequest<CommandResultDTO>, ICachableRequest, IIntervalRequest
+    : ICommand<CommandResultDTO>, ICachableRequest, IIntervalRequest
 {
     // Caching
     public string CacheKey => $"SearchWeb-{Query}";

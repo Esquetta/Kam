@@ -1,5 +1,4 @@
-﻿using AgentFrameworkToolkit.Tools;
-using MediatR;
+using AgentFrameworkToolkit.Tools;
 using Microsoft.Extensions.AI;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Commands;
@@ -43,7 +42,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
 
             try
             {
-                var result = await _mediator.Send(new OpenApplicationCommand(applicationName));
+                var result = await _mediator.SendAsync(new OpenApplicationCommand(applicationName));
                 _contextManager.SetApplicationState(applicationName, true);
                 _contextManager.UpdateContext("app_open", applicationName, "Success");
                 return $"{applicationName} başarıyla başlatıldı.";
@@ -69,7 +68,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
 
             try
             {
-                await _mediator.Send(new CloseApplicationCommand(applicationName));
+                await _mediator.SendAsync(new CloseApplicationCommand(applicationName));
                 _contextManager.SetApplicationState(applicationName, false);
                 _contextManager.UpdateContext("app_close", applicationName, "Success");
                 return $"{applicationName} başarıyla kapatıldı.";
@@ -87,7 +86,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
         {
             try
             {
-                var result = await _mediator.Send(new CheckApplicationCommand(applicationName));
+                var result = await _mediator.SendAsync(new CheckApplicationCommand(applicationName));
                 return result?.ToString() ?? $"{applicationName} hakkında bilgi bulunamadı.";
             }
             catch (Exception ex)
@@ -101,7 +100,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
         {
             try
             {
-                var result = await _mediator.Send(new GetApplicationPathCommand(applicationName));
+                var result = await _mediator.SendAsync(new GetApplicationPathCommand(applicationName));
                 return result?.ToString() ?? $"{applicationName} için dosya yolu bulunamadı.";
             }
             catch (Exception ex)
@@ -115,7 +114,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
         {
             try
             {
-                var result = await _mediator.Send(new IsApplicationRunningCommand(applicationName));
+                var result = await _mediator.SendAsync(new IsApplicationRunningCommand(applicationName));
                 return result.ToString();
             }
             catch (Exception ex)
@@ -129,7 +128,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
         {
             try
             {
-                var result = await _mediator.Send(new ListInstalledApplicationsCommand(includeSystemApps));
+                var result = await _mediator.SendAsync(new ListInstalledApplicationsCommand(includeSystemApps));
                 return result?.ToString() ?? "Yüklü uygulama listesi boş.";
             }
             catch (Exception ex)
@@ -148,7 +147,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
         {
             try
             {
-                var result = await _mediator.Send(new PlayMusicCommand(trackName));
+                var result = await _mediator.SendAsync(new PlayMusicCommand(trackName));
                 _contextManager.UpdateContext("music_play", trackName, "Started");
                 return result?.ToString() ?? $"{trackName} çalınmaya başlandı.";
             }
@@ -169,7 +168,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
         {
             try
             {
-                var result = await _mediator.Send(new ControlDeviceCommand(deviceName, action));
+                var result = await _mediator.SendAsync(new ControlDeviceCommand(deviceName, action));
                 return result?.ToString() ?? $"{deviceName} üzerinde {action} işlemi uygulandı.";
             }
             catch (Exception ex)

@@ -1,5 +1,4 @@
 using AgentFrameworkToolkit.Tools;
-using MediatR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -73,7 +72,7 @@ public class CommunicationAgentTools
                 // Publish notification if mediator is available
                 if (_mediator != null)
                 {
-                    await _mediator.Publish(new MessageSentNotification(to, body));
+                    await _mediator.PublishAsync(new MessageSentNotification(to, body));
                 }
 
                 _logger?.LogInformation("✅ Email sent successfully to {To}", to);

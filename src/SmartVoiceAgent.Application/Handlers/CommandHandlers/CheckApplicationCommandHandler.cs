@@ -1,4 +1,3 @@
-﻿using MediatR;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Dtos;
 using SmartVoiceAgent.Core.Interfaces;
@@ -6,7 +5,7 @@ using System.Diagnostics;
 
 namespace SmartVoiceAgent.Application.Handlers.CommandHandlers;
 
-public sealed class CheckApplicationCommandHandler : IRequestHandler<CheckApplicationCommand, AgentApplicationResponse>
+public sealed class CheckApplicationCommandHandler : ICommandHandler<CheckApplicationCommand, AgentApplicationResponse>
 {
     private readonly IApplicationScannerServiceFactory _scannerFactory;
 

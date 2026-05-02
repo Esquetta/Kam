@@ -1,4 +1,3 @@
-using MediatR;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Entities;
 using SmartVoiceAgent.Core.Interfaces;
@@ -6,7 +5,7 @@ using System.Text.Json;
 
 namespace SmartVoiceAgent.Application.Handlers.CommandHandlers;
 
-public sealed class ListInstalledApplicationsCommandHandler : IRequestHandler<ListInstalledApplicationsCommand, CommandResult>
+public sealed class ListInstalledApplicationsCommandHandler : ICommandHandler<ListInstalledApplicationsCommand, CommandResult>
 {
     private readonly IApplicationScannerServiceFactory _scannerFactory;
 

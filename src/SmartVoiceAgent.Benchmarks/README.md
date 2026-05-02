@@ -26,7 +26,7 @@ dotnet run --configuration Release -- memory
 | Services | `services` or `4` | Music, UI components |
 | Memory | `memory` or `5` | Memory allocation patterns |
 | Serialization | `serialization` or `6` | JSON serialization performance |
-| Mediator | `mediator` or `7` | MediatR pipeline |
+| Mediator | `mediator` or `7` | Cortex.Mediator pipeline |
 
 ## Benchmark Suites
 
@@ -90,7 +90,7 @@ Tests JSON serialization:
 
 ### 8. MediatorPipelineBenchmark
 
-Tests MediatR pipeline with behaviors:
+Tests Cortex.Mediator pipeline with behaviors:
 - `Send_PlayMusicCommand` - Full pipeline execution
 
 ## Understanding Results

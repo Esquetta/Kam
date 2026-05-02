@@ -1,5 +1,4 @@
 using FluentAssertions;
-using MediatR;
 using Moq;
 using SmartVoiceAgent.Application.Handlers;
 using SmartVoiceAgent.Application.Notifications;
@@ -35,7 +34,7 @@ namespace SmartVoiceAgent.Tests.Application.Commands
                 .Returns(Task.CompletedTask);
 
             _mediatorMock
-                .Setup(m => m.Publish(It.IsAny<MusicPlayedNotification>(), It.IsAny<CancellationToken>()))
+                .Setup(m => m.PublishAsync(It.IsAny<MusicPlayedNotification>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
 
             // Act
@@ -51,7 +50,7 @@ namespace SmartVoiceAgent.Tests.Application.Commands
                 Times.Once);
 
             _mediatorMock.Verify(
-                m => m.Publish(
+                m => m.PublishAsync(
                     It.Is<MusicPlayedNotification>(n => n.SongName == trackName),
                     It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -95,7 +94,7 @@ namespace SmartVoiceAgent.Tests.Application.Commands
             await act.Should().ThrowAsync<InvalidOperationException>();
 
             _mediatorMock.Verify(
-                m => m.Publish(It.IsAny<MusicPlayedNotification>(), It.IsAny<CancellationToken>()),
+                m => m.PublishAsync(It.IsAny<MusicPlayedNotification>(), It.IsAny<CancellationToken>()),
                 Times.Never);
         }
 

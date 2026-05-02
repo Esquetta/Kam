@@ -1,45 +1,85 @@
-﻿using Core.CrossCuttingConcerns.Logging.Serilog;
-using MediatR;
+using Core.CrossCuttingConcerns.Logging.Serilog;
 using System.Diagnostics;
 
-namespace SmartVoiceAgent.Application.Behaviors.Performance
+namespace SmartVoiceAgent.Application.Behaviors.Performance;
+
+public class PerformanceBehavior<TRequest, TResponse> :
+    ICommandPipelineBehavior<TRequest, TResponse>
+    where TRequest : ICommand<TResponse>
 {
-    public class PerformanceBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-        where TRequest : IRequest<TResponse>
+    private readonly LoggerServiceBase _loggerService;
+
+    public PerformanceBehavior(LoggerServiceBase loggerService)
     {
-        private readonly LoggerServiceBase _loggerService;
+        _loggerService = loggerService;
+    }
 
-        public PerformanceBehavior(LoggerServiceBase loggerService)
+    public Task<TResponse> Handle(TRequest request, CommandHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    {
+        return HandleCore(request, next.Invoke, cancellationToken);
+    }
+
+    private async Task<TResponse> HandleCore(TRequest request, Func<Task<TResponse>> next, CancellationToken cancellationToken)
+    {
+        var stopwatch = Stopwatch.StartNew();
+
+        try
         {
-            _loggerService = loggerService;
+            return await next();
         }
-
-        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+        finally
         {
-            // Create a new Stopwatch instance per request to ensure thread safety
-            var stopwatch = Stopwatch.StartNew();
+            stopwatch.Stop();
+            var elapsedTime = stopwatch.ElapsedMilliseconds;
 
-            try
+            if (elapsedTime > 500)
             {
-                var response = await next();
-                return response;
+                _loggerService.Warn($"Performance Alert: {typeof(TRequest).Name} took {elapsedTime} ms.");
             }
-            finally
+            else
             {
-                stopwatch.Stop();
-                var elapsedTime = stopwatch.ElapsedMilliseconds;
+                _loggerService.Info($"Performance: {typeof(TRequest).Name} took {elapsedTime} ms.");
+            }
+        }
+    }
+}
 
-                // Log performance information
-                if (elapsedTime > 500) // ms cinsinden, threshold configurable yapılabilir.
-                {
-                    _loggerService.Warn(
-                        $"Performance Alert: {typeof(TRequest).Name} took {elapsedTime} ms.");
-                }
-                else
-                {
-                    _loggerService.Info(
-                        $"Performance: {typeof(TRequest).Name} took {elapsedTime} ms.");
-                }
+public class PerformanceQueryBehavior<TRequest, TResponse> :
+    IQueryPipelineBehavior<TRequest, TResponse>
+    where TRequest : IQuery<TResponse>
+{
+    private readonly LoggerServiceBase _loggerService;
+
+    public PerformanceQueryBehavior(LoggerServiceBase loggerService)
+    {
+        _loggerService = loggerService;
+    }
+
+    public Task<TResponse> Handle(TRequest request, QueryHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    {
+        return HandleCore(request, next.Invoke, cancellationToken);
+    }
+
+    private async Task<TResponse> HandleCore(TRequest request, Func<Task<TResponse>> next, CancellationToken cancellationToken)
+    {
+        var stopwatch = Stopwatch.StartNew();
+
+        try
+        {
+            return await next();
+        }
+        finally
+        {
+            stopwatch.Stop();
+            var elapsedTime = stopwatch.ElapsedMilliseconds;
+
+            if (elapsedTime > 500)
+            {
+                _loggerService.Warn($"Performance Alert: {typeof(TRequest).Name} took {elapsedTime} ms.");
+            }
+            else
+            {
+                _loggerService.Info($"Performance: {typeof(TRequest).Name} took {elapsedTime} ms.");
             }
         }
     }

@@ -1,4 +1,3 @@
-﻿using MediatR;
 
 namespace SmartVoiceAgent.Application.Notifications;
 

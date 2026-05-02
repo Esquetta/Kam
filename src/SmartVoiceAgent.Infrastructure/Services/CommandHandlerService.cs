@@ -1,6 +1,6 @@
-using MediatR;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Commands;
+using SmartVoiceAgent.Core.Dtos;
 using SmartVoiceAgent.Core.Entities;
 using SmartVoiceAgent.Core.Enums;
 using SmartVoiceAgent.Core.Interfaces;
@@ -85,7 +85,7 @@ public class CommandHandlerService : ICommandHandlerService
                 _commandMappings.TryGetValue(commandType, out var commandFactory))
             {
                 var command = await commandFactory(request);
-                var result = await _mediator.Send(command);
+                var result = await SendDynamicCommandAsync(command);
 
                 return new CommandResult
                 {
@@ -175,6 +175,17 @@ public class CommandHandlerService : ICommandHandlerService
                 ExtractEntity(req.Entities, "deviceName") ?? ExtractDeviceFromText(req.OriginalText),
                 ExtractEntity(req.Entities, "action") ?? ExtractActionFromText(req.OriginalText)
             )
+        };
+    }
+
+    private async Task<object?> SendDynamicCommandAsync(object command)
+    {
+        return command switch
+        {
+            ICommand<CommandResultDTO> typedCommand => await _mediator.SendAsync(typedCommand),
+            ICommand<CommandResult> typedCommand => await _mediator.SendAsync(typedCommand),
+            ICommand<AgentApplicationResponse> typedCommand => await _mediator.SendAsync(typedCommand),
+            _ => throw new InvalidOperationException($"Unsupported command type: {command.GetType().Name}")
         };
     }
 

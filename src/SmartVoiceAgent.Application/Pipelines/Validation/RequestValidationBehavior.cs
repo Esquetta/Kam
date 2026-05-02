@@ -1,36 +1,78 @@
-﻿using Core.CrossCuttingConcerns.Exceptions.Types;
+using Core.CrossCuttingConcerns.Exceptions.Types;
 using FluentValidation;
-using MediatR;
 using ValidationException = Core.CrossCuttingConcerns.Exceptions.Types.ValidationException;
-namespace SmartVoiceAgent.Application.Behaviors.Validation
+
+namespace SmartVoiceAgent.Application.Behaviors.Validation;
+
+public class RequestValidationBehavior<TRequest, TResponse> :
+    ICommandPipelineBehavior<TRequest, TResponse>
+    where TRequest : ICommand<TResponse>
 {
-    public class RequestValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-        where TRequest : notnull
+    private readonly IEnumerable<IValidator<TRequest>> _validators;
+
+    public RequestValidationBehavior(IEnumerable<IValidator<TRequest>> validators)
     {
-        private readonly IEnumerable<IValidator<TRequest>> _validators;
-        public RequestValidationBehavior(IEnumerable<IValidator<TRequest>> validators)
+        _validators = validators;
+    }
+
+    public Task<TResponse> Handle(TRequest request, CommandHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    {
+        return HandleCore(request, next.Invoke, cancellationToken);
+    }
+
+    private async Task<TResponse> HandleCore(TRequest request, Func<Task<TResponse>> next, CancellationToken cancellationToken)
+    {
+        ValidationContext<TRequest> context = new(request);
+        IEnumerable<ValidationExceptionModel> errors = _validators
+            .Select(validator => validator.Validate(context))
+            .SelectMany(result => result.Errors)
+            .Where(failure => failure != null)
+            .GroupBy(
+                keySelector: p => p.PropertyName,
+                resultSelector: (propertyName, errors) =>
+                    new ValidationExceptionModel { Property = propertyName, Errors = errors.Select(e => e.ErrorMessage) }
+            )
+            .ToList();
+
+        if (errors.Any())
         {
-            _validators = validators;
+            throw new ValidationException(errors);
         }
 
-        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
-        {
-            ValidationContext<TRequest> context = new(request);
-            IEnumerable<ValidationExceptionModel> errors = _validators
-                .Select(validator => validator.Validate(context))
-                .SelectMany(result => result.Errors)
-                .Where(failure => failure != null)
-                .GroupBy(
-                    keySelector: p => p.PropertyName,
-                    resultSelector: (propertyName, errors) =>
-                        new ValidationExceptionModel { Property = propertyName, Errors = errors.Select(e => e.ErrorMessage) }
-                )
-                .ToList();
+        return await next();
+    }
+}
 
-            if (errors.Any())
-                throw new ValidationException(errors);
-            TResponse response = await next();
-            return response;
+public class RequestValidationQueryBehavior<TRequest, TResponse> :
+    IQueryPipelineBehavior<TRequest, TResponse>
+    where TRequest : IQuery<TResponse>
+{
+    private readonly IEnumerable<IValidator<TRequest>> _validators;
+
+    public RequestValidationQueryBehavior(IEnumerable<IValidator<TRequest>> validators)
+    {
+        _validators = validators;
+    }
+
+    public async Task<TResponse> Handle(TRequest request, QueryHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    {
+        ValidationContext<TRequest> context = new(request);
+        IEnumerable<ValidationExceptionModel> errors = _validators
+            .Select(validator => validator.Validate(context))
+            .SelectMany(result => result.Errors)
+            .Where(failure => failure != null)
+            .GroupBy(
+                keySelector: p => p.PropertyName,
+                resultSelector: (propertyName, errors) =>
+                    new ValidationExceptionModel { Property = propertyName, Errors = errors.Select(e => e.ErrorMessage) }
+            )
+            .ToList();
+
+        if (errors.Any())
+        {
+            throw new ValidationException(errors);
         }
+
+        return await next();
     }
 }

@@ -1,4 +1,3 @@
-using MediatR;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Application.Notifications;
 using SmartVoiceAgent.Core.Interfaces;
@@ -8,7 +7,7 @@ namespace SmartVoiceAgent.Application.Handlers;
 /// <summary>
 /// Handles the SendMessageCommand by sending a message to the specified recipient.
 /// </summary>
-public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, CommandResultDTO>
+public class SendMessageCommandHandler : ICommandHandler<SendMessageCommand, CommandResultDTO>
 {
     private readonly IMessageServiceFactory _messageServiceFactory;
     private readonly IMediator _mediator;
@@ -36,7 +35,7 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Com
             if (success)
             {
                 // Publish notification
-                await _mediator.Publish(
+                await _mediator.PublishAsync(
                     new MessageSentNotification(request.Recipient, request.Message), 
                     cancellationToken);
                 

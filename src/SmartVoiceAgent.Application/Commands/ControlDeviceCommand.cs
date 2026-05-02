@@ -1,11 +1,10 @@
-﻿using MediatR;
 using SmartVoiceAgent.Application.Pipelines.Caching;
 using SmartVoiceAgent.Application.Pipelines.Performance;
 
 namespace SmartVoiceAgent.Application.Commands;
 
 public record ControlDeviceCommand(string DeviceName, string Action)
-    : IRequest<CommandResultDTO>, ICachableRequest, IIntervalRequest
+    : ICommand<CommandResultDTO>, ICachableRequest, IIntervalRequest
 {
     // Caching
     public string CacheKey => $"ControlDevice-{DeviceName}-{Action}";

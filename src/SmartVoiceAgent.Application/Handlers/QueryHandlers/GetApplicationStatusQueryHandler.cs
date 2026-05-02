@@ -1,4 +1,3 @@
-﻿using MediatR;
 using SmartVoiceAgent.Application.Queries;
 using SmartVoiceAgent.Core.Enums;
 using SmartVoiceAgent.Core.Interfaces;
@@ -9,7 +8,7 @@ namespace SmartVoiceAgent.Application.Handlers.Queries;
 /// Handles the query to get application status.
 /// </summary>
 public sealed class GetApplicationStatusQueryHandler(IApplicationService appService)
-    : IRequestHandler<GetApplicationStatusQuery, AppStatus>
+    : IQueryHandler<GetApplicationStatusQuery, AppStatus>
 {
     private readonly IApplicationService _appService = appService;
 

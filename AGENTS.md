@@ -23,7 +23,7 @@
 | **UI Framework** | Avalonia UI 11.3.10 (cross-platform desktop) |
 | **AI/ML** | AutoGen 0.2.3, Microsoft.SemanticKernel 1.67.1, Microsoft.Agents.AI |
 | **MCP** | ModelContextProtocol 0.5.0-preview.1 |
-| **CQRS** | MediatR 12.5.0 |
+| **CQRS** | Cortex.Mediator 3.1.2 |
 | **Validation** | FluentValidation 12.1.1 |
 | **Audio** | NAudio 2.2.1, Whisper.net 1.9.0 |
 | **OCR** | Tesseract 5.2.0 |
@@ -56,7 +56,7 @@ Kam.sln
 
 #### 1. SmartVoiceAgent.Core (Domain Layer)
 - **Purpose**: Domain entities, interfaces, DTOs, enums, models
-- **Dependencies**: Minimal (AutoGen.Core, MediatR, Microsoft.Agents.AI)
+- **Dependencies**: Minimal (AutoGen.Core, Cortex.Mediator, Microsoft.Agents.AI)
 - **Key Folders**:
   - `Entities/` - Domain entities (CommandResult, AppInfo, etc.)
   - `Dtos/` - Data transfer objects
@@ -68,18 +68,18 @@ Kam.sln
 
 #### 2. SmartVoiceAgent.Application (Application Layer)
 - **Purpose**: CQRS commands, queries, handlers, pipelines, validators
-- **Dependencies**: Core, CrossCuttingConcerns, MediatR, FluentValidation, AutoGen
+- **Dependencies**: Core, CrossCuttingConcerns, Cortex.Mediator, FluentValidation, AutoGen
 - **Key Folders**:
   - `Commands/` - Command records (e.g., `OpenApplicationCommand`)
   - `Handlers/CommandHandlers/` - Command handlers
   - `Handlers/QueryHandlers/` - Query handlers
-  - `Pipelines/` - MediatR pipeline behaviors
+  - `Pipelines/` - Cortex.Mediator command/query pipeline behaviors
     - `Caching/` - Request caching behavior
     - `Logging/` - Request logging behavior
     - `Performance/` - Performance monitoring behavior
     - `Validation/` - FluentValidation behavior
   - `Validators/` - FluentValidation validators
-  - `Notifications/` - MediatR notifications
+  - `Notifications/` - Cortex.Mediator notifications
   - `NotificationHandlers/` - Notification handlers
 
 #### 3. SmartVoiceAgent.Infrastructure (Infrastructure Layer)
@@ -117,16 +117,16 @@ Kam.sln
 ## Architecture Patterns
 
 ### 1. CQRS (Command Query Responsibility Segregation)
-All business operations are implemented as commands or queries handled through MediatR:
+All business operations are implemented as commands or queries handled through Cortex.Mediator:
 
 ```csharp
 // Command definition in Core layer
 public record OpenApplicationCommand(string ApplicationName) 
-    : IRequest<CommandResultDTO>, ICachableRequest, IIntervalRequest;
+    : ICommand<CommandResultDTO>, ICachableRequest, IIntervalRequest;
 
 // Handler in Application layer
 public sealed class OpenApplicationCommandHandler : 
-    IRequestHandler<OpenApplicationCommand, CommandResultDTO>
+    ICommandHandler<OpenApplicationCommand, CommandResultDTO>
 {
     public async Task<CommandResultDTO> Handle(OpenApplicationCommand request, 
         CancellationToken cancellationToken)
@@ -137,7 +137,7 @@ public sealed class OpenApplicationCommandHandler :
 ```
 
 ### 2. Pipeline Behaviors
-Cross-cutting concerns are handled via MediatR pipeline behaviors:
+Cross-cutting concerns are handled via Cortex.Mediator pipeline behaviors:
 
 - **CachingBehavior** - Automatic caching for `ICachableRequest`
 - **RequestValidationBehavior** - FluentValidation integration

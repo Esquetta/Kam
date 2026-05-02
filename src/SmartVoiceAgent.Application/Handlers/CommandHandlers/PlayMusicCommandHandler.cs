@@ -1,4 +1,3 @@
-﻿using MediatR;
 using SmartVoiceAgent.Application.Notifications;
 using SmartVoiceAgent.Core.Interfaces;
 
@@ -7,7 +6,7 @@ namespace SmartVoiceAgent.Application.Handlers;
 /// <summary>
 /// Handles the PlayMusicCommand by playing the requested track.
 /// </summary>
-public class PlayMusicCommandHandler : IRequestHandler<PlayMusicCommand, CommandResultDTO>
+public class PlayMusicCommandHandler : ICommandHandler<PlayMusicCommand, CommandResultDTO>
 {
     private readonly IMusicService _musicService;
     private readonly IMediator _mediator;
@@ -22,7 +21,7 @@ public class PlayMusicCommandHandler : IRequestHandler<PlayMusicCommand, Command
     {
         await _musicService.PlayMusicAsync(request.TrackName);
 
-        await _mediator.Publish(new MusicPlayedNotification(request.TrackName), cancellationToken);
+        await _mediator.PublishAsync(new MusicPlayedNotification(request.TrackName), cancellationToken);
 
         return new CommandResultDTO(true, $"Playing {request.TrackName}.");
     }

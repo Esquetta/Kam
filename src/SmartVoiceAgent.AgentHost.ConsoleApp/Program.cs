@@ -1,4 +1,4 @@
-﻿#region Using Statements
+#region Using Statements
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -12,7 +12,6 @@ using SmartVoiceAgent.Infrastructure.Extensions;
 using SmartVoiceAgent.Mailing.Entities;
 using SmartVoiceAgent.Mailing.Interfaces;
 using SmartVoiceAgent.Mailing.Extensions;
-using MediatR;
 #endregion
 
 #region Main Entry Point
@@ -483,7 +482,7 @@ async Task HandleSendMessageCommand(string[] parts, IMediator mediator)
     try
     {
         var command = new SendMessageCommand(recipient, message);
-        var result = await mediator.Send(command);
+        var result = await mediator.SendAsync(command);
         
         if (result.Success)
         {
@@ -867,7 +866,7 @@ async Task ExecuteDeviceCommandAsync(IMediator mediator, string device, string a
     try
     {
         var command = new ControlDeviceCommand(device, action);
-        var result = await mediator.Send(command);
+        var result = await mediator.SendAsync(command);
         
         if (result.Success)
         {
@@ -992,7 +991,7 @@ async Task ListApplicationsAsync(IMediator mediator, string? argument)
     try
     {
         var command = new ListInstalledApplicationsCommand(includeSystemApps);
-        var result = await mediator.Send(command);
+        var result = await mediator.SendAsync(command);
         
         if (result.Success)
         {

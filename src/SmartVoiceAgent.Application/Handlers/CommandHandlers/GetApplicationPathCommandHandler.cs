@@ -1,11 +1,10 @@
-﻿using MediatR;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Dtos;
 using SmartVoiceAgent.Core.Interfaces;
 
 namespace SmartVoiceAgent.Application.Handlers.CommandHandlers
 {
-    public class GetApplicationPathCommandHandler : IRequestHandler<GetApplicationPathCommand, AgentApplicationResponse>
+    public class GetApplicationPathCommandHandler : ICommandHandler<GetApplicationPathCommand, AgentApplicationResponse>
     {
         private readonly IApplicationServiceFactory _applicationServiceFactory;
         public GetApplicationPathCommandHandler(IApplicationServiceFactory applicationServiceFactory)

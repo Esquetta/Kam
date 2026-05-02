@@ -1,78 +1,80 @@
-using Core.CrossCuttingConcerns.Logging;
 using Core.CrossCuttingConcerns.Logging.Serilog;
-using MediatR;
 using SmartVoiceAgent.Application.Pipelines.Caching;
-using System.Text.Json;
 
-namespace SmartVoiceAgent.Application.Behaviors.Logging
+namespace SmartVoiceAgent.Application.Behaviors.Logging;
+
+/// <summary>
+/// Logs request and response information for commands and queries in the pipeline.
+/// </summary>
+public class LoggingBehavior<TRequest, TResponse> :
+    ICommandPipelineBehavior<TRequest, TResponse>
+    where TRequest : ICommand<TResponse>
 {
-    /// <summary>
-    /// Logs request and response information for commands and queries in the pipeline.
-    /// Only logs requests implementing ILoggableRequest to avoid performance overhead on all requests.
-    /// </summary>
-    /// <typeparam name="TRequest">The type of request.</typeparam>
-    /// <typeparam name="TResponse">The type of response.</typeparam>
-    public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-        where TRequest : IRequest<TResponse>
+    private readonly LoggingBehaviorCore<TRequest, TResponse> _core;
+
+    public LoggingBehavior(LoggerServiceBase loggerService)
     {
-        private readonly LoggerServiceBase _loggerService;
+        _core = new LoggingBehaviorCore<TRequest, TResponse>(loggerService);
+    }
 
-        // Performance: Reuse JsonSerializerOptions with source generator support
-        private static readonly JsonSerializerOptions s_jsonOptions = new()
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = false // Compact format for better performance
-        };
+    public Task<TResponse> Handle(TRequest request, CommandHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    {
+        return _core.HandleCore(request, next.Invoke, cancellationToken);
+    }
+}
 
-        public LoggingBehavior(LoggerServiceBase loggerService)
+public class LoggingQueryBehavior<TRequest, TResponse> :
+    IQueryPipelineBehavior<TRequest, TResponse>
+    where TRequest : IQuery<TResponse>
+{
+    private readonly LoggingBehaviorCore<TRequest, TResponse> _core;
+
+    public LoggingQueryBehavior(LoggerServiceBase loggerService)
+    {
+        _core = new LoggingBehaviorCore<TRequest, TResponse>(loggerService);
+    }
+
+    public Task<TResponse> Handle(TRequest request, QueryHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+    {
+        return _core.HandleCore(request, next.Invoke, cancellationToken);
+    }
+}
+
+internal sealed class LoggingBehaviorCore<TRequest, TResponse>
+{
+    private readonly LoggerServiceBase _loggerService;
+
+    public LoggingBehaviorCore(LoggerServiceBase loggerService)
+    {
+        _loggerService = loggerService;
+    }
+
+    public async Task<TResponse> HandleCore(TRequest request, Func<Task<TResponse>> next, CancellationToken cancellationToken)
+    {
+        if (request is not ILoggableRequest)
         {
-            _loggerService = loggerService;
+            return await next();
         }
 
-        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+        try
         {
-            // Performance: Only log if request implements ILoggableRequest
-            // This avoids serialization overhead on all requests
-            if (request is not ILoggableRequest)
+            _loggerService.Info($"Handling {request?.GetType().Name}");
+
+            if (request is ICachableRequest cachableRequest)
             {
-                return await next();
+                _loggerService.Info($"Cache: {cachableRequest.CacheKey}");
             }
 
-            // Performance: Create list with capacity to avoid resizing
-            var logParameters = new List<LogParameter>(2)
-            {
-                new LogParameter { Type = request.GetType().Name, Value = request }
-            };
+            var response = await next();
 
-            var logDetail = new LogDetail
-            {
-                MethodName = next.Method.Name,
-                Parameters = logParameters
-            };
+            _loggerService.Info($"Handled {request?.GetType().Name}");
 
-            try
-            {
-                // Performance: Only serialize if Info logging is enabled
-                // This avoids expensive JSON serialization when not needed
-                _loggerService.Info($"Handling {request.GetType().Name}");
-
-                if (request is ICachableRequest cachableRequest)
-                {
-                    _loggerService.Info($"Cache: {cachableRequest.CacheKey}");
-                }
-
-                var response = await next();
-
-                _loggerService.Info($"Handled {request.GetType().Name}");
-
-                return response;
-            }
-            catch (Exception ex)
-            {
-                // Serialize detail only on exception (rare path)
-                _loggerService.Error($"Exception in {request.GetType().Name}: {ex.Message}");
-                throw;
-            }
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _loggerService.Error($"Exception in {request?.GetType().Name}: {ex.Message}");
+            throw;
         }
     }
 }

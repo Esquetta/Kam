@@ -1,8 +1,5 @@
-﻿using Mediator;
+namespace SmartVoiceAgent.Core.Contracts;
 
-namespace SmartVoiceAgent.Core.Contracts
+public interface IQuery<TResult> : Cortex.Mediator.Queries.IQuery<TResult>
 {
-    public interface IQuery<TResult>: IRequest<TResult>
-    {
-    }
 }

@@ -24,14 +24,19 @@ public static class ServiceRegistration
 
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        services.AddMediatR(cfg =>
+        services.AddCortexMediator(new[] { typeof(ServiceRegistration) }, options =>
         {
-            cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
-            cfg.AddOpenBehavior(typeof(RequestValidationBehavior<,>));
-            cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
-            cfg.AddOpenBehavior(typeof(PerformanceBehavior<,>));
-            cfg.AddOpenBehavior(typeof(CachingBehavior<,>));
-            cfg.AddOpenBehavior(typeof(CacheRemovingBehavior<,>));
+            options.AddOpenCommandPipelineBehavior(typeof(RequestValidationBehavior<,>));
+            options.AddOpenCommandPipelineBehavior(typeof(LoggingBehavior<,>));
+            options.AddOpenCommandPipelineBehavior(typeof(PerformanceBehavior<,>));
+            options.AddOpenCommandPipelineBehavior(typeof(CachingBehavior<,>));
+            options.AddOpenCommandPipelineBehavior(typeof(CacheRemovingBehavior<,>));
+
+            options.AddOpenQueryPipelineBehavior(typeof(RequestValidationQueryBehavior<,>));
+            options.AddOpenQueryPipelineBehavior(typeof(LoggingQueryBehavior<,>));
+            options.AddOpenQueryPipelineBehavior(typeof(PerformanceQueryBehavior<,>));
+            options.AddOpenQueryPipelineBehavior(typeof(QueryCachingBehavior<,>));
+            options.AddOpenQueryPipelineBehavior(typeof(QueryCacheRemovingBehavior<,>));
         });
         services.AddDistributedMemoryCache();
 

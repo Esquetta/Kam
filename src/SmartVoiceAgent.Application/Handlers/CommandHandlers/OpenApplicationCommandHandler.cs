@@ -1,4 +1,3 @@
-﻿using MediatR;
 using SmartVoiceAgent.Application.NotificationHandlers;
 using SmartVoiceAgent.Core.Commands;
 using SmartVoiceAgent.Core.Interfaces;
@@ -7,7 +6,7 @@ namespace SmartVoiceAgent.Application.Handlers;
 /// <summary>
 /// Handles the command to open an application.
 /// </summary>
-public sealed class OpenApplicationCommandHandler : IRequestHandler<OpenApplicationCommand, CommandResultDTO>
+public sealed class OpenApplicationCommandHandler : ICommandHandler<OpenApplicationCommand, CommandResultDTO>
 {
     private readonly IMediator _mediator;
     private readonly IApplicationServiceFactory _factory;
@@ -22,7 +21,7 @@ public sealed class OpenApplicationCommandHandler : IRequestHandler<OpenApplicat
 
         var appService = _factory.Create();
         await appService.OpenApplicationAsync(request.ApplicationName);
-        await _mediator.Publish(new ApplicationOpenedNotification(request.ApplicationName), cancellationToken);
+        await _mediator.PublishAsync(new ApplicationOpenedNotification(request.ApplicationName), cancellationToken);
         await Task.CompletedTask;
         return new CommandResultDTO(true, $"{request.ApplicationName} application starting...");
     }

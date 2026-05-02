@@ -1,6 +1,5 @@
-﻿using MediatR;
 using SmartVoiceAgent.Core.Dtos;
 
 namespace SmartVoiceAgent.Application.Commands;
 
-public record CheckApplicationCommand(string ApplicationName) : IRequest<AgentApplicationResponse>;
+public record CheckApplicationCommand(string ApplicationName) : ICommand<AgentApplicationResponse>;

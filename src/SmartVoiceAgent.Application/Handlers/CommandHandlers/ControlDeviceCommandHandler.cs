@@ -1,4 +1,3 @@
-using MediatR;
 using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Application.Notifications;
@@ -10,7 +9,7 @@ namespace SmartVoiceAgent.Application.Handlers.CommandHandlers;
 /// Handles the ControlDeviceCommand by performing the specified action on a device.
 /// Supports: volume, wifi, bluetooth, screen (brightness), power
 /// </summary>
-public class ControlDeviceCommandHandler : IRequestHandler<ControlDeviceCommand, CommandResultDTO>
+public class ControlDeviceCommandHandler : ICommandHandler<ControlDeviceCommand, CommandResultDTO>
 {
     private readonly IMediator _mediator;
     private readonly ISystemControlServiceFactory _systemControlFactory;
@@ -77,7 +76,7 @@ public class ControlDeviceCommandHandler : IRequestHandler<ControlDeviceCommand,
             }
 
             // Publish notification
-            await _mediator.Publish(
+            await _mediator.PublishAsync(
                 new DeviceControlledNotification(request.DeviceName, request.Action) 
                 { 
                     Success = success,
