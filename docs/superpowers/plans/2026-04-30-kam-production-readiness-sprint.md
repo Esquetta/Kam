@@ -624,7 +624,7 @@ git push
 - Modify: `docs/local-production-smoke.md`
 - Create: `docs/release-candidate-checklist.md`
 
-- [ ] **Step 1: Create release checklist**
+- [x] **Step 1: Create release checklist**
 
 Create `docs/release-candidate-checklist.md` with:
 
@@ -635,7 +635,7 @@ Create `docs/release-candidate-checklist.md` with:
 - known non-blockers
 - release approval section
 
-- [ ] **Step 2: Run full automated gate**
+- [x] **Step 2: Run full automated gate**
 
 ```powershell
 dotnet restore Kam.sln

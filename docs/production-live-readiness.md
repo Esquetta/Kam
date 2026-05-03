@@ -38,7 +38,7 @@ The smoke gate also accepts the legacy spelling `AIService:EndPoint`.
 Run:
 
 ```powershell
-.\scripts\local-production-smoke.ps1 -Configuration Release -Runtime win-x64 -RequireAiConfig -ReleaseCandidate rc-local-20260502
+.\scripts\local-production-smoke.ps1 -Configuration Release -Runtime win-x64 -RequireAiConfig -ReleaseCandidate rc-local-20260503
 ```
 
 Then launch and manually verify:
@@ -55,3 +55,5 @@ Then launch and manually verify:
 - Runtime Diagnostics > Copy Report produces a secrets-free readiness report for support/debugging.
 - Skills page evals run and report health.
 - Optional integrations are tested only when their credentials are intentionally configured.
+
+Before tagging, complete `docs/release-candidate-checklist.md` and keep the generated smoke summary path with the candidate evidence.
