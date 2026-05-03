@@ -43,12 +43,13 @@ Run:
 
 Then launch and manually verify:
 
-- The generated `artifacts/local-production-smoke/<timestamp>/summary.md` records the release candidate id, git commit, tracked worktree state, skill-smoke summary path, and published `SmartVoiceAgent.Ui.exe` path.
+- The generated `artifacts/local-production-smoke/<timestamp>/summary.md` records the release candidate id, git commit, tracked worktree state, skill-smoke summary path, command-smoke summary path, and published `SmartVoiceAgent.Ui.exe` path.
+- The generated `command-smoke.md` shows the headless `list applications` command completed through the planner-backed command runtime.
 - Settings > AI Runtime Test Connection shows a successful live model catalog check.
 - Runtime Diagnostics > Refresh shows Core AI as ready and Planner Live Connection as verified.
 - Runtime Diagnostics > Run Skill Smoke reports all smoke evals passing.
 - Skill Smoke includes bounded file/workspace/web, active-window, window-list, and accessibility-tree checks.
-- A simple command produces a planner trace and a normalized skill result.
+- A simple command produces a planner trace and a normalized skill result. The headless command smoke covers this before launch; repeat it manually in the UI as the final interaction check.
 - Runtime Diagnostics > Local Runtime shows the latest Planner Trace and Skill Result as ready after that command.
 - Runtime Diagnostics > Command Loop summary card shows Ready after the same command.
 - Runtime Diagnostics > Live Production Test shows `READY_FOR_LIVE_TEST`. If it shows `NEEDS_ACTION`, follow the next action shown in that panel.

@@ -45,6 +45,7 @@ jobs:
         path: |
           artifacts/local-production-smoke/**/summary.md
           artifacts/local-production-smoke/**/skill-smoke.md
+          artifacts/local-production-smoke/**/command-smoke.md
         retention-days: 14
 
   security-scan:

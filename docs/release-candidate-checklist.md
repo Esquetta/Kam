@@ -9,6 +9,7 @@ Use this checklist for every local release candidate before tagging or publishin
 - Commit under rehearsal: `b15fc31c5fbc057cbab830353fdb1b912aa66430`
 - Smoke summary: `artifacts/local-production-smoke/20260503-113220/summary.md`
 - Skill smoke summary: `artifacts/local-production-smoke/20260503-113220/skill-smoke.md`
+- Command smoke summary: pending latest release smoke
 - Sanitized readiness report: `artifacts/local-production-smoke/20260503-113220/readiness-report.md`
 - Approval owner: pending manual approval
 - Approval date: pending
@@ -54,6 +55,7 @@ Required result:
 - All tests pass.
 - Local production smoke writes `summary.md`.
 - Skill smoke writes `skill-smoke.md` and all required cases pass.
+- Command smoke writes `command-smoke.md` and the headless `list applications` command succeeds without confirmation.
 - Publish creates `SmartVoiceAgent.Ui.exe`.
 - Launch starts a responding `SmartVoiceAgent.Ui` process.
 - `git diff --check` reports no whitespace errors.
@@ -71,7 +73,7 @@ Complete this against the launched published app:
 - Plugins: cards and icon buttons are aligned in dark and light mode; health/eval actions are visible.
 - Activity panel: `ACTIVITY_LOG`, `PLAN_TRACE`, and `SKILL_RESULTS` are visible; `KERNEL_LOG`, `PLANNER_TRACE`, and `RESULT_VIEWER` are absent.
 - Theme toggle: dark and light mode remain readable with no low-contrast card metadata.
-- Command loop: submit a simple command and confirm it produces both planner trace evidence and normalized skill result evidence.
+- Command loop: confirm `command-smoke.md` exists, then submit a simple UI command and confirm it produces both planner trace evidence and normalized skill result evidence.
 
 ## Optional Integration Gate
 
@@ -106,4 +108,4 @@ Manual UI gate notes:
 - Plugins opened successfully and showed `38/38 smoke evals passing`; action icons were visible without obvious clipping.
 - Settings opened in dark and light mode; API key was masked and Test Connection was aligned.
 - Copy Report produced a sanitized readiness report.
-- Remaining manual blocker: the command input automation did not submit a planner-backed command in this desktop session, so Runtime Diagnostics still showed `NEEDS_ACTION` for Planner Trace / Command Loop. A human live-command pass is required before tagging.
+- Remaining manual blocker: the previous command input automation did not submit a planner-backed command in this desktop session. The automated gate now has a headless command smoke; rerun the gate and repeat one UI command before tagging.

@@ -26,6 +26,7 @@ Useful variants:
   - tracked worktree state
   - smoke `summary.md` path
   - skill smoke `skill-smoke.md` path
+  - command smoke `command-smoke.md` path when `-RequireAiConfig` is used
   - published `SmartVoiceAgent.Ui.exe` path
 - Checks required AI planner configuration without printing secret values. The check accepts either `dotnet user-secrets` / environment configuration or the enabled planner profile saved from the Settings screen:
   - `AIService:ApiKey`
@@ -33,6 +34,7 @@ Useful variants:
   - `AIService:Endpoint` / `AIService:EndPoint`
 - Publishes the Avalonia UI to `artifacts/local-production-smoke/<timestamp>/publish`.
 - Writes a smoke summary to `artifacts/local-production-smoke/<timestamp>/summary.md`.
+- Runs a headless command-loop smoke with `list applications` when `-RequireAiConfig` is used. This writes `command-smoke.md` and proves the planner, command runtime, planner trace, and normalized skill result path before the UI is launched.
 
 ## Manual Smoke After Launch
 
@@ -49,7 +51,7 @@ Useful variants:
    - Skill Smoke includes bounded active-window, visible-window, and accessibility-tree checks for the visual context path.
 7. Use Copy Report from Runtime Diagnostics when sharing a local readiness snapshot. The report is intentionally sanitized and does not include API keys or endpoint values.
 8. Run smoke evals from the Skills screen.
-9. Record the generated `summary.md`, `skill-smoke.md`, and sanitized readiness report paths in `docs/release-candidate-checklist.md`.
+9. Record the generated `summary.md`, `skill-smoke.md`, `command-smoke.md`, and sanitized readiness report paths in `docs/release-candidate-checklist.md`.
 
 ## Notes
 
@@ -57,3 +59,4 @@ Useful variants:
 - Tracked local changes are rejected by default because release evidence must map to a reproducible source state. Use `-AllowDirtyWorktree` only for explicit non-release validation while developing the gate itself.
 - Warnings from legacy nullable/XML-doc/platform analyzers can still appear during build. Treat command exit code and new test failures as the release gate.
 - Use `-RequireAiConfig` for a real production-style run. Without it, missing AI keys are reported as warnings so build-only checks can still run on clean machines.
+- Use `-SkipCommandSmoke` only for build-only or CI-style checks that intentionally do not have live planner credentials.

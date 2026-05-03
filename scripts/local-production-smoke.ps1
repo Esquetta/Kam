@@ -4,6 +4,7 @@ param(
     [string]$Runtime = "win-x64",
     [switch]$SkipTests,
     [switch]$SkipSkillSmoke,
+    [switch]$SkipCommandSmoke,
     [switch]$SkipPublish,
     [switch]$RequireAiConfig,
     [switch]$Launch,
@@ -26,6 +27,7 @@ $artifactRoot = Join-Path $repoRoot "artifacts\local-production-smoke\$runId"
 $publishDir = Join-Path $artifactRoot "publish"
 $summaryPath = Join-Path $artifactRoot "summary.md"
 $skillSmokeSummaryPath = Join-Path $artifactRoot "skill-smoke.md"
+$commandSmokeSummaryPath = Join-Path $artifactRoot "command-smoke.md"
 $uiSettingsPath = Join-Path $env:LOCALAPPDATA "SmartVoiceAgent\settings.json"
 $summary = New-Object System.Collections.Generic.List[string]
 
@@ -473,6 +475,7 @@ Add-SummaryLine "- planOnly: $PlanOnly"
 Add-SummaryLine "- maxBuildWarnings: $MaxBuildWarnings"
 Add-SummaryLine "- summaryPath: $summaryPath"
 Add-SummaryLine "- skillSmokeSummary: $skillSmokeSummaryPath"
+Add-SummaryLine "- commandSmokeSummary: $commandSmokeSummaryPath"
 Add-SummaryLine "- publishExecutable: $(Join-Path $publishDir "SmartVoiceAgent.Ui.exe")"
 Add-SummaryLine ""
 Add-SummaryLine "## Steps"
@@ -498,6 +501,17 @@ if (-not $SkipSkillSmoke) {
 }
 else {
     Add-SummaryLine "- skill smoke: skipped"
+}
+
+if (-not $SkipCommandSmoke -and $RequireAiConfig) {
+    Invoke-SmokeStep "command smoke" @("dotnet", "run", "--project", $agentHostProject, "--configuration", $Configuration, "--no-build", "--", "--command-smoke", "--command-smoke-command", "list applications", "--command-smoke-summary", $commandSmokeSummaryPath)
+    Add-SummaryLine "- commandSmokeSummary: $commandSmokeSummaryPath"
+}
+elseif ($SkipCommandSmoke) {
+    Add-SummaryLine "- command smoke: skipped"
+}
+else {
+    Add-SummaryLine "- command smoke: skipped because -RequireAiConfig is false"
 }
 
 if (-not $SkipPublish) {

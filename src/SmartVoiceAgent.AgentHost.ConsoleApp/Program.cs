@@ -16,7 +16,8 @@ using SmartVoiceAgent.Mailing.Extensions;
 
 #region Main Entry Point
 var skillSmokeRequested = SkillSmokeCommand.IsRequested(args);
-if (!skillSmokeRequested)
+var commandSmokeRequested = CommandSmokeCommand.IsRequested(args);
+if (!skillSmokeRequested && !commandSmokeRequested)
 {
     Console.WriteLine("╔═══════════════════════════════════════════════════════════╗");
     Console.WriteLine("║          Kam Agent Host - Console Test Application        ║");
@@ -47,6 +48,17 @@ if (skillSmokeRequested)
     var command = ActivatorUtilities.CreateInstance<SkillSmokeCommand>(scope.ServiceProvider);
     Environment.ExitCode = await command.RunAsync(
         SkillSmokeCommand.ParseOptions(args),
+        Console.Out,
+        Console.Error);
+    return;
+}
+
+if (commandSmokeRequested)
+{
+    using var scope = host.Services.CreateScope();
+    var command = ActivatorUtilities.CreateInstance<CommandSmokeCommand>(scope.ServiceProvider);
+    Environment.ExitCode = await command.RunAsync(
+        CommandSmokeCommand.ParseOptions(args),
         Console.Out,
         Console.Error);
     return;

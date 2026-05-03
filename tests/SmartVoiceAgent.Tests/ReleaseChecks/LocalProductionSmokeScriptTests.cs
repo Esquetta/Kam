@@ -13,6 +13,8 @@ public sealed class LocalProductionSmokeScriptTests
         script.Should().Contain("dotnet\", \"build\"");
         script.Should().Contain("dotnet\", \"test\"");
         script.Should().Contain("--skill-smoke");
+        script.Should().Contain("--command-smoke");
+        script.Should().Contain("SkipCommandSmoke");
         script.Should().Contain("dotnet\", \"publish\"");
         script.Should().Contain("MaxBuildWarnings");
         script.Should().Contain("ReleaseCandidate");
@@ -22,6 +24,7 @@ public sealed class LocalProductionSmokeScriptTests
         script.Should().Contain("Reject-PlaceholderReleaseCandidate");
         script.Should().Contain("summary.md");
         script.Should().Contain("skill-smoke.md");
+        script.Should().Contain("command-smoke.md");
         script.Should().Contain("SmartVoiceAgent.Ui.exe");
     }
 
@@ -41,6 +44,7 @@ public sealed class LocalProductionSmokeScriptTests
         workflow.Should().Contain("kam-production-smoke-evidence");
         workflow.Should().Contain("summary.md");
         workflow.Should().Contain("skill-smoke.md");
+        workflow.Should().Contain("command-smoke.md");
     }
 
     private static string FindRepoFile(params string[] segments)
