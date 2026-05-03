@@ -98,14 +98,55 @@ namespace SmartVoiceAgent.Infrastructure.Services
         {
             _logger.LogInformation("Initializing agents...");
 
-            _registry.RegisterAgent("Coordinator", _factory.CreateCoordinatorAgent());
-            _registry.RegisterAgent("SystemAgent", _factory.CreateSystemAgent());
-            _registry.RegisterAgent("TaskAgent", await _factory.CreateTaskAgentAsync());
-            _registry.RegisterAgent("ResearchAgent", _factory.CreateResearchAgent());
-            _registry.RegisterAgent("CommunicationAgent", _factory.CreateCommunicationAgent());
+            var registeredCount = 0;
+            registeredCount += TryRegisterAgent("Coordinator", () => _factory.CreateCoordinatorAgent()) ? 1 : 0;
+            registeredCount += TryRegisterAgent("SystemAgent", () => _factory.CreateSystemAgent()) ? 1 : 0;
+            registeredCount += await TryRegisterAgentAsync("TaskAgent", token => _factory.CreateTaskAgentAsync(token)) ? 1 : 0;
+            registeredCount += TryRegisterAgent("ResearchAgent", () => _factory.CreateResearchAgent()) ? 1 : 0;
+            registeredCount += TryRegisterAgent("CommunicationAgent", () => _factory.CreateCommunicationAgent()) ? 1 : 0;
 
-            _logger.LogInformation("All agents ready");
+            if (registeredCount == 0)
+            {
+                _logger.LogWarning("Legacy agents are unavailable. Skill-first command runtime remains active.");
+            }
+            else
+            {
+                _logger.LogInformation("{RegisteredCount} legacy agents ready", registeredCount);
+            }
+
             await Task.CompletedTask;
+        }
+
+        private bool TryRegisterAgent(string name, Func<Microsoft.Agents.AI.AIAgent> createAgent)
+        {
+            try
+            {
+                _registry.RegisterAgent(name, createAgent());
+                _logger.LogInformation("Agent registered: {AgentName}", name);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Skipping legacy agent {AgentName}; command runtime will continue.", name);
+                return false;
+            }
+        }
+
+        private async Task<bool> TryRegisterAgentAsync(
+            string name,
+            Func<CancellationToken, Task<Microsoft.Agents.AI.AIAgent>> createAgent)
+        {
+            try
+            {
+                _registry.RegisterAgent(name, await createAgent(CancellationToken.None));
+                _logger.LogInformation("Agent registered: {AgentName}", name);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Skipping legacy agent {AgentName}; command runtime will continue.", name);
+                return false;
+            }
         }
     }
 }

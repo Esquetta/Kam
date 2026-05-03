@@ -44,13 +44,31 @@ public sealed class PluginsViewIconLayoutTests
             .ToArray();
 
         actionButtons.Should().NotBeEmpty();
+        foreach (var actionButton in actionButtons)
+        {
+            var classes = AttributeValue(actionButton, "Classes")?.Split(' ') ?? [];
+            classes.Should().Contain("IconButton");
+            classes.Should().Contain("PluginActionButton");
+        }
+
         actionButtons.Should().OnlyContain(element =>
-            AttributeValue(element, "Classes") == "IconButton");
-        actionButtons.Should().OnlyContain(element =>
-            AttributeValue(element, "Width") == "28"
-            && AttributeValue(element, "Height") == "28"
+            AttributeValue(element, "Width") == "30"
+            && AttributeValue(element, "Height") == "30"
             && AttributeValue(element, "Padding") == "0"
             && AttributeValue(element, "Margin") == null);
+
+        var actionGlyphs = actionButtons
+            .SelectMany(element => element.Descendants())
+            .Where(element => element.Name.LocalName == "Path")
+            .ToArray();
+
+        actionGlyphs.Should().HaveCount(actionButtons.Length);
+        actionGlyphs.Should().OnlyContain(element =>
+            AttributeValue(element, "Width") == "16"
+            && AttributeValue(element, "Height") == "16"
+            && AttributeValue(element, "Stretch") == "Uniform"
+            && AttributeValue(element, "HorizontalAlignment") == "Center"
+            && AttributeValue(element, "VerticalAlignment") == "Center");
     }
 
     [Fact]
@@ -66,7 +84,7 @@ public sealed class PluginsViewIconLayoutTests
         actionBar.Parent!.Name.LocalName.Should().Be("Grid");
         AttributeValue(actionBar, "Grid.Row").Should().Be("2");
         AttributeValue(actionBar, "Orientation").Should().Be("Horizontal");
-        AttributeValue(actionBar, "Spacing").Should().Be("6");
+        AttributeValue(actionBar, "Spacing").Should().Be("8");
         AttributeValue(actionBar, "HorizontalAlignment").Should().Be("Left");
         AttributeValue(actionBar, "VerticalAlignment").Should().Be("Bottom");
     }
