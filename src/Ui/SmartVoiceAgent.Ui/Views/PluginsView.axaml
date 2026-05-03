@@ -452,7 +452,7 @@
                                 </Grid>
 
                                 <!-- Content -->
-                                <StackPanel Grid.Row="2" VerticalAlignment="Bottom">
+                                <StackPanel Grid.Row="1" VerticalAlignment="Stretch">
                                     <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
                                         <TextBlock Text="{Binding Name}"
                                                    FontSize="16"
@@ -460,17 +460,21 @@
                                                    LetterSpacing="1"
                                                    Foreground="{Binding TextColor}"
                                                    TextWrapping="Wrap"
+                                                   TextTrimming="CharacterEllipsis"
                                                    MaxLines="2"/>
                                         <Border Classes.StatusActive="{Binding IsActive}"
                                                 Classes.StatusInactive="{Binding !IsActive}"
                                                 Grid.Column="1"
                                                 VerticalAlignment="Top"
+                                                MaxWidth="82"
                                                 Margin="8,0,0,0">
                                             <TextBlock Text="{Binding Status}"
                                                        FontSize="9"
                                                        FontFamily="Consolas"
                                                        Foreground="{Binding StatusColor}"
-                                                       VerticalAlignment="Center"/>
+                                                       VerticalAlignment="Center"
+                                                       TextWrapping="NoWrap"
+                                                       TextTrimming="CharacterEllipsis"/>
                                         </Border>
                                     </Grid>
                                     <TextBlock Text="{Binding SkillId}"
@@ -574,130 +578,125 @@
                                                        MaxLines="2"/>
                                         </StackPanel>
                                     </Border>
-                                    <WrapPanel Classes="PluginActionBar"
-                                               Orientation="Horizontal"
-                                               ItemWidth="28"
-                                               ItemHeight="28"
-                                               Margin="0,12,0,0">
-                                        <Button Classes="IconButton"
-                                                Width="28" Height="28"
-                                                Margin="0,0,6,6"
-                                                Background="Transparent"
-                                                BorderBrush="{DynamicResource AccentCyanDimBrush}"
-                                                BorderThickness="1"
-                                                CornerRadius="6"
-                                                Padding="0"
-                                                Cursor="Hand"
-                                                ToolTip.Tip="Details"
-                                                Command="{Binding SelectCommand}">
-                                            <Path Data="M11,17H13V11H11V17M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,7V9H13V7H11Z"
-                                                  Fill="{DynamicResource AccentCyanBrush}"
-                                                  Width="15" Height="15"
-                                                  Stretch="Uniform"/>
-                                        </Button>
-                                        <Button Classes="IconButton"
-                                                Width="28" Height="28"
-                                                Margin="0,0,6,6"
-                                                Background="Transparent"
-                                                BorderBrush="{DynamicResource AccentCyanBrush}"
-                                                BorderThickness="1"
-                                                CornerRadius="6"
-                                                Padding="0"
-                                                Cursor="Hand"
-                                                ToolTip.Tip="Test Skill"
-                                                IsVisible="{Binding CanTestSkill}"
-                                                Command="{Binding TestSkillCommand}">
-                                            <Path Data="M8,5V19L19,12L8,5Z"
-                                                  Fill="{DynamicResource AccentCyanBrush}"
-                                                  Width="14" Height="14"
-                                                  Stretch="Uniform"/>
-                                        </Button>
-                                        <Button Classes="IconButton"
-                                                Width="28" Height="28"
-                                                Margin="0,0,6,6"
-                                                Background="Transparent"
-                                                BorderBrush="{DynamicResource AccentCyanDimBrush}"
-                                                BorderThickness="1"
-                                                CornerRadius="6"
-                                                Padding="0"
-                                                Cursor="Hand"
-                                                ToolTip.Tip="Approve Review"
-                                                IsVisible="{Binding CanApproveReview}"
-                                                Command="{Binding ApproveReviewCommand}">
-                                            <Path Data="M9,16.17L4.83,12L3.41,13.41L9,19L21,7L19.59,5.59L9,16.17Z"
-                                                  Fill="{DynamicResource AccentCyanBrush}"
-                                                  Width="15" Height="15"
-                                                  Stretch="Uniform"/>
-                                        </Button>
-                                        <Button Classes="IconButton"
-                                                Width="28" Height="28"
-                                                Margin="0,0,6,6"
-                                                Background="Transparent"
-                                                BorderBrush="{DynamicResource AccentGreenBrush}"
-                                                BorderThickness="1"
-                                                CornerRadius="6"
-                                                Padding="0"
-                                                Cursor="Hand"
-                                                ToolTip.Tip="Enable"
-                                                IsVisible="{Binding CanEnable}"
-                                                Command="{Binding EnableCommand}">
-                                            <Path Data="M8,5V19L19,12L8,5Z"
-                                                  Fill="{DynamicResource AccentGreenBrush}"
-                                                  Width="14" Height="14"
-                                                  Stretch="Uniform"/>
-                                        </Button>
-                                        <Button Classes="IconButton"
-                                                Width="28" Height="28"
-                                                Margin="0,0,6,6"
-                                                Background="Transparent"
-                                                BorderBrush="{DynamicResource AccentCyanBrush}"
-                                                BorderThickness="1"
-                                                CornerRadius="6"
-                                                Padding="0"
-                                                Cursor="Hand"
-                                                ToolTip.Tip="Grant Permissions"
-                                                IsVisible="{Binding CanGrantPermissions}"
-                                                Command="{Binding GrantPermissionsCommand}">
-                                            <Path Data="M12,17A2,2 0 0,0 14,15A2,2 0 0,0 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8H17V6A5,5 0 0,0 7,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0,0 18,8M9,8V6A3,3 0 0,1 15,6V8H9Z"
-                                                  Fill="{DynamicResource AccentCyanBrush}"
-                                                  Width="15" Height="15"
-                                                  Stretch="Uniform"/>
-                                        </Button>
-                                        <Button Classes="IconButton"
-                                                Width="28" Height="28"
-                                                Margin="0,0,6,6"
-                                                Background="Transparent"
-                                                BorderBrush="{DynamicResource TextMutedBrush}"
-                                                BorderThickness="1"
-                                                CornerRadius="6"
-                                                Padding="0"
-                                                Cursor="Hand"
-                                                ToolTip.Tip="Disable"
-                                                IsVisible="{Binding CanDisable}"
-                                                Command="{Binding DisableCommand}">
-                                            <Path Data="M6,19H10V5H6V19M14,5V19H18V5H14Z"
-                                                  Fill="{DynamicResource TextMutedBrush}"
-                                                  Width="14" Height="14"
-                                                  Stretch="Uniform"/>
-                                        </Button>
-                                        <Button Classes="IconButton"
-                                                Width="28" Height="28"
-                                                Margin="0,0,6,6"
-                                                Background="Transparent"
-                                                BorderBrush="{DynamicResource AccentErrorBrush}"
-                                                BorderThickness="1"
-                                                CornerRadius="6"
-                                                Padding="0"
-                                                Cursor="Hand"
-                                                ToolTip.Tip="Revoke Permissions"
-                                                IsVisible="{Binding CanRevokePermissions}"
-                                                Command="{Binding RevokePermissionsCommand}">
-                                            <Path Data="M12,2L4,5V11C4,16.55 7.84,21.74 12,23C16.16,21.74 20,16.55 20,11V5L12,2M12,4.18L18,6.43V11C18,15.55 15.11,19.82 12,20.88C8.89,19.82 6,15.55 6,11V6.43L12,4.18M8.46,8.88L7.05,10.29L10.76,14L7.05,17.71L8.46,19.12L12.17,15.41L15.88,19.12L17.29,17.71L13.58,14L17.29,10.29L15.88,8.88L12.17,12.59L8.46,8.88Z"
-                                                  Fill="{DynamicResource AccentErrorBrush}"
-                                                  Width="15" Height="15"
-                                                  Stretch="Uniform"/>
-                                        </Button>
-                                    </WrapPanel>
+                                </StackPanel>
+                                <StackPanel Grid.Row="2"
+                                            Classes="PluginActionBar"
+                                            Orientation="Horizontal"
+                                            Spacing="6"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Bottom"
+                                            Margin="0,14,0,0">
+                                    <Button Classes="IconButton"
+                                            Width="28" Height="28"
+                                            Background="Transparent"
+                                            BorderBrush="{DynamicResource AccentCyanDimBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            Padding="0"
+                                            Cursor="Hand"
+                                            ToolTip.Tip="Details"
+                                            Command="{Binding SelectCommand}">
+                                        <Path Data="M11,17H13V11H11V17M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,7V9H13V7H11Z"
+                                              Fill="{DynamicResource AccentCyanBrush}"
+                                              Width="15" Height="15"
+                                              Stretch="Uniform"/>
+                                    </Button>
+                                    <Button Classes="IconButton"
+                                            Width="28" Height="28"
+                                            Background="Transparent"
+                                            BorderBrush="{DynamicResource AccentCyanBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            Padding="0"
+                                            Cursor="Hand"
+                                            ToolTip.Tip="Test Skill"
+                                            IsVisible="{Binding CanTestSkill}"
+                                            Command="{Binding TestSkillCommand}">
+                                        <Path Data="M8,5V19L19,12L8,5Z"
+                                              Fill="{DynamicResource AccentCyanBrush}"
+                                              Width="14" Height="14"
+                                              Stretch="Uniform"/>
+                                    </Button>
+                                    <Button Classes="IconButton"
+                                            Width="28" Height="28"
+                                            Background="Transparent"
+                                            BorderBrush="{DynamicResource AccentCyanDimBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            Padding="0"
+                                            Cursor="Hand"
+                                            ToolTip.Tip="Approve Review"
+                                            IsVisible="{Binding CanApproveReview}"
+                                            Command="{Binding ApproveReviewCommand}">
+                                        <Path Data="M9,16.17L4.83,12L3.41,13.41L9,19L21,7L19.59,5.59L9,16.17Z"
+                                              Fill="{DynamicResource AccentCyanBrush}"
+                                              Width="15" Height="15"
+                                              Stretch="Uniform"/>
+                                    </Button>
+                                    <Button Classes="IconButton"
+                                            Width="28" Height="28"
+                                            Background="Transparent"
+                                            BorderBrush="{DynamicResource AccentGreenBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            Padding="0"
+                                            Cursor="Hand"
+                                            ToolTip.Tip="Enable"
+                                            IsVisible="{Binding CanEnable}"
+                                            Command="{Binding EnableCommand}">
+                                        <Path Data="M8,5V19L19,12L8,5Z"
+                                              Fill="{DynamicResource AccentGreenBrush}"
+                                              Width="14" Height="14"
+                                              Stretch="Uniform"/>
+                                    </Button>
+                                    <Button Classes="IconButton"
+                                            Width="28" Height="28"
+                                            Background="Transparent"
+                                            BorderBrush="{DynamicResource AccentCyanBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            Padding="0"
+                                            Cursor="Hand"
+                                            ToolTip.Tip="Grant Permissions"
+                                            IsVisible="{Binding CanGrantPermissions}"
+                                            Command="{Binding GrantPermissionsCommand}">
+                                        <Path Data="M12,17A2,2 0 0,0 14,15A2,2 0 0,0 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8H17V6A5,5 0 0,0 7,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0,0 18,8M9,8V6A3,3 0 0,1 15,6V8H9Z"
+                                              Fill="{DynamicResource AccentCyanBrush}"
+                                              Width="15" Height="15"
+                                              Stretch="Uniform"/>
+                                    </Button>
+                                    <Button Classes="IconButton"
+                                            Width="28" Height="28"
+                                            Background="Transparent"
+                                            BorderBrush="{DynamicResource TextMutedBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            Padding="0"
+                                            Cursor="Hand"
+                                            ToolTip.Tip="Disable"
+                                            IsVisible="{Binding CanDisable}"
+                                            Command="{Binding DisableCommand}">
+                                        <Path Data="M6,19H10V5H6V19M14,5V19H18V5H14Z"
+                                              Fill="{DynamicResource TextMutedBrush}"
+                                              Width="14" Height="14"
+                                              Stretch="Uniform"/>
+                                    </Button>
+                                    <Button Classes="IconButton"
+                                            Width="28" Height="28"
+                                            Background="Transparent"
+                                            BorderBrush="{DynamicResource AccentErrorBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            Padding="0"
+                                            Cursor="Hand"
+                                            ToolTip.Tip="Revoke Permissions"
+                                            IsVisible="{Binding CanRevokePermissions}"
+                                            Command="{Binding RevokePermissionsCommand}">
+                                        <Path Data="M12,2L4,5V11C4,16.55 7.84,21.74 12,23C16.16,21.74 20,16.55 20,11V5L12,2M12,4.18L18,6.43V11C18,15.55 15.11,19.82 12,20.88C8.89,19.82 6,15.55 6,11V6.43L12,4.18M8.46,8.88L7.05,10.29L10.76,14L7.05,17.71L8.46,19.12L12.17,15.41L15.88,19.12L17.29,17.71L13.58,14L17.29,10.29L15.88,8.88L12.17,12.59L8.46,8.88Z"
+                                              Fill="{DynamicResource AccentErrorBrush}"
+                                              Width="15" Height="15"
+                                              Stretch="Uniform"/>
+                                    </Button>
                                 </StackPanel>
                             </Grid>
                         </Border>

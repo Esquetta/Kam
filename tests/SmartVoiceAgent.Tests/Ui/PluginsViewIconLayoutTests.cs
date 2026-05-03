@@ -35,7 +35,7 @@ public sealed class PluginsViewIconLayoutTests
 
         var actionBar = pluginsView!
             .Descendants()
-            .Single(element => element.Name.LocalName == "WrapPanel"
+            .Single(element => element.Name.LocalName == "StackPanel"
                 && AttributeValue(element, "Classes") == "PluginActionBar");
 
         var actionButtons = actionBar
@@ -46,6 +46,97 @@ public sealed class PluginsViewIconLayoutTests
         actionButtons.Should().NotBeEmpty();
         actionButtons.Should().OnlyContain(element =>
             AttributeValue(element, "Classes") == "IconButton");
+        actionButtons.Should().OnlyContain(element =>
+            AttributeValue(element, "Width") == "28"
+            && AttributeValue(element, "Height") == "28"
+            && AttributeValue(element, "Padding") == "0"
+            && AttributeValue(element, "Margin") == null);
+    }
+
+    [Fact]
+    public void PluginCards_KeepActionButtonsInStableFooter()
+    {
+        var pluginsView = XDocument.Load(FindPluginsViewXamlPath()).Root;
+
+        var actionBar = pluginsView!
+            .Descendants()
+            .Single(element => element.Name.LocalName == "StackPanel"
+                && AttributeValue(element, "Classes") == "PluginActionBar");
+
+        actionBar.Parent!.Name.LocalName.Should().Be("Grid");
+        AttributeValue(actionBar, "Grid.Row").Should().Be("2");
+        AttributeValue(actionBar, "Orientation").Should().Be("Horizontal");
+        AttributeValue(actionBar, "Spacing").Should().Be("6");
+        AttributeValue(actionBar, "HorizontalAlignment").Should().Be("Left");
+        AttributeValue(actionBar, "VerticalAlignment").Should().Be("Bottom");
+    }
+
+    [Fact]
+    public void PluginCards_ConstrainLabelsForResponsiveCards()
+    {
+        var pluginsView = XDocument.Load(FindPluginsViewXamlPath()).Root;
+
+        var statusBadge = pluginsView!
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Border"
+                && AttributeValue(element, "Classes.StatusActive") == "{Binding IsActive}"
+                && AttributeValue(element, "Classes.StatusInactive") == "{Binding !IsActive}");
+
+        AttributeValue(statusBadge, "MaxWidth").Should().Be("82");
+
+        var statusText = statusBadge
+            .Elements()
+            .Single(element => element.Name.LocalName == "TextBlock"
+                && AttributeValue(element, "Text") == "{Binding Status}");
+
+        AttributeValue(statusText, "TextWrapping").Should().Be("NoWrap");
+        AttributeValue(statusText, "TextTrimming").Should().Be("CharacterEllipsis");
+
+        var nameText = pluginsView
+            .Descendants()
+            .Single(element => element.Name.LocalName == "TextBlock"
+                && AttributeValue(element, "Text") == "{Binding Name}"
+                && AttributeValue(element, "FontSize") == "16"
+                && AttributeValue(element, "FontWeight") == "SemiBold");
+
+        AttributeValue(nameText, "TextWrapping").Should().Be("Wrap");
+        AttributeValue(nameText, "MaxLines").Should().Be("2");
+        AttributeValue(nameText, "TextTrimming").Should().Be("CharacterEllipsis");
+    }
+
+    [Fact]
+    public void SharedIconButtonStyle_CentersContentWithDeterministicMinimumSize()
+    {
+        var controls = XDocument.Load(FindControlsXamlPath()).Root;
+
+        var iconButtonStyle = controls!
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Style"
+                && AttributeValue(element, "Selector") == "Button.IconButton");
+
+        var setters = iconButtonStyle
+            .Elements()
+            .Where(element => element.Name.LocalName == "Setter")
+            .ToDictionary(element => AttributeValue(element, "Property")!, element => AttributeValue(element, "Value"));
+
+        setters["MinWidth"].Should().Be("28");
+        setters["MinHeight"].Should().Be("28");
+        setters["Padding"].Should().Be("0");
+        setters["HorizontalContentAlignment"].Should().Be("Center");
+        setters["VerticalContentAlignment"].Should().Be("Center");
+
+        var presenterStyle = controls
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Style"
+                && AttributeValue(element, "Selector") == "Button.IconButton /template/ ContentPresenter#PART_ContentPresenter");
+
+        presenterStyle
+            .Elements()
+            .Where(element => element.Name.LocalName == "Setter")
+            .ToDictionary(element => AttributeValue(element, "Property")!, element => AttributeValue(element, "Value"))
+            .Should()
+            .Contain("HorizontalAlignment", "Center")
+            .And.Contain("VerticalAlignment", "Center");
     }
 
     [Fact]
@@ -81,16 +172,20 @@ public sealed class PluginsViewIconLayoutTests
 
     private static string FindPluginsViewXamlPath()
     {
+        return FindRepoFile("src", "Ui", "SmartVoiceAgent.Ui", "Views", "PluginsView.axaml");
+    }
+
+    private static string FindControlsXamlPath()
+    {
+        return FindRepoFile("src", "Ui", "SmartVoiceAgent.Ui", "Themes", "Controls.axaml");
+    }
+
+    private static string FindRepoFile(params string[] pathSegments)
+    {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            var candidate = Path.Combine(
-                directory.FullName,
-                "src",
-                "Ui",
-                "SmartVoiceAgent.Ui",
-                "Views",
-                "PluginsView.axaml");
+            var candidate = Path.Combine(new[] { directory.FullName }.Concat(pathSegments).ToArray());
 
             if (File.Exists(candidate))
             {
@@ -100,6 +195,6 @@ public sealed class PluginsViewIconLayoutTests
             directory = directory.Parent;
         }
 
-        throw new FileNotFoundException("Could not locate PluginsView.axaml from the test output directory.");
+        throw new FileNotFoundException($"Could not locate {Path.Combine(pathSegments)} from the test output directory.");
     }
 }
