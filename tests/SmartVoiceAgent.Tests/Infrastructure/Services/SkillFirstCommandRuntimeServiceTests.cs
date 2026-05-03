@@ -138,6 +138,37 @@ public class SkillFirstCommandRuntimeServiceTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_PlannerRequiresConfirmationForGrantedAppOpen_RunsPipeline()
+    {
+        var plan = SkillPlan.FromObject("apps.open", new { applicationName = "Spotify" });
+        plan.RequiresConfirmation = true;
+        var planner = new StubSkillPlannerService(SkillPlanParseResult.Success(plan));
+        var pipeline = new RecordingSkillExecutionPipeline(
+            _ => SkillResult.Succeeded("Opened Spotify."));
+        var confirmation = new RecordingSkillConfirmationService();
+        var registry = new StubSkillRegistry(
+            new KamSkillManifest
+            {
+                Id = "apps.open",
+                DisplayName = "Open Application",
+                Enabled = true,
+                RiskLevel = SkillRiskLevel.Medium,
+                Permissions = [SkillPermission.ProcessLaunch],
+                GrantedPermissions = [SkillPermission.ProcessLaunch]
+            });
+        var runtime = CreateRuntime(planner, pipeline, confirmation, registry);
+
+        var result = await runtime.ExecuteAsync("Open Spotify");
+
+        result.Success.Should().BeTrue();
+        result.RequiresConfirmation.Should().BeFalse();
+        result.Message.Should().Be("Opened Spotify.");
+        result.SkillId.Should().Be("apps.open");
+        pipeline.CallCount.Should().Be(1);
+        confirmation.QueueCount.Should().Be(0);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_HighRiskSkill_QueuesRequestWithoutRunningPipeline()
     {
         var plan = SkillPlan.FromObject("files.delete", new { filePath = "C:\\temp\\notes.txt" });

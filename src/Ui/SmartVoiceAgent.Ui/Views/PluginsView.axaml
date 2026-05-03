@@ -89,16 +89,17 @@
         </Style>
 
         <Style Selector="Button.PluginActionButton">
-            <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Opacity" Value="0.96"/>
+            <Setter Property="Opacity" Value="1"/>
         </Style>
 
         <Style Selector="Button.PluginActionButton:pointerover">
-            <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource AccentCyanDimBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Opacity" Value="1"/>
         </Style>
 

@@ -158,6 +158,39 @@ public sealed class PluginsViewIconLayoutTests
     }
 
     [Fact]
+    public void PluginActionButtonStyle_RendersFlatUntilHover()
+    {
+        var pluginsView = XDocument.Load(FindPluginsViewXamlPath()).Root;
+
+        var flatStyle = pluginsView!
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Style"
+                && AttributeValue(element, "Selector") == "Button.PluginActionButton");
+
+        var setters = flatStyle
+            .Elements()
+            .Where(element => element.Name.LocalName == "Setter")
+            .ToDictionary(element => AttributeValue(element, "Property")!, element => AttributeValue(element, "Value"));
+
+        setters["Background"].Should().Be("Transparent");
+        setters["BorderThickness"].Should().Be("0");
+        setters.Should().NotContainKey("BoxShadow");
+
+        var hoverStyle = pluginsView
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Style"
+                && AttributeValue(element, "Selector") == "Button.PluginActionButton:pointerover");
+
+        hoverStyle
+            .Elements()
+            .Where(element => element.Name.LocalName == "Setter")
+            .ToDictionary(element => AttributeValue(element, "Property")!, element => AttributeValue(element, "Value"))
+            .Should()
+            .Contain("Background", "{DynamicResource SurfaceBgBrush}")
+            .And.Contain("BorderThickness", "1");
+    }
+
+    [Fact]
     public void PluginCards_ReserveEnoughHeightForHealthAndActionContent()
     {
         var pluginsView = XDocument.Load(FindPluginsViewXamlPath()).Root;

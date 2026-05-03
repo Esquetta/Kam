@@ -212,13 +212,37 @@ public sealed class SkillFirstCommandRuntimeService : ICommandRuntimeService
             return false;
         }
 
-        if (plan.RequiresConfirmation)
+        if (!registry.TryGet(plan.SkillId, out var manifest) || manifest is null)
+        {
+            return plan.RequiresConfirmation;
+        }
+
+        if (manifest.ReviewRequired || manifest.RiskLevel == SkillRiskLevel.High)
         {
             return true;
         }
 
-        return registry.TryGet(plan.SkillId, out var manifest)
-            && manifest?.RiskLevel == SkillRiskLevel.High;
+        return plan.RequiresConfirmation && HasMissingPermissions(manifest);
+    }
+
+    private static bool HasMissingPermissions(KamSkillManifest manifest)
+    {
+        var required = manifest.Permissions
+            .Where(permission => permission != SkillPermission.None)
+            .Distinct()
+            .ToArray();
+
+        if (required.Length == 0)
+        {
+            return false;
+        }
+
+        var granted = manifest.GrantedPermissions
+            .Where(permission => permission != SkillPermission.None)
+            .Distinct()
+            .ToHashSet();
+
+        return required.Any(permission => !granted.Contains(permission));
     }
 
     private static bool IsPreviewableFileEditSkill(string skillId)

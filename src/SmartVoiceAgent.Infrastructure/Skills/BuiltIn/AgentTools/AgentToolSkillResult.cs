@@ -2,7 +2,7 @@ using SmartVoiceAgent.Core.Models.Skills;
 
 namespace SmartVoiceAgent.Infrastructure.Skills.BuiltIn.AgentTools;
 
-internal static class AgentToolSkillResult
+public static class AgentToolSkillResult
 {
     public static SkillResult FromMessage(string message)
     {
@@ -19,6 +19,12 @@ internal static class AgentToolSkillResult
         }
 
         var normalized = message.TrimStart();
+        if (normalized.StartsWith("📋 Clipboard content:", StringComparison.OrdinalIgnoreCase)
+            || normalized.StartsWith("Clipboard content:", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
         return normalized.StartsWith("Hata", StringComparison.OrdinalIgnoreCase)
             || normalized.StartsWith("Error", StringComparison.OrdinalIgnoreCase)
             || normalized.StartsWith("Failed", StringComparison.OrdinalIgnoreCase)

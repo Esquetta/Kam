@@ -67,7 +67,10 @@ namespace SmartVoiceAgent.Infrastructure.Services
 
                         _logger.LogInformation("Result: {Result}", result.Message);
 
-                        _commandInput.PublishResult(input, result.Message, result.Success);
+                        _commandInput.PublishResult(
+                            input,
+                            result.Message,
+                            result.Success || result.RequiresConfirmation);
                     }
                     catch (OperationCanceledException)
                     {

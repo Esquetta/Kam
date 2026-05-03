@@ -86,6 +86,8 @@ public class BuiltInSkillManifestCatalogTests
         manifests["shell.run"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.ProcessLaunch);
         manifests["shell.run"].TimeoutMilliseconds.Should().BeLessThanOrEqualTo(15000);
 
+        manifests["apps.open"].RiskLevel.Should().Be(SmartVoiceAgent.Core.Models.Skills.SkillRiskLevel.Medium);
+        manifests["apps.open"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.ProcessLaunch);
         manifests["web.fetch"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.Network);
         manifests["web.read_page"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.Network);
         manifests["window.active"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.SystemInformation);

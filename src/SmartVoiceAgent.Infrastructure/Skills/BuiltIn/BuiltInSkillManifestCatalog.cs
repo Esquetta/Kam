@@ -12,7 +12,7 @@ public static class BuiltInSkillManifestCatalog
             Create(
                 "apps.open",
                 "Open Application",
-                SkillRiskLevel.High,
+                SkillRiskLevel.Medium,
                 [SkillPermission.ProcessLaunch],
                 [RequiredString("applicationName", "Application display name or executable alias.")],
                 timeoutMilliseconds: 10000,

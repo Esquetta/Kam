@@ -14,7 +14,11 @@ public sealed class VoiceAgentHostedServiceTests
     public async Task ExecuteAsync_LegacyAgentToolFailure_DoesNotBlockCommandRuntime()
     {
         var commandInput = new CommandInputService();
-        var runtime = new RecordingCommandRuntime();
+        var runtime = new RecordingCommandRuntime(new CommandRuntimeResult(true, "apps.list completed")
+        {
+            SkillId = "apps.list",
+            Status = SkillExecutionStatus.Succeeded
+        });
         var resultPublished = new TaskCompletionSource<CommandResultEventArgs>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         commandInput.OnResult += (_, args) => resultPublished.TrySetResult(args);
@@ -45,8 +49,53 @@ public sealed class VoiceAgentHostedServiceTests
         }
     }
 
+    [Fact]
+    public async Task ExecuteAsync_PendingConfirmation_PublishesNonErrorResult()
+    {
+        var commandInput = new CommandInputService();
+        var confirmationId = Guid.NewGuid();
+        var runtime = new RecordingCommandRuntime(CommandRuntimeResult.PendingConfirmation(
+            "Skill 'apps.open' requires confirmation before execution.",
+            "apps.open",
+            confirmationId));
+        var resultPublished = new TaskCompletionSource<CommandResultEventArgs>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        commandInput.OnResult += (_, args) => resultPublished.TrySetResult(args);
+
+        var service = new VoiceAgentHostedService(
+            runtime,
+            new NoOpAgentRegistry(),
+            new ThrowingAgentFactory(),
+            NullLogger<VoiceAgentHostedService>.Instance,
+            commandInput,
+            new VoiceAgentHostControlService());
+
+        await service.StartAsync(CancellationToken.None);
+        try
+        {
+            commandInput.SubmitCommand("Open Spotify");
+
+            var published = await resultPublished.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+            published.Success.Should().BeTrue();
+            published.Command.Should().Be("Open Spotify");
+            published.Result.Should().Contain("requires confirmation");
+        }
+        finally
+        {
+            await service.StopAsync(CancellationToken.None);
+        }
+    }
+
     private sealed class RecordingCommandRuntime : ICommandRuntimeService
     {
+        private readonly CommandRuntimeResult _result;
+
+        public RecordingCommandRuntime(CommandRuntimeResult result)
+        {
+            _result = result;
+        }
+
         public List<string> Commands { get; } = [];
 
         public Task<CommandRuntimeResult> ExecuteAsync(
@@ -54,11 +103,7 @@ public sealed class VoiceAgentHostedServiceTests
             CancellationToken cancellationToken = default)
         {
             Commands.Add(command);
-            return Task.FromResult(new CommandRuntimeResult(true, "apps.list completed")
-            {
-                SkillId = "apps.list",
-                Status = SkillExecutionStatus.Succeeded
-            });
+            return Task.FromResult(_result);
         }
     }
 
