@@ -52,8 +52,8 @@ public sealed class PluginsViewIconLayoutTests
         }
 
         actionButtons.Should().OnlyContain(element =>
-            AttributeValue(element, "Width") == "30"
-            && AttributeValue(element, "Height") == "30"
+            AttributeValue(element, "Width") == "24"
+            && AttributeValue(element, "Height") == "24"
             && AttributeValue(element, "Padding") == "0"
             && AttributeValue(element, "Margin") == null);
 
@@ -158,7 +158,7 @@ public sealed class PluginsViewIconLayoutTests
     }
 
     [Fact]
-    public void PluginActionButtonStyle_RendersFlatUntilHover()
+    public void PluginActionButtonStyle_RendersFlatAcrossInteractiveStates()
     {
         var pluginsView = XDocument.Load(FindPluginsViewXamlPath()).Root;
 
@@ -173,6 +173,7 @@ public sealed class PluginsViewIconLayoutTests
             .ToDictionary(element => AttributeValue(element, "Property")!, element => AttributeValue(element, "Value"));
 
         setters["Background"].Should().Be("Transparent");
+        setters["BorderBrush"].Should().Be("Transparent");
         setters["BorderThickness"].Should().Be("0");
         setters.Should().NotContainKey("BoxShadow");
 
@@ -186,8 +187,24 @@ public sealed class PluginsViewIconLayoutTests
             .Where(element => element.Name.LocalName == "Setter")
             .ToDictionary(element => AttributeValue(element, "Property")!, element => AttributeValue(element, "Value"))
             .Should()
-            .Contain("Background", "{DynamicResource SurfaceBgBrush}")
-            .And.Contain("BorderThickness", "1");
+            .Contain("Background", "Transparent")
+            .And.Contain("BorderBrush", "Transparent")
+            .And.Contain("BorderThickness", "0");
+
+        var presenterStyle = pluginsView
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Style"
+                && AttributeValue(element, "Selector") == "Button.PluginActionButton /template/ ContentPresenter#PART_ContentPresenter");
+
+        presenterStyle
+            .Elements()
+            .Where(element => element.Name.LocalName == "Setter")
+            .ToDictionary(element => AttributeValue(element, "Property")!, element => AttributeValue(element, "Value"))
+            .Should()
+            .Contain("Background", "Transparent")
+            .And.Contain("BorderBrush", "Transparent")
+            .And.Contain("BorderThickness", "0")
+            .And.Contain("Padding", "0");
     }
 
     [Fact]
