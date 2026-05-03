@@ -99,6 +99,12 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
                 throw new ArgumentException("Invalid application name. Potentially dangerous characters detected.");
             }
 
+            var protocolUri = WindowsApplicationLaunchResolver.FindRegisteredProtocolUri(appName);
+            if (!string.IsNullOrWhiteSpace(protocolUri) && await TryStartProtocolAsync(protocolUri, appName))
+            {
+                return;
+            }
+
             var executablePath = await FindApplicationExecutableAsync(appName);
 
             if (!string.IsNullOrEmpty(executablePath))
@@ -109,6 +115,12 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
                     throw new SecurityException("Invalid executable path detected.");
                 }
                 Process.Start(new ProcessStartInfo(executablePath) { UseShellExecute = true });
+                if (WindowsApplicationLaunchResolver.IsWindowsAppsExecutionAlias(executablePath)
+                    && !await WaitForApplicationProcessAsync(appName, TimeSpan.FromSeconds(5)))
+                {
+                    throw new FileNotFoundException(
+                        $"Application '{appName}' launch alias started but no matching process appeared.");
+                }
             }
             else
             {
@@ -122,6 +134,69 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
                     throw new FileNotFoundException($"Application '{appName}' could not be found or started.");
                 }
             }
+        }
+
+        private static async Task<bool> TryStartProtocolAsync(string protocolUri, string appName)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(protocolUri) { UseShellExecute = true });
+                return await WaitForApplicationProcessAsync(appName, TimeSpan.FromSeconds(5));
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static async Task<bool> WaitForApplicationProcessAsync(string appName, TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow + timeout;
+            while (DateTime.UtcNow < deadline)
+            {
+                if (IsApplicationProcessRunning(appName))
+                {
+                    return true;
+                }
+
+                await Task.Delay(250);
+            }
+
+            return IsApplicationProcessRunning(appName);
+        }
+
+        private static bool IsApplicationProcessRunning(string appName)
+        {
+            var expectedProcessName = NormalizeProcessName(appName);
+            foreach (var process in Process.GetProcesses())
+            {
+                try
+                {
+                    if (NormalizeProcessName(process.ProcessName).Equals(expectedProcessName, StringComparison.OrdinalIgnoreCase)
+                        || (!string.IsNullOrWhiteSpace(process.MainWindowTitle)
+                            && process.MainWindowTitle.Contains(appName, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        return true;
+                    }
+                }
+                catch
+                {
+                    continue;
+                }
+                finally
+                {
+                    process.Dispose();
+                }
+            }
+
+            return false;
+        }
+
+        private static string NormalizeProcessName(string value)
+        {
+            return new string(value
+                .Where(char.IsLetterOrDigit)
+                .ToArray());
         }
 
         /// <summary>
