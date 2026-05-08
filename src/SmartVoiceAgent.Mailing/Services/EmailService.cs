@@ -7,6 +7,7 @@ using MimeKit;
 using MimeKit.Text;
 using SmartVoiceAgent.Mailing.Entities;
 using SmartVoiceAgent.Mailing.Interfaces;
+using SmartVoiceAgent.Mailing.Security;
 
 namespace SmartVoiceAgent.Mailing.Services;
 
@@ -46,8 +47,8 @@ public class EmailService : IEmailService, IDisposable
         }
         
         // Log configuration (without sensitive data)
-        _logger.LogInformation("📧 EmailService configured: Provider={Provider}, Host={Host}:{Port}, Auth={AuthMethod}, User={Username}",
-            _settings.Provider, _settings.Host, _settings.Port, _settings.AuthMethod, _settings.Username);
+        _logger.LogInformation("EmailService configured: Provider={Provider}, Host={Host}:{Port}, Auth={AuthMethod}, User={Username}",
+            _settings.Provider, _settings.Host, _settings.Port, _settings.AuthMethod, MailingLogSanitizer.MaskEmail(_settings.Username));
         
         // Validate essential settings
         if (string.IsNullOrEmpty(_settings.Host))
@@ -66,8 +67,8 @@ public class EmailService : IEmailService, IDisposable
             // Sandbox mode for testing
             if (_options.SandboxMode)
             {
-                _logger.LogInformation("🧪 [SANDBOX] Email would be sent to {Recipients}. Subject: {Subject}",
-                    string.Join(", ", message.To), message.Subject);
+                _logger.LogInformation("[SANDBOX] Email would be sent to {RecipientCount} recipient(s): {Recipients}. SubjectLength={SubjectLength}",
+                    message.To.Count, MailingLogSanitizer.MaskEmails(message.To), message.Subject?.Length ?? 0);
                 return EmailSendResult.SuccessResult(message.Id, "[SANDBOX MODE] Email not actually sent");
             }
 
@@ -99,15 +100,15 @@ public class EmailService : IEmailService, IDisposable
             message.SentAt = DateTime.UtcNow;
             message.Status = EmailStatus.Sent;
 
-            _logger.LogInformation("✅ Email sent successfully to {Recipients}. Subject: {Subject}",
-                string.Join(", ", message.To), message.Subject);
+            _logger.LogInformation("Email sent successfully to {RecipientCount} recipient(s): {Recipients}. SubjectLength={SubjectLength}",
+                message.To.Count, MailingLogSanitizer.MaskEmails(message.To), message.Subject?.Length ?? 0);
 
             return EmailSendResult.SuccessResult(message.Id);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "❌ Failed to send email to {Recipients}. Subject: {Subject}",
-                string.Join(", ", message.To), message.Subject);
+            _logger.LogError(ex, "Failed to send email to {RecipientCount} recipient(s): {Recipients}. SubjectLength={SubjectLength}",
+                message.To.Count, MailingLogSanitizer.MaskEmails(message.To), message.Subject?.Length ?? 0);
             
             message.Status = EmailStatus.Failed;
             message.ErrorMessage = ex.Message;
@@ -347,7 +348,7 @@ public class EmailService : IEmailService, IDisposable
         }
 
         _logger.LogDebug("Authenticated as {Username} using {AuthMethod}", 
-            username, _settings.AuthMethod);
+            MailingLogSanitizer.MaskEmail(username), _settings.AuthMethod);
     }
 
     private MimeMessage CreateMimeMessage(EmailMessage message)

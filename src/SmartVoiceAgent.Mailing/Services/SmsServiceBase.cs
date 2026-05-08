@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SmartVoiceAgent.Mailing.Entities;
 using SmartVoiceAgent.Mailing.Interfaces;
+using SmartVoiceAgent.Mailing.Security;
 
 namespace SmartVoiceAgent.Mailing.Services;
 
@@ -54,7 +55,9 @@ public abstract class SmsServiceBase : ISmsService
             // Sandbox mode
             if (_settings.SandboxMode || _options.SandboxMode)
             {
-                _logger.LogInformation("🧪 [SANDBOX] SMS would be sent to {To}: {Body}", message.To, message.Body);
+                _logger.LogInformation("[SANDBOX] SMS would be sent to {To}. BodyLength={BodyLength}",
+                    MailingLogSanitizer.MaskPhoneNumber(message.To),
+                    message.Body?.Length ?? 0);
                 var sandboxId = "sandbox-" + Guid.NewGuid().ToString("N").Substring(0, 10);
                 var sandboxResult = SmsSendResult.CreateSuccess(message.Id, sandboxId, ProviderName, message.CalculateSegments());
                 sandboxResult.Message = "[SANDBOX MODE] SMS not actually sent";
@@ -91,20 +94,21 @@ public abstract class SmsServiceBase : ISmsService
             
             if (result.Success)
             {
-                _logger.LogInformation("✅ SMS sent to {To} via {Provider}. Segments: {Segments}, ID: {MessageId}",
-                    message.To, ProviderName, message.Segments, result.ProviderMessageId);
+                _logger.LogInformation("SMS sent to {To} via {Provider}. Segments: {Segments}, ID: {MessageId}",
+                    MailingLogSanitizer.MaskPhoneNumber(message.To), ProviderName, message.Segments, result.ProviderMessageId);
             }
             else
             {
-                _logger.LogWarning("❌ Failed to send SMS to {To} via {Provider}: {Error}",
-                    message.To, ProviderName, result.Error);
+                _logger.LogWarning("Failed to send SMS to {To} via {Provider}: {Error}",
+                    MailingLogSanitizer.MaskPhoneNumber(message.To), ProviderName, result.Error);
             }
             
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "❌ Exception sending SMS to {To} via {Provider}", message.To, ProviderName);
+            _logger.LogError(ex, "Exception sending SMS to {To} via {Provider}",
+                MailingLogSanitizer.MaskPhoneNumber(message.To), ProviderName);
             return SmsSendResult.CreateFailure(message.Id, ex.Message);
         }
     }

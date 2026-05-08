@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Application.Notifications;
 using SmartVoiceAgent.Mailing.Entities;
 using SmartVoiceAgent.Mailing.Interfaces;
+using SmartVoiceAgent.Mailing.Security;
 using System.ComponentModel;
 
 namespace SmartVoiceAgent.Infrastructure.Agent.Tools;
@@ -63,30 +64,33 @@ public class CommunicationAgentTools
 
         try
         {
-            _logger?.LogInformation("📧 Agent sending email to: {To}, Subject: {Subject}", to, subject);
+            var safeSubject = subject ?? string.Empty;
+            var safeBody = body ?? string.Empty;
+            _logger?.LogInformation("Agent sending email to {To}. SubjectLength={SubjectLength}",
+                MailingLogSanitizer.MaskEmail(to), safeSubject.Length);
 
-            var result = await _emailService.SendAsync(to, subject, body, isHtml);
+            var result = await _emailService.SendAsync(to, safeSubject, safeBody, isHtml);
 
             if (result.Success)
             {
                 // Publish notification if mediator is available
                 if (_mediator != null)
                 {
-                    await _mediator.PublishAsync(new MessageSentNotification(to, body));
+                    await _mediator.PublishAsync(new MessageSentNotification(to, safeBody));
                 }
 
-                _logger?.LogInformation("✅ Email sent successfully to {To}", to);
-                return $"✅ Email sent successfully to {to}. Subject: {subject}";
+                _logger?.LogInformation("Email sent successfully to {To}", MailingLogSanitizer.MaskEmail(to));
+                return $"✅ Email sent successfully to {to}. Subject: {safeSubject}";
             }
             else
             {
-                _logger?.LogWarning("❌ Failed to send email to {To}: {Error}", to, result.Error);
+                _logger?.LogWarning("Failed to send email to {To}: {Error}", MailingLogSanitizer.MaskEmail(to), result.Error);
                 return $"❌ Failed to send email: {result.Message}. Error: {result.Error}";
             }
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "❌ Exception sending email to {To}", to);
+            _logger?.LogError(ex, "Exception sending email to {To}", MailingLogSanitizer.MaskEmail(to));
             return $"❌ Error sending email: {ex.Message}";
         }
     }
@@ -110,7 +114,8 @@ public class CommunicationAgentTools
 
         try
         {
-            _logger?.LogInformation("📧 Agent sending templated email to: {To}, Template: {Template}", to, templateName);
+            _logger?.LogInformation("Agent sending templated email to {To}, Template: {Template}",
+                MailingLogSanitizer.MaskEmail(to), templateName);
 
             // Parse template data
             var templateData = ParseTemplateData(templateDataJson);
@@ -119,18 +124,19 @@ public class CommunicationAgentTools
 
             if (result.Success)
             {
-                _logger?.LogInformation("✅ Templated email sent successfully to {To}", to);
+                _logger?.LogInformation("Templated email sent successfully to {To}", MailingLogSanitizer.MaskEmail(to));
                 return $"✅ Templated email ({templateName}) sent successfully to {to}";
             }
             else
             {
-                _logger?.LogWarning("❌ Failed to send templated email to {To}: {Error}", to, result.Error);
+                _logger?.LogWarning("Failed to send templated email to {To}: {Error}",
+                    MailingLogSanitizer.MaskEmail(to), result.Error);
                 return $"❌ Failed to send email: {result.Message}";
             }
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "❌ Exception sending templated email to {To}", to);
+            _logger?.LogError(ex, "Exception sending templated email to {To}", MailingLogSanitizer.MaskEmail(to));
             return $"❌ Error sending email: {ex.Message}";
         }
     }
@@ -187,24 +193,24 @@ public class CommunicationAgentTools
 
         try
         {
-            _logger?.LogInformation("📱 Agent sending SMS to: {To}", to);
+            _logger?.LogInformation("Agent sending SMS to {To}", MailingLogSanitizer.MaskPhoneNumber(to));
 
             var result = await _smsService.SendAsync(to, message);
 
             if (result.Success)
             {
-                _logger?.LogInformation("✅ SMS sent successfully to {To}", to);
+                _logger?.LogInformation("SMS sent successfully to {To}", MailingLogSanitizer.MaskPhoneNumber(to));
                 return $"✅ SMS sent successfully to {to}. Segments: {result.Segments}";
             }
             else
             {
-                _logger?.LogWarning("❌ Failed to send SMS to {To}: {Error}", to, result.Error);
+                _logger?.LogWarning("Failed to send SMS to {To}: {Error}", MailingLogSanitizer.MaskPhoneNumber(to), result.Error);
                 return $"❌ Failed to send SMS: {result.Message}. Error: {result.Error}";
             }
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "❌ Exception sending SMS to {To}", to);
+            _logger?.LogError(ex, "Exception sending SMS to {To}", MailingLogSanitizer.MaskPhoneNumber(to));
             return $"❌ Error sending SMS: {ex.Message}";
         }
     }

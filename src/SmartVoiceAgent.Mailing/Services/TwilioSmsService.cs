@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SmartVoiceAgent.Mailing.Entities;
 using SmartVoiceAgent.Mailing.Interfaces;
+using SmartVoiceAgent.Mailing.Security;
 
 namespace SmartVoiceAgent.Mailing.Services;
 
@@ -134,7 +135,7 @@ public class TwilioSmsService : SmsServiceBase
                 var account = JsonSerializer.Deserialize<TwilioAccountResponse>(body);
                 
                 _logger.LogInformation("Connected to Twilio account: {AccountSid}, Status: {Status}",
-                    account?.Sid, account?.Status);
+                    MailingLogSanitizer.MaskIdentifier(account?.Sid), account?.Status);
                 
                 return true;
             }
