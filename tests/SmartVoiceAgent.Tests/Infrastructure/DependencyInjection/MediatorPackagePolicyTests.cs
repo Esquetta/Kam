@@ -5,6 +5,8 @@ namespace SmartVoiceAgent.Tests.Infrastructure.DependencyInjection;
 
 public class MediatorPackagePolicyTests
 {
+    private static readonly Version MinimumSafeSnappierVersion = new(1, 3, 1);
+
     [Fact]
     public void ProjectFiles_UseCortexMediatorWithoutMediatR()
     {
@@ -28,6 +30,33 @@ public class MediatorPackagePolicyTests
 
         cortexReferences.Should().NotBeEmpty(
             "the application mediator pipeline should be backed by the selected free Cortex.Mediator package");
+    }
+
+    [Fact]
+    public void ProjectFiles_PinSnappierAboveVulnerableTransitiveVersion()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var projectFiles = Directory.GetFiles(repositoryRoot, "*.csproj", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+                && !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        var snappierReferences = projectFiles
+            .SelectMany(projectPath => ReadPackageReferences(projectPath, "Snappier"))
+            .ToArray();
+
+        snappierReferences.Should().NotBeEmpty(
+            "the dependency graph includes packages that otherwise resolve the vulnerable Snappier 1.0.0 transitive version");
+
+        snappierReferences.Should().OnlyContain(reference =>
+                IsAtOrAboveMinimumSafeSnappierVersion(reference.Version),
+            $"Snappier must stay at or above {MinimumSafeSnappierVersion} to avoid GHSA-pggp-6c3x-2xmx");
+    }
+
+    private static bool IsAtOrAboveMinimumSafeSnappierVersion(string version)
+    {
+        return Version.TryParse(version, out var parsedVersion)
+            && parsedVersion >= MinimumSafeSnappierVersion;
     }
 
     private static IEnumerable<PackageReference> ReadPackageReferences(string projectPath, string packageName)
