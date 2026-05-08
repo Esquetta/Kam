@@ -4,17 +4,17 @@ Use this checklist for every local release candidate before tagging or publishin
 
 ## Release Candidate
 
-- Candidate id: `rc-local-20260503`
+- Candidate id: `rc-local-20260508`
 - Source branch: `master`
-- Commit under rehearsal: `b15fc31c5fbc057cbab830353fdb1b912aa66430`
-- Smoke summary: `artifacts/local-production-smoke/20260503-113220/summary.md`
-- Skill smoke summary: `artifacts/local-production-smoke/20260503-113220/skill-smoke.md`
-- Command smoke summary: pending latest release smoke
-- Sanitized readiness report: `artifacts/local-production-smoke/20260503-113220/readiness-report.md`
+- Commit under rehearsal: `93df389a9c80d35bf7bf7f26f1838be067b530d8`
+- Smoke summary: `artifacts/local-production-smoke/20260508-192713/summary.md`
+- Skill smoke summary: `artifacts/local-production-smoke/20260508-192713/skill-smoke.md`
+- Command smoke summary: `artifacts/local-production-smoke/20260508-192713/command-smoke.md`
+- Sanitized readiness report: `artifacts/local-production-smoke/20260508-192713/readiness-report.md`
 - Approval owner: pending manual approval
 - Approval date: pending
 
-Note: the current smoke evidence was captured while this checklist was being edited, so the smoke summary records `dirty tracked worktree allowed` for the docs-only changes. Run the same smoke command again after committing this checklist before creating a release tag.
+Note: the latest smoke evidence was captured from a clean tracked worktree before this checklist update.
 
 ## Required Core Configuration
 
@@ -44,7 +44,7 @@ Run from the repository root:
 dotnet restore Kam.sln
 dotnet build Kam.sln --configuration Release --no-restore --no-incremental
 dotnet test Kam.sln --configuration Release
-.\scripts\local-production-smoke.ps1 -Configuration Release -Runtime win-x64 -RequireAiConfig -ReleaseCandidate rc-local-20260503 -Launch
+.\scripts\local-production-smoke.ps1 -Configuration Release -Runtime win-x64 -RequireAiConfig -ReleaseCandidate rc-local-20260508 -Launch
 git diff --check
 ```
 
@@ -95,17 +95,20 @@ Run only when credentials are intentionally configured:
 
 ## Approval
 
-- Automated gate completed: yes, for rehearsal evidence above
+- Automated gate completed: yes, for `rc-local-20260508`
 - Manual UI gate completed: partial
-- Sanitized readiness report reviewed: yes, copied from Runtime Diagnostics and saved to the artifact path above
+- Sanitized readiness report reviewed: yes, saved to the artifact path above
 - Release candidate approved for tag: no
 - Approved tag: pending
 
 Manual UI gate notes:
 
-- Runtime Diagnostics opened successfully in the published app.
-- Core AI was `Ready`, Planner Live Connection was `Verified`, Host was `Online`, and Skills summary was `62/62 healthy`.
-- Plugins opened successfully and showed `38/38 smoke evals passing`; action icons were visible without obvious clipping.
-- Settings opened in dark and light mode; API key was masked and Test Connection was aligned.
-- Copy Report produced a sanitized readiness report.
-- Remaining manual blocker: the previous command input automation did not submit a planner-backed command in this desktop session. The automated gate now has a headless command smoke; rerun the gate and repeat one UI command before tagging.
+- Full local production smoke completed from a clean tracked worktree.
+- Release build completed with `0 Warning(s)` and `0 Error(s)`.
+- Test suite passed: `573/573`.
+- Skill smoke passed: `38/38`.
+- Headless command smoke passed: `list applications` -> `apps.list`, no confirmation required.
+- Publish created `SmartVoiceAgent.Ui.exe` and launched process `32264`; Windows reported `Responding=True`.
+- Command Center opened from the published artifact and showed `ACTIVITY_LOG`, `PLAN_TRACE`, and `SKILL_RESULTS`.
+- UI command input accepted `list applications` and produced planner trace plus normalized `apps.list` skill result evidence.
+- Remaining manual blocker before tagging: repeat Settings and Runtime Diagnostics page checks by hand, including Live Production Test `READY_FOR_LIVE_TEST` and Copy Report from the UI.
