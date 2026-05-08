@@ -17,6 +17,12 @@ public sealed class LocalProductionSmokeScriptTests
         script.Should().Contain("SkipCommandSmoke");
         script.Should().Contain("dotnet\", \"publish\"");
         script.Should().Contain("MaxBuildWarnings");
+        script.Should().Contain("StepTimeoutSeconds");
+        script.Should().Contain("CommandSmokeTimeoutSeconds");
+        script.Should().Contain("Join-ProcessArguments");
+        script.Should().Contain("Kill($true)");
+        script.Should().Contain("timed out after");
+        script.Should().Contain("-TimeoutSeconds $CommandSmokeTimeoutSeconds");
         script.Should().Contain("ReleaseCandidate");
         script.Should().Contain("AllowDirtyWorktree");
         script.Should().Contain("git\", \"rev-parse\", \"HEAD\"");

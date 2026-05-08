@@ -12,7 +12,9 @@ param(
     [switch]$SelfTestWarningParser,
     [string]$ReleaseCandidate = "",
     [switch]$AllowDirtyWorktree,
-    [int]$MaxBuildWarnings = 0
+    [int]$MaxBuildWarnings = 0,
+    [int]$StepTimeoutSeconds = 900,
+    [int]$CommandSmokeTimeoutSeconds = 180
 )
 
 Set-StrictMode -Version Latest
@@ -33,6 +35,14 @@ $summary = New-Object System.Collections.Generic.List[string]
 
 if ($MaxBuildWarnings -lt 0) {
     throw "-MaxBuildWarnings must be zero or greater."
+}
+
+if ($StepTimeoutSeconds -le 0) {
+    throw "-StepTimeoutSeconds must be greater than zero."
+}
+
+if ($CommandSmokeTimeoutSeconds -le 0) {
+    throw "-CommandSmokeTimeoutSeconds must be greater than zero."
 }
 
 function Add-SummaryLine {
@@ -164,14 +174,44 @@ function Test-SmokeWarningParser {
         throw "Expected stream warning count 2 when no MSBuild summary exists, got $streamCount."
     }
 
+    $quotedArguments = Join-ProcessArguments @("dotnet", "build", "D:\repo with spaces\Kam.sln")
+    if ($quotedArguments -ne 'dotnet build "D:\repo with spaces\Kam.sln"') {
+        throw "Expected process argument quoting to preserve spaces, got $quotedArguments."
+    }
+
     Write-Host "Warning parser self-test passed" -ForegroundColor Green
+}
+
+function Join-ProcessArguments {
+    param([string[]]$Arguments)
+
+    return ($Arguments | ForEach-Object {
+        if ($null -eq $_) {
+            '""'
+        }
+        else {
+            $argument = $_.ToString()
+            if ($argument.Length -eq 0) {
+                '""'
+            }
+            elseif ($argument -notmatch '[\s"]') {
+                $argument
+            }
+            else {
+                $escaped = $argument -replace '(\\*)"', '$1$1\"'
+                $escaped = $escaped -replace '(\\+)$', '$1$1'
+                "`"$escaped`""
+            }
+        }
+    }) -join " "
 }
 
 function Invoke-SmokeStep {
     param(
         [string]$Name,
         [string[]]$Command,
-        [int]$MaxWarnings = -1
+        [int]$MaxWarnings = -1,
+        [int]$TimeoutSeconds = $StepTimeoutSeconds
     )
 
     $commandText = $Command -join " "
@@ -189,15 +229,55 @@ function Invoke-SmokeStep {
     }
 
     $timer = [System.Diagnostics.Stopwatch]::StartNew()
-    $output = & $exe @arguments 2>&1
-    $exitCode = if ($LASTEXITCODE -is [int]) { $LASTEXITCODE } else { 0 }
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo.FileName = $exe
+    $process.StartInfo.Arguments = Join-ProcessArguments $arguments
+    $process.StartInfo.RedirectStandardOutput = $true
+    $process.StartInfo.RedirectStandardError = $true
+    $process.StartInfo.UseShellExecute = $false
+    $process.StartInfo.CreateNoWindow = $true
+
+    [void]$process.Start()
+    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+    $stderrTask = $process.StandardError.ReadToEndAsync()
+    $timeoutMilliseconds = $TimeoutSeconds * 1000
+
+    if (-not $process.WaitForExit($timeoutMilliseconds)) {
+        try {
+            $process.Kill($true)
+        }
+        catch {
+            Write-Warning "Failed to kill timed-out process $($process.Id): $_"
+        }
+
+        [void]$process.WaitForExit(5000)
+        $timer.Stop()
+        $stdout = $stdoutTask.GetAwaiter().GetResult()
+        $stderr = $stderrTask.GetAwaiter().GetResult()
+        $output = @(Convert-ProcessOutputToLines $stdout) + @(Convert-ProcessOutputToLines $stderr)
+        foreach ($line in $output) {
+            Write-Host $line
+        }
+
+        Add-SummaryLine "  - duration: $($timer.Elapsed.TotalSeconds.ToString('0.0'))s"
+        Add-SummaryLine "  - timeoutSeconds: $TimeoutSeconds"
+        Add-SummaryLine "  - timedOut: true"
+        throw "$Name timed out after $TimeoutSeconds seconds."
+    }
+
+    $process.WaitForExit()
     $timer.Stop()
+    $stdout = $stdoutTask.GetAwaiter().GetResult()
+    $stderr = $stderrTask.GetAwaiter().GetResult()
+    $output = @(Convert-ProcessOutputToLines $stdout) + @(Convert-ProcessOutputToLines $stderr)
+    $exitCode = $process.ExitCode
 
     foreach ($line in $output) {
         Write-Host $line
     }
 
     Add-SummaryLine "  - duration: $($timer.Elapsed.TotalSeconds.ToString('0.0'))s"
+    Add-SummaryLine "  - timeoutSeconds: $TimeoutSeconds"
 
     if ($MaxWarnings -ge 0) {
         $warningCount = Get-SmokeBuildWarningCount -Output $output
@@ -212,6 +292,16 @@ function Invoke-SmokeStep {
     if ($exitCode -ne 0) {
         throw "$Name failed with exit code $exitCode."
     }
+}
+
+function Convert-ProcessOutputToLines {
+    param([string]$Output)
+
+    if ([string]::IsNullOrEmpty($Output)) {
+        return @()
+    }
+
+    return @($Output -split "\r?\n" | Where-Object { -not [string]::IsNullOrEmpty($_) })
 }
 
 function Get-UserSecretKeys {
@@ -473,6 +563,8 @@ Add-SummaryLine "- configuration: $Configuration"
 Add-SummaryLine "- runtime: $Runtime"
 Add-SummaryLine "- planOnly: $PlanOnly"
 Add-SummaryLine "- maxBuildWarnings: $MaxBuildWarnings"
+Add-SummaryLine "- stepTimeoutSeconds: $StepTimeoutSeconds"
+Add-SummaryLine "- commandSmokeTimeoutSeconds: $CommandSmokeTimeoutSeconds"
 Add-SummaryLine "- summaryPath: $summaryPath"
 Add-SummaryLine "- skillSmokeSummary: $skillSmokeSummaryPath"
 Add-SummaryLine "- commandSmokeSummary: $commandSmokeSummaryPath"
@@ -504,7 +596,7 @@ else {
 }
 
 if (-not $SkipCommandSmoke -and $RequireAiConfig) {
-    Invoke-SmokeStep "command smoke" @("dotnet", "run", "--project", $agentHostProject, "--configuration", $Configuration, "--no-build", "--", "--command-smoke", "--command-smoke-command", "list applications", "--command-smoke-summary", $commandSmokeSummaryPath)
+    Invoke-SmokeStep "command smoke" @("dotnet", "run", "--project", $agentHostProject, "--configuration", $Configuration, "--no-build", "--", "--command-smoke", "--command-smoke-command", "list applications", "--command-smoke-summary", $commandSmokeSummaryPath) -TimeoutSeconds $CommandSmokeTimeoutSeconds
     Add-SummaryLine "- commandSmokeSummary: $commandSmokeSummaryPath"
 }
 elseif ($SkipCommandSmoke) {
