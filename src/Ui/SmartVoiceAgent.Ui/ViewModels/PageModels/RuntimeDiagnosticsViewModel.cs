@@ -410,7 +410,16 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         {
             DownloadedUpdatePackagePath = _lastApplicationUpdateDownload.FilePath ?? string.Empty;
             ApplicationUpdateActionStatus = "Downloaded Kam update package.";
-            PlanApplicationRestart();
+            if (_lastApplicationUpdateDownload.IsVerified)
+            {
+                PlanApplicationRestart();
+                ApplicationUpdateActionStatus = "Downloaded Kam update package.";
+                return;
+            }
+
+            _lastApplicationRestartPlan = null;
+            ApplyApplicationUpdateDiagnostics();
+            RebuildSummary();
             ApplicationUpdateActionStatus = "Downloaded Kam update package.";
             return;
         }
@@ -422,6 +431,16 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
 
     public void PlanApplicationRestart()
     {
+        if (_lastApplicationUpdateDownload?.Success == true
+            && !_lastApplicationUpdateDownload.IsVerified)
+        {
+            _lastApplicationRestartPlan = null;
+            ApplicationUpdateActionStatus = "Verify the downloaded package before restart handoff.";
+            ApplyApplicationUpdateDiagnostics();
+            RebuildSummary();
+            return;
+        }
+
         if (_applicationRestartPlanner is null)
         {
             _lastApplicationRestartPlan = new ApplicationRestartPlan(
@@ -674,6 +693,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
                 "Unavailable",
                 "Application update service is not registered in this runtime.",
                 RuntimeDiagnosticSeverity.Warning));
+            AddPackageVerificationDiagnostic();
             AddDownloadedPackageDiagnostic();
             AddRestartPlanDiagnostic();
             return;
@@ -687,6 +707,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
                 "Not checked",
                 "Use Check Updates to query the configured GitHub Releases feed.",
                 RuntimeDiagnosticSeverity.Warning));
+            AddPackageVerificationDiagnostic();
             AddDownloadedPackageDiagnostic();
             AddRestartPlanDiagnostic();
             return;
@@ -706,11 +727,6 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
                 _lastApplicationUpdateCheck.Asset.Name,
                 $"{FormatBytes(_lastApplicationUpdateCheck.Asset.SizeBytes)} package selected; raw download URL hidden.",
                 RuntimeDiagnosticSeverity.Ready));
-            ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
-                "Package Verification",
-                "Not verified",
-                "Hash and signature verification are not implemented in this build.",
-                RuntimeDiagnosticSeverity.Warning));
         }
         else
         {
@@ -725,6 +741,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
                     : RuntimeDiagnosticSeverity.Ready));
         }
 
+        AddPackageVerificationDiagnostic();
         AddDownloadedPackageDiagnostic();
         AddRestartPlanDiagnostic();
     }
@@ -1095,11 +1112,16 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         if (_lastApplicationUpdateDownload?.Success == true
             && !string.IsNullOrWhiteSpace(_lastApplicationUpdateDownload.FilePath))
         {
+            var verificationDetail = _lastApplicationUpdateDownload.IsVerified
+                ? "SHA256 verified."
+                : $"Verification: {_lastApplicationUpdateDownload.VerificationStatus}.";
             ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
                 "Downloaded Package",
-                "Ready",
-                $"{Path.GetFileName(_lastApplicationUpdateDownload.FilePath)} downloaded for version {_lastApplicationUpdateDownload.Version ?? "(unknown)"}; package verification is still pending.",
-                RuntimeDiagnosticSeverity.Ready));
+                _lastApplicationUpdateDownload.IsVerified ? "Ready" : "Needs verification",
+                $"{Path.GetFileName(_lastApplicationUpdateDownload.FilePath)} downloaded for version {_lastApplicationUpdateDownload.Version ?? "(unknown)"}. {verificationDetail}",
+                _lastApplicationUpdateDownload.IsVerified
+                    ? RuntimeDiagnosticSeverity.Ready
+                    : RuntimeDiagnosticSeverity.Warning));
             return;
         }
 
@@ -1120,8 +1142,76 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             RuntimeDiagnosticSeverity.Warning));
     }
 
+    private void AddPackageVerificationDiagnostic()
+    {
+        if (_lastApplicationUpdateDownload is not null)
+        {
+            if (_lastApplicationUpdateDownload.Success && _lastApplicationUpdateDownload.IsVerified)
+            {
+                ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
+                    "Package Verification",
+                    "Verified",
+                    BuildVerificationDetail(_lastApplicationUpdateDownload),
+                    RuntimeDiagnosticSeverity.Ready));
+                return;
+            }
+
+            if (_lastApplicationUpdateDownload.VerificationStatus.Contains(
+                    "mismatch",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
+                    "Package Verification",
+                    "Mismatch",
+                    BuildVerificationDetail(_lastApplicationUpdateDownload),
+                    RuntimeDiagnosticSeverity.Blocked));
+                return;
+            }
+
+            ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
+                "Package Verification",
+                "Not verified",
+                BuildVerificationDetail(_lastApplicationUpdateDownload),
+                RuntimeDiagnosticSeverity.Warning));
+            return;
+        }
+
+        var asset = _lastApplicationUpdateCheck?.Asset;
+        if (asset is null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(asset.ChecksumDownloadUrl))
+        {
+            ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
+                "Package Verification",
+                "Not verified",
+                "No checksum asset was found for the selected release package.",
+                RuntimeDiagnosticSeverity.Warning));
+            return;
+        }
+
+        ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
+            "Package Verification",
+            "Pending",
+            $"{asset.ChecksumName ?? "Checksum"} will be verified after download.",
+            RuntimeDiagnosticSeverity.Warning));
+    }
+
     private void AddRestartPlanDiagnostic()
     {
+        if (_lastApplicationUpdateDownload?.Success == true
+            && !_lastApplicationUpdateDownload.IsVerified)
+        {
+            ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
+                "Restart Plan",
+                "Blocked",
+                "Verify the downloaded package before restart handoff.",
+                RuntimeDiagnosticSeverity.Blocked));
+            return;
+        }
+
         if (_lastApplicationRestartPlan is null)
         {
             ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
@@ -1142,6 +1232,21 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             _lastApplicationRestartPlan.CanRestart
                 ? RuntimeDiagnosticSeverity.Ready
                 : RuntimeDiagnosticSeverity.Warning));
+    }
+
+    private static string BuildVerificationDetail(ApplicationUpdateDownloadResult download)
+    {
+        var detail = string.IsNullOrWhiteSpace(download.VerificationStatus)
+            ? "Package verification did not produce a status."
+            : download.VerificationStatus;
+
+        if (!string.IsNullOrWhiteSpace(download.ExpectedSha256)
+            && !string.IsNullOrWhiteSpace(download.ActualSha256))
+        {
+            detail += $" Expected {download.ExpectedSha256}; actual {download.ActualSha256}.";
+        }
+
+        return SecretRedactor.Redact(detail);
     }
 
     private string CurrentApplicationVersion()

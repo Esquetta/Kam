@@ -230,6 +230,7 @@ public sealed class SlashCommandService : ISlashCommandService
         if (update.Asset is not null)
         {
             lines.Add($"  asset: {update.Asset.Name} ({FormatBytes(update.Asset.SizeBytes)})");
+            lines.Add($"  checksum: {(string.IsNullOrWhiteSpace(update.Asset.ChecksumDownloadUrl) ? "missing" : update.Asset.ChecksumName ?? "available")}");
             lines.Add("  next: /download");
         }
 
@@ -249,6 +250,10 @@ public sealed class SlashCommandService : ISlashCommandService
             return SlashCommandResult.Failed("/download", download.Message);
         }
 
+        var nextStep = download.IsVerified
+            ? "next: /restart <file>"
+            : "next: verify release package before restart";
+
         return SlashCommandResult.Succeeded(
             "/download",
             string.Join(Environment.NewLine, [
@@ -256,7 +261,8 @@ public sealed class SlashCommandService : ISlashCommandService
                 $"  version: {download.Version ?? "(unknown)"}",
                 $"  file: {download.FilePath}",
                 $"  size: {FormatBytes(download.SizeBytes ?? 0)}",
-                "  next: /restart <file>"
+                $"  verification: {download.VerificationStatus}",
+                $"  {nextStep}"
             ]));
     }
 

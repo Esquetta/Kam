@@ -42,6 +42,12 @@ public sealed class GitHubApplicationUpdateServiceTests : IDisposable
                       "browser_download_url": "https://downloads.example/kam.msi",
                       "size": 100,
                       "content_type": "application/octet-stream"
+                    },
+                    {
+                      "name": "Kam-1.2.0-x64.msi.sha256",
+                      "browser_download_url": "https://downloads.example/Kam-1.2.0-x64.msi.sha256",
+                      "size": 64,
+                      "content_type": "text/plain"
                     }
                   ]
                 }
@@ -56,6 +62,7 @@ public sealed class GitHubApplicationUpdateServiceTests : IDisposable
         result.LatestVersion.Should().Be("1.2.0");
         result.Asset.Should().NotBeNull();
         result.Asset!.Name.Should().Be("Kam-1.2.0-x64.msi");
+        result.Asset.ChecksumDownloadUrl.Should().Be("https://downloads.example/Kam-1.2.0-x64.msi.sha256");
     }
 
     [Fact]
@@ -130,6 +137,122 @@ public sealed class GitHubApplicationUpdateServiceTests : IDisposable
         result.Version.Should().Be("1.2.0");
         result.FilePath.Should().NotBeNull();
         File.ReadAllBytes(result.FilePath!).Should().Equal(payload);
+        result.IsVerified.Should().BeFalse();
+        result.VerificationStatus.ToLowerInvariant().Should().Contain("checksum");
+    }
+
+    [Fact]
+    public async Task DownloadLatestAsync_WhenChecksumMatches_MarksPackageVerified()
+    {
+        var payload = Encoding.UTF8.GetBytes("installer-bytes");
+        var expectedHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(payload)).ToLowerInvariant();
+        var service = CreateService(new StaticHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.Host == "api.github.com")
+            {
+                return JsonResponse("""
+                    {
+                      "tag_name": "v1.2.0",
+                      "name": "Kam 1.2.0",
+                      "html_url": "https://github.com/Esquetta/Kam/releases/tag/v1.2.0",
+                      "published_at": "2026-05-09T12:00:00Z",
+                      "prerelease": false,
+                      "assets": [
+                        {
+                          "name": "Kam-1.2.0-x64.msi",
+                          "browser_download_url": "https://downloads.example/Kam-1.2.0-x64.msi",
+                          "size": 15,
+                          "content_type": "application/octet-stream"
+                        },
+                        {
+                          "name": "Kam-1.2.0-x64.msi.sha256",
+                          "browser_download_url": "https://downloads.example/Kam-1.2.0-x64.msi.sha256",
+                          "size": 64,
+                          "content_type": "text/plain"
+                        }
+                      ]
+                    }
+                    """);
+            }
+
+            if (request.RequestUri.AbsolutePath.EndsWith(".sha256", StringComparison.OrdinalIgnoreCase))
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent($"{expectedHash}  Kam-1.2.0-x64.msi")
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(payload)
+            };
+        }));
+
+        var result = await service.DownloadLatestAsync();
+
+        result.Success.Should().BeTrue();
+        result.IsVerified.Should().BeTrue();
+        result.VerificationStatus.Should().Be("SHA256 verified");
+        result.ExpectedSha256.Should().Be(expectedHash);
+        result.ActualSha256.Should().Be(expectedHash);
+        File.Exists(result.FilePath).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DownloadLatestAsync_WhenChecksumMismatches_FailsAndDeletesDownloadedPackage()
+    {
+        var payload = Encoding.UTF8.GetBytes("installer-bytes");
+        var service = CreateService(new StaticHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.Host == "api.github.com")
+            {
+                return JsonResponse("""
+                    {
+                      "tag_name": "v1.2.0",
+                      "name": "Kam 1.2.0",
+                      "html_url": "https://github.com/Esquetta/Kam/releases/tag/v1.2.0",
+                      "published_at": "2026-05-09T12:00:00Z",
+                      "prerelease": false,
+                      "assets": [
+                        {
+                          "name": "Kam-1.2.0-x64.msi",
+                          "browser_download_url": "https://downloads.example/Kam-1.2.0-x64.msi",
+                          "size": 15,
+                          "content_type": "application/octet-stream"
+                        },
+                        {
+                          "name": "SHA256SUMS",
+                          "browser_download_url": "https://downloads.example/SHA256SUMS",
+                          "size": 64,
+                          "content_type": "text/plain"
+                        }
+                      ]
+                    }
+                    """);
+            }
+
+            if (request.RequestUri.AbsolutePath.EndsWith("SHA256SUMS", StringComparison.OrdinalIgnoreCase))
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(new string('0', 64) + "  Kam-1.2.0-x64.msi")
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(payload)
+            };
+        }));
+
+        var result = await service.DownloadLatestAsync();
+
+        result.Success.Should().BeFalse();
+        result.IsVerified.Should().BeFalse();
+        result.VerificationStatus.Should().Be("SHA256 mismatch");
+        result.FilePath.Should().NotBeNull();
+        File.Exists(result.FilePath!).Should().BeFalse();
     }
 
     private GitHubApplicationUpdateService CreateService(HttpMessageHandler handler)

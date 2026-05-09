@@ -106,6 +106,28 @@ public sealed class SlashCommandServiceTests
 
         result.Success.Should().BeTrue();
         result.Message.Should().Contain(@"C:\Updates\Kam-1.2.0-x64.msi");
+        result.Message.Should().Contain("verification: SHA256 verified");
+        result.Message.Should().Contain("next: /restart <file>");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenDownloadIsUnverified_DoesNotOfferRestartAsNextStep()
+    {
+        var service = new SlashCommandService(
+            applicationUpdateService: new FakeApplicationUpdateService(
+                ApplicationUpdateDownloadResult.Succeeded(
+                    @"C:\Updates\Kam-1.2.0-x64.msi",
+                    "1.2.0",
+                    1024,
+                    isVerified: false,
+                    verificationStatus: "Checksum missing")));
+
+        var result = await service.ExecuteAsync("/download");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("verification: Checksum missing");
+        result.Message.Should().Contain("next: verify release package before restart");
+        result.Message.Should().NotContain("next: /restart <file>");
     }
 
     [Fact]
@@ -124,6 +146,25 @@ public sealed class SlashCommandServiceTests
 
     private sealed class FakeApplicationUpdateService : IApplicationUpdateService
     {
+        private readonly ApplicationUpdateDownloadResult _downloadResult;
+
+        public FakeApplicationUpdateService()
+            : this(ApplicationUpdateDownloadResult.Succeeded(
+                @"C:\Updates\Kam-1.2.0-x64.msi",
+                "1.2.0",
+                1024,
+                isVerified: true,
+                verificationStatus: "SHA256 verified",
+                expectedSha256: new string('a', 64),
+                actualSha256: new string('a', 64)))
+        {
+        }
+
+        public FakeApplicationUpdateService(ApplicationUpdateDownloadResult downloadResult)
+        {
+            _downloadResult = downloadResult;
+        }
+
         public string CurrentVersion => "1.0.0";
 
         public Task<ApplicationUpdateCheckResult> CheckForUpdatesAsync(
@@ -145,10 +186,7 @@ public sealed class SlashCommandServiceTests
         public Task<ApplicationUpdateDownloadResult> DownloadLatestAsync(
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(ApplicationUpdateDownloadResult.Succeeded(
-                @"C:\Updates\Kam-1.2.0-x64.msi",
-                "1.2.0",
-                1024));
+            return Task.FromResult(_downloadResult);
         }
     }
 

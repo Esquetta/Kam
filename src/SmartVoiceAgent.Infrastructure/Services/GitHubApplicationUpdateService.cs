@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
@@ -127,11 +128,14 @@ public sealed class GitHubApplicationUpdateService : IApplicationUpdateService
         }
 
         var tempPath = string.Empty;
+        var downloadedFilePath = string.Empty;
+        var finalFileCreated = false;
         try
         {
             var downloadDirectory = ResolveDownloadDirectory();
             Directory.CreateDirectory(downloadDirectory);
             var filePath = Path.Combine(downloadDirectory, Path.GetFileName(update.Asset.Name));
+            downloadedFilePath = filePath;
             tempPath = filePath + ".download";
             using var request = new HttpRequestMessage(HttpMethod.Get, update.Asset.DownloadUrl);
             using var response = await _httpClient.SendAsync(
@@ -156,15 +160,74 @@ public sealed class GitHubApplicationUpdateService : IApplicationUpdateService
             }
 
             File.Move(tempPath, filePath);
+            finalFileCreated = true;
             var fileInfo = new FileInfo(filePath);
+            var actualSha256 = await ComputeSha256Async(filePath, cancellationToken);
+            if (string.IsNullOrWhiteSpace(update.Asset.ChecksumDownloadUrl))
+            {
+                return ApplicationUpdateDownloadResult.Succeeded(
+                    filePath,
+                    update.LatestVersion,
+                    fileInfo.Length,
+                    isVerified: false,
+                    verificationStatus: "Checksum missing",
+                    actualSha256: actualSha256);
+            }
+
+            var checksumText = await DownloadChecksumAsync(update.Asset.ChecksumDownloadUrl, cancellationToken);
+            var expectedSha256 = string.IsNullOrWhiteSpace(checksumText)
+                ? null
+                : ParseExpectedSha256(checksumText, update.Asset.Name);
+            if (string.IsNullOrWhiteSpace(expectedSha256))
+            {
+                return ApplicationUpdateDownloadResult.Succeeded(
+                    filePath,
+                    update.LatestVersion,
+                    fileInfo.Length,
+                    isVerified: false,
+                    verificationStatus: "Checksum unreadable",
+                    actualSha256: actualSha256);
+            }
+
+            if (!expectedSha256.Equals(actualSha256, StringComparison.OrdinalIgnoreCase))
+            {
+                TryDeleteFile(filePath);
+                return ApplicationUpdateDownloadResult.Failed(
+                    "Update package verification failed.",
+                    verificationStatus: "SHA256 mismatch",
+                    filePath: filePath,
+                    version: update.LatestVersion,
+                    expectedSha256: expectedSha256,
+                    actualSha256: actualSha256);
+            }
+
             return ApplicationUpdateDownloadResult.Succeeded(
                 filePath,
                 update.LatestVersion,
-                fileInfo.Length);
+                fileInfo.Length,
+                isVerified: true,
+                verificationStatus: "SHA256 verified",
+                expectedSha256: expectedSha256,
+                actualSha256: actualSha256);
+        }
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            TryDeleteFile(tempPath);
+            if (finalFileCreated)
+            {
+                TryDeleteFile(downloadedFilePath);
+            }
+
+            return ApplicationUpdateDownloadResult.Failed("Update package download failed: request timed out.");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or HttpRequestException)
         {
             TryDeleteFile(tempPath);
+            if (finalFileCreated)
+            {
+                TryDeleteFile(downloadedFilePath);
+            }
+
             return ApplicationUpdateDownloadResult.Failed($"Update package download failed: {ex.Message}");
         }
     }
@@ -174,19 +237,21 @@ public sealed class GitHubApplicationUpdateService : IApplicationUpdateService
         if (!string.IsNullOrWhiteSpace(_options.PreferredAssetName))
         {
             var preferred = assets.FirstOrDefault(asset =>
-                asset.Name.Equals(_options.PreferredAssetName, StringComparison.OrdinalIgnoreCase));
+                asset.Name.Equals(_options.PreferredAssetName, StringComparison.OrdinalIgnoreCase)
+                && IsPackageAssetCandidate(asset));
             if (preferred is not null)
             {
-                return ToUpdateAsset(preferred);
+                return ToUpdateAsset(preferred, FindChecksumAsset(assets, preferred.Name));
             }
         }
 
         var selected = assets
+            .Where(IsPackageAssetCandidate)
             .OrderBy(asset => GetAssetRank(asset.Name))
             .ThenBy(asset => asset.Name, StringComparer.OrdinalIgnoreCase)
-            .FirstOrDefault(asset => !string.IsNullOrWhiteSpace(asset.BrowserDownloadUrl));
+            .FirstOrDefault();
 
-        return selected is null ? null : ToUpdateAsset(selected);
+        return selected is null ? null : ToUpdateAsset(selected, FindChecksumAsset(assets, selected.Name));
     }
 
     private static int GetAssetRank(string name)
@@ -201,13 +266,142 @@ public sealed class GitHubApplicationUpdateService : IApplicationUpdateService
         };
     }
 
-    private static ApplicationUpdateAsset ToUpdateAsset(GitHubAsset asset)
+    private static bool IsPackageAssetCandidate(GitHubAsset asset)
+    {
+        return !string.IsNullOrWhiteSpace(asset.BrowserDownloadUrl)
+            && !IsChecksumAssetName(asset.Name);
+    }
+
+    private static bool IsChecksumAssetName(string name)
+    {
+        var fileName = Path.GetFileName(name);
+        return fileName.EndsWith(".sha256", StringComparison.OrdinalIgnoreCase)
+            || fileName.EndsWith(".sha256sum", StringComparison.OrdinalIgnoreCase)
+            || fileName.EndsWith(".sha256.txt", StringComparison.OrdinalIgnoreCase)
+            || fileName.Equals("SHA256SUMS", StringComparison.OrdinalIgnoreCase)
+            || fileName.Equals("SHA256SUMS.txt", StringComparison.OrdinalIgnoreCase)
+            || fileName.Equals("checksums.txt", StringComparison.OrdinalIgnoreCase)
+            || fileName.Equals("checksums.sha256", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static GitHubAsset? FindChecksumAsset(
+        IReadOnlyList<GitHubAsset> assets,
+        string packageName)
+    {
+        var directNames = new[]
+        {
+            packageName + ".sha256",
+            packageName + ".sha256sum",
+            packageName + ".sha256.txt"
+        };
+
+        var directMatch = assets.FirstOrDefault(asset =>
+            !string.IsNullOrWhiteSpace(asset.BrowserDownloadUrl)
+            && directNames.Contains(asset.Name, StringComparer.OrdinalIgnoreCase));
+        if (directMatch is not null)
+        {
+            return directMatch;
+        }
+
+        return assets.FirstOrDefault(asset =>
+            !string.IsNullOrWhiteSpace(asset.BrowserDownloadUrl)
+            && IsChecksumAssetName(asset.Name));
+    }
+
+    private static ApplicationUpdateAsset ToUpdateAsset(GitHubAsset asset, GitHubAsset? checksumAsset)
     {
         return new ApplicationUpdateAsset(
             asset.Name,
             asset.BrowserDownloadUrl,
             asset.Size,
-            asset.ContentType);
+            asset.ContentType,
+            checksumAsset?.Name,
+            checksumAsset?.BrowserDownloadUrl);
+    }
+
+    private async Task<string?> DownloadChecksumAsync(
+        string checksumDownloadUrl,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, checksumDownloadUrl);
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            return await response.Content.ReadAsStringAsync(cancellationToken);
+        }
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
+    }
+
+    private static async Task<string> ComputeSha256Async(
+        string filePath,
+        CancellationToken cancellationToken)
+    {
+        await using var stream = File.OpenRead(filePath);
+        var hash = await SHA256.HashDataAsync(stream, cancellationToken);
+        return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    private static string? ParseExpectedSha256(string checksumText, string packageName)
+    {
+        string? singleHash = null;
+        foreach (var rawLine in checksumText.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            var line = rawLine.Trim();
+            if (line.Length == 0 || line.StartsWith("#", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var parts = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 1 && IsSha256Hex(parts[0]))
+            {
+                singleHash = parts[0].ToLowerInvariant();
+                continue;
+            }
+
+            if (parts.Length >= 2 && IsSha256Hex(parts[0]))
+            {
+                var fileName = NormalizeChecksumFileName(string.Join(' ', parts.Skip(1)));
+                if (fileName.Equals(packageName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return parts[0].ToLowerInvariant();
+                }
+            }
+        }
+
+        return singleHash;
+    }
+
+    private static string NormalizeChecksumFileName(string value)
+    {
+        var trimmed = value.Trim().Trim('"', '\'');
+        if (trimmed.StartsWith("*", StringComparison.Ordinal))
+        {
+            trimmed = trimmed[1..];
+        }
+
+        return Path.GetFileName(trimmed.Replace('/', Path.DirectorySeparatorChar));
+    }
+
+    private static bool IsSha256Hex(string value)
+    {
+        return value.Length == 64
+            && value.All(character =>
+                character is >= '0' and <= '9'
+                || character is >= 'a' and <= 'f'
+                || character is >= 'A' and <= 'F');
     }
 
     private string ResolveDownloadDirectory()
