@@ -114,10 +114,11 @@ public sealed class SlashCommandServiceTests
         var service = new SlashCommandService(
             applicationRestartPlanner: new FakeApplicationRestartPlanner());
 
-        var result = await service.ExecuteAsync(@"/restart C:\Updates\Kam-1.2.0-x64.msi");
+        var result = await service.ExecuteAsync(@"/restart C:\Program Files\Kam Updates\Kam-1.2.0-x64.msi");
 
         result.Success.Should().BeTrue();
         result.Message.Should().Contain("Kam restart plan");
+        result.Message.Should().Contain(@"C:\Program Files\Kam Updates\Kam-1.2.0-x64.msi");
         result.Message.Should().Contain("Start installer");
     }
 

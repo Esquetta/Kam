@@ -2,8 +2,11 @@ using FluentAssertions;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.AI;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Core.Models.Updates;
 using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.ViewModels.PageModels;
+using System.Reflection;
+using UiCommand = System.Windows.Input.ICommand;
 
 namespace SmartVoiceAgent.Tests.Ui.ViewModels;
 
@@ -698,6 +701,206 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
         viewModel.ReadinessReportCopyStatus.Should().Be("Readiness report copied.");
     }
 
+    [Fact]
+    public async Task CheckApplicationUpdateAsync_WithAvailableRelease_ReportsUpdatePanelAction()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var updateService = new RecordingApplicationUpdateService(
+            "1.0.0",
+            ApplicationUpdateCheckResult.UpdateAvailable(
+                "1.0.0",
+                "1.2.0",
+                "Kam 1.2.0",
+                "https://github.com/Esquetta/Kam/releases/tag/v1.2.0",
+                new DateTimeOffset(2026, 5, 9, 10, 30, 0, TimeSpan.Zero),
+                new ApplicationUpdateAsset(
+                    "Kam-1.2.0-x64.msi",
+                    "https://downloads.example/Kam-1.2.0-x64.msi",
+                    1_048_576,
+                    "application/octet-stream")));
+
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            applicationUpdateService: updateService,
+            applicationVersionProvider: new StaticApplicationVersionProvider("1.0.0"));
+
+        await viewModel.CheckApplicationUpdateAsync();
+
+        updateService.CheckCount.Should().Be(1);
+        viewModel.ApplicationUpdateStatus.Should().Be("Update available");
+        viewModel.ApplicationUpdateActionStatus.Should().Be("Kam 1.2.0 is available.");
+        viewModel.ApplicationUpdateItems.Should().Contain(item =>
+            item.Name == "Release Feed"
+            && item.Value == "Update available"
+            && item.IsWarning);
+        viewModel.ApplicationUpdateItems.Should().Contain(item =>
+            item.Name == "Release Asset"
+            && item.Value == "Kam-1.2.0-x64.msi"
+            && item.Detail.Contains("1 MB", StringComparison.OrdinalIgnoreCase));
+        viewModel.SummaryCards.Should().Contain(card =>
+            card.Name == "Updates"
+            && card.Value == "Update available"
+            && card.IsWarning);
+    }
+
+    [Fact]
+    public async Task DownloadApplicationUpdateAsync_WithDownloadedInstaller_BuildsRestartPlan()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        const string packagePath = @"C:\Users\agent\AppData\Local\Kam\Updates\Kam-1.2.0-x64.msi";
+        var updateService = new RecordingApplicationUpdateService(
+            "1.0.0",
+            ApplicationUpdateCheckResult.UpdateAvailable(
+                "1.0.0",
+                "1.2.0",
+                "Kam 1.2.0",
+                "https://github.com/Esquetta/Kam/releases/tag/v1.2.0",
+                null,
+                new ApplicationUpdateAsset(
+                    "Kam-1.2.0-x64.msi",
+                    "https://downloads.example/Kam-1.2.0-x64.msi",
+                    2_097_152,
+                    "application/octet-stream")),
+            ApplicationUpdateDownloadResult.Succeeded(packagePath, "1.2.0", 2_097_152));
+        var restartPlanner = new RecordingApplicationRestartPlanner(
+            new ApplicationRestartPlan(
+                true,
+                "Installer handoff ready.",
+                @"C:\Program Files\Kam\Kam.exe",
+                packagePath,
+                ["Start installer", "Close Kam", "Relaunch Kam"]));
+
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            applicationUpdateService: updateService,
+            applicationRestartPlanner: restartPlanner,
+            applicationVersionProvider: new StaticApplicationVersionProvider("1.0.0"));
+
+        await viewModel.DownloadApplicationUpdateAsync();
+
+        updateService.DownloadCount.Should().Be(1);
+        restartPlanner.LastPackagePath.Should().Be(packagePath);
+        viewModel.DownloadedUpdatePackagePath.Should().Be(packagePath);
+        viewModel.ApplicationUpdateActionStatus.Should().Be("Downloaded Kam update package.");
+        viewModel.ApplicationUpdateItems.Should().Contain(item =>
+            item.Name == "Downloaded Package"
+            && item.Value == "Ready"
+            && item.Detail.Contains("Kam-1.2.0-x64.msi", StringComparison.OrdinalIgnoreCase));
+        viewModel.ApplicationUpdateItems.Should().Contain(item =>
+            item.Name == "Restart Plan"
+            && item.Value == "Ready"
+            && item.Detail.Contains("Installer handoff ready", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task BuildReadinessReport_WithApplicationUpdateEvidence_IncludesUpdateSectionWithoutAssetUrl()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var updateService = new RecordingApplicationUpdateService(
+            "1.2.0",
+            ApplicationUpdateCheckResult.UpToDate(
+                "1.2.0",
+                "1.2.0",
+                "Kam 1.2.0",
+                "https://github.com/Esquetta/Kam/releases/tag/v1.2.0",
+                new DateTimeOffset(2026, 5, 9, 10, 30, 0, TimeSpan.Zero)));
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            applicationUpdateService: updateService,
+            applicationVersionProvider: new StaticApplicationVersionProvider("1.2.0"));
+
+        await viewModel.CheckApplicationUpdateAsync();
+
+        var report = viewModel.BuildReadinessReport();
+
+        report.Should().Contain("Application Updates");
+        report.Should().Contain("Current Version: 1.2.0");
+        report.Should().Contain("Release Feed: Up to date");
+        report.Should().NotContain("https://downloads.example");
+    }
+
+    [Fact]
+    public void RuntimeDiagnosticsViewModel_ShouldExposeApplicationUpdateStatusAndVersionSurface()
+    {
+        var diagnosticsType = typeof(RuntimeDiagnosticsViewModel);
+        var updateStatusProperties = diagnosticsType.GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            .Where(property =>
+                property.PropertyType == typeof(string) &&
+                property.Name.Contains("Update", StringComparison.OrdinalIgnoreCase) &&
+                property.Name.Contains("Status", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        updateStatusProperties.Should().NotBeEmpty(
+            "runtime diagnostics should expose an application update status string for the UX slice");
+
+        var versionProperties = diagnosticsType.GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            .Where(property =>
+                property.PropertyType == typeof(string) &&
+                property.Name.Contains("Version", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        versionProperties.Should().NotBeEmpty(
+            "runtime diagnostics should expose version context for update readiness reporting");
+    }
+
+    [Fact]
+    public void RuntimeDiagnosticsViewModel_ShouldExposeUpdateLifecycleCommands()
+    {
+        var commandProperties = typeof(RuntimeDiagnosticsViewModel).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            .Where(property => typeof(UiCommand).IsAssignableFrom(property.PropertyType))
+            .Select(property => property.Name)
+            .ToArray();
+
+        commandProperties.Should().Contain(name =>
+                name.Contains("Check", StringComparison.OrdinalIgnoreCase) &&
+                name.Contains("Update", StringComparison.OrdinalIgnoreCase),
+            "runtime diagnostics should expose a command to run an update check");
+
+        commandProperties.Should().Contain(name =>
+                name.Contains("Download", StringComparison.OrdinalIgnoreCase) &&
+                name.Contains("Update", StringComparison.OrdinalIgnoreCase),
+            "runtime diagnostics should expose a command to download an update package");
+
+        commandProperties.Should().Contain(name =>
+                name.Contains("Restart", StringComparison.OrdinalIgnoreCase) &&
+                (name.Contains("Plan", StringComparison.OrdinalIgnoreCase) ||
+                name.Contains("Apply", StringComparison.OrdinalIgnoreCase)),
+            "runtime diagnostics should expose a command for creating a restart plan");
+    }
+
+    [Fact]
+    public async Task BuildReadinessReport_ShouldNotLeakSensitiveValuesInAnyUpdateEvidence()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        settingsService.ModelProviderProfiles =
+        [
+            new ModelProviderProfile
+            {
+                Id = "planner",
+                Provider = ModelProviderType.OpenAI,
+                ApiKey = "sk-super-secret",
+                ModelId = "gpt-5.2",
+                Roles = [ModelProviderRole.Planner],
+                Enabled = true
+            }
+        ];
+        settingsService.ActivePlannerProfileId = "planner";
+        settingsService.SmtpPassword = "smtp-super-secret";
+        settingsService.TodoistApiKey = "todoist-super-secret";
+
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            new StaticHostControl(isRunning: true));
+
+        await viewModel.RefreshAsync();
+
+        var report = viewModel.BuildReadinessReport();
+
+        report.Should().NotContain("sk-super-secret");
+        report.Should().NotContain("smtp-super-secret");
+        report.Should().NotContain("todoist-super-secret");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_settingsDirectory))
@@ -859,6 +1062,70 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
         public void Clear()
         {
             Changed?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private sealed class StaticApplicationVersionProvider : IApplicationVersionProvider
+    {
+        public StaticApplicationVersionProvider(string currentVersion)
+        {
+            CurrentVersion = currentVersion;
+        }
+
+        public string CurrentVersion { get; }
+    }
+
+    private sealed class RecordingApplicationUpdateService : IApplicationUpdateService
+    {
+        private readonly ApplicationUpdateCheckResult _checkResult;
+        private readonly ApplicationUpdateDownloadResult _downloadResult;
+
+        public RecordingApplicationUpdateService(
+            string currentVersion,
+            ApplicationUpdateCheckResult checkResult,
+            ApplicationUpdateDownloadResult? downloadResult = null)
+        {
+            CurrentVersion = currentVersion;
+            _checkResult = checkResult;
+            _downloadResult = downloadResult ?? ApplicationUpdateDownloadResult.Failed("No download configured.");
+        }
+
+        public string CurrentVersion { get; }
+
+        public int CheckCount { get; private set; }
+
+        public int DownloadCount { get; private set; }
+
+        public Task<ApplicationUpdateCheckResult> CheckForUpdatesAsync(
+            CancellationToken cancellationToken = default)
+        {
+            CheckCount++;
+            return Task.FromResult(_checkResult);
+        }
+
+        public Task<ApplicationUpdateDownloadResult> DownloadLatestAsync(
+            CancellationToken cancellationToken = default)
+        {
+            DownloadCount++;
+            return Task.FromResult(_downloadResult);
+        }
+    }
+
+    private sealed class RecordingApplicationRestartPlanner : IApplicationRestartPlanner
+    {
+        private readonly ApplicationRestartPlan _plan;
+
+        public RecordingApplicationRestartPlanner(ApplicationRestartPlan plan)
+        {
+            _plan = plan;
+        }
+
+        public string? LastPackagePath { get; private set; }
+
+        public ApplicationRestartPlan CreateRestartPlan(string? updatePackagePath = null)
+        {
+            LastPackagePath = updatePackagePath;
+            return _plan;
         }
     }
 }

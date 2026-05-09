@@ -2,12 +2,14 @@ using ReactiveUI;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.AI;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Core.Models.Updates;
 using SmartVoiceAgent.Core.Security;
 using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -25,13 +27,23 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     private readonly ISkillEvalCaseCatalog? _skillEvalCaseCatalog;
     private readonly ISkillExecutionHistoryService? _skillExecutionHistoryService;
     private readonly ISkillPlannerTraceStore? _skillPlannerTraceStore;
+    private readonly IApplicationUpdateService? _applicationUpdateService;
+    private readonly IApplicationRestartPlanner? _applicationRestartPlanner;
+    private readonly IApplicationVersionProvider? _applicationVersionProvider;
     private readonly Action<string, string>? _copyReport;
 
+    private ApplicationUpdateCheckResult? _lastApplicationUpdateCheck;
+    private ApplicationUpdateDownloadResult? _lastApplicationUpdateDownload;
+    private ApplicationRestartPlan? _lastApplicationRestartPlan;
     private string _coreReadinessStatus = "ACTION_NEEDED";
     private string _hostStatus = "Unknown";
     private string _skillStatus = "Unavailable";
     private string _skillSmokeStatus = "Not run";
     private string _skillSmokeSummaryValue = string.Empty;
+    private string _applicationVersionText = "Unknown";
+    private string _applicationUpdateStatus = "Not checked";
+    private string _applicationUpdateActionStatus = "Updates not checked.";
+    private string _downloadedUpdatePackagePath = string.Empty;
     private string _liveTestStatus = "NEEDS_ACTION";
     private string _liveTestNextAction = "Fix blocking model settings before live commands.";
     private string _readinessReportCopyStatus = "Report not copied.";
@@ -55,6 +67,9 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         ISkillEvalCaseCatalog? skillEvalCaseCatalog = null,
         ISkillExecutionHistoryService? skillExecutionHistoryService = null,
         ISkillPlannerTraceStore? skillPlannerTraceStore = null,
+        IApplicationUpdateService? applicationUpdateService = null,
+        IApplicationRestartPlanner? applicationRestartPlanner = null,
+        IApplicationVersionProvider? applicationVersionProvider = null,
         Action<string, string>? copyReport = null)
     {
         _settingsService = settingsService;
@@ -65,11 +80,17 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         _skillEvalCaseCatalog = skillEvalCaseCatalog;
         _skillExecutionHistoryService = skillExecutionHistoryService;
         _skillPlannerTraceStore = skillPlannerTraceStore;
+        _applicationUpdateService = applicationUpdateService;
+        _applicationRestartPlanner = applicationRestartPlanner;
+        _applicationVersionProvider = applicationVersionProvider;
         _copyReport = copyReport;
 
         Title = "Runtime Diagnostics";
         RefreshCommand = ReactiveCommand.CreateFromTask(RefreshAsync);
         RunSkillSmokeCommand = ReactiveCommand.CreateFromTask(RunSkillSmokeAsync);
+        CheckApplicationUpdateCommand = ReactiveCommand.CreateFromTask(CheckApplicationUpdateAsync);
+        DownloadApplicationUpdateCommand = ReactiveCommand.CreateFromTask(DownloadApplicationUpdateAsync);
+        PlanApplicationRestartCommand = ReactiveCommand.Create(PlanApplicationRestart);
         CopyReadinessReportCommand = ReactiveCommand.Create(CopyReadinessReport);
 
         if (_hostControl is not null)
@@ -94,6 +115,12 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
 
     public ICommand RunSkillSmokeCommand { get; }
 
+    public ICommand CheckApplicationUpdateCommand { get; }
+
+    public ICommand DownloadApplicationUpdateCommand { get; }
+
+    public ICommand PlanApplicationRestartCommand { get; }
+
     public ICommand CopyReadinessReportCommand { get; }
 
     public ObservableCollection<RuntimeDiagnosticItemViewModel> SummaryCards { get; } = [];
@@ -103,6 +130,8 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     public ObservableCollection<RuntimeDiagnosticItemViewModel> IntegrationItems { get; } = [];
 
     public ObservableCollection<RuntimeDiagnosticItemViewModel> RuntimeItems { get; } = [];
+
+    public ObservableCollection<RuntimeDiagnosticItemViewModel> ApplicationUpdateItems { get; } = [];
 
     public ObservableCollection<RuntimeDiagnosticItemViewModel> LiveTestSteps { get; } = [];
 
@@ -136,6 +165,30 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     {
         get => _skillSmokeStatus;
         private set => this.RaiseAndSetIfChanged(ref _skillSmokeStatus, value);
+    }
+
+    public string ApplicationVersionText
+    {
+        get => _applicationVersionText;
+        private set => this.RaiseAndSetIfChanged(ref _applicationVersionText, value);
+    }
+
+    public string ApplicationUpdateStatus
+    {
+        get => _applicationUpdateStatus;
+        private set => this.RaiseAndSetIfChanged(ref _applicationUpdateStatus, value);
+    }
+
+    public string ApplicationUpdateActionStatus
+    {
+        get => _applicationUpdateActionStatus;
+        private set => this.RaiseAndSetIfChanged(ref _applicationUpdateActionStatus, value);
+    }
+
+    public string DownloadedUpdatePackagePath
+    {
+        get => _downloadedUpdatePackagePath;
+        private set => this.RaiseAndSetIfChanged(ref _downloadedUpdatePackagePath, value);
     }
 
     public string LiveTestStatus
@@ -294,6 +347,103 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         }
     }
 
+    public async Task CheckApplicationUpdateAsync()
+    {
+        if (_applicationUpdateService is null)
+        {
+            _lastApplicationUpdateCheck = ApplicationUpdateCheckResult.Failed(
+                CurrentApplicationVersion(),
+                "Application update service is unavailable.");
+            ApplicationUpdateActionStatus = _lastApplicationUpdateCheck.Message;
+            ApplyApplicationUpdateDiagnostics();
+            RebuildSummary();
+            return;
+        }
+
+        ApplicationUpdateActionStatus = "Checking GitHub Releases for Kam updates.";
+        try
+        {
+            _lastApplicationUpdateCheck = await _applicationUpdateService
+                .CheckForUpdatesAsync()
+                .ConfigureAwait(true);
+            ApplicationUpdateActionStatus = _lastApplicationUpdateCheck.Message;
+        }
+        catch (Exception ex)
+        {
+            _lastApplicationUpdateCheck = ApplicationUpdateCheckResult.Failed(
+                CurrentApplicationVersion(),
+                $"Update check failed: {ex.Message}");
+            ApplicationUpdateActionStatus = _lastApplicationUpdateCheck.Message;
+        }
+
+        ApplyApplicationUpdateDiagnostics();
+        RebuildSummary();
+        LastRefreshText = $"Updates {DateTimeOffset.Now:HH:mm:ss}";
+    }
+
+    public async Task DownloadApplicationUpdateAsync()
+    {
+        if (_applicationUpdateService is null)
+        {
+            _lastApplicationUpdateDownload = ApplicationUpdateDownloadResult.Failed(
+                "Application update service is unavailable.");
+            ApplicationUpdateActionStatus = _lastApplicationUpdateDownload.Message;
+            ApplyApplicationUpdateDiagnostics();
+            RebuildSummary();
+            return;
+        }
+
+        ApplicationUpdateActionStatus = "Downloading latest Kam release package.";
+        try
+        {
+            _lastApplicationUpdateDownload = await _applicationUpdateService
+                .DownloadLatestAsync()
+                .ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            _lastApplicationUpdateDownload = ApplicationUpdateDownloadResult.Failed(
+                $"Update package download failed: {ex.Message}");
+        }
+
+        if (_lastApplicationUpdateDownload.Success)
+        {
+            DownloadedUpdatePackagePath = _lastApplicationUpdateDownload.FilePath ?? string.Empty;
+            ApplicationUpdateActionStatus = "Downloaded Kam update package.";
+            PlanApplicationRestart();
+            ApplicationUpdateActionStatus = "Downloaded Kam update package.";
+            return;
+        }
+
+        ApplicationUpdateActionStatus = _lastApplicationUpdateDownload.Message;
+        ApplyApplicationUpdateDiagnostics();
+        RebuildSummary();
+    }
+
+    public void PlanApplicationRestart()
+    {
+        if (_applicationRestartPlanner is null)
+        {
+            _lastApplicationRestartPlan = new ApplicationRestartPlan(
+                false,
+                "Application restart planner is unavailable.",
+                null,
+                DownloadedUpdatePackagePath,
+                ["Restart planner service is not registered."]);
+        }
+        else
+        {
+            _lastApplicationRestartPlan = _applicationRestartPlanner.CreateRestartPlan(
+                string.IsNullOrWhiteSpace(DownloadedUpdatePackagePath)
+                    ? null
+                    : DownloadedUpdatePackagePath);
+        }
+
+        ApplicationUpdateActionStatus = _lastApplicationRestartPlan.Message;
+        ApplyApplicationUpdateDiagnostics();
+        RebuildSummary();
+    }
+
     public string BuildReadinessReport()
     {
         var report = new StringBuilder();
@@ -307,6 +457,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         AppendReportSection(report, "Live Production Test", LiveTestSteps);
         AppendReportSection(report, "Summary", SummaryCards);
         AppendReportSection(report, "AI Runtime", AiRuntimeItems);
+        AppendReportSection(report, "Application Updates", ApplicationUpdateItems);
         AppendReportSection(report, "Local Runtime", RuntimeItems);
         AppendReportSection(report, "Integrations", IntegrationItems);
 
@@ -344,6 +495,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         AiRuntimeItems.Clear();
         IntegrationItems.Clear();
         RuntimeItems.Clear();
+        ApplicationUpdateItems.Clear();
         BlockingItems.Clear();
         SkillSmokeStatus = "Not run";
         _skillSmokeSummaryValue = string.Empty;
@@ -363,6 +515,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         ApplyIntegrationDiagnostics();
         ApplyHostDiagnostics();
         ApplyCommandLoopDiagnostics();
+        ApplyApplicationUpdateDiagnostics();
         RebuildSummary();
 
         return plannerProfile;
@@ -500,6 +653,80 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             _hostControl is null
                 ? RuntimeDiagnosticSeverity.Warning
                 : (_hostControl.IsRunning ? RuntimeDiagnosticSeverity.Ready : RuntimeDiagnosticSeverity.Blocked)));
+    }
+
+    private void ApplyApplicationUpdateDiagnostics()
+    {
+        ApplicationUpdateItems.Clear();
+        ApplicationVersionText = CurrentApplicationVersion();
+
+        ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
+            "Current Version",
+            ApplicationVersionText,
+            "Assembly version used for release comparison.",
+            RuntimeDiagnosticSeverity.Ready));
+
+        if (_applicationUpdateService is null)
+        {
+            ApplicationUpdateStatus = "Unavailable";
+            ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
+                "Release Feed",
+                "Unavailable",
+                "Application update service is not registered in this runtime.",
+                RuntimeDiagnosticSeverity.Warning));
+            AddDownloadedPackageDiagnostic();
+            AddRestartPlanDiagnostic();
+            return;
+        }
+
+        if (_lastApplicationUpdateCheck is null)
+        {
+            ApplicationUpdateStatus = "Not checked";
+            ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
+                "Release Feed",
+                "Not checked",
+                "Use Check Updates to query the configured GitHub Releases feed.",
+                RuntimeDiagnosticSeverity.Warning));
+            AddDownloadedPackageDiagnostic();
+            AddRestartPlanDiagnostic();
+            return;
+        }
+
+        ApplicationUpdateStatus = FormatApplicationUpdateStatus(_lastApplicationUpdateCheck);
+        ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
+            "Release Feed",
+            ApplicationUpdateStatus,
+            BuildApplicationUpdateFeedDetail(_lastApplicationUpdateCheck),
+            GetApplicationUpdateSeverity(_lastApplicationUpdateCheck)));
+
+        if (_lastApplicationUpdateCheck.Asset is not null)
+        {
+            ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
+                "Release Asset",
+                _lastApplicationUpdateCheck.Asset.Name,
+                $"{FormatBytes(_lastApplicationUpdateCheck.Asset.SizeBytes)} package selected; raw download URL hidden.",
+                RuntimeDiagnosticSeverity.Ready));
+            ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
+                "Package Verification",
+                "Not verified",
+                "Hash and signature verification are not implemented in this build.",
+                RuntimeDiagnosticSeverity.Warning));
+        }
+        else
+        {
+            ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
+                "Release Asset",
+                _lastApplicationUpdateCheck.IsUpdateAvailable ? "Missing" : "Not needed",
+                _lastApplicationUpdateCheck.IsUpdateAvailable
+                    ? "Latest release has no installer asset selected for this app."
+                    : "No package is needed when the app is already current.",
+                _lastApplicationUpdateCheck.IsUpdateAvailable
+                    ? RuntimeDiagnosticSeverity.Warning
+                    : RuntimeDiagnosticSeverity.Ready));
+        }
+
+        AddDownloadedPackageDiagnostic();
+        AddRestartPlanDiagnostic();
     }
 
     private void ApplyCommandLoopDiagnostics()
@@ -696,6 +923,11 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             HostStatus == "Online"
                 ? RuntimeDiagnosticSeverity.Ready
                 : RuntimeDiagnosticSeverity.Warning));
+        SummaryCards.Add(new RuntimeDiagnosticItemViewModel(
+            "Updates",
+            ApplicationUpdateStatus,
+            $"Current version {ApplicationVersionText}.",
+            GetApplicationUpdateSummarySeverity()));
 
         RebuildLiveTestSession();
         this.RaisePropertyChanged(nameof(HasBlockingItems));
@@ -856,6 +1088,131 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         }
 
         report.AppendLine();
+    }
+
+    private void AddDownloadedPackageDiagnostic()
+    {
+        if (_lastApplicationUpdateDownload?.Success == true
+            && !string.IsNullOrWhiteSpace(_lastApplicationUpdateDownload.FilePath))
+        {
+            ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
+                "Downloaded Package",
+                "Ready",
+                $"{Path.GetFileName(_lastApplicationUpdateDownload.FilePath)} downloaded for version {_lastApplicationUpdateDownload.Version ?? "(unknown)"}; package verification is still pending.",
+                RuntimeDiagnosticSeverity.Ready));
+            return;
+        }
+
+        if (_lastApplicationUpdateDownload is not null)
+        {
+            ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
+                "Downloaded Package",
+                "Failed",
+                SecretRedactor.Redact(_lastApplicationUpdateDownload.Message),
+                RuntimeDiagnosticSeverity.Warning));
+            return;
+        }
+
+        ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
+            "Downloaded Package",
+            "Not downloaded",
+            "Download is explicit so packages are not pulled during diagnostics refresh.",
+            RuntimeDiagnosticSeverity.Warning));
+    }
+
+    private void AddRestartPlanDiagnostic()
+    {
+        if (_lastApplicationRestartPlan is null)
+        {
+            ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
+                "Restart Plan",
+                "Not planned",
+                "Download a package or request a restart plan before closing the app.",
+                RuntimeDiagnosticSeverity.Warning));
+            return;
+        }
+
+        var detail = _lastApplicationRestartPlan.CanRestart
+            ? $"{_lastApplicationRestartPlan.Message} Verify the release package before running the installer."
+            : _lastApplicationRestartPlan.Message;
+        ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
+            "Restart Plan",
+            _lastApplicationRestartPlan.CanRestart ? "Ready" : "Manual",
+            SecretRedactor.Redact(detail),
+            _lastApplicationRestartPlan.CanRestart
+                ? RuntimeDiagnosticSeverity.Ready
+                : RuntimeDiagnosticSeverity.Warning));
+    }
+
+    private string CurrentApplicationVersion()
+    {
+        return _applicationVersionProvider?.CurrentVersion
+            ?? _applicationUpdateService?.CurrentVersion
+            ?? "Unknown";
+    }
+
+    private static string FormatApplicationUpdateStatus(ApplicationUpdateCheckResult update)
+    {
+        if (!update.Success)
+        {
+            return "Check failed";
+        }
+
+        return update.IsUpdateAvailable ? "Update available" : "Up to date";
+    }
+
+    private static string BuildApplicationUpdateFeedDetail(ApplicationUpdateCheckResult update)
+    {
+        if (!update.Success)
+        {
+            return SecretRedactor.Redact(update.Message);
+        }
+
+        var latestVersion = string.IsNullOrWhiteSpace(update.LatestVersion)
+            ? "(unknown)"
+            : update.LatestVersion;
+        var releaseName = string.IsNullOrWhiteSpace(update.ReleaseName)
+            ? "latest release"
+            : update.ReleaseName;
+
+        return $"{releaseName}, latest {latestVersion}.";
+    }
+
+    private static RuntimeDiagnosticSeverity GetApplicationUpdateSeverity(ApplicationUpdateCheckResult update)
+    {
+        if (!update.Success)
+        {
+            return RuntimeDiagnosticSeverity.Warning;
+        }
+
+        return update.IsUpdateAvailable
+            ? RuntimeDiagnosticSeverity.Warning
+            : RuntimeDiagnosticSeverity.Ready;
+    }
+
+    private RuntimeDiagnosticSeverity GetApplicationUpdateSummarySeverity()
+    {
+        if (_applicationUpdateService is null || _lastApplicationUpdateCheck is null)
+        {
+            return RuntimeDiagnosticSeverity.Warning;
+        }
+
+        return GetApplicationUpdateSeverity(_lastApplicationUpdateCheck);
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 1024)
+        {
+            return $"{bytes} B";
+        }
+
+        if (bytes < 1024 * 1024)
+        {
+            return $"{bytes / 1024d:0.#} KB";
+        }
+
+        return $"{bytes / 1024d / 1024d:0.#} MB";
     }
 
     private static ModelProviderProfile? FindProfile(

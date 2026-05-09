@@ -27,34 +27,70 @@ public sealed class ApplicationRestartPlanner : IApplicationRestartPlanner
                 executablePath,
                 null,
                 [
-                    $"Start {executablePath}",
+                    $"Start \"{executablePath}\"",
                     "Close the current Kam process after the new process starts"
                 ]);
         }
 
-        var extension = Path.GetExtension(updatePackagePath).ToLowerInvariant();
+        string packagePath;
+        try
+        {
+            packagePath = Path.GetFullPath(updatePackagePath);
+        }
+        catch (ArgumentException)
+        {
+            return UnsupportedPackagePlan(
+                executablePath,
+                updatePackagePath,
+                "Update package path is invalid.");
+        }
+        catch (NotSupportedException)
+        {
+            return UnsupportedPackagePlan(
+                executablePath,
+                updatePackagePath,
+                "Update package path is not supported.");
+        }
+
+        if (!File.Exists(packagePath))
+        {
+            return UnsupportedPackagePlan(
+                executablePath,
+                packagePath,
+                "Update package could not be found.");
+        }
+
+        var extension = Path.GetExtension(packagePath).ToLowerInvariant();
         if (extension == ".zip")
         {
             return new ApplicationRestartPlan(
                 false,
                 "ZIP update packages require manual extraction before restart.",
                 executablePath,
-                updatePackagePath,
+                packagePath,
                 [
-                    $"Extract {updatePackagePath}",
-                    $"Start {executablePath}"
+                    $"Extract \"{packagePath}\"",
+                    $"Start \"{executablePath}\""
                 ]);
         }
 
+        if (extension is not ".msi" and not ".exe")
+        {
+            return UnsupportedPackagePlan(
+                executablePath,
+                packagePath,
+                $"Update package type '{extension}' is not supported.");
+        }
+
         var installerStep = extension == ".msi"
-            ? $"Start msiexec /i \"{updatePackagePath}\""
-            : $"Start \"{updatePackagePath}\"";
+            ? $"Start msiexec /i \"{packagePath}\""
+            : $"Start \"{packagePath}\"";
 
         return new ApplicationRestartPlan(
             true,
             "Kam can hand off to the downloaded installer and close the current app.",
             executablePath,
-            updatePackagePath,
+            packagePath,
             [
                 installerStep,
                 "Close the current Kam process after installer launch",
@@ -81,5 +117,21 @@ public sealed class ApplicationRestartPlanner : IApplicationRestartPlanner
         {
             return null;
         }
+    }
+
+    private static ApplicationRestartPlan UnsupportedPackagePlan(
+        string executablePath,
+        string updatePackagePath,
+        string message)
+    {
+        return new ApplicationRestartPlan(
+            false,
+            message,
+            executablePath,
+            updatePackagePath,
+            [
+                "Download a supported Kam .msi or .exe package before restart handoff",
+                $"Start \"{executablePath}\" only after the package is verified"
+            ]);
     }
 }

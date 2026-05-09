@@ -105,6 +105,7 @@ public sealed class SlashCommandService : ISlashCommandService
 
         var commandName = GetCommandToken(input).ToLowerInvariant();
         var arguments = GetArguments(input);
+        var argumentText = GetArgumentText(input);
         var normalizedName = NormalizeAlias(commandName);
 
         return normalizedName switch
@@ -113,9 +114,9 @@ public sealed class SlashCommandService : ISlashCommandService
                 normalizedName,
                 FormatCommandList(arguments.FirstOrDefault())),
             "/version" => SlashCommandResult.Succeeded("/version", FormatVersion()),
-            "/update" => await RunUpdateCommandAsync(arguments, cancellationToken),
+            "/update" => await RunUpdateCommandAsync(arguments, argumentText, cancellationToken),
             "/download" => await DownloadUpdateAsync(cancellationToken),
-            "/restart" => SlashCommandResult.Succeeded("/restart", FormatRestartPlan(arguments.FirstOrDefault())),
+            "/restart" => SlashCommandResult.Succeeded("/restart", FormatRestartPlan(argumentText)),
             "/status" => SlashCommandResult.Succeeded("/status", await FormatStatusAsync(cancellationToken)),
             "/permissions" => SlashCommandResult.Succeeded("/permissions", FormatPermissions()),
             "/diff" => SlashCommandResult.Succeeded("/diff", FormatCodingAgentWorkflow("/diff")),
@@ -180,6 +181,7 @@ public sealed class SlashCommandService : ISlashCommandService
 
     private async Task<SlashCommandResult> RunUpdateCommandAsync(
         IReadOnlyList<string> arguments,
+        string argumentText,
         CancellationToken cancellationToken)
     {
         var action = arguments.FirstOrDefault()?.ToLowerInvariant() ?? "check";
@@ -187,7 +189,9 @@ public sealed class SlashCommandService : ISlashCommandService
         {
             "check" or "status" => await CheckUpdateAsync(cancellationToken),
             "download" => await DownloadUpdateAsync(cancellationToken),
-            "restart" => SlashCommandResult.Succeeded("/update", FormatRestartPlan(arguments.Skip(1).FirstOrDefault())),
+            "restart" => SlashCommandResult.Succeeded(
+                "/update",
+                FormatRestartPlan(GetArgumentTextAfterFirstToken(argumentText))),
             _ => SlashCommandResult.Failed("/update", "Usage: /update [check|download|restart]")
         };
     }
@@ -263,7 +267,7 @@ public sealed class SlashCommandService : ISlashCommandService
             return "Kam restart planner is unavailable.";
         }
 
-        var plan = _applicationRestartPlanner.CreateRestartPlan(updatePackagePath);
+        var plan = _applicationRestartPlanner.CreateRestartPlan(NormalizePathArgument(updatePackagePath));
         var lines = new List<string>
         {
             "Kam restart plan:",
@@ -480,6 +484,40 @@ public sealed class SlashCommandService : ISlashCommandService
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Skip(1)
             .ToArray();
+    }
+
+    private static string GetArgumentText(string input)
+    {
+        var trimmed = input.TrimStart();
+        var commandToken = GetCommandToken(input);
+        if (string.IsNullOrWhiteSpace(commandToken) || trimmed.Length <= commandToken.Length)
+        {
+            return string.Empty;
+        }
+
+        return trimmed[commandToken.Length..].Trim();
+    }
+
+    private static string GetArgumentTextAfterFirstToken(string argumentText)
+    {
+        var trimmed = argumentText.TrimStart();
+        var separatorIndex = trimmed.IndexOf(' ');
+        return separatorIndex < 0
+            ? string.Empty
+            : trimmed[(separatorIndex + 1)..].Trim();
+    }
+
+    private static string? NormalizePathArgument(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+        return trimmed.Length >= 2 && trimmed[0] == '"' && trimmed[^1] == '"'
+            ? trimmed[1..^1]
+            : trimmed;
     }
 
     private static string FormatConfiguredValue(string? value)

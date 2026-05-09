@@ -43,6 +43,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private ISkillExecutionPipeline? _skillExecutionPipeline;
         private ISkillPlannerTraceStore? _skillPlannerTraceStore;
         private ISlashCommandService? _slashCommandService;
+        private IApplicationUpdateService? _applicationUpdateService;
+        private IApplicationRestartPlanner? _applicationRestartPlanner;
+        private IApplicationVersionProvider? _applicationVersionProvider;
         private readonly IModelConnectionTestService _modelConnectionTestService = new ModelConnectionTestService();
 
         private const int MaxSkillExecutionHistoryScanCount = 50;
@@ -580,6 +583,16 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _slashCommandService = slashCommandService;
             RefreshSlashCommandSuggestions();
         }
+
+        public void SetApplicationUpdateServices(
+            IApplicationUpdateService applicationUpdateService,
+            IApplicationRestartPlanner applicationRestartPlanner,
+            IApplicationVersionProvider applicationVersionProvider)
+        {
+            _applicationUpdateService = applicationUpdateService;
+            _applicationRestartPlanner = applicationRestartPlanner;
+            _applicationVersionProvider = applicationVersionProvider;
+        }
         
         private void OnHostStateChanged(object? sender, bool isRunning)
         {
@@ -665,6 +678,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     _skillEvalCaseCatalog,
                     _skillExecutionHistoryService,
                     _skillPlannerTraceStore,
+                    _applicationUpdateService,
+                    _applicationRestartPlanner,
+                    _applicationVersionProvider,
                     CopyRuntimeDiagnosticsText),
                 NavView.Plugins => CreatePluginsViewModel(),
                 NavView.Integrations => new IntegrationsViewModel(),
