@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.CodingAgent;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Core.Models.Updates;
 using SmartVoiceAgent.Infrastructure.Factories;
 using SmartVoiceAgent.Infrastructure.Helpers;
 using SmartVoiceAgent.Infrastructure.Skills;
@@ -48,6 +49,7 @@ public static class ServiceRegistration
     {
         services.TryAddSingleton(configuration);
         services.Configure<CodingAgentOptions>(configuration.GetSection(CodingAgentOptions.SectionName));
+        services.Configure<ApplicationUpdateOptions>(configuration.GetSection(ApplicationUpdateOptions.SectionName));
 
         services.AddScoped<ICommandLearningService, CommandLearningService>();
         services.AddSingleton<ISTTServiceFactory, STTServiceFactory>();
@@ -163,6 +165,9 @@ public static class ServiceRegistration
         services.AddSingleton<ISkillAdapter, McpSkillAdapter>();
         services.AddSingleton<ISkillAdapterRegistry, SkillAdapterRegistry>();
         services.AddSingleton<ISkillImportService, SkillImportService>();
+        services.AddSingleton<IApplicationVersionProvider, AssemblyApplicationVersionProvider>();
+        services.AddSingleton<IApplicationRestartPlanner, ApplicationRestartPlanner>();
+        services.AddHttpClient<IApplicationUpdateService, GitHubApplicationUpdateService>();
         services.AddScoped<ISlashCommandService, SlashCommandService>();
 
         return services;

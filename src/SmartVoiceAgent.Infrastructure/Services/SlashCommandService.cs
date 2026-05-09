@@ -14,6 +14,10 @@ public sealed class SlashCommandService : ISlashCommandService
     [
         new("/help", "Show available slash commands.", "/help", "General", ["/commands"]),
         new("/commands", "List slash commands, optionally filtered.", "/commands [filter]", "General", ["/help"]),
+        new("/version", "Show current Kam version and update channel.", "/version", "Updates"),
+        new("/update", "Check for a newer Kam release.", "/update [check|download|restart]", "Updates"),
+        new("/download", "Download the latest Kam release package.", "/download", "Updates"),
+        new("/restart", "Show the Kam restart handoff plan.", "/restart [packagePath]", "Updates"),
         new("/status", "Show runtime and skill health status.", "/status", "Runtime"),
         new("/permissions", "Show chat command permission boundaries.", "/permissions", "Runtime"),
         new("/diff", "Show how to inspect the workspace diff from coding-agent mode.", "/diff", "Workflow"),
@@ -36,6 +40,8 @@ public sealed class SlashCommandService : ISlashCommandService
     private readonly IAgentRegistry? _agentRegistry;
     private readonly CodingAgentOptions _codingAgentOptions;
     private readonly McpOptions _mcpOptions;
+    private readonly IApplicationUpdateService? _applicationUpdateService;
+    private readonly IApplicationRestartPlanner? _applicationRestartPlanner;
 
     public SlashCommandService(
         IVoiceAgentHostControl? hostControl = null,
@@ -44,7 +50,9 @@ public sealed class SlashCommandService : ISlashCommandService
         ISkillEvalCaseCatalog? evalCaseCatalog = null,
         IAgentRegistry? agentRegistry = null,
         IOptions<CodingAgentOptions>? codingAgentOptions = null,
-        IOptions<McpOptions>? mcpOptions = null)
+        IOptions<McpOptions>? mcpOptions = null,
+        IApplicationUpdateService? applicationUpdateService = null,
+        IApplicationRestartPlanner? applicationRestartPlanner = null)
     {
         _hostControl = hostControl;
         _skillHealthService = skillHealthService;
@@ -53,6 +61,8 @@ public sealed class SlashCommandService : ISlashCommandService
         _agentRegistry = agentRegistry;
         _codingAgentOptions = codingAgentOptions?.Value ?? new CodingAgentOptions();
         _mcpOptions = mcpOptions?.Value ?? new McpOptions();
+        _applicationUpdateService = applicationUpdateService;
+        _applicationRestartPlanner = applicationRestartPlanner;
     }
 
     public IReadOnlyList<SlashCommandDefinition> GetCommands()
@@ -102,6 +112,10 @@ public sealed class SlashCommandService : ISlashCommandService
             "/help" or "/commands" => SlashCommandResult.Succeeded(
                 normalizedName,
                 FormatCommandList(arguments.FirstOrDefault())),
+            "/version" => SlashCommandResult.Succeeded("/version", FormatVersion()),
+            "/update" => await RunUpdateCommandAsync(arguments, cancellationToken),
+            "/download" => await DownloadUpdateAsync(cancellationToken),
+            "/restart" => SlashCommandResult.Succeeded("/restart", FormatRestartPlan(arguments.FirstOrDefault())),
             "/status" => SlashCommandResult.Succeeded("/status", await FormatStatusAsync(cancellationToken)),
             "/permissions" => SlashCommandResult.Succeeded("/permissions", FormatPermissions()),
             "/diff" => SlashCommandResult.Succeeded("/diff", FormatCodingAgentWorkflow("/diff")),
@@ -153,6 +167,126 @@ public sealed class SlashCommandService : ISlashCommandService
             "  tests: limited to registered skill smoke tests",
             "  integrations: status output redacts secrets"
         ]);
+    }
+
+    private string FormatVersion()
+    {
+        return string.Join(Environment.NewLine, [
+            "Kam version:",
+            $"  current: {_applicationUpdateService?.CurrentVersion ?? "(unavailable)"}",
+            "  release feed: GitHub Releases"
+        ]);
+    }
+
+    private async Task<SlashCommandResult> RunUpdateCommandAsync(
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken)
+    {
+        var action = arguments.FirstOrDefault()?.ToLowerInvariant() ?? "check";
+        return action switch
+        {
+            "check" or "status" => await CheckUpdateAsync(cancellationToken),
+            "download" => await DownloadUpdateAsync(cancellationToken),
+            "restart" => SlashCommandResult.Succeeded("/update", FormatRestartPlan(arguments.Skip(1).FirstOrDefault())),
+            _ => SlashCommandResult.Failed("/update", "Usage: /update [check|download|restart]")
+        };
+    }
+
+    private async Task<SlashCommandResult> CheckUpdateAsync(CancellationToken cancellationToken)
+    {
+        if (_applicationUpdateService is null)
+        {
+            return SlashCommandResult.Failed("/update", "Application update service is unavailable.");
+        }
+
+        var update = await _applicationUpdateService.CheckForUpdatesAsync(cancellationToken);
+        if (!update.Success)
+        {
+            return SlashCommandResult.Failed("/update", update.Message);
+        }
+
+        var lines = new List<string>
+        {
+            "Kam update status:",
+            $"  current: {update.CurrentVersion}",
+            $"  latest: {update.LatestVersion ?? "(unknown)"}",
+            $"  status: {(update.IsUpdateAvailable ? "update available" : "up to date")}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(update.ReleaseName))
+        {
+            lines.Add($"  release: {update.ReleaseName}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(update.ReleaseUrl))
+        {
+            lines.Add($"  url: {update.ReleaseUrl}");
+        }
+
+        if (update.Asset is not null)
+        {
+            lines.Add($"  asset: {update.Asset.Name} ({FormatBytes(update.Asset.SizeBytes)})");
+            lines.Add("  next: /download");
+        }
+
+        return SlashCommandResult.Succeeded("/update", string.Join(Environment.NewLine, lines));
+    }
+
+    private async Task<SlashCommandResult> DownloadUpdateAsync(CancellationToken cancellationToken)
+    {
+        if (_applicationUpdateService is null)
+        {
+            return SlashCommandResult.Failed("/download", "Application update service is unavailable.");
+        }
+
+        var download = await _applicationUpdateService.DownloadLatestAsync(cancellationToken);
+        if (!download.Success)
+        {
+            return SlashCommandResult.Failed("/download", download.Message);
+        }
+
+        return SlashCommandResult.Succeeded(
+            "/download",
+            string.Join(Environment.NewLine, [
+                "Kam update downloaded:",
+                $"  version: {download.Version ?? "(unknown)"}",
+                $"  file: {download.FilePath}",
+                $"  size: {FormatBytes(download.SizeBytes ?? 0)}",
+                "  next: /restart <file>"
+            ]));
+    }
+
+    private string FormatRestartPlan(string? updatePackagePath)
+    {
+        if (_applicationRestartPlanner is null)
+        {
+            return "Kam restart planner is unavailable.";
+        }
+
+        var plan = _applicationRestartPlanner.CreateRestartPlan(updatePackagePath);
+        var lines = new List<string>
+        {
+            "Kam restart plan:",
+            $"  status: {(plan.CanRestart ? "ready" : "manual action required")}",
+            $"  message: {plan.Message}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(plan.UpdatePackagePath))
+        {
+            lines.Add($"  package: {plan.UpdatePackagePath}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(plan.ExecutablePath))
+        {
+            lines.Add($"  executable: {plan.ExecutablePath}");
+        }
+
+        foreach (var step in plan.Steps)
+        {
+            lines.Add($"  - {step}");
+        }
+
+        return string.Join(Environment.NewLine, lines);
     }
 
     private async Task<string> FormatPluginsAsync(CancellationToken cancellationToken)
@@ -356,5 +490,22 @@ public sealed class SlashCommandService : ISlashCommandService
     private static string FormatSecretStatus(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? "(not configured)" : "(configured)";
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 1024)
+        {
+            return $"{bytes} B";
+        }
+
+        var kib = bytes / 1024d;
+        if (kib < 1024)
+        {
+            return $"{kib:F1} KiB";
+        }
+
+        var mib = kib / 1024d;
+        return $"{mib:F1} MiB";
     }
 }

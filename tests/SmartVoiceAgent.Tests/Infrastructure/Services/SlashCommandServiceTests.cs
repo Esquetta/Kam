@@ -1,6 +1,8 @@
 using FluentAssertions;
 using Microsoft.Extensions.Options;
+using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.CodingAgent;
+using SmartVoiceAgent.Core.Models.Updates;
 using SmartVoiceAgent.Infrastructure.Mcp;
 using SmartVoiceAgent.Infrastructure.Services;
 
@@ -17,7 +19,7 @@ public sealed class SlashCommandServiceTests
 
         suggestions.Select(command => command.Name)
             .Should()
-            .Contain(["/dependabot", "/diff", "/github", "/hooks", "/worktree"]);
+            .Contain(["/dependabot", "/diff", "/github", "/hooks", "/worktree", "/update", "/version"]);
     }
 
     [Fact]
@@ -67,5 +69,98 @@ public sealed class SlashCommandServiceTests
         result.Message.Should().Contain(Path.GetFullPath(workspace));
         result.Message.Should().Contain("kam coding-agent /dependabot");
         result.Message.Should().Contain("do not run shell, git, or gh workflows directly");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenVersionIsRequested_ReturnsCurrentVersion()
+    {
+        var service = new SlashCommandService(
+            applicationUpdateService: new FakeApplicationUpdateService());
+
+        var result = await service.ExecuteAsync("/version");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("current: 1.0.0");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenUpdateIsRequested_ReturnsReleaseStatus()
+    {
+        var service = new SlashCommandService(
+            applicationUpdateService: new FakeApplicationUpdateService());
+
+        var result = await service.ExecuteAsync("/update");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("update available");
+        result.Message.Should().Contain("Kam-1.2.0-x64.msi");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenDownloadIsRequested_ReturnsDownloadedFilePath()
+    {
+        var service = new SlashCommandService(
+            applicationUpdateService: new FakeApplicationUpdateService());
+
+        var result = await service.ExecuteAsync("/download");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain(@"C:\Updates\Kam-1.2.0-x64.msi");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenRestartIsRequested_ReturnsRestartPlan()
+    {
+        var service = new SlashCommandService(
+            applicationRestartPlanner: new FakeApplicationRestartPlanner());
+
+        var result = await service.ExecuteAsync(@"/restart C:\Updates\Kam-1.2.0-x64.msi");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Kam restart plan");
+        result.Message.Should().Contain("Start installer");
+    }
+
+    private sealed class FakeApplicationUpdateService : IApplicationUpdateService
+    {
+        public string CurrentVersion => "1.0.0";
+
+        public Task<ApplicationUpdateCheckResult> CheckForUpdatesAsync(
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(ApplicationUpdateCheckResult.UpdateAvailable(
+                "1.0.0",
+                "1.2.0",
+                "Kam 1.2.0",
+                "https://github.com/Esquetta/Kam/releases/tag/v1.2.0",
+                DateTimeOffset.Parse("2026-05-09T12:00:00Z"),
+                new ApplicationUpdateAsset(
+                    "Kam-1.2.0-x64.msi",
+                    "https://downloads.example/Kam-1.2.0-x64.msi",
+                    1024,
+                    "application/octet-stream")));
+        }
+
+        public Task<ApplicationUpdateDownloadResult> DownloadLatestAsync(
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(ApplicationUpdateDownloadResult.Succeeded(
+                @"C:\Updates\Kam-1.2.0-x64.msi",
+                "1.2.0",
+                1024));
+        }
+    }
+
+    private sealed class FakeApplicationRestartPlanner : IApplicationRestartPlanner
+    {
+        public ApplicationRestartPlan CreateRestartPlan(string? updatePackagePath = null)
+        {
+            return new ApplicationRestartPlan(
+                true,
+                "ready",
+                @"C:\Kam\Kam.exe",
+                updatePackagePath,
+                ["Start installer", "Close Kam"]);
+        }
     }
 }

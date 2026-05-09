@@ -36,6 +36,20 @@ public sealed class MainWindowSlashCommandTests
     }
 
     [Fact]
+    public void CommandInputText_WhenUpdateFilterIsTyped_ShowsUpdateSuggestion()
+    {
+        var viewModel = new MainWindowViewModel();
+        viewModel.SetSlashCommandService(new FakeSlashCommandService());
+
+        viewModel.CommandInputText = "/up";
+
+        viewModel.IsSlashCommandPaletteVisible.Should().BeTrue();
+        viewModel.SlashCommandSuggestions.Select(command => command.Name)
+            .Should()
+            .Equal("/update");
+    }
+
+    [Fact]
     public void CommandInputText_WhenPlainTextIsTyped_HidesSlashCommandSuggestions()
     {
         var viewModel = new MainWindowViewModel();
@@ -157,7 +171,8 @@ public sealed class MainWindowSlashCommandTests
         [
             new("/help", "Show commands.", "/help", "General"),
             new("/plugins", "Show plugin health.", "/plugins", "Skills"),
-            new("/status", "Show runtime status.", "/status", "Runtime")
+            new("/status", "Show runtime status.", "/status", "Runtime"),
+            new("/update", "Check for updates.", "/update", "Updates")
         ];
 
         public string? ExecutedInput { get; private set; }
