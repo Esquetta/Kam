@@ -43,6 +43,7 @@ var host = Host.CreateDefaultBuilder(args)
     {
         var configuration = context.Configuration;
         services.AddApplicationServices();
+        services.AddSingleton<ICodingAgentProcessRunner, CodingAgentProcessRunner>();
         services.AddSmartVoiceAgent(configuration);
         services.AddInfrastructureServices(configuration);
         
