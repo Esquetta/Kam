@@ -20,6 +20,9 @@ jobs:
     
     - name: Restore dependencies
       run: dotnet restore Kam.sln
+
+    - name: Audit vulnerable NuGet packages
+      run: dotnet list Kam.sln package --vulnerable --include-transitive
     
     - name: Build
       run: dotnet build Kam.sln --configuration Release --no-restore
@@ -61,6 +64,9 @@ jobs:
     
     - name: Restore dependencies
       run: dotnet restore Kam.sln
+
+    - name: Audit vulnerable NuGet packages
+      run: dotnet list Kam.sln package --vulnerable --include-transitive
     
     - name: Run security analysis
       run: |
