@@ -54,6 +54,7 @@ public class AppServiceScopeTests
         scope.ServiceProvider.GetRequiredService<ISkillEvalHarness>().Should().NotBeNull();
         scope.ServiceProvider.GetRequiredService<ISkillTestService>().Should().NotBeNull();
         scope.ServiceProvider.GetRequiredService<ISkillExecutionPipeline>().Should().NotBeNull();
+        scope.ServiceProvider.GetRequiredService<ISlashCommandService>().Should().NotBeNull();
         scope.ServiceProvider.GetRequiredService<IEmailService>().Should().NotBeNull();
         scope.ServiceProvider.GetRequiredService<ISmsService>().Should().NotBeNull();
     }

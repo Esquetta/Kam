@@ -49,6 +49,17 @@ public sealed class MainWindowMetadataTests
     }
 
     [Fact]
+    public void MainWindow_ExposesSlashCommandPaletteBindings()
+    {
+        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+
+        mainWindowText.Should().Contain("IsSlashCommandPaletteVisible");
+        mainWindowText.Should().Contain("SlashCommandSuggestions");
+        mainWindowText.Should().Contain("SelectSlashCommandCommand");
+        mainWindowText.Should().Contain("type / for commands");
+    }
+
+    [Fact]
     public void MainWindow_BottomNavigationOnlyRendersThemeToggle()
     {
         var mainWindow = XDocument.Load(FindMainWindowXamlPath()).Root;

@@ -91,6 +91,9 @@ namespace SmartVoiceAgent.Ui
                 var commandInput = services.GetRequiredService<ICommandInputService>();
                 _mainViewModel.SetCommandInputService(commandInput);
 
+                var slashCommandService = services.GetRequiredService<ISlashCommandService>();
+                _mainViewModel.SetSlashCommandService(slashCommandService);
+
                 // Connect VoiceAgent Host Control to ViewModel
                 var hostControl = services.GetRequiredService<IVoiceAgentHostControl>();
                 _mainViewModel.SetVoiceAgentHostControl(hostControl);

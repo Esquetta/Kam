@@ -1,0 +1,360 @@
+using System.Text;
+using Microsoft.Extensions.Options;
+using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Core.Models.CodingAgent;
+using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Core.Models.SlashCommands;
+using SmartVoiceAgent.Infrastructure.Mcp;
+
+namespace SmartVoiceAgent.Infrastructure.Services;
+
+public sealed class SlashCommandService : ISlashCommandService
+{
+    private static readonly SlashCommandDefinition[] Definitions =
+    [
+        new("/help", "Show available slash commands.", "/help", "General", ["/commands"]),
+        new("/commands", "List slash commands, optionally filtered.", "/commands [filter]", "General", ["/help"]),
+        new("/status", "Show runtime and skill health status.", "/status", "Runtime"),
+        new("/permissions", "Show chat command permission boundaries.", "/permissions", "Runtime"),
+        new("/diff", "Show how to inspect the workspace diff from coding-agent mode.", "/diff", "Workflow"),
+        new("/dependabot", "Show how to run dependency audit and Dependabot checks.", "/dependabot", "Workflow"),
+        new("/github", "Show how to inspect GitHub PR and workflow status.", "/github", "Workflow"),
+        new("/plugins", "Show skill/plugin health summary.", "/plugins", "Skills"),
+        new("/mcp", "Show configured MCP endpoint status.", "/mcp", "Integrations"),
+        new("/agents", "Show registered runtime agents.", "/agents", "Runtime"),
+        new("/test", "Run a registered smoke test for one skill.", "/test <skillId>", "Skills"),
+        new("/review", "Review current skill health state.", "/review", "Skills"),
+        new("/worktree", "Show worktree command availability.", "/worktree", "Workflow"),
+        new("/hooks", "Show coding-agent hook availability.", "/hooks", "Workflow"),
+        new("/clear", "Clear the command input.", "/clear", "General")
+    ];
+
+    private readonly IVoiceAgentHostControl? _hostControl;
+    private readonly ISkillHealthService? _skillHealthService;
+    private readonly ISkillTestService? _skillTestService;
+    private readonly ISkillEvalCaseCatalog? _evalCaseCatalog;
+    private readonly IAgentRegistry? _agentRegistry;
+    private readonly CodingAgentOptions _codingAgentOptions;
+    private readonly McpOptions _mcpOptions;
+
+    public SlashCommandService(
+        IVoiceAgentHostControl? hostControl = null,
+        ISkillHealthService? skillHealthService = null,
+        ISkillTestService? skillTestService = null,
+        ISkillEvalCaseCatalog? evalCaseCatalog = null,
+        IAgentRegistry? agentRegistry = null,
+        IOptions<CodingAgentOptions>? codingAgentOptions = null,
+        IOptions<McpOptions>? mcpOptions = null)
+    {
+        _hostControl = hostControl;
+        _skillHealthService = skillHealthService;
+        _skillTestService = skillTestService;
+        _evalCaseCatalog = evalCaseCatalog;
+        _agentRegistry = agentRegistry;
+        _codingAgentOptions = codingAgentOptions?.Value ?? new CodingAgentOptions();
+        _mcpOptions = mcpOptions?.Value ?? new McpOptions();
+    }
+
+    public IReadOnlyList<SlashCommandDefinition> GetCommands()
+    {
+        return Definitions;
+    }
+
+    public IReadOnlyList<SlashCommandDefinition> GetSuggestions(string input)
+    {
+        if (!IsSlashCommand(input))
+        {
+            return [];
+        }
+
+        var filter = GetCommandToken(input).TrimStart('/');
+        return Definitions
+            .Where(command => string.IsNullOrWhiteSpace(filter)
+                || command.Name.TrimStart('/').Contains(filter, StringComparison.OrdinalIgnoreCase)
+                || command.Aliases.Any(alias => alias.TrimStart('/').Contains(filter, StringComparison.OrdinalIgnoreCase))
+                || command.Summary.Contains(filter, StringComparison.OrdinalIgnoreCase)
+                || command.Category.Contains(filter, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(command => command.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public bool IsSlashCommand(string input)
+    {
+        return !string.IsNullOrWhiteSpace(input)
+            && input.TrimStart().StartsWith("/", StringComparison.Ordinal);
+    }
+
+    public async Task<SlashCommandResult> ExecuteAsync(
+        string input,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsSlashCommand(input))
+        {
+            return SlashCommandResult.Failed(string.Empty, "Input is not a slash command.");
+        }
+
+        var commandName = GetCommandToken(input).ToLowerInvariant();
+        var arguments = GetArguments(input);
+        var normalizedName = NormalizeAlias(commandName);
+
+        return normalizedName switch
+        {
+            "/help" or "/commands" => SlashCommandResult.Succeeded(
+                normalizedName,
+                FormatCommandList(arguments.FirstOrDefault())),
+            "/status" => SlashCommandResult.Succeeded("/status", await FormatStatusAsync(cancellationToken)),
+            "/permissions" => SlashCommandResult.Succeeded("/permissions", FormatPermissions()),
+            "/diff" => SlashCommandResult.Succeeded("/diff", FormatCodingAgentWorkflow("/diff")),
+            "/dependabot" => SlashCommandResult.Succeeded("/dependabot", FormatCodingAgentWorkflow("/dependabot")),
+            "/github" => SlashCommandResult.Succeeded("/github", FormatCodingAgentWorkflow("/github")),
+            "/plugins" => SlashCommandResult.Succeeded("/plugins", await FormatPluginsAsync(cancellationToken)),
+            "/mcp" => SlashCommandResult.Succeeded("/mcp", FormatMcp()),
+            "/agents" => SlashCommandResult.Succeeded("/agents", FormatAgents()),
+            "/test" => await RunSkillTestAsync(arguments, cancellationToken),
+            "/review" => SlashCommandResult.Succeeded("/review", await FormatReviewAsync(cancellationToken)),
+            "/worktree" => SlashCommandResult.Succeeded("/worktree", FormatCodingAgentWorkflow("/worktree")),
+            "/hooks" => SlashCommandResult.Succeeded("/hooks", FormatCodingAgentWorkflow("/hooks")),
+            "/clear" => SlashCommandResult.Succeeded("/clear", "Input cleared."),
+            _ => SlashCommandResult.Failed(commandName, $"Unknown slash command: {commandName}")
+        };
+    }
+
+    private async Task<string> FormatStatusAsync(CancellationToken cancellationToken)
+    {
+        var builder = new StringBuilder()
+            .AppendLine("Kam status:")
+            .AppendLine($"  host: {(_hostControl?.IsRunning == false ? "stopped" : "running")}");
+
+        if (_skillHealthService is null)
+        {
+            return builder
+                .AppendLine("  skills: health service unavailable")
+                .ToString()
+                .TrimEnd();
+        }
+
+        var reports = await _skillHealthService.GetHealthAsync(cancellationToken);
+        builder.AppendLine($"  skills: {reports.Count} registered");
+        foreach (var group in reports.GroupBy(report => report.Status).OrderBy(group => group.Key.ToString()))
+        {
+            builder.AppendLine($"  {group.Key}: {group.Count()}");
+        }
+
+        return builder.ToString().TrimEnd();
+    }
+
+    private static string FormatPermissions()
+    {
+        return string.Join(Environment.NewLine, [
+            "Kam chat slash-command permissions:",
+            "  commands: app-local command registry only",
+            "  shell: not available from chat slash commands",
+            "  files: no direct file mutation from chat slash commands",
+            "  tests: limited to registered skill smoke tests",
+            "  integrations: status output redacts secrets"
+        ]);
+    }
+
+    private async Task<string> FormatPluginsAsync(CancellationToken cancellationToken)
+    {
+        if (_skillHealthService is null)
+        {
+            return "Kam plugins: skill health service unavailable.";
+        }
+
+        var reports = await _skillHealthService.GetHealthAsync(cancellationToken);
+        var builder = new StringBuilder()
+            .AppendLine("Kam plugins/skills:");
+
+        foreach (var group in reports.GroupBy(report => report.Status).OrderBy(group => group.Key.ToString()))
+        {
+            builder.AppendLine($"  {group.Key}: {group.Count()}");
+        }
+
+        var attention = reports
+            .Where(report => report.Status != SkillHealthStatus.Healthy)
+            .OrderBy(report => report.SkillId, StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToArray();
+
+        if (attention.Length == 0)
+        {
+            builder.AppendLine("  all registered skills are healthy");
+        }
+        else
+        {
+            builder.AppendLine("  attention:");
+            foreach (var report in attention)
+            {
+                builder.AppendLine($"    {report.SkillId}: {report.Status}");
+            }
+        }
+
+        return builder.ToString().TrimEnd();
+    }
+
+    private string FormatMcp()
+    {
+        return string.Join(Environment.NewLine, [
+            "Kam MCP status:",
+            $"  Todoist endpoint: {FormatConfiguredValue(_mcpOptions.TodoistServerLink)}",
+            $"  Todoist API key: {FormatSecretStatus(_mcpOptions.TodoistApiKey)}",
+            "  MCP commands in chat are status-only"
+        ]);
+    }
+
+    private string FormatAgents()
+    {
+        var names = _agentRegistry?.GetAllAgentNames()
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToArray() ?? [];
+
+        if (names.Length == 0)
+        {
+            return "Kam agents: no runtime agents are registered yet.";
+        }
+
+        var builder = new StringBuilder()
+            .AppendLine("Kam agents:");
+        foreach (var name in names)
+        {
+            builder.AppendLine($"  {name}");
+        }
+
+        return builder.ToString().TrimEnd();
+    }
+
+    private string FormatCodingAgentWorkflow(string commandName)
+    {
+        var workspace = _codingAgentOptions.GetWorkspaceRootOrDefault() ?? "(not configured)";
+        return string.Join(Environment.NewLine, [
+            $"Kam {commandName}:",
+            "  available in coding-agent mode",
+            $"  workspace: {workspace}",
+            $"  approvalMode: {_codingAgentOptions.ApprovalMode}",
+            "  chat slash commands do not run shell, git, or gh workflows directly",
+            $"  run from CLI: kam coding-agent {commandName}"
+        ]);
+    }
+
+    private async Task<SlashCommandResult> RunSkillTestAsync(
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken)
+    {
+        if (_skillTestService is null)
+        {
+            return SlashCommandResult.Failed("/test", "Skill test service is unavailable.");
+        }
+
+        if (arguments.Count == 0)
+        {
+            return SlashCommandResult.Failed(
+                "/test",
+                "Usage: /test <skillId>" + FormatSmokeCaseHint());
+        }
+
+        var skillId = arguments[0];
+        var result = await _skillTestService.TestAsync(skillId, cancellationToken);
+        var message = result.Success
+            ? result.Message
+            : string.IsNullOrWhiteSpace(result.ErrorMessage) ? result.Message : result.ErrorMessage;
+
+        return result.Success
+            ? SlashCommandResult.Succeeded("/test", $"Skill test passed for {skillId}: {message}")
+            : SlashCommandResult.Failed("/test", $"Skill test failed for {skillId}: {message}");
+    }
+
+    private async Task<string> FormatReviewAsync(CancellationToken cancellationToken)
+    {
+        if (_skillHealthService is null)
+        {
+            return "Kam review: skill health service unavailable.";
+        }
+
+        var reports = await _skillHealthService.GetHealthAsync(cancellationToken);
+        var attention = reports
+            .Where(report => report.Status != SkillHealthStatus.Healthy)
+            .OrderBy(report => report.SkillId, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (attention.Length == 0)
+        {
+            return $"Kam review: {reports.Count} skills checked, no skill-health issues found.";
+        }
+
+        var builder = new StringBuilder()
+            .AppendLine($"Kam review: {attention.Length} skills need attention.");
+        foreach (var report in attention.Take(12))
+        {
+            builder.AppendLine($"  {report.SkillId}: {report.Status} - {report.Details}");
+        }
+
+        return builder.ToString().TrimEnd();
+    }
+
+    private string FormatCommandList(string? filter)
+    {
+        var commands = string.IsNullOrWhiteSpace(filter)
+            ? Definitions
+            : GetSuggestions("/" + filter).ToArray();
+
+        var builder = new StringBuilder()
+            .AppendLine("Kam slash commands:");
+
+        foreach (var command in commands.OrderBy(command => command.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            builder.AppendLine($"  {command.Usage} - {command.Summary}");
+        }
+
+        return builder.ToString().TrimEnd();
+    }
+
+    private string FormatSmokeCaseHint()
+    {
+        var cases = _evalCaseCatalog?.CreateSmokeCases()
+            .Select(testCase => testCase.Plan.SkillId)
+            .Where(skillId => !string.IsNullOrWhiteSpace(skillId))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(skillId => skillId, StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToArray() ?? [];
+
+        return cases.Length == 0
+            ? string.Empty
+            : $"{Environment.NewLine}Available smoke tests: {string.Join(", ", cases)}";
+    }
+
+    private static string NormalizeAlias(string commandName)
+    {
+        return commandName switch
+        {
+            "/commands" => "/help",
+            _ => commandName
+        };
+    }
+
+    private static string GetCommandToken(string input)
+    {
+        return input.TrimStart()
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault() ?? string.Empty;
+    }
+
+    private static IReadOnlyList<string> GetArguments(string input)
+    {
+        return input.TrimStart()
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Skip(1)
+            .ToArray();
+    }
+
+    private static string FormatConfiguredValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "(not configured)" : value.Trim();
+    }
+
+    private static string FormatSecretStatus(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "(not configured)" : "(configured)";
+    }
+}

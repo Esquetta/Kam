@@ -930,68 +930,113 @@
 							BorderBrush="{DynamicResource BorderSubtleBrush}"
 							BorderThickness="0,1,0,0"
 							Padding="16,8">
-						<Grid ColumnDefinitions="Auto, *, Auto, Auto">
-							<!-- Prompt character -->
-							<TextBlock Grid.Column="0"
-									   Text=">"
-									   FontSize="12"
-									   FontFamily="Consolas"
-									   Foreground="{DynamicResource AccentGreenBrush}"
-									   VerticalAlignment="Center"
-									   Margin="0,0,8,0"/>
-							
-							<!-- Text Input -->
-							<TextBox Grid.Column="1"
-									 x:Name="PromptInput"
-									 PlaceholderText="Enter command or click mic to speak..."
-									 FontSize="12"
-									 FontFamily="Consolas"
-									 Background="Transparent"
-									 BorderThickness="0"
-									 Foreground="{DynamicResource TextSecondaryBrush}"
-									 VerticalAlignment="Center"
-									 AcceptsReturn="False"
-									 TextWrapping="NoWrap"
-									 Text="{Binding CommandInputText, Mode=TwoWay}"
-									 KeyDown="OnPromptKeyDown"/>
-							
-							<!-- Voice Status Indicator -->
-							<StackPanel Grid.Column="2" 
-										Orientation="Horizontal" 
-										VerticalAlignment="Center"
-										Margin="8,0"
-										IsVisible="{Binding IsVoiceEnabled}">
-								<Ellipse Width="6" Height="6" 
-										 Fill="{Binding VoiceStatusColor}" 
-										 Margin="0,0,4,0"
-										 VerticalAlignment="Center">
-									<Ellipse.Effect>
-										<BlurEffect Radius="2"/>
-									</Ellipse.Effect>
-								</Ellipse>
-								<TextBlock Text="{Binding VoiceStatusText}" 
-										   FontSize="10"
-										   Foreground="{Binding VoiceStatusColor}"
-										   VerticalAlignment="Center"/>
-							</StackPanel>
-							
-							<!-- Mic Button -->
-							<Button Grid.Column="3"
-									Classes="IconButton"
-									Width="28" Height="28"
-									Margin="8,0,0,0"
-									Background="Transparent"
-									BorderThickness="0"
-									Cursor="Hand"
-									ToolTip.Tip="Toggle Voice Control (Say 'Hey Kam')"
-									Command="{Binding ToggleVoiceCommand}">
-								<Path Data="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"
-									  Fill="{Binding VoiceStatusColor}"
-									  Width="16" Height="16"
-									  Stretch="Uniform"
-									  HorizontalAlignment="Center"
-									  VerticalAlignment="Center"/>
-							</Button>
+						<Grid RowDefinitions="Auto, Auto">
+							<Border Grid.Row="0"
+									Background="{DynamicResource CardBgHoverBrush}"
+									BorderBrush="{DynamicResource AccentCyanDimBrush}"
+									BorderThickness="1"
+									CornerRadius="8"
+									Padding="8"
+									Margin="0,0,0,8"
+									IsVisible="{Binding IsSlashCommandPaletteVisible}">
+								<ItemsControl ItemsSource="{Binding SlashCommandSuggestions}">
+									<ItemsControl.ItemTemplate>
+										<DataTemplate DataType="vm:SlashCommandSuggestionViewModel">
+											<Button Command="{Binding $parent[Window].DataContext.SelectSlashCommandCommand}"
+													CommandParameter="{Binding}"
+													Background="Transparent"
+													BorderThickness="0"
+													HorizontalContentAlignment="Stretch"
+													Padding="8,6"
+													Cursor="Hand">
+												<Grid ColumnDefinitions="96, *, Auto">
+													<TextBlock Grid.Column="0"
+															   Text="{Binding Name}"
+															   FontSize="12"
+															   FontFamily="Consolas"
+															   FontWeight="SemiBold"
+															   Foreground="{DynamicResource AccentCyanBrush}"/>
+													<TextBlock Grid.Column="1"
+															   Text="{Binding Summary}"
+															   FontSize="11"
+															   Foreground="{DynamicResource TextSecondaryBrush}"
+															   TextTrimming="CharacterEllipsis"/>
+													<TextBlock Grid.Column="2"
+															   Text="{Binding Category}"
+															   FontSize="10"
+															   FontFamily="Consolas"
+															   Foreground="{DynamicResource TextMutedBrush}"
+															   Margin="12,0,0,0"/>
+												</Grid>
+											</Button>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+							</Border>
+
+							<Grid Grid.Row="1" ColumnDefinitions="Auto, *, Auto, Auto">
+								<!-- Prompt character -->
+								<TextBlock Grid.Column="0"
+										   Text=">"
+										   FontSize="12"
+										   FontFamily="Consolas"
+										   Foreground="{DynamicResource AccentGreenBrush}"
+										   VerticalAlignment="Center"
+										   Margin="0,0,8,0"/>
+
+								<!-- Text Input -->
+								<TextBox Grid.Column="1"
+										 x:Name="PromptInput"
+										 PlaceholderText="Enter command or type / for commands..."
+										 FontSize="12"
+										 FontFamily="Consolas"
+										 Background="Transparent"
+										 BorderThickness="0"
+										 Foreground="{DynamicResource TextSecondaryBrush}"
+										 VerticalAlignment="Center"
+										 AcceptsReturn="False"
+										 TextWrapping="NoWrap"
+										 Text="{Binding CommandInputText, Mode=TwoWay}"
+										 KeyDown="OnPromptKeyDown"/>
+
+								<!-- Voice Status Indicator -->
+								<StackPanel Grid.Column="2"
+											Orientation="Horizontal"
+											VerticalAlignment="Center"
+											Margin="8,0"
+											IsVisible="{Binding IsVoiceEnabled}">
+									<Ellipse Width="6" Height="6"
+											 Fill="{Binding VoiceStatusColor}"
+											 Margin="0,0,4,0"
+											 VerticalAlignment="Center">
+										<Ellipse.Effect>
+											<BlurEffect Radius="2"/>
+										</Ellipse.Effect>
+									</Ellipse>
+									<TextBlock Text="{Binding VoiceStatusText}"
+											   FontSize="10"
+											   Foreground="{Binding VoiceStatusColor}"
+											   VerticalAlignment="Center"/>
+								</StackPanel>
+
+								<!-- Mic Button -->
+								<Button Grid.Column="3"
+										Classes="IconButton"
+										Width="28" Height="28"
+										Margin="8,0,0,0"
+										Background="Transparent"
+										BorderThickness="0"
+										Cursor="Hand"
+										ToolTip.Tip="Toggle Voice Control (Say 'Hey Kam')"
+										Command="{Binding ToggleVoiceCommand}">
+									<Path Data="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"
+										  Fill="{Binding VoiceStatusColor}"
+										  Width="16" Height="16"
+										  Stretch="Uniform"
+										  HorizontalAlignment="Center"
+										  VerticalAlignment="Center"/>
+								</Button>
+							</Grid>
 						</Grid>
 					</Border>
 				</Grid>

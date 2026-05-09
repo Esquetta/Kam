@@ -163,6 +163,7 @@ public static class ServiceRegistration
         services.AddSingleton<ISkillAdapter, McpSkillAdapter>();
         services.AddSingleton<ISkillAdapterRegistry, SkillAdapterRegistry>();
         services.AddSingleton<ISkillImportService, SkillImportService>();
+        services.AddScoped<ISlashCommandService, SlashCommandService>();
 
         return services;
     }

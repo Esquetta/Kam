@@ -128,7 +128,25 @@ namespace SmartVoiceAgent.Ui.Views
 
         private void OnPromptKeyDown(object? sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Enter && DataContext is MainWindowViewModel vm)
+            if (DataContext is not MainWindowViewModel vm)
+            {
+                return;
+            }
+
+            if (e.Key == Key.Tab && vm.AcceptFirstSlashCommandSuggestion())
+            {
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.Escape)
+            {
+                vm.HideSlashCommandSuggestions();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.Enter)
             {
                 vm.SubmitCommand.Execute(null);
                 e.Handled = true;

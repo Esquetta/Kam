@@ -8,6 +8,7 @@ using Avalonia.Threading;
 using ReactiveUI;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Core.Models.SlashCommands;
 using SmartVoiceAgent.Infrastructure.Skills.Importing;
 using SmartVoiceAgent.Infrastructure.Skills.Policy;
 using SmartVoiceAgent.Ui.Services;
@@ -41,6 +42,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private ISkillExecutionHistoryService? _skillExecutionHistoryService;
         private ISkillExecutionPipeline? _skillExecutionPipeline;
         private ISkillPlannerTraceStore? _skillPlannerTraceStore;
+        private ISlashCommandService? _slashCommandService;
         private readonly IModelConnectionTestService _modelConnectionTestService = new ModelConnectionTestService();
 
         private const int MaxSkillExecutionHistoryScanCount = 50;
@@ -214,10 +216,36 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public string CommandInputText
         {
             get => _commandInputText;
-            set => this.RaiseAndSetIfChanged(ref _commandInputText, value);
+            set
+            {
+                var normalizedValue = value ?? string.Empty;
+                if (_commandInputText == normalizedValue)
+                {
+                    return;
+                }
+
+                this.RaiseAndSetIfChanged(ref _commandInputText, normalizedValue);
+                RefreshSlashCommandSuggestions();
+            }
         }
 
         public ICommand SubmitCommand { get; }
+
+        public ICommand SelectSlashCommandCommand { get; }
+
+        private ObservableCollection<SlashCommandSuggestionViewModel> _slashCommandSuggestions = new();
+        public ObservableCollection<SlashCommandSuggestionViewModel> SlashCommandSuggestions
+        {
+            get => _slashCommandSuggestions;
+            set => this.RaiseAndSetIfChanged(ref _slashCommandSuggestions, value);
+        }
+
+        private bool _isSlashCommandPaletteVisible;
+        public bool IsSlashCommandPaletteVisible
+        {
+            get => _isSlashCommandPaletteVisible;
+            private set => this.RaiseAndSetIfChanged(ref _isSlashCommandPaletteVisible, value);
+        }
 
         private ObservableCollection<PendingSkillConfirmationViewModel> _pendingSkillConfirmations = new();
         public ObservableCollection<PendingSkillConfirmationViewModel> PendingSkillConfirmations
@@ -427,7 +455,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ClearSkillExecutionHistoryCommand = ReactiveCommand.Create(ClearSkillExecutionHistory);
             ClearSkillExecutionHistoryFiltersCommand = ReactiveCommand.Create(ClearSkillExecutionHistoryFilters);
             ClearSkillPlannerTraceCommand = ReactiveCommand.Create(ClearSkillPlannerTrace);
-            SubmitCommand = ReactiveCommand.Create(SubmitCommandInput);
+            SubmitCommand = ReactiveCommand.CreateFromTask(SubmitCommandInputAsync);
+            SelectSlashCommandCommand = ReactiveCommand.Create<SlashCommandSuggestionViewModel>(SelectSlashCommand);
             ToggleVoiceCommand = ReactiveCommand.Create(ToggleVoiceEnabled);
             StartVoiceRecordingCommand = ReactiveCommand.CreateFromTask(StartVoiceRecordingAsync);
 
@@ -544,6 +573,12 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public void SetSkillExecutionPipeline(ISkillExecutionPipeline skillExecutionPipeline)
         {
             _skillExecutionPipeline = skillExecutionPipeline;
+        }
+
+        public void SetSlashCommandService(ISlashCommandService slashCommandService)
+        {
+            _slashCommandService = slashCommandService;
+            RefreshSlashCommandSuggestions();
         }
         
         private void OnHostStateChanged(object? sender, bool isRunning)
@@ -788,14 +823,81 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _resultListenerCts = new CancellationTokenSource();
         }
 
-        private void SubmitCommandInput()
+        public async Task SubmitCommandInputAsync()
         {
-            if (string.IsNullOrWhiteSpace(CommandInputText) || _commandInput == null)
+            if (string.IsNullOrWhiteSpace(CommandInputText))
                 return;
 
-            AddLog($"> {CommandInputText}");
-            _commandInput.SubmitCommand(CommandInputText);
+            var input = CommandInputText.Trim();
+            AddLog($"> {input}");
+
+            if (_slashCommandService?.IsSlashCommand(input) == true)
+            {
+                var slashResult = await _slashCommandService.ExecuteAsync(input);
+                AddLog(slashResult.Success
+                    ? $"✅ {slashResult.Message}"
+                    : $"❌ Error: {slashResult.Message}");
+                CommandInputText = string.Empty;
+                SlashCommandSuggestions.Clear();
+                IsSlashCommandPaletteVisible = false;
+                return;
+            }
+
+            if (_commandInput is null)
+            {
+                AddLog("COMMAND_INPUT_UNAVAILABLE");
+                return;
+            }
+
+            _commandInput.SubmitCommand(input);
             CommandInputText = string.Empty;
+        }
+
+        private void RefreshSlashCommandSuggestions()
+        {
+            SlashCommandSuggestions.Clear();
+
+            if (_slashCommandService is null
+                || !_slashCommandService.IsSlashCommand(CommandInputText))
+            {
+                IsSlashCommandPaletteVisible = false;
+                return;
+            }
+
+            foreach (var command in _slashCommandService.GetSuggestions(CommandInputText).Take(8))
+            {
+                SlashCommandSuggestions.Add(new SlashCommandSuggestionViewModel(command));
+            }
+
+            IsSlashCommandPaletteVisible = SlashCommandSuggestions.Count > 0;
+        }
+
+        private void SelectSlashCommand(SlashCommandSuggestionViewModel? suggestion)
+        {
+            if (suggestion is null)
+            {
+                return;
+            }
+
+            CommandInputText = suggestion.Name + " ";
+            IsSlashCommandPaletteVisible = false;
+        }
+
+        public bool AcceptFirstSlashCommandSuggestion()
+        {
+            var suggestion = SlashCommandSuggestions.FirstOrDefault();
+            if (suggestion is null)
+            {
+                return false;
+            }
+
+            SelectSlashCommand(suggestion);
+            return true;
+        }
+
+        public void HideSlashCommandSuggestions()
+        {
+            IsSlashCommandPaletteVisible = false;
         }
 
         private void OnCommandResult(object? sender, CommandResultEventArgs e)
@@ -1362,6 +1464,25 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public ICommand ApproveCommand { get; }
 
         public ICommand RejectCommand { get; }
+    }
+
+    public sealed class SlashCommandSuggestionViewModel
+    {
+        public SlashCommandSuggestionViewModel(SlashCommandDefinition definition)
+        {
+            Name = definition.Name;
+            Summary = definition.Summary;
+            Usage = definition.Usage;
+            Category = definition.Category;
+        }
+
+        public string Name { get; }
+
+        public string Summary { get; }
+
+        public string Usage { get; }
+
+        public string Category { get; }
     }
 
     public sealed class SkillPlannerTraceItemViewModel
