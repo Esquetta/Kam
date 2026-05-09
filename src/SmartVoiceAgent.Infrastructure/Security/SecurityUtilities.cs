@@ -71,8 +71,7 @@ public static class SecurityUtilities
                 return false;
             }
 
-            // Ensure the path starts with the base directory
-            if (!normalizedPath.StartsWith(normalizedBase, StringComparison.OrdinalIgnoreCase))
+            if (!IsSameOrChildPath(normalizedPath, normalizedBase))
                 return false;
         }
 
@@ -81,6 +80,25 @@ public static class SecurityUtilities
             return false;
 
         return true;
+    }
+
+    private static bool IsSameOrChildPath(string path, string baseDirectory)
+    {
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        var normalizedBase = Path.TrimEndingDirectorySeparator(baseDirectory);
+
+        if (string.Equals(path, normalizedBase, comparison))
+        {
+            return true;
+        }
+
+        var baseWithSeparator = normalizedBase.EndsWith(Path.DirectorySeparatorChar)
+            ? normalizedBase
+            : normalizedBase + Path.DirectorySeparatorChar;
+
+        return path.StartsWith(baseWithSeparator, comparison);
     }
 
     /// <summary>

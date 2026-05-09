@@ -323,7 +323,7 @@ public sealed class ShellSkillExecutor : ISkillExecutor
         var allowedCommands = GetRuntimeList(runtimeOptions, SkillRuntimePolicyOptions.ShellAllowedCommands);
         if (allowedCommands.Count == 0)
         {
-            return true;
+            return !GetRuntimeBool(runtimeOptions, SkillRuntimePolicyOptions.ShellRequireAllowedCommands);
         }
 
         var normalized = NormalizeCommand(command);
@@ -338,6 +338,15 @@ public sealed class ShellSkillExecutor : ISkillExecutor
         return runtimeOptions.TryGetValue(key, out var value)
             ? SkillRuntimePolicyOptions.SplitList(value)
             : [];
+    }
+
+    private static bool GetRuntimeBool(
+        IReadOnlyDictionary<string, string> runtimeOptions,
+        string key)
+    {
+        return runtimeOptions.TryGetValue(key, out var value)
+            && bool.TryParse(value, out var parsed)
+            && parsed;
     }
 
     private static string NormalizeCommand(string command)

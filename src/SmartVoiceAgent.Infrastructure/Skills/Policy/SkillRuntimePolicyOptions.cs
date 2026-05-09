@@ -5,6 +5,7 @@ public static class SkillRuntimePolicyOptions
     public const string ShellBlockedPatterns = "shell.blockedPatterns";
     public const string ShellAllowedCommands = "shell.allowedCommands";
     public const string ShellAllowedWorkingDirectories = "shell.allowedWorkingDirectories";
+    public const string ShellRequireAllowedCommands = "shell.requireAllowedCommands";
     public const string WebAllowedHosts = "web.allowedHosts";
     public const string WebBlockedHosts = "web.blockedHosts";
     public const string WebAllowPrivateNetwork = "web.allowPrivateNetwork";
@@ -66,7 +67,7 @@ public static class SkillRuntimePolicyOptions
         }
 
         var defaultText = skillId.Equals("shell.run", StringComparison.OrdinalIgnoreCase)
-            ? $"Runtime policy: set {ShellBlockedPatterns}, {ShellAllowedCommands}, or {ShellAllowedWorkingDirectories}."
+            ? $"Runtime policy: set {ShellBlockedPatterns}, {ShellAllowedCommands}, {ShellAllowedWorkingDirectories}, or {ShellRequireAllowedCommands}."
             : $"Runtime policy: set {WebAllowedHosts}, {WebBlockedHosts}, or {WebAllowPrivateNetwork}.";
 
         return string.IsNullOrWhiteSpace(smokeCoverageText)

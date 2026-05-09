@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Options;
 using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Core.Models.CodingAgent;
 using SmartVoiceAgent.Core.Models.Skills;
 
 namespace SmartVoiceAgent.Infrastructure.Skills.Execution;
@@ -11,15 +13,18 @@ public sealed class SkillExecutionPipeline : ISkillExecutionPipeline
     private readonly ISkillRegistry _registry;
     private readonly IEnumerable<ISkillExecutor> _executors;
     private readonly ISkillExecutionHistoryService? _historyService;
+    private readonly CodingAgentOptions _codingAgentOptions;
 
     public SkillExecutionPipeline(
         ISkillRegistry registry,
         IEnumerable<ISkillExecutor> executors,
-        ISkillExecutionHistoryService? historyService = null)
+        ISkillExecutionHistoryService? historyService = null,
+        IOptions<CodingAgentOptions>? codingAgentOptions = null)
     {
         _registry = registry;
         _executors = executors;
         _historyService = historyService;
+        _codingAgentOptions = codingAgentOptions?.Value ?? new CodingAgentOptions();
     }
 
     public async Task<SkillResult> ExecuteAsync(SkillPlan plan, CancellationToken cancellationToken = default)
@@ -68,6 +73,17 @@ public sealed class SkillExecutionPipeline : ISkillExecutionPipeline
                     $"Skill '{plan.SkillId}' is missing granted permissions: {string.Join(", ", missingPermissions)}.",
                     SkillExecutionStatus.PermissionDenied,
                     "permission_denied"),
+                stopwatch);
+        }
+
+        if (IsReadOnlyCodingAgentDenied(plan.SkillId))
+        {
+            return Complete(
+                plan,
+                SkillResult.Failed(
+                    $"Skill '{plan.SkillId}' is blocked by coding-agent read-only mode.",
+                    SkillExecutionStatus.PermissionDenied,
+                    "coding_agent_read_only"),
                 stopwatch);
         }
 
@@ -189,6 +205,26 @@ public sealed class SkillExecutionPipeline : ISkillExecutionPipeline
         return required
             .Where(permission => !granted.Contains(permission))
             .ToArray();
+    }
+
+    private bool IsReadOnlyCodingAgentDenied(string skillId)
+    {
+        return _codingAgentOptions.IsEnabled
+            && _codingAgentOptions.ApprovalMode.Equals("read-only", StringComparison.OrdinalIgnoreCase)
+            && IsMutatingCodingSkill(skillId);
+    }
+
+    private static bool IsMutatingCodingSkill(string skillId)
+    {
+        return skillId.Equals("shell.run", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("files.write", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("files.create", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("files.delete", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("files.copy", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("files.move", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("file.replace_range", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("file.patch", StringComparison.OrdinalIgnoreCase)
+            || skillId.Equals("directories.create", StringComparison.OrdinalIgnoreCase);
     }
 
     private static SkillResult NormalizeResult(string skillId, SkillResult result)

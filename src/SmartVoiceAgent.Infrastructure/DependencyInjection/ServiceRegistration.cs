@@ -2,7 +2,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Core.Models.CodingAgent;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Infrastructure.Factories;
 using SmartVoiceAgent.Infrastructure.Helpers;
@@ -45,6 +47,7 @@ public static class ServiceRegistration
         IConfiguration configuration)
     {
         services.TryAddSingleton(configuration);
+        services.Configure<CodingAgentOptions>(configuration.GetSection(CodingAgentOptions.SectionName));
 
         services.AddScoped<ICommandLearningService, CommandLearningService>();
         services.AddSingleton<ISTTServiceFactory, STTServiceFactory>();
@@ -132,10 +135,12 @@ public static class ServiceRegistration
         services.AddSingleton<ISkillRegistry>(sp =>
         {
             var policyStore = sp.GetRequiredService<ISkillPolicyStore>();
+            var codingOptions = sp.GetRequiredService<IOptions<CodingAgentOptions>>().Value;
             var registry = new InMemorySkillRegistry();
             foreach (var manifest in BuiltInSkillManifestCatalog.CreateAll())
             {
                 policyStore.ApplyPolicy(manifest);
+                ApplyCodingAgentPolicy(manifest, codingOptions);
                 registry.Register(manifest);
             }
 
@@ -160,6 +165,28 @@ public static class ServiceRegistration
         services.AddSingleton<ISkillImportService, SkillImportService>();
 
         return services;
+    }
+
+    private static void ApplyCodingAgentPolicy(
+        KamSkillManifest manifest,
+        CodingAgentOptions codingOptions)
+    {
+        if (!codingOptions.IsEnabled
+            || !manifest.Id.Equals("shell.run", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var workspaceRoot = codingOptions.GetWorkspaceRootOrDefault();
+        if (!string.IsNullOrWhiteSpace(workspaceRoot))
+        {
+            manifest.RuntimeOptions[SkillRuntimePolicyOptions.ShellAllowedWorkingDirectories] = workspaceRoot;
+        }
+
+        if (codingOptions.RequireShellAllowList)
+        {
+            manifest.RuntimeOptions[SkillRuntimePolicyOptions.ShellRequireAllowedCommands] = "true";
+        }
     }
 
     [SupportedOSPlatform("windows6.1")]

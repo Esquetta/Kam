@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using OpenAI;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
+using SmartVoiceAgent.Core.Models.CodingAgent;
 using SmartVoiceAgent.Infrastructure.Agent.Agents;
 using SmartVoiceAgent.Infrastructure.Agent.Conf;
 using SmartVoiceAgent.Infrastructure.Agent.Functions;
@@ -15,6 +16,7 @@ using SmartVoiceAgent.Infrastructure.Skills.BuiltIn.AgentTools;
 using SmartVoiceAgent.Infrastructure.Skills.External;
 using SmartVoiceAgent.Infrastructure.Skills.Planning;
 using System.ClientModel;
+using Microsoft.Extensions.Options;
 
 namespace SmartVoiceAgent.Infrastructure.Extensions;
 
@@ -35,6 +37,7 @@ public static class ServiceCollectionExtensions
 
         // Configuration options
         services.Configure<GroupChatOptions>(configuration.GetSection("GroupChat"));
+        services.Configure<CodingAgentOptions>(configuration.GetSection(CodingAgentOptions.SectionName));
 
         services.Configure<McpOptions>(configuration.GetSection("McpOptions"));
 
@@ -76,7 +79,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<SystemAgentTools>();
         services.AddSingleton<TaskAgentTools>();
         services.AddScoped<WebSearchAgentTools>();
-        services.AddSingleton<FileAgentTools>();
+        services.AddSingleton(sp =>
+        {
+            var codingOptions = sp.GetRequiredService<IOptions<CodingAgentOptions>>().Value;
+            var workspaceRoot = codingOptions.IsEnabled
+                ? codingOptions.GetWorkspaceRootOrDefault()
+                : null;
+
+            return new FileAgentTools(workspaceRoot);
+        });
         services.AddScoped<CommunicationAgentTools>();
         services.AddSingleton<ClipboardTools>();
         services.AddSingleton<SystemInformationTools>();

@@ -17,7 +17,11 @@ using SmartVoiceAgent.Mailing.Extensions;
 #region Main Entry Point
 var skillSmokeRequested = SkillSmokeCommand.IsRequested(args);
 var commandSmokeRequested = CommandSmokeCommand.IsRequested(args);
-if (!skillSmokeRequested && !commandSmokeRequested)
+var codingAgentRequested = CodingAgentCommand.IsRequested(args);
+var codingAgentOptions = codingAgentRequested
+    ? CodingAgentCommand.ParseOptions(args)
+    : null;
+if (!skillSmokeRequested && !commandSmokeRequested && !codingAgentRequested)
 {
     Console.WriteLine("╔═══════════════════════════════════════════════════════════╗");
     Console.WriteLine("║          Kam Agent Host - Console Test Application        ║");
@@ -29,6 +33,11 @@ var host = Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration(config =>
     {
         config.AddUserSecrets<Program>();
+
+        if (codingAgentOptions is not null)
+        {
+            config.AddInMemoryCollection(CodingAgentCommand.CreateConfigurationOverrides(codingAgentOptions));
+        }
     })
     .ConfigureServices((context, services) =>
     {
@@ -59,6 +68,17 @@ if (commandSmokeRequested)
     var command = ActivatorUtilities.CreateInstance<CommandSmokeCommand>(scope.ServiceProvider);
     Environment.ExitCode = await command.RunAsync(
         CommandSmokeCommand.ParseOptions(args),
+        Console.Out,
+        Console.Error);
+    return;
+}
+
+if (codingAgentOptions is not null)
+{
+    using var scope = host.Services.CreateScope();
+    var command = ActivatorUtilities.CreateInstance<CodingAgentCommand>(scope.ServiceProvider);
+    Environment.ExitCode = await command.RunAsync(
+        codingAgentOptions,
         Console.Out,
         Console.Error);
     return;

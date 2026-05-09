@@ -1,5 +1,7 @@
 using FluentAssertions;
+using Microsoft.Extensions.Options;
 using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Core.Models.CodingAgent;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Infrastructure.Skills;
 using SmartVoiceAgent.Infrastructure.Skills.Execution;
@@ -159,6 +161,38 @@ public class SkillExecutionPipelineTests
         result.Status.Should().Be(SkillExecutionStatus.PermissionDenied);
         result.ErrorCode.Should().Be("permission_denied");
         result.ErrorMessage.Should().Contain(nameof(SkillPermission.FileSystemWrite));
+        executor.CallCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CodingAgentReadOnlyMode_BlocksMutatingSkillsWithoutCallingExecutor()
+    {
+        var registry = CreateRegistry(new KamSkillManifest
+        {
+            Id = "file.patch",
+            Enabled = true,
+            Permissions = [SkillPermission.FileSystemRead, SkillPermission.FileSystemWrite],
+            GrantedPermissions = [SkillPermission.FileSystemRead, SkillPermission.FileSystemWrite]
+        });
+        var executor = new RecordingSkillExecutor(
+            "file.patch",
+            (_, _) => Task.FromResult(SkillResult.Succeeded("Should not run.")));
+        var pipeline = new SkillExecutionPipeline(
+            registry,
+            [executor],
+            codingAgentOptions: Options.Create(new CodingAgentOptions
+            {
+                IsEnabled = true,
+                ApprovalMode = "read-only"
+            }));
+
+        var result = await pipeline.ExecuteAsync(SkillPlan.FromObject(
+            "file.patch",
+            new { filePath = "README.md", oldText = "old", newText = "new" }));
+
+        result.Success.Should().BeFalse();
+        result.Status.Should().Be(SkillExecutionStatus.PermissionDenied);
+        result.ErrorCode.Should().Be("coding_agent_read_only");
         executor.CallCount.Should().Be(0);
     }
 

@@ -105,6 +105,85 @@ public class FileSkillExecutorTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_FilesSearchContent_BlocksDirectoryOutsideDefaultWorkspace()
+    {
+        var filePath = Path.Combine(_outsideWorkspace, "secret.md");
+        await File.WriteAllTextAsync(filePath, "outside workspace");
+        var executor = new FileSkillExecutor(new FileAgentTools(_workspace));
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject(
+            "files.search_content",
+            new
+            {
+                directoryPath = _outsideWorkspace,
+                query = "outside",
+                searchPattern = "*.md"
+            }));
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("reddedildi");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WorkspaceMap_BlocksDirectoryOutsideDefaultWorkspace()
+    {
+        await File.WriteAllTextAsync(Path.Combine(_outsideWorkspace, "secret.md"), "outside workspace");
+        var executor = new FileSkillExecutor(new FileAgentTools(_workspace));
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject(
+            "workspace.map",
+            new { directoryPath = _outsideWorkspace }));
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("reddedildi");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CodeOutline_BlocksFileOutsideDefaultWorkspace()
+    {
+        var filePath = Path.Combine(_outsideWorkspace, "Secret.cs");
+        await File.WriteAllTextAsync(filePath, "public sealed class Secret {}");
+        var executor = new FileSkillExecutor(new FileAgentTools(_workspace));
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject(
+            "code.outline",
+            new { filePath }));
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("reddedildi");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_DirectoriesCreate_BlocksDirectoryOutsideDefaultWorkspace()
+    {
+        var directoryPath = Path.Combine(_outsideWorkspace, "created");
+        var executor = new FileSkillExecutor(new FileAgentTools(_workspace));
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject(
+            "directories.create",
+            new { directoryPath }));
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("reddedildi");
+        Directory.Exists(directoryPath).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ReadLines_BlocksFileOutsideDefaultWorkspace()
+    {
+        var filePath = Path.Combine(_outsideWorkspace, "secret.md");
+        await File.WriteAllTextAsync(filePath, "outside workspace");
+        var executor = new FileSkillExecutor(new FileAgentTools(_workspace));
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject(
+            "files.read_lines",
+            new { filePath, startLine = 1, lineCount = 1 }));
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("reddedildi");
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WorkspaceMap_ReturnsBoundedTreeAndExtensionSummary()
     {
         Directory.CreateDirectory(Path.Combine(_workspace, "src"));

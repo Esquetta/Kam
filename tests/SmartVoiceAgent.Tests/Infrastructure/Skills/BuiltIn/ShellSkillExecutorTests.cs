@@ -212,6 +212,33 @@ public class ShellSkillExecutorTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_ShellRun_RequiresAllowListWhenPolicyIsFailClosed()
+    {
+        var registry = new InMemorySkillRegistry();
+        registry.Register(new KamSkillManifest
+        {
+            Id = "shell.run",
+            RuntimeOptions = new Dictionary<string, string>
+            {
+                [SkillRuntimePolicyOptions.ShellRequireAllowedCommands] = "true"
+            }
+        });
+        var executor = new ShellSkillExecutor(registry);
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject(
+            "shell.run",
+            new
+            {
+                command = EchoStdOutCommand("blocked-without-allow-list"),
+                workingDirectory = _workspace
+            }));
+
+        result.Success.Should().BeFalse();
+        result.Status.Should().Be(SkillExecutionStatus.PermissionDenied);
+        result.ErrorCode.Should().Be("shell_command_not_allowed");
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ShellRun_BlocksWorkingDirectoryOutsideConfiguredAllowedRoots()
     {
         var registry = new InMemorySkillRegistry();
