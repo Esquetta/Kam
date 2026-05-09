@@ -48,6 +48,41 @@ public sealed class MainWindowMetadataTests
         mainWindowText.Should().Contain("ToolTip.Tip=\"Runtime Diagnostics\"");
     }
 
+    [Fact]
+    public void MainWindow_BottomNavigationOnlyRendersThemeToggle()
+    {
+        var mainWindow = XDocument.Load(FindMainWindowXamlPath()).Root;
+
+        var bottomNavigation = mainWindow!
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "StackPanel"
+                && AttributeValue(element, "Grid.Row") == "2"
+                && AttributeValue(element, "Margin") == "12,0");
+
+        bottomNavigation
+            .Descendants()
+            .Where(element => element.Name.LocalName == "Button")
+            .Should()
+            .ContainSingle(button =>
+                AttributeValue(button, "Command") == "{Binding ToggleThemeCommand}"
+                && AttributeValue(button, "ToolTip.Tip") == "Toggle Theme");
+
+        bottomNavigation
+            .Descendants()
+            .Where(element => element.Name.LocalName == "Border")
+            .Should()
+            .BeEmpty();
+    }
+
+    private static string? AttributeValue(XElement element, string attributeName)
+    {
+        return element
+            .Attributes()
+            .FirstOrDefault(attribute => attribute.Name.LocalName == attributeName)
+            ?.Value;
+    }
+
     private static string FindMainWindowXamlPath()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

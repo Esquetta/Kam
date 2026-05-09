@@ -319,18 +319,6 @@
 							</Panel>
 						</Button>
 
-						<!-- User Avatar -->
-						<Border Width="32" Height="32"
-								CornerRadius="16"
-								Margin="0,12,0,0"
-								HorizontalAlignment="Center">
-							<Border.Background>
-								<LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-									<GradientStop Color="{DynamicResource BorderMuted}" Offset="0"/>
-									<GradientStop Color="{DynamicResource TextMuted}" Offset="1"/>
-								</LinearGradientBrush>
-							</Border.Background>
-						</Border>
 					</StackPanel>
 				</Grid>
 			</Border>

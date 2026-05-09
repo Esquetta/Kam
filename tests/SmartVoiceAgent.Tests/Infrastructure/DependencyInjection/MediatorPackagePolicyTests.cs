@@ -5,6 +5,7 @@ namespace SmartVoiceAgent.Tests.Infrastructure.DependencyInjection;
 
 public class MediatorPackagePolicyTests
 {
+    private static readonly Version MinimumSafeSharpCompressVersion = new(0, 48, 0);
     private static readonly Version MinimumSafeSnappierVersion = new(1, 3, 1);
 
     [Fact]
@@ -51,6 +52,33 @@ public class MediatorPackagePolicyTests
         snappierReferences.Should().OnlyContain(reference =>
                 IsAtOrAboveMinimumSafeSnappierVersion(reference.Version),
             $"Snappier must stay at or above {MinimumSafeSnappierVersion} to avoid GHSA-pggp-6c3x-2xmx");
+    }
+
+    [Fact]
+    public void ProjectFiles_PinSharpCompressAboveVulnerableTransitiveVersion()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var projectFiles = Directory.GetFiles(repositoryRoot, "*.csproj", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+                && !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        var sharpCompressReferences = projectFiles
+            .SelectMany(projectPath => ReadPackageReferences(projectPath, "SharpCompress"))
+            .ToArray();
+
+        sharpCompressReferences.Should().NotBeEmpty(
+            "the MongoDB dependency chain currently resolves a vulnerable SharpCompress version unless the safe override stays pinned");
+
+        sharpCompressReferences.Should().OnlyContain(reference =>
+                IsAtOrAboveMinimumSafeSharpCompressVersion(reference.Version),
+            $"SharpCompress must stay at or above {MinimumSafeSharpCompressVersion} to avoid GHSA-6c8g-7p36-r338");
+    }
+
+    private static bool IsAtOrAboveMinimumSafeSharpCompressVersion(string version)
+    {
+        return Version.TryParse(version, out var parsedVersion)
+            && parsedVersion >= MinimumSafeSharpCompressVersion;
     }
 
     private static bool IsAtOrAboveMinimumSafeSnappierVersion(string version)
