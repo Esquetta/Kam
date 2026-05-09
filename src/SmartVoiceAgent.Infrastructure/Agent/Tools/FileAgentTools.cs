@@ -119,6 +119,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         {
             try
             {
+                if (!IsSafeFilePath(directoryPath))
+                {
+                    return "Hata: Geçersiz dizin yolu. Güvenlik nedeniyle işlem reddedildi.";
+                }
+
                 if (!Directory.Exists(directoryPath))
                 {
                     return $"Hata: '{directoryPath}' dizini bulunamadı.";
@@ -570,6 +575,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         {
             try
             {
+                if (!IsSafeFilePath(filePath))
+                {
+                    return Task.FromResult("Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.");
+                }
+
                 var exists = File.Exists(filePath);
                 return Task.FromResult(exists
                     ? $"Dosya mevcut: {filePath}"
@@ -588,6 +598,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         {
             try
             {
+                if (!IsSafeFilePath(filePath))
+                {
+                    return Task.FromResult("Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.");
+                }
+
                 if (!File.Exists(filePath))
                 {
                     return Task.FromResult($"Hata: '{filePath}' dosyası bulunamadı.");
@@ -625,6 +640,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         {
             try
             {
+                if (!IsSafeFilePath(directoryPath))
+                {
+                    return Task.FromResult("Hata: Geçersiz dizin yolu. Güvenlik nedeniyle işlem reddedildi.");
+                }
+
                 if (!Directory.Exists(directoryPath))
                 {
                     return Task.FromResult($"Hata: '{directoryPath}' dizini bulunamadı.");
