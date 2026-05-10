@@ -1,4 +1,5 @@
 ﻿using Core.CrossCuttingConcerns.Logging.Serilog;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
@@ -11,31 +12,30 @@ using System.Text.RegularExpressions;
 namespace SmartVoiceAgent.Infrastructure.Services.WebResearch;
 
 /// <summary>
-/// OpenRouter API ile AI destekli akıllı web araştırma servisi
+/// AI destekli akıllı web araştırma servisi
 /// </summary>
 public class AiWebResearchService : IWebResearchService
 {
     private readonly HttpClient _httpClient;
+    private readonly IChatClient _chatClient;
     private readonly LoggerServiceBase _logger;
-    private readonly string _openRouterApiKey;
-    private readonly string _model;
     private readonly string _searchApiKey;
     private readonly string _searchEngineId;
 
-    public AiWebResearchService(HttpClient httpClient, LoggerServiceBase logger, IConfiguration configuration)
+    public AiWebResearchService(
+        HttpClient httpClient,
+        IChatClient chatClient,
+        LoggerServiceBase logger,
+        IConfiguration configuration)
     {
         _httpClient = httpClient;
+        _chatClient = chatClient;
         _logger = logger;
 
         _searchApiKey = configuration.GetSection("WebResearch:SearchApiKey").Get<string>()
             ?? throw new NullReferenceException("SearchApiKey section cannot found in configuration.");
         _searchEngineId = configuration.GetSection("WebResearch:SearchEngineId").Get<string>()
             ?? throw new NullReferenceException("SearchEngineId section cannot found in configuration.");
-
-        // OpenRouter API setup
-        _openRouterApiKey = configuration.GetSection("OpenRouter:ApiKey").Get<string>()
-            ?? throw new NullReferenceException("OpenRouter ApiKey not found in configuration.");
-        _model = configuration.GetSection("OpenRouter:Model").Get<string>() ?? "microsoft/wizardlm-2-8x22b";
 
         // HttpClient'ı temiz başlat - her method kendi header'larını ayarlayacak
         _httpClient.DefaultRequestHeaders.Clear();
@@ -194,7 +194,7 @@ Lütfen Türkçe olarak yanıtla.";
 
         try
         {
-            var summary = await CallOpenRouterAsync(
+            var summary = await CallAiProviderAsync(
                 "Sen araştırma sonuçlarını özetleyen bir uzmansın. Bulguları açık ve anlaşılır şekilde özetlersin.",
                 prompt
             );
@@ -249,7 +249,7 @@ SADECE JSON formatında yanıt ver, başka hiçbir metin ekleme:
     ""language"": ""{request.Language}""
 }}";
 
-        var response = await CallOpenRouterAsync(
+        var response = await CallAiProviderAsync(
             "Sen araştırma uzmanısın. Kullanıcının isteğine göre etkili araştırma planları oluşturursun. SADECE temiz JSON yanıtı ver, markdown veya başka format kullanma.",
             prompt
         );
@@ -315,7 +315,7 @@ SADECE JSON formatında yanıt ver:
         string response = "";
         try
         {
-            response = await CallOpenRouterAsync(
+            response = await CallAiProviderAsync(
                 "Sen araştırma sonuçlarını değerlendiren bir uzmansın. Kullanıcının ihtiyacına en uygun sonuçları seçersin. SADECE temiz JSON yanıtı ver.",
                 prompt
             );
@@ -349,11 +349,11 @@ SADECE JSON formatında yanıt ver:
         return results.Take(request.MaxResults).ToList();
     }
 
-    private async Task<string> CallOpenRouterAsync(string systemMessage, string userMessage)
+    private async Task<string> CallAiProviderAsync(string systemMessage, string userMessage)
     {
         try
         {
-            return await CallOpenRouterChatAsync(systemMessage, userMessage);
+            return await CallAiProviderChatAsync(systemMessage, userMessage);
         }
         catch (JsonException jsonEx)
         {
@@ -362,68 +362,35 @@ SADECE JSON formatında yanıt ver:
         }
         catch (Exception ex)
         {
-            _logger.Error($"OpenRouter API çağrısı başarısız: {ex.Message}");
+            _logger.Error($"AI provider call failed: {ex.Message}");
             throw;
         }
     }
 
     /// <summary>
-    /// Chat Completions API ile fallback çağrı
+    /// Configured chat provider call.
     /// </summary>
-    private async Task<string> CallOpenRouterChatAsync(string systemMessage, string userMessage)
+    private async Task<string> CallAiProviderChatAsync(string systemMessage, string userMessage)
     {
         try
         {
-            var requestBody = new
+            var messages = new[]
             {
-                model = _model,
-                messages = new[]
-                {
-                    new { role = "system", content = systemMessage },
-                    new { role = "user", content = userMessage }
-                },
-                max_tokens = 1000,
-                temperature = 0.7
+                new Microsoft.Extensions.AI.ChatMessage(ChatRole.System, systemMessage),
+                new Microsoft.Extensions.AI.ChatMessage(ChatRole.User, userMessage)
             };
 
-            var json = JsonSerializer.Serialize(requestBody);
-
-            using var request = new HttpRequestMessage(HttpMethod.Post, "https://openrouter.ai/api/v1/chat/completions");
-            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            // OpenRouter için gerekli header'ları ekle
-            request.Headers.Add("Authorization", $"Bearer {_openRouterApiKey}");
-            request.Headers.Add("HTTP-Referer", "https://esquetta.netlify.app/");
-            request.Headers.Add("X-Title", "Smart Voice Agent");
-
-            var response = await _httpClient.SendAsync(request);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.Error($"OpenRouter Chat API hatası: {response.StatusCode} - {errorContent}");
-                throw new HttpRequestException($"OpenRouter Chat API error: {response.StatusCode} - {errorContent}");
-            }
-
-            var responseContent = await response.Content.ReadAsStringAsync();
-            _logger.Info($"OpenRouter Chat Ham Yanıt: {responseContent}");
-
-            var apiResponse = JsonSerializer.Deserialize<ChatCompletionResponse>(responseContent, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-
-            if (apiResponse?.Choices?.Any() == true)
-            {
-                var firstChoice = apiResponse.Choices.First();
-                return firstChoice.Message?.Content?.Trim() ?? "";
-            }
-
-            throw new InvalidOperationException("OpenRouter Chat API yanıtı beklenmeyen formatta");
+            var response = await _chatClient.GetResponseAsync(messages);
+            return string.Join(
+                    Environment.NewLine,
+                    response.Messages
+                        .Select(message => message.Text)
+                        .Where(message => !string.IsNullOrWhiteSpace(message)))
+                .Trim();
         }
         catch (Exception ex)
         {
-            _logger.Error($"OpenRouter Chat API fallback başarısız: {ex.Message}");
+            _logger.Error($"AI provider chat call failed: {ex.Message}");
             throw;
         }
     }

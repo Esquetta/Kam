@@ -19,7 +19,7 @@ The current application already has useful foundations:
 - `SmartVoiceAgent.Core`, `SmartVoiceAgent.Application`, `SmartVoiceAgent.Infrastructure`, and `SmartVoiceAgent.Ui` provide a Clean Architecture-style split.
 - Avalonia UI has a Settings page and JSON settings storage.
 - Infrastructure already contains voice capture, STT providers, intent detection, agent orchestration, application control, system control, web research, MCP/Todoist tooling, and several agent tool classes.
-- `AIService` is used by the agent runtime, while intent detection and web research still use separate `OpenRouter:*` configuration paths. That split makes runtime model changes hard and makes product behavior inconsistent.
+- `AIService` and model provider profiles now drive the agent runtime, intent detection, semantic intent matching, and AI-backed web research through the shared `IChatClient` path.
 - `IChatClient` is currently registered as a singleton from configuration. That blocks clean runtime model/profile switching.
 - Existing agent tools depend too much on model-native function calling, which is the source of instability.
 
@@ -253,7 +253,7 @@ Execution gate:
 
 ## Unified Model Provider Profiles
 
-The current split between `AIService` and `OpenRouter:*` should be replaced with model provider profiles.
+The previous split between `AIService` and `OpenRouter:*` has been replaced with model provider profiles for runtime model selection.
 
 Profile shape:
 
@@ -484,4 +484,3 @@ This directly addresses the current instability while keeping scope controlled. 
 - Skill execution returns a structured result.
 - Tests cover profile validation, planner parsing, skill registry lookup, permission checks, and built-in app skill execution with fakes.
 - `dotnet build` and the relevant test suite pass.
-

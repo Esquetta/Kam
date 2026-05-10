@@ -1,7 +1,6 @@
-using System.Net;
 using Core.CrossCuttingConcerns.Logging.Serilog;
 using FluentAssertions;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.AI;
 using Serilog;
 using SmartVoiceAgent.Core.Enums;
 using SmartVoiceAgent.Infrastructure.Services;
@@ -14,19 +13,9 @@ public sealed class AiIntentDetectionServiceTests
     [Fact]
     public async Task DetectIntentAsync_WhenAiProviderFails_UsesPatternFallback()
     {
-        using var httpClient = new HttpClient(new StaticStatusHandler(HttpStatusCode.InternalServerError));
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["OpenRouter:ApiKey"] = "test-key",
-                ["OpenRouter:Model"] = "test-model"
-            })
-            .Build();
-
         var service = new AiIntentDetectionService(
-            httpClient,
+            new ThrowingChatClient(),
             new TestLogger(),
-            configuration,
             new IntentDetectorService());
 
         var result = await service.DetectIntentAsync("search google", "en");
@@ -34,16 +23,37 @@ public sealed class AiIntentDetectionServiceTests
         result.Intent.Should().Be(CommandType.SearchWeb);
     }
 
-    private sealed class StaticStatusHandler(HttpStatusCode statusCode) : HttpMessageHandler
+    private sealed class ThrowingChatClient : IChatClient
     {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
+        public Task<ChatResponse> GetResponseAsync(
+            IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(new HttpResponseMessage(statusCode)
-            {
-                Content = new StringContent("provider failed")
-            });
+            throw new HttpRequestException("provider failed");
+        }
+
+        public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            return EmptyAsync();
+        }
+
+        public object? GetService(Type serviceType, object? serviceKey = null)
+        {
+            return null;
+        }
+
+        public void Dispose()
+        {
+        }
+
+        private static async IAsyncEnumerable<ChatResponseUpdate> EmptyAsync()
+        {
+            await Task.Yield();
+            yield break;
         }
     }
 

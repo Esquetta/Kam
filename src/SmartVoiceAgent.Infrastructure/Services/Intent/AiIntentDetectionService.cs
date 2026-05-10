@@ -1,34 +1,25 @@
 ﻿using Core.CrossCuttingConcerns.Logging.Serilog;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.AI;
 using SmartVoiceAgent.Core.Entities;
 using SmartVoiceAgent.Core.Enums;
-using SmartVoiceAgent.Core.Models;
 using SmartVoiceAgent.Core.Models.Intent;
-using System.Text;
 using System.Text.Json;
 
 namespace SmartVoiceAgent.Infrastructure.Services.Intent;
 public class AiIntentDetectionService : IIntentDetectionService
 {
-    private readonly HttpClient _httpClient;
+    private readonly IChatClient _chatClient;
     private readonly LoggerServiceBase _logger;
-    private readonly string _openRouterApiKey;
-    private readonly string _model;
     private readonly IIntentDetectionService _fallbackService; // Keep existing service as fallback
 
     public AiIntentDetectionService(
-        HttpClient httpClient,
+        IChatClient chatClient,
         LoggerServiceBase logger,
-        IConfiguration configuration,
         IntentDetectorService fallbackService)
     {
-        _httpClient = httpClient;
+        _chatClient = chatClient;
         _logger = logger;
         _fallbackService = fallbackService;
-
-        _openRouterApiKey = configuration.GetSection("OpenRouter:ApiKey").Get<string>()
-            ?? throw new NullReferenceException("OpenRouter ApiKey not found in configuration.");
-        _model = configuration.GetSection("OpenRouter:Model").Get<string>() ?? "microsoft/wizardlm-2-8x22b";
     }
 
     public async Task<IntentResult> DetectIntentAsync(string text, string language, CancellationToken cancellationToken = default)
@@ -38,7 +29,7 @@ public class AiIntentDetectionService : IIntentDetectionService
             var systemMessage = BuildSystemPrompt(language);
             var userMessage = $"Analyze this user input: \"{text}\"";
 
-            var aiResponse = await CallOpenRouterAsync(systemMessage, userMessage);
+            var aiResponse = await CallAiProviderAsync(systemMessage, userMessage, cancellationToken);
             var intentResult = ParseAiResponse(aiResponse, text, language);     
             return intentResult;
         }
@@ -84,43 +75,24 @@ Response format (JSON only):
 Language: {language}";
     }
 
-    private async Task<string> CallOpenRouterAsync(string systemMessage, string userMessage)
+    private async Task<string> CallAiProviderAsync(
+        string systemMessage,
+        string userMessage,
+        CancellationToken cancellationToken)
     {
-        var requestBody = new
+        var messages = new[]
         {
-            model = _model,
-            messages = new[]
-            {
-                new { role = "system", content = systemMessage },
-                new { role = "user", content = userMessage }
-            },
-            max_tokens = 500,
-            temperature = 0.3 // Lower temperature for more consistent intent detection
+            new Microsoft.Extensions.AI.ChatMessage(ChatRole.System, systemMessage),
+            new Microsoft.Extensions.AI.ChatMessage(ChatRole.User, userMessage)
         };
 
-        var json = JsonSerializer.Serialize(requestBody);
-
-        using var request = new HttpRequestMessage(HttpMethod.Post, "https://openrouter.ai/api/v1/chat/completions");
-        request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-        request.Headers.Add("Authorization", $"Bearer {_openRouterApiKey}");
-        request.Headers.Add("HTTP-Referer", "https://esquetta.netlify.app/");
-        request.Headers.Add("X-Title", "Smart Voice Agent Intent Detection");
-
-        var response = await _httpClient.SendAsync(request);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            var errorContent = await response.Content.ReadAsStringAsync();
-            throw new HttpRequestException($"OpenRouter API error: {response.StatusCode} - {errorContent}");
-        }
-
-        var responseContent = await response.Content.ReadAsStringAsync();
-        var apiResponse = JsonSerializer.Deserialize<ChatCompletionResponse>(responseContent, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
-
-        return apiResponse?.Choices?.FirstOrDefault()?.Message?.Content?.Trim() ?? "";
+        var response = await _chatClient.GetResponseAsync(messages, cancellationToken: cancellationToken);
+        return string.Join(
+                Environment.NewLine,
+                response.Messages
+                    .Select(message => message.Text)
+                    .Where(message => !string.IsNullOrWhiteSpace(message)))
+            .Trim();
     }
 
     private IntentResult ParseAiResponse(string aiResponse, string originalText, string language)

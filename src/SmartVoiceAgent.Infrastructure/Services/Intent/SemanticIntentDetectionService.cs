@@ -1,26 +1,19 @@
 ﻿using Core.CrossCuttingConcerns.Logging.Serilog;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.AI;
 using SmartVoiceAgent.Core.Entities;
 using SmartVoiceAgent.Core.Enums;
-using SmartVoiceAgent.Core.Models;
-using System.Text;
-using System.Text.Json;
 
 namespace SmartVoiceAgent.Infrastructure.Services.Intent;
 public class SemanticIntentDetectionService : IIntentDetectionService
 {
-    private readonly HttpClient _httpClient;
+    private readonly IChatClient _chatClient;
     private readonly LoggerServiceBase _logger;
-    private readonly string _openRouterApiKey;
     private readonly Dictionary<CommandType, List<string>> _intentExamples;
 
-    public SemanticIntentDetectionService(HttpClient httpClient, LoggerServiceBase logger, IConfiguration configuration)
+    public SemanticIntentDetectionService(IChatClient chatClient, LoggerServiceBase logger)
     {
-        _httpClient = httpClient;
+        _chatClient = chatClient;
         _logger = logger;
-        _openRouterApiKey = configuration.GetSection("OpenRouter:ApiKey").Get<string>()
-            ?? throw new NullReferenceException("OpenRouter ApiKey not found in configuration.");
-
         _intentExamples = LoadIntentExamples();
     }
 
@@ -88,7 +81,7 @@ Respond with only a decimal number between 0.0 and 1.0:";
 
         try
         {
-            var response = await CallOpenRouterForSimilarity(prompt);
+            var response = await CallAiProviderForSimilarity(prompt);
             if (float.TryParse(response.Trim(), out var similarity))
             {
                 return Math.Max(0f, Math.Min(1f, similarity));
@@ -134,34 +127,22 @@ Respond with only a decimal number between 0.0 and 1.0:";
         };
     }
 
-    private async Task<string> CallOpenRouterForSimilarity(string prompt)
+    private async Task<string> CallAiProviderForSimilarity(string prompt)
     {
-        var requestBody = new
+        var messages = new[]
         {
-            model = "microsoft/wizardlm-2-8x22b",
-            messages = new[]
-            {
-                new { role = "user", content = prompt }
-            },
-            max_tokens = 10,
-            temperature = 0.1
+            new Microsoft.Extensions.AI.ChatMessage(ChatRole.User, prompt)
         };
 
-        var json = JsonSerializer.Serialize(requestBody);
-        using var request = new HttpRequestMessage(HttpMethod.Post, "https://openrouter.ai/api/v1/chat/completions");
-        request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-        request.Headers.Add("Authorization", $"Bearer {_openRouterApiKey}");
-        request.Headers.Add("HTTP-Referer", "https://esquetta.netlify.app/");
+        var response = await _chatClient.GetResponseAsync(messages);
+        var responseText = string.Join(
+                Environment.NewLine,
+                response.Messages
+                    .Select(message => message.Text)
+                    .Where(message => !string.IsNullOrWhiteSpace(message)))
+            .Trim();
 
-        var response = await _httpClient.SendAsync(request);
-        var responseContent = await response.Content.ReadAsStringAsync();
-
-        var apiResponse = JsonSerializer.Deserialize<ChatCompletionResponse>(responseContent, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        });
-
-        return apiResponse?.Choices?.FirstOrDefault()?.Message?.Content?.Trim() ?? "0.0";
+        return string.IsNullOrWhiteSpace(responseText) ? "0.0" : responseText;
     }
 
     private float CalculateLevenshteinSimilarity(string s1, string s2)

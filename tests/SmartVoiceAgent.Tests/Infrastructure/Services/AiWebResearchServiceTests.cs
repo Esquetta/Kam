@@ -1,6 +1,7 @@
 using System.Net;
 using Core.CrossCuttingConcerns.Logging.Serilog;
 using FluentAssertions;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Serilog;
 using SmartVoiceAgent.Core.Models;
@@ -11,20 +12,25 @@ namespace SmartVoiceAgent.Tests.Infrastructure.Services;
 public sealed class AiWebResearchServiceTests
 {
     [Fact]
-    public async Task SearchAsync_UsesChatCompletionsEndpointForOpenRouterPlans()
+    public async Task SearchAsync_UsesConfiguredChatClientForResearchPlans()
     {
         var handler = new RecordingWebResearchHandler();
+        var chatClient = new QueueingChatClient(
+            """
+            {"purpose":"smoke","keywords":["Kam voice automation","desktop agent","voice assistant"],"preferredSources":["docs"],"language":"en"}
+            """,
+            """
+            {"selectedIndices":[0],"reasoning":"Relevant smoke result"}
+            """);
         using var httpClient = new HttpClient(handler);
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["OpenRouter:ApiKey"] = "test-openrouter-key",
-                ["OpenRouter:Model"] = "openai/gpt-4.1-mini",
                 ["WebResearch:SearchApiKey"] = "test-google-key",
                 ["WebResearch:SearchEngineId"] = "test-search-engine"
             })
             .Build();
-        var service = new AiWebResearchService(httpClient, new TestLogger(), configuration);
+        var service = new AiWebResearchService(httpClient, chatClient, new TestLogger(), configuration);
 
         var results = await service.SearchAsync(new WebResearchRequest
         {
@@ -35,26 +41,24 @@ public sealed class AiWebResearchServiceTests
 
         results.Should().ContainSingle();
         results[0].Title.Should().Be("Kam release notes");
-        handler.ChatCompletionRequests.Should().Be(2);
+        chatClient.CallCount.Should().Be(2);
         handler.GoogleSearchRequests.Should().Be(2);
-        handler.LegacyCompletionRequests.Should().Be(0);
     }
 
     [Fact]
-    public async Task SearchAsync_WithSingleResult_UsesDirectSearchWithoutOpenRouterPlanning()
+    public async Task SearchAsync_WithSingleResult_UsesDirectSearchWithoutAiPlanning()
     {
         var handler = new RecordingWebResearchHandler();
+        var chatClient = new QueueingChatClient();
         using var httpClient = new HttpClient(handler);
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["OpenRouter:ApiKey"] = "test-openrouter-key",
-                ["OpenRouter:Model"] = "openai/gpt-4.1-mini",
                 ["WebResearch:SearchApiKey"] = "test-google-key",
                 ["WebResearch:SearchEngineId"] = "test-search-engine"
             })
             .Build();
-        var service = new AiWebResearchService(httpClient, new TestLogger(), configuration);
+        var service = new AiWebResearchService(httpClient, chatClient, new TestLogger(), configuration);
 
         var results = await service.SearchAsync(new WebResearchRequest
         {
@@ -64,51 +68,18 @@ public sealed class AiWebResearchServiceTests
         });
 
         results.Should().ContainSingle();
-        handler.ChatCompletionRequests.Should().Be(0);
+        chatClient.CallCount.Should().Be(0);
         handler.GoogleSearchRequests.Should().Be(1);
-        handler.LegacyCompletionRequests.Should().Be(0);
     }
 
     private sealed class RecordingWebResearchHandler : HttpMessageHandler
     {
-        public int ChatCompletionRequests { get; private set; }
-
-        public int LegacyCompletionRequests { get; private set; }
-
         public int GoogleSearchRequests { get; private set; }
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
-            if (request.Method == HttpMethod.Post
-                && request.RequestUri?.AbsolutePath.Equals("/api/v1/completions", StringComparison.OrdinalIgnoreCase) == true)
-            {
-                LegacyCompletionRequests++;
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)
-                {
-                    Content = new StringContent("legacy endpoint not available")
-                });
-            }
-
-            if (request.Method == HttpMethod.Post
-                && request.RequestUri?.AbsolutePath.Equals("/api/v1/chat/completions", StringComparison.OrdinalIgnoreCase) == true)
-            {
-                ChatCompletionRequests++;
-                var content = ChatCompletionRequests == 1
-                    ? """
-                      {"choices":[{"message":{"content":"{\"purpose\":\"smoke\",\"keywords\":[\"Kam voice automation\",\"desktop agent\",\"voice assistant\"],\"preferredSources\":[\"docs\"],\"language\":\"en\"}"}}]}
-                      """
-                    : """
-                      {"choices":[{"message":{"content":"{\"selectedIndices\":[0],\"reasoning\":\"Relevant smoke result\"}"}}]}
-                      """;
-
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent(content)
-                });
-            }
-
             if (request.Method == HttpMethod.Get
                 && request.RequestUri?.Host.Equals("www.googleapis.com", StringComparison.OrdinalIgnoreCase) == true)
             {
@@ -126,6 +97,52 @@ public sealed class AiWebResearchServiceTests
             {
                 Content = new StringContent($"Unexpected request: {request.Method} {request.RequestUri}")
             });
+        }
+    }
+
+    private sealed class QueueingChatClient : IChatClient
+    {
+        private readonly Queue<string> _responses;
+
+        public QueueingChatClient(params string[] responses)
+        {
+            _responses = new Queue<string>(responses);
+        }
+
+        public int CallCount { get; private set; }
+
+        public Task<ChatResponse> GetResponseAsync(
+            IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            CallCount++;
+            var response = _responses.Count > 0 ? _responses.Dequeue() : string.Empty;
+            return Task.FromResult(new ChatResponse(
+                new Microsoft.Extensions.AI.ChatMessage(ChatRole.Assistant, response)));
+        }
+
+        public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            return EmptyAsync();
+        }
+
+        public object? GetService(Type serviceType, object? serviceKey = null)
+        {
+            return null;
+        }
+
+        public void Dispose()
+        {
+        }
+
+        private static async IAsyncEnumerable<ChatResponseUpdate> EmptyAsync()
+        {
+            await Task.Yield();
+            yield break;
         }
     }
 
