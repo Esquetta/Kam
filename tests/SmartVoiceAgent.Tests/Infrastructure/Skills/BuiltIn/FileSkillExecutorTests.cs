@@ -420,14 +420,34 @@ public class FileSkillExecutorTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_workspace))
-        {
-            Directory.Delete(_workspace, recursive: true);
-        }
+        DeleteDirectoryWithRetry(_workspace);
+        DeleteDirectoryWithRetry(_outsideWorkspace);
+    }
 
-        if (Directory.Exists(_outsideWorkspace))
+    private static void DeleteDirectoryWithRetry(string path)
+    {
+        const int maxAttempts = 5;
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            Directory.Delete(_outsideWorkspace, recursive: true);
+            if (!Directory.Exists(path))
+            {
+                return;
+            }
+
+            try
+            {
+                Directory.Delete(path, recursive: true);
+                return;
+            }
+            catch (IOException) when (attempt < maxAttempts)
+            {
+                Thread.Sleep(TimeSpan.FromMilliseconds(100 * attempt));
+            }
+            catch (UnauthorizedAccessException) when (attempt < maxAttempts)
+            {
+                Thread.Sleep(TimeSpan.FromMilliseconds(100 * attempt));
+            }
         }
     }
 }
