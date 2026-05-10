@@ -41,6 +41,9 @@ public class JsonSettingsServiceAiProfileTests : IDisposable
             ];
             service.ActivePlannerProfileId = "openrouter-primary";
             service.ActiveChatProfileId = "openrouter-chat";
+            service.TodoistApiKey = "todoist-secret";
+            service.SmtpPassword = "smtp-secret";
+            service.TwilioAuthToken = "twilio-secret";
             service.Save();
         }
 
@@ -49,9 +52,84 @@ public class JsonSettingsServiceAiProfileTests : IDisposable
         reloaded.ActivePlannerProfileId.Should().Be("openrouter-primary");
         reloaded.ActiveChatProfileId.Should().Be("openrouter-chat");
         reloaded.ModelProviderProfiles.Should().ContainSingle(
-            p => p.Id == "openrouter-primary" && p.ModelId == "openai/gpt-4.1-mini");
+            p => p.Id == "openrouter-primary"
+                && p.ModelId == "openai/gpt-4.1-mini"
+                && p.ApiKey == "sk-test");
         reloaded.ModelProviderProfiles.Should().ContainSingle(
-            p => p.Id == "openrouter-chat" && p.Roles.Contains(ModelProviderRole.Chat));
+            p => p.Id == "openrouter-chat"
+                && p.ApiKey == "sk-chat"
+                && p.Roles.Contains(ModelProviderRole.Chat));
+        reloaded.TodoistApiKey.Should().Be("todoist-secret");
+        reloaded.SmtpPassword.Should().Be("smtp-secret");
+        reloaded.TwilioAuthToken.Should().Be("twilio-secret");
+
+        var settingsJson = File.ReadAllText(Path.Combine(_settingsDirectory, "settings.json"));
+        settingsJson.Should().NotContain("sk-test");
+        settingsJson.Should().NotContain("sk-chat");
+        settingsJson.Should().NotContain("todoist-secret");
+        settingsJson.Should().NotContain("smtp-secret");
+        settingsJson.Should().NotContain("twilio-secret");
+        settingsJson.Should().NotContain("\"TodoistApiKey\"");
+        settingsJson.Should().NotContain("\"SmtpPassword\"");
+        settingsJson.Should().NotContain("\"TwilioAuthToken\"");
+        settingsJson.Should().NotContain("\"ApiKey\"");
+
+        var secretStoreJson = File.ReadAllText(Path.Combine(_settingsDirectory, "settings.secrets.json"));
+        secretStoreJson.Should().NotContain("sk-test");
+        secretStoreJson.Should().NotContain("sk-chat");
+        secretStoreJson.Should().NotContain("todoist-secret");
+        secretStoreJson.Should().NotContain("smtp-secret");
+        secretStoreJson.Should().NotContain("twilio-secret");
+    }
+
+    [Fact]
+    public void Load_LegacyPlaintextSecrets_MigratesSecretsOutOfSettingsJson()
+    {
+        Directory.CreateDirectory(_settingsDirectory);
+        File.WriteAllText(
+            Path.Combine(_settingsDirectory, "settings.json"),
+            """
+            {
+              "ShowOnStartup": true,
+              "TodoistApiKey": "legacy-todoist-secret",
+              "SmtpPassword": "legacy-smtp-secret",
+              "TwilioAuthToken": "legacy-twilio-secret",
+              "ModelProviderProfiles": [
+                {
+                  "Id": "legacy-openrouter",
+                  "Provider": 0,
+                  "DisplayName": "Legacy OpenRouter",
+                  "Endpoint": "https://openrouter.ai/api/v1",
+                  "ApiKey": "legacy-openrouter-secret",
+                  "ModelId": "openai/gpt-4.1-mini",
+                  "Roles": [0],
+                  "Temperature": 0.2,
+                  "MaxTokens": 1200,
+                  "Enabled": true
+                }
+              ],
+              "ActivePlannerProfileId": "legacy-openrouter",
+              "ActiveChatProfileId": "legacy-openrouter"
+            }
+            """);
+
+        using var service = new JsonSettingsService(_settingsDirectory);
+
+        service.TodoistApiKey.Should().Be("legacy-todoist-secret");
+        service.SmtpPassword.Should().Be("legacy-smtp-secret");
+        service.TwilioAuthToken.Should().Be("legacy-twilio-secret");
+        service.ModelProviderProfiles.Should().ContainSingle(
+            p => p.Id == "legacy-openrouter" && p.ApiKey == "legacy-openrouter-secret");
+
+        var settingsJson = File.ReadAllText(Path.Combine(_settingsDirectory, "settings.json"));
+        settingsJson.Should().NotContain("legacy-todoist-secret");
+        settingsJson.Should().NotContain("legacy-smtp-secret");
+        settingsJson.Should().NotContain("legacy-twilio-secret");
+        settingsJson.Should().NotContain("legacy-openrouter-secret");
+        settingsJson.Should().NotContain("\"TodoistApiKey\"");
+        settingsJson.Should().NotContain("\"SmtpPassword\"");
+        settingsJson.Should().NotContain("\"TwilioAuthToken\"");
+        settingsJson.Should().NotContain("\"ApiKey\"");
     }
 
     public void Dispose()

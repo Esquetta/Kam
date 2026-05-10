@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using SmartVoiceAgent.Core.Models.AI;
 
@@ -13,18 +14,24 @@ namespace SmartVoiceAgent.Ui.Services;
 /// </summary>
 public class JsonSettingsService : ISettingsService, IDisposable
 {
+    private const string ModelProviderProfileSecretPrefix = "ModelProviderProfiles:";
+
     private readonly string _settingsPath;
+    private readonly ISettingsSecretStore _secretStore;
     private readonly object _lock = new();
     private SettingsData _data = new();
     private FileSystemWatcher? _watcher;
+    private DateTime _suppressWatcherUntilUtc;
+    private string? _lastSavedJson;
 
     public event EventHandler<SettingChangedEventArgs>? SettingChanged;
 
-    public JsonSettingsService(string? settingsDirectory = null)
+    public JsonSettingsService(string? settingsDirectory = null, ISettingsSecretStore? secretStore = null)
     {
         var directory = settingsDirectory ?? GetDefaultSettingsDirectory();
         Directory.CreateDirectory(directory);
         _settingsPath = Path.Combine(directory, "settings.json");
+        _secretStore = secretStore ?? new JsonFileSettingsSecretStore(directory);
         
         Load();
         SetupFileWatcher();
@@ -207,11 +214,17 @@ public class JsonSettingsService : ISettingsService, IDisposable
         {
             try
             {
-                var json = JsonSerializer.Serialize(_data, new JsonSerializerOptions
+                SaveSecrets();
+                var json = JsonSerializer.Serialize(CreateSerializableData(), new JsonSerializerOptions
                 {
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                    IgnoreReadOnlyProperties = true,
                     WriteIndented = true
                 });
+                _suppressWatcherUntilUtc = DateTime.UtcNow.AddSeconds(1);
                 File.WriteAllText(_settingsPath, json);
+                _lastSavedJson = json;
+                _suppressWatcherUntilUtc = DateTime.UtcNow.AddSeconds(1);
             }
             catch (Exception ex)
             {
@@ -233,6 +246,12 @@ public class JsonSettingsService : ISettingsService, IDisposable
                     if (loaded != null)
                     {
                         _data = loaded;
+                        var migrated = MigratePlaintextSecrets(json);
+                        LoadSecrets();
+                        if (migrated)
+                        {
+                            Save();
+                        }
                     }
                 }
                 else
@@ -302,6 +321,174 @@ public class JsonSettingsService : ISettingsService, IDisposable
         };
     }
 
+    private bool MigratePlaintextSecrets(string json)
+    {
+        var migrated = false;
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+
+            migrated |= MigratePlaintextSecret(root, nameof(TodoistApiKey), value => _data.TodoistApiKey = value);
+            migrated |= MigratePlaintextSecret(root, nameof(SmtpPassword), value => _data.SmtpPassword = value);
+            migrated |= MigratePlaintextSecret(root, nameof(TwilioAuthToken), value => _data.TwilioAuthToken = value);
+
+            if (root.TryGetProperty(nameof(SettingsData.ModelProviderProfiles), out var profilesElement)
+                && profilesElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var profileElement in profilesElement.EnumerateArray())
+                {
+                    if (!profileElement.TryGetProperty(nameof(ModelProviderProfile.Id), out var idElement)
+                        || idElement.ValueKind != JsonValueKind.String
+                        || !profileElement.TryGetProperty(nameof(ModelProviderProfile.ApiKey), out var apiKeyElement)
+                        || apiKeyElement.ValueKind != JsonValueKind.String)
+                    {
+                        continue;
+                    }
+
+                    var id = idElement.GetString();
+                    var apiKey = apiKeyElement.GetString();
+                    if (string.IsNullOrWhiteSpace(id) || string.IsNullOrEmpty(apiKey))
+                    {
+                        continue;
+                    }
+
+                    _secretStore.SetSecret(GetModelProviderApiKeySecretName(id), apiKey);
+                    migrated = true;
+                }
+            }
+        }
+        catch (JsonException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to inspect settings secrets for migration: {ex}");
+        }
+
+        return migrated;
+    }
+
+    private bool MigratePlaintextSecret(JsonElement root, string propertyName, Action<string> setValue)
+    {
+        if (!root.TryGetProperty(propertyName, out var valueElement)
+            || valueElement.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        var value = valueElement.GetString();
+        if (string.IsNullOrEmpty(value))
+        {
+            return false;
+        }
+
+        _secretStore.SetSecret(propertyName, value);
+        setValue(value);
+        return true;
+    }
+
+    private void LoadSecrets()
+    {
+        _data.TodoistApiKey = _secretStore.GetSecret(nameof(TodoistApiKey)) ?? _data.TodoistApiKey;
+        _data.SmtpPassword = _secretStore.GetSecret(nameof(SmtpPassword)) ?? _data.SmtpPassword;
+        _data.TwilioAuthToken = _secretStore.GetSecret(nameof(TwilioAuthToken)) ?? _data.TwilioAuthToken;
+
+        foreach (var profile in _data.ModelProviderProfiles)
+        {
+            if (string.IsNullOrWhiteSpace(profile.Id))
+            {
+                continue;
+            }
+
+            profile.ApiKey = _secretStore.GetSecret(GetModelProviderApiKeySecretName(profile.Id)) ?? profile.ApiKey;
+        }
+    }
+
+    private void SaveSecrets()
+    {
+        SaveSecret(nameof(TodoistApiKey), _data.TodoistApiKey);
+        SaveSecret(nameof(SmtpPassword), _data.SmtpPassword);
+        SaveSecret(nameof(TwilioAuthToken), _data.TwilioAuthToken);
+
+        var activeProfileSecretNames = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var profile in _data.ModelProviderProfiles.Where(p => !string.IsNullOrWhiteSpace(p.Id)))
+        {
+            var secretName = GetModelProviderApiKeySecretName(profile.Id);
+            activeProfileSecretNames.Add(secretName);
+            SaveSecret(secretName, profile.ApiKey);
+        }
+
+        foreach (var name in _secretStore.GetSecretNames()
+                     .Where(name => name.StartsWith(ModelProviderProfileSecretPrefix, StringComparison.Ordinal)
+                         && !activeProfileSecretNames.Contains(name)))
+        {
+            _secretStore.RemoveSecret(name);
+        }
+    }
+
+    private void SaveSecret(string name, string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            _secretStore.RemoveSecret(name);
+            return;
+        }
+
+        _secretStore.SetSecret(name, value);
+    }
+
+    private SettingsData CreateSerializableData()
+    {
+        var data = CloneSettingsData(_data);
+        data.TodoistApiKey = null;
+        data.SmtpPassword = null;
+        data.TwilioAuthToken = null;
+
+        foreach (var profile in data.ModelProviderProfiles)
+        {
+            profile.ApiKey = null!;
+        }
+
+        data.LastModified = DateTime.UtcNow;
+        return data;
+    }
+
+    private static SettingsData CloneSettingsData(SettingsData source)
+    {
+        return new SettingsData
+        {
+            AutoStart = source.AutoStart,
+            StartMinimized = source.StartMinimized,
+            ShowOnStartup = source.ShowOnStartup,
+            StartupBehavior = source.StartupBehavior,
+            TodoistApiKey = source.TodoistApiKey,
+            SmtpHost = source.SmtpHost,
+            SmtpPort = source.SmtpPort,
+            SmtpUsername = source.SmtpUsername,
+            SmtpPassword = source.SmtpPassword,
+            SenderEmail = source.SenderEmail,
+            SmtpEnableSsl = source.SmtpEnableSsl,
+            EmailProvider = source.EmailProvider,
+            TwilioAccountSid = source.TwilioAccountSid,
+            TwilioAuthToken = source.TwilioAuthToken,
+            TwilioPhoneNumber = source.TwilioPhoneNumber,
+            SmsEnabled = source.SmsEnabled,
+            SelectedInputDeviceId = source.SelectedInputDeviceId,
+            SelectedOutputDeviceId = source.SelectedOutputDeviceId,
+            InputVolume = source.InputVolume,
+            OutputVolume = source.OutputVolume,
+            IsNoiseSuppressionEnabled = source.IsNoiseSuppressionEnabled,
+            ModelProviderProfiles = source.ModelProviderProfiles.Select(CloneProfile).ToList(),
+            ActivePlannerProfileId = source.ActivePlannerProfileId,
+            ActiveChatProfileId = source.ActiveChatProfileId,
+            LastModified = source.LastModified
+        };
+    }
+
+    private static string GetModelProviderApiKeySecretName(string profileId)
+    {
+        return $"{ModelProviderProfileSecretPrefix}{profileId}:ApiKey";
+    }
+
     private static string GetDefaultSettingsDirectory()
     {
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -333,8 +520,26 @@ public class JsonSettingsService : ISettingsService, IDisposable
 
     private void OnSettingsFileChanged(object sender, FileSystemEventArgs e)
     {
+        if (DateTime.UtcNow <= _suppressWatcherUntilUtc)
+        {
+            return;
+        }
+
         // Reload settings if file was modified externally
         Thread.Sleep(100); // Brief delay to let write complete
+        try
+        {
+            if (File.Exists(_settingsPath)
+                && string.Equals(File.ReadAllText(_settingsPath), _lastSavedJson, StringComparison.Ordinal))
+            {
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to inspect changed settings file: {ex}");
+        }
+
         Load();
     }
 
