@@ -57,15 +57,22 @@ public sealed class LocalProductionSmokeScriptTests
     public void DotnetWorkflow_SecurityScanFailsWhenAnalysisFindsIssues()
     {
         var workflow = File.ReadAllText(FindRepoFile(".github", "workflows", "dotnet.yml"));
+        var securityScanJobStart = workflow.IndexOf("  security-scan:", StringComparison.Ordinal);
 
-        workflow.Should().Contain("Setup .NET for security tools");
-        workflow.Should().Contain("6.0.x");
-        workflow.Should().Contain("dotnet tool update --global security-scan --version 5.6.7");
-        workflow.Should().Contain("$installSucceeded = $LASTEXITCODE -eq 0");
-        workflow.Should().Contain("if (-not $installSucceeded)");
-        workflow.Should().Contain("Optional security-scan tool install failed. Skipping security analysis.");
-        workflow.Should().Contain("$env:PATH = \"$env:USERPROFILE\\.dotnet\\tools;$env:PATH\"");
-        workflow.Should().Contain("security-scan Kam.sln --excl-proj=\"**/SmartVoiceAgent.Tests.csproj\"");
+        securityScanJobStart.Should().BeGreaterThan(0);
+        var buildJob = workflow[..securityScanJobStart];
+        var securityScanJob = workflow[securityScanJobStart..];
+
+        buildJob.Should().Contain("Setup .NET 9");
+        buildJob.Should().NotContain("6.0.x");
+        securityScanJob.Should().Contain("Setup .NET for security tools");
+        securityScanJob.Should().Contain("6.0.x");
+        securityScanJob.Should().Contain("dotnet tool update --global security-scan --version 5.6.7");
+        securityScanJob.Should().Contain("$installSucceeded = $LASTEXITCODE -eq 0");
+        securityScanJob.Should().Contain("if (-not $installSucceeded)");
+        securityScanJob.Should().Contain("Optional security-scan tool install failed. Skipping security analysis.");
+        securityScanJob.Should().Contain("$env:PATH = \"$env:USERPROFILE\\.dotnet\\tools;$env:PATH\"");
+        securityScanJob.Should().Contain("security-scan Kam.sln --excl-proj=\"**/SmartVoiceAgent.Tests.csproj\"");
         workflow.Should().NotContain("security-scan Kam.sln --excl-proj=\"**/SmartVoiceAgent.Tests.csproj\" || true");
     }
 
