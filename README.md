@@ -145,7 +145,7 @@ dotnet user-secrets set "GitHubApp:PrivateKeyPath" "C:\secure\kam-github-app.pem
 
 Desktop Runtime Diagnostics reads configuration from the UI host, so set the same keys for `src/Ui/SmartVoiceAgent.Ui` or use environment variables such as `GitHubApp__AppId`, `GitHubApp__InstallationId`, and `GitHubApp__PrivateKeyPath`.
 
-Start with read-only GitHub App permissions: Metadata, Contents, Pull requests, Issues, Actions, Checks, Commit statuses, and Dependabot alerts. Keep the PEM file outside the repository; Kam prints only configured/missing status, never PEM contents, JWTs, installation tokens, or private key paths.
+Start with read-only GitHub App permissions: Metadata, Contents, Pull requests, Issues, Actions, Checks, Commit statuses, and Dependabot alerts. Keep the PEM file outside the repository; Kam prints only configured/missing status, never PEM contents, JWTs, installation tokens, or private key paths. Runtime Diagnostics shows the repo count plus a short repository preview when list access is available.
 
 ## Development Commands
 

@@ -671,7 +671,10 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         try
         {
             var status = await _githubAppClient!.GetStatusAsync();
-            ReplaceIntegrationItem(BuildGitHubAppIntegrationItem(status));
+            var repositories = status.IsConnected
+                ? await _githubAppClient.ListRepositoriesAsync()
+                : null;
+            ReplaceIntegrationItem(BuildGitHubAppIntegrationItem(status, repositories));
         }
         catch (Exception ex)
         {
@@ -1373,7 +1376,8 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     }
 
     private static RuntimeDiagnosticItemViewModel BuildGitHubAppIntegrationItem(
-        GitHubAppConnectionStatus status)
+        GitHubAppConnectionStatus status,
+        GitHubRepositoryListResult? repositories = null)
     {
         if (!status.IsConfigured)
         {
@@ -1396,17 +1400,55 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
                 RuntimeDiagnosticSeverity.Warning);
         }
 
-        var repositoryCount = status.RepositoryCount.GetValueOrDefault();
+        if (repositories is { Success: false })
+        {
+            return new RuntimeDiagnosticItemViewModel(
+                "GitHub App",
+                "Needs action",
+                SecretRedactor.Redact($"GitHub App connected, but repository list validation failed: {repositories.Message}"),
+                RuntimeDiagnosticSeverity.Warning);
+        }
+
+        var repositoryCount = status.RepositoryCount ?? repositories?.Repositories.Count ?? 0;
         var value = repositoryCount == 1 ? "1 repo" : $"{repositoryCount} repos";
         var appName = string.IsNullOrWhiteSpace(status.AppName)
             ? "Configured GitHub App"
             : status.AppName.Trim();
+        var repositoryDetail = FormatGitHubRepositoryPreview(
+            repositories?.Repositories ?? [],
+            repositoryCount);
 
         return new RuntimeDiagnosticItemViewModel(
             "GitHub App",
             value,
-            SecretRedactor.Redact($"{appName} repo list access verified."),
+            SecretRedactor.Redact($"{appName} repo list access verified.{repositoryDetail}"),
             RuntimeDiagnosticSeverity.Ready);
+    }
+
+    private static string FormatGitHubRepositoryPreview(
+        IReadOnlyList<GitHubRepositorySummary> repositories,
+        int expectedRepositoryCount)
+    {
+        if (repositories.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        const int maxVisibleRepositories = 3;
+        var visible = repositories
+            .OrderBy(repository => repository.FullName, StringComparer.OrdinalIgnoreCase)
+            .Take(maxVisibleRepositories)
+            .Select(repository =>
+                $"{repository.FullName} ({(repository.IsPrivate ? "private" : "public")}, {repository.DefaultBranch})")
+            .ToArray();
+        var detail = $" Repositories: {string.Join("; ", visible)}";
+        var hiddenCount = Math.Max(expectedRepositoryCount, repositories.Count) - visible.Length;
+        if (hiddenCount > 0)
+        {
+            detail += $"; and {hiddenCount} more";
+        }
+
+        return detail + ".";
     }
 
     private void ReplaceIntegrationItem(RuntimeDiagnosticItemViewModel item)

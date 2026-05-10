@@ -170,6 +170,121 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task RefreshAsync_WithGitHubAppClient_ListsAccessibleRepositoriesInDiagnostics()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        settingsService.ModelProviderProfiles =
+        [
+            new ModelProviderProfile
+            {
+                Id = "local-planner",
+                Provider = ModelProviderType.Ollama,
+                Endpoint = "http://localhost:11434/v1",
+                ModelId = "llama3.1",
+                Roles = [ModelProviderRole.Planner],
+                Enabled = true
+            }
+        ];
+        settingsService.ActivePlannerProfileId = "local-planner";
+        var githubApp = new StaticGitHubAppClient(
+            GitHubAppConnectionStatus.Connected(
+                "12345",
+                "98765",
+                "https://api.github.com",
+                "Kam Coding Agent",
+                "kam-coding-agent",
+                4),
+            GitHubRepositoryListResult.Succeeded(
+                "4 repositories accessible.",
+                [
+                    new GitHubRepositorySummary(
+                        "Esquetta/Kam",
+                        true,
+                        "master",
+                        "https://github.com/Esquetta/Kam",
+                        "https://github.com/Esquetta/Kam.git"),
+                    new GitHubRepositorySummary(
+                        "Esquetta/PublicTool",
+                        false,
+                        "main",
+                        "https://github.com/Esquetta/PublicTool",
+                        "https://github.com/Esquetta/PublicTool.git"),
+                    new GitHubRepositorySummary(
+                        "Esquetta/PrivateOps",
+                        true,
+                        "main",
+                        "https://github.com/Esquetta/PrivateOps",
+                        "https://github.com/Esquetta/PrivateOps.git"),
+                    new GitHubRepositorySummary(
+                        "Zulu/Archive",
+                        false,
+                        "trunk",
+                        "https://github.com/Zulu/Archive",
+                        "https://github.com/Zulu/Archive.git")
+                ]));
+
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            githubAppClient: githubApp);
+
+        await viewModel.RefreshAsync();
+
+        githubApp.ListRepositoriesCallCount.Should().Be(1);
+        viewModel.IntegrationItems.Should().Contain(item =>
+            item.Name == "GitHub App"
+            && item.Value == "4 repos"
+            && item.Detail.Contains("Esquetta/Kam (private, master)", StringComparison.Ordinal)
+            && item.Detail.Contains("Esquetta/PublicTool (public, main)", StringComparison.Ordinal)
+            && item.Detail.Contains("Esquetta/PrivateOps (private, main)", StringComparison.Ordinal)
+            && item.Detail.Contains("and 1 more", StringComparison.Ordinal)
+            && item.IsReady);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_WhenGitHubRepositoryListingFails_ReportsWarningWithoutTokenLeak()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        settingsService.ModelProviderProfiles =
+        [
+            new ModelProviderProfile
+            {
+                Id = "local-planner",
+                Provider = ModelProviderType.Ollama,
+                Endpoint = "http://localhost:11434/v1",
+                ModelId = "llama3.1",
+                Roles = [ModelProviderRole.Planner],
+                Enabled = true
+            }
+        ];
+        settingsService.ActivePlannerProfileId = "local-planner";
+        const string token = "Bearer ghp_1234567890abcdefghijklmnop";
+        var githubApp = new StaticGitHubAppClient(
+            GitHubAppConnectionStatus.Connected(
+                "12345",
+                "98765",
+                "https://api.github.com",
+                "Kam Coding Agent",
+                "kam-coding-agent",
+                2),
+            GitHubRepositoryListResult.Failed(
+                $"GitHub App repository request failed with HTTP 403. {token}",
+                []));
+
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            githubAppClient: githubApp);
+
+        await viewModel.RefreshAsync();
+
+        var githubItem = viewModel.IntegrationItems.Single(item => item.Name == "GitHub App");
+        githubItem.Value.Should().Be("Needs action");
+        githubItem.Detail.Should().Contain("repository list");
+        githubItem.Detail.Should().Contain("[redacted]");
+        githubItem.Detail.Should().NotContain(token);
+        githubItem.IsWarning.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task RefreshAsync_WithLivePlannerConnectionSuccess_ReportsVerifiedModelConnection()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);
@@ -1074,11 +1189,26 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
     private sealed class StaticGitHubAppClient : IGitHubAppClient
     {
         private readonly GitHubAppConnectionStatus _status;
+        private readonly GitHubRepositoryListResult _repositories;
 
         public StaticGitHubAppClient(GitHubAppConnectionStatus status)
+            : this(
+                status,
+                GitHubRepositoryListResult.Succeeded(
+                    "0 repositories accessible.",
+                    []))
+        {
+        }
+
+        public StaticGitHubAppClient(
+            GitHubAppConnectionStatus status,
+            GitHubRepositoryListResult repositories)
         {
             _status = status;
+            _repositories = repositories;
         }
+
+        public int ListRepositoriesCallCount { get; private set; }
 
         public Task<GitHubAppConnectionStatus> GetStatusAsync(CancellationToken cancellationToken = default)
         {
@@ -1087,9 +1217,8 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
 
         public Task<GitHubRepositoryListResult> ListRepositoriesAsync(CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(GitHubRepositoryListResult.Succeeded(
-                "0 repositories accessible.",
-                []));
+            ListRepositoriesCallCount++;
+            return Task.FromResult(_repositories);
         }
     }
 
