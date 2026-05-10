@@ -212,16 +212,12 @@ namespace SmartVoiceAgent.Ui
 
         private IHost BuildHost()
         {
-            // Set environment to Development to enable User Secrets
-            Environment.SetEnvironmentVariable("DOTNET_ENVIRONMENT", "Development");
-
             return Host.CreateDefaultBuilder()
-                .UseEnvironment("Development")
                 .ConfigureAppConfiguration((context, config) =>
                 {
                     // CreateDefaultBuilder already adds:
                     // - appsettings.json
-                    // - UserSecrets (when Environment is Development)
+                    // - UserSecrets when the caller explicitly runs in Development
                     // - EnvironmentVariables
                     AddUserRuntimeConfiguration(config);
                 })
@@ -229,8 +225,10 @@ namespace SmartVoiceAgent.Ui
                 {
                     var configuration = context.Configuration;
 
-                    // Debug: Log configuration
-                    LogConfigurationDebugInfo(configuration);
+                    if (ShouldLogConfigurationDebugInfo(configuration))
+                    {
+                        LogConfigurationDebugInfo(configuration);
+                    }
 
                     // Register Application services
                     services.AddApplicationServices();
@@ -346,6 +344,19 @@ namespace SmartVoiceAgent.Ui
             }
         }
 
+        private static bool ShouldLogConfigurationDebugInfo(IConfiguration configuration)
+        {
+            return IsEnabled(configuration["Kam:Diagnostics:LogConfiguration"])
+                || IsEnabled(Environment.GetEnvironmentVariable("KAM_LOG_CONFIGURATION"));
+        }
+
+        private static bool IsEnabled(string? value)
+        {
+            return string.Equals(value, "1", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
+        }
+
         /// <summary>
         /// Sets up global exception handling for the application
         /// </summary>
@@ -434,7 +445,7 @@ namespace SmartVoiceAgent.Ui
                 _errorHandlingService?.LogWarning("AIService configuration not found");
                 Console.WriteLine("⚠️ WARNING: AIService configuration not found!");
                 Console.WriteLine("   AI features will not work without API configuration.");
-                Console.WriteLine("   Run: dotnet user-secrets set \"AIService:ApiKey\" \"your-key\"");
+                Console.WriteLine("   Configure an AI provider in Settings before using AI features.");
             }
             else if (string.IsNullOrEmpty(aiServiceSection["ApiKey"]))
             {
@@ -462,7 +473,7 @@ namespace SmartVoiceAgent.Ui
                 _errorHandlingService?.LogWarning("HuggingFaceConfig:ApiKey not found. Voice transcription will not work");
                 Console.WriteLine("⚠️ WARNING: HuggingFaceConfig:ApiKey not found!");
                 Console.WriteLine("   Voice transcription will not work without API key.");
-                Console.WriteLine("   Run: dotnet user-secrets set \"HuggingFaceConfig:ApiKey\" \"your-hf-key\"");
+                Console.WriteLine("   Configure HuggingFaceConfig:ApiKey through your local secret/configuration source.");
             }
             else
             {
