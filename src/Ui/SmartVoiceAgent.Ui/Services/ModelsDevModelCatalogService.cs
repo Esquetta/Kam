@@ -83,6 +83,7 @@ public sealed class ModelsDevModelCatalogService : IModelCatalogService, IDispos
         {
             ModelProviderType.OpenAI => providerId.Equals("openai", StringComparison.OrdinalIgnoreCase),
             ModelProviderType.OpenRouter => true,
+            ModelProviderType.Anthropic => providerId.Equals("anthropic", StringComparison.OrdinalIgnoreCase),
             _ => false
         };
     }

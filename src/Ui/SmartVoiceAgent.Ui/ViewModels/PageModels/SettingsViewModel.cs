@@ -146,6 +146,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public IReadOnlyList<string> AiProviders { get; } =
         [
             "OpenAI",
+            "Anthropic",
             "OpenRouter",
             "OpenAICompatible",
             "Ollama"
@@ -701,6 +702,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private static bool IsCatalogBackedProvider(ModelProviderType provider)
         {
             return provider is ModelProviderType.OpenAI
+                or ModelProviderType.Anthropic
                 or ModelProviderType.OpenRouter
                 or ModelProviderType.Ollama;
         }
@@ -808,6 +810,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             return provider switch
             {
                 ModelProviderType.OpenAI => "https://api.openai.com/v1",
+                ModelProviderType.Anthropic => "https://api.anthropic.com",
                 ModelProviderType.OpenRouter => "https://openrouter.ai/api/v1",
                 ModelProviderType.Ollama => "http://localhost:11434/v1",
                 _ => string.Empty
@@ -825,6 +828,18 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
                 return string.IsNullOrWhiteSpace(modelId) || modelId.Contains('/', StringComparison.Ordinal)
                     ? "gpt-4.1-mini"
+                    : modelId;
+            }
+
+            if (provider == ModelProviderType.Anthropic)
+            {
+                if (modelId.StartsWith("anthropic/", StringComparison.OrdinalIgnoreCase))
+                {
+                    return modelId["anthropic/".Length..];
+                }
+
+                return string.IsNullOrWhiteSpace(modelId) || modelId.Contains('/', StringComparison.Ordinal)
+                    ? "claude-sonnet-4-6"
                     : modelId;
             }
 
@@ -854,6 +869,14 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     "gpt-4.1-mini",
                     "gpt-4o",
                     "gpt-4o-mini"
+                ],
+                ModelProviderType.Anthropic =>
+                [
+                    "claude-opus-4-7",
+                    "claude-sonnet-4-6",
+                    "claude-haiku-4-5-20251001",
+                    "claude-opus-4-6",
+                    "claude-sonnet-4-5-20250929"
                 ],
                 ModelProviderType.OpenRouter =>
                 [
@@ -955,6 +978,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             return provider switch
             {
                 ModelProviderType.OpenAI => "openai",
+                ModelProviderType.Anthropic => "anthropic",
                 ModelProviderType.OpenRouter => "openrouter",
                 ModelProviderType.Ollama => "ollama",
                 _ => "openai-compatible"

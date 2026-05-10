@@ -90,6 +90,30 @@ public class AiRuntimeConfigurationMapperTests
     }
 
     [Fact]
+    public void CreateAiServiceOverrides_AnthropicProfile_EmitsDirectClaudeRuntimeSettings()
+    {
+        var overrides = AiRuntimeConfigurationMapper.CreateAiServiceOverrides(
+            [
+                new ModelProviderProfile
+                {
+                    Id = "anthropic-planner",
+                    Provider = ModelProviderType.Anthropic,
+                    Endpoint = "https://api.anthropic.com",
+                    ApiKey = "sk-ant-test",
+                    ModelId = "claude-sonnet-4-6",
+                    Roles = [ModelProviderRole.Planner],
+                    Enabled = true
+                }
+            ],
+            "anthropic-planner");
+
+        overrides.Should().Contain("AIService:Provider", "Anthropic");
+        overrides.Should().Contain("AIService:Endpoint", "https://api.anthropic.com");
+        overrides.Should().Contain("AIService:ApiKey", "sk-ant-test");
+        overrides.Should().Contain("AIService:ModelId", "claude-sonnet-4-6");
+    }
+
+    [Fact]
     public void CreateAiServiceOverrides_InvalidProfile_ReturnsEmptyOverrides()
     {
         var overrides = AiRuntimeConfigurationMapper.CreateAiServiceOverrides(

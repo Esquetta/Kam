@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using SmartVoiceAgent.Application.DependencyInjection;
 using SmartVoiceAgent.Core.Interfaces;
@@ -69,6 +70,28 @@ public class SkillRuntimeRegistrationTests
             .ToArray();
 
         missingExecutorSkillIds.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void AddSmartVoiceAgent_AnthropicConfiguration_ResolvesChatClient()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AIService:Provider"] = "Anthropic",
+                ["AIService:Endpoint"] = "https://api.anthropic.com",
+                ["AIService:ApiKey"] = "sk-ant-test",
+                ["AIService:ModelId"] = "claude-sonnet-4-6",
+                ["AIService:DefaultMaxTokens"] = "1200"
+            })
+            .Build();
+
+        services.AddLogging();
+        services.AddSmartVoiceAgent(configuration);
+        using var provider = services.BuildServiceProvider();
+
+        provider.GetRequiredService<IChatClient>().Should().NotBeNull();
     }
 
     [Fact]

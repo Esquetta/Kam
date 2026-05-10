@@ -67,6 +67,30 @@ public class SettingsViewModelAiProfileTests : IDisposable
     }
 
     [Fact]
+    public void AnthropicProvider_DefaultsToDirectClaudeEndpointAndModels()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        using var viewModel = new SettingsViewModel(settingsService);
+
+        viewModel.AiProvider = "Anthropic";
+
+        viewModel.AiProviders.Should().Contain("Anthropic");
+        viewModel.AiEndpoint.Should().Be("https://api.anthropic.com");
+        viewModel.AiModelId.Should().Be("claude-sonnet-4-6");
+        viewModel.AiModelOptions.Should().ContainInOrder(
+            "claude-opus-4-7",
+            "claude-sonnet-4-6",
+            "claude-haiku-4-5-20251001");
+        viewModel.AiModelOptions.Should().NotContain(model => model.StartsWith("anthropic/", StringComparison.OrdinalIgnoreCase));
+        viewModel.IsPlannerModelCatalogBacked.Should().BeTrue();
+        settingsService.ModelProviderProfiles.Should().ContainSingle(profile =>
+            profile.Provider == ModelProviderType.Anthropic
+            && profile.Endpoint == "https://api.anthropic.com"
+            && profile.ModelId == "claude-sonnet-4-6"
+            && profile.Roles.Contains(ModelProviderRole.Planner));
+    }
+
+    [Fact]
     public async Task TestAiConnectionCommand_InvalidEndpoint_ShowsValidationError()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);
@@ -143,6 +167,31 @@ public class SettingsViewModelAiProfileTests : IDisposable
             request.Provider == ModelProviderType.OpenAI
             && request.ApiKey == "sk-planner"
             && request.Endpoint == "https://api.openai.com/v1");
+    }
+
+    [Fact]
+    public async Task TestAiConnectionCommand_AnthropicProvider_UsesLiveConnectionTestAndShowsSuccess()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var connectionTestService = new StubModelConnectionTestService(ModelConnectionTestResult.Passed(
+            ModelProviderType.Anthropic,
+            "claude-sonnet-4-6",
+            12,
+            DateTimeOffset.UtcNow));
+        using var viewModel = CreateViewModel(settingsService, connectionTestService);
+        viewModel.AiProvider = "Anthropic";
+        viewModel.AiApiKey = "sk-ant-planner";
+        viewModel.AiModelId = "claude-sonnet-4-6";
+
+        await viewModel.TestAiConnectionCommand.Execute().FirstAsync();
+
+        viewModel.IsAiProfileValid.Should().BeTrue();
+        viewModel.AiProfileStatus.Should().Contain("Planner returned 12 live models");
+        connectionTestService.Requests.Should().ContainSingle(request =>
+            request.Provider == ModelProviderType.Anthropic
+            && request.ApiKey == "sk-ant-planner"
+            && request.Endpoint == "https://api.anthropic.com"
+            && request.ModelId == "claude-sonnet-4-6");
     }
 
     [Fact]

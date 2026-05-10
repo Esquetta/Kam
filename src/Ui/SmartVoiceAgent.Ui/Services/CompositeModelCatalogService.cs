@@ -33,7 +33,7 @@ public sealed class CompositeModelCatalogService : IModelCatalogService, IDispos
     public static CompositeModelCatalogService CreateDefault()
     {
         return new CompositeModelCatalogService(
-            new OpenAiCompatibleModelCatalogService(),
+            new ProviderModelCatalogService(),
             new ModelsDevModelCatalogService(),
             ownsCatalogs: true);
     }
@@ -119,8 +119,10 @@ public sealed class CompositeModelCatalogService : IModelCatalogService, IDispos
 
     private static string NormalizeModelId(string modelId)
     {
-        return modelId.StartsWith("openai/", StringComparison.OrdinalIgnoreCase)
-            ? modelId["openai/".Length..]
-            : modelId;
+        var providerPrefixes = new[] { "openai/", "anthropic/" };
+        var prefix = providerPrefixes.FirstOrDefault(candidate =>
+            modelId.StartsWith(candidate, StringComparison.OrdinalIgnoreCase));
+
+        return prefix is null ? modelId : modelId[prefix.Length..];
     }
 }

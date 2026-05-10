@@ -12,7 +12,7 @@ public sealed class ModelConnectionTestService : IModelConnectionTestService, ID
     private readonly bool _ownsLiveCatalog;
 
     public ModelConnectionTestService()
-        : this(new OpenAiCompatibleModelCatalogService(), ownsLiveCatalog: true)
+        : this(new ProviderModelCatalogService(), ownsLiveCatalog: true)
     {
     }
 

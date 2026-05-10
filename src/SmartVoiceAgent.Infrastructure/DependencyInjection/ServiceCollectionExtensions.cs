@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.AI;
+﻿using Anthropic;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -59,12 +60,7 @@ public static class ServiceCollectionExtensions
                 .Get<AIServiceConfiguration>()
                 ?? throw new InvalidOperationException("AIService configuration is missing.");
 
-            return config.Provider switch
-            {
-                var provider when IsOpenAICompatibleProvider(provider) => CreateOpenAICompatibleClient(config),
-                _ => throw new NotSupportedException(
-                    $"AI provider '{config.Provider}' is not supported.")
-            };
+            return CreateChatClient(config);
         });
 
         services.AddSingleton<IAgentFactory, AgentFactory>();
@@ -114,7 +110,7 @@ public static class ServiceCollectionExtensions
                     .Get<AIServiceConfiguration>();
 
                 return IsUsableAiConfiguration(chatConfig)
-                    ? CreateOpenAICompatibleClient(chatConfig!)
+                    ? CreateChatClient(chatConfig!)
                     : sp.GetRequiredService<IChatClient>();
             });
 
@@ -147,6 +143,17 @@ public static class ServiceCollectionExtensions
         Console.WriteLine($"✅ Agent function service {typeof(T).Name} registered");
         return services;
     }
+    static IChatClient CreateChatClient(AIServiceConfiguration config)
+    {
+        return config.Provider switch
+        {
+            var provider when IsAnthropicProvider(provider) => CreateAnthropicClient(config),
+            var provider when IsOpenAICompatibleProvider(provider) => CreateOpenAICompatibleClient(config),
+            _ => throw new NotSupportedException(
+                $"AI provider '{config.Provider}' is not supported.")
+        };
+    }
+
     static IChatClient CreateOpenAICompatibleClient(AIServiceConfiguration config)
     {
         var options = new OpenAIClientOptions
@@ -165,6 +172,26 @@ public static class ServiceCollectionExtensions
         return client.GetChatClient(config.ModelId).AsIChatClient();
     }
 
+    static IChatClient CreateAnthropicClient(AIServiceConfiguration config)
+    {
+        var client = new AnthropicClient().WithOptions(options =>
+        {
+            options.ApiKey = config.ApiKey;
+            if (!string.IsNullOrWhiteSpace(config.Endpoint))
+            {
+                options.BaseUrl = config.Endpoint.TrimEnd('/');
+            }
+
+            return options;
+        });
+
+        var defaultMaxTokens = config.DefaultMaxTokens > 0
+            ? config.DefaultMaxTokens
+            : (int?)null;
+
+        return client.AsIChatClient(config.ModelId, defaultMaxTokens);
+    }
+
     private static bool IsOpenAICompatibleProvider(string provider)
     {
         return provider.Equals("OpenRouter", StringComparison.OrdinalIgnoreCase)
@@ -176,7 +203,7 @@ public static class ServiceCollectionExtensions
     private static bool IsUsableAiConfiguration(AIServiceConfiguration? config)
     {
         return config is not null
-            && IsOpenAICompatibleProvider(config.Provider)
+            && IsSupportedAiProvider(config.Provider)
             && !string.IsNullOrWhiteSpace(config.Endpoint)
             && !string.IsNullOrWhiteSpace(config.ModelId)
             && (IsOllamaProvider(config.Provider) || !string.IsNullOrWhiteSpace(config.ApiKey));
@@ -201,6 +228,16 @@ public static class ServiceCollectionExtensions
     private static bool IsOllamaProvider(string provider)
     {
         return provider.Equals("Ollama", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsAnthropicProvider(string provider)
+    {
+        return provider.Equals("Anthropic", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSupportedAiProvider(string provider)
+    {
+        return IsOpenAICompatibleProvider(provider) || IsAnthropicProvider(provider);
     }
 }
 

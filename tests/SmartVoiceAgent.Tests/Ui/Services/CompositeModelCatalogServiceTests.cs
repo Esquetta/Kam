@@ -80,6 +80,48 @@ public sealed class CompositeModelCatalogServiceTests
             && !model.IsAvailable);
     }
 
+    [Fact]
+    public async Task GetModelsAsync_EnrichesAnthropicLiveModelsWithProviderQualifiedMetadata()
+    {
+        var live = new StubModelCatalogService([
+            new ModelCatalogEntry
+            {
+                Provider = ModelProviderType.Anthropic,
+                ProviderId = "anthropic",
+                ModelId = "claude-sonnet-4-6",
+                DisplayName = "Claude Sonnet 4.6",
+                Source = "provider-live",
+                IsAvailable = true
+            }
+        ]);
+        var metadata = new StubModelCatalogService([
+            new ModelCatalogEntry
+            {
+                Provider = ModelProviderType.Anthropic,
+                ProviderId = "anthropic",
+                ModelId = "anthropic/claude-sonnet-4-6",
+                DisplayName = "Claude Sonnet 4.6 Metadata",
+                Source = "models.dev",
+                ContextWindow = 200000,
+                Capabilities = ["tool-calling"]
+            }
+        ]);
+        var service = new CompositeModelCatalogService(live, metadata);
+
+        var models = await service.GetModelsAsync(new ModelProviderProfile
+        {
+            Provider = ModelProviderType.Anthropic
+        });
+
+        models.Should().ContainSingle().Which.Should().Match<ModelCatalogEntry>(model =>
+            model.ModelId == "claude-sonnet-4-6"
+            && model.DisplayName == "Claude Sonnet 4.6 Metadata"
+            && model.Source == "provider-live+models.dev"
+            && model.ContextWindow == 200000
+            && model.Capabilities.Contains("tool-calling")
+            && model.IsAvailable);
+    }
+
     private sealed class StubModelCatalogService(IReadOnlyList<ModelCatalogEntry> models) : IModelCatalogService
     {
         public Task<IReadOnlyList<ModelCatalogEntry>> GetModelsAsync(

@@ -98,6 +98,50 @@ public sealed class ModelsDevModelCatalogServiceTests
         models.Should().ContainSingle().Which.ModelId.Should().Be("openai/gpt-5.1-codex");
     }
 
+    [Fact]
+    public async Task GetModelsAsync_Anthropic_ReturnsDirectClaudeModelIds()
+    {
+        using var handler = new StubHttpMessageHandler("""
+            {
+              "anthropic": {
+                "id": "anthropic",
+                "name": "Anthropic",
+                "models": {
+                  "claude-sonnet-4-6": {
+                    "id": "claude-sonnet-4-6",
+                    "name": "Claude Sonnet 4.6",
+                    "tool_call": true,
+                    "modalities": {
+                      "input": ["text"],
+                      "output": ["text"]
+                    }
+                  }
+                }
+              },
+              "openai": {
+                "id": "openai",
+                "models": {
+                  "gpt-5.4-mini": { "id": "gpt-5.4-mini" }
+                }
+              }
+            }
+            """);
+        using var httpClient = new HttpClient(handler);
+        var service = new ModelsDevModelCatalogService(httpClient);
+
+        var models = await service.GetModelsAsync(new ModelProviderProfile
+        {
+            Provider = ModelProviderType.Anthropic
+        });
+
+        models.Should().ContainSingle().Which.Should().Match<ModelCatalogEntry>(model =>
+            model.Provider == ModelProviderType.Anthropic
+            && model.ProviderId == "anthropic"
+            && model.ModelId == "claude-sonnet-4-6"
+            && model.DisplayName == "Claude Sonnet 4.6"
+            && model.Capabilities.Contains("tool-calling"));
+    }
+
     private sealed class StubHttpMessageHandler(string responseContent) : HttpMessageHandler
     {
         public Uri? RequestUri { get; private set; }
