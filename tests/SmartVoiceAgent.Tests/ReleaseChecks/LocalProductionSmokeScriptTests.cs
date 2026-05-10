@@ -58,6 +58,8 @@ public sealed class LocalProductionSmokeScriptTests
     {
         var workflow = File.ReadAllText(FindRepoFile(".github", "workflows", "dotnet.yml"));
 
+        workflow.Should().Contain("Setup .NET for security tools");
+        workflow.Should().Contain("6.0.x");
         workflow.Should().Contain("dotnet tool update --global security-scan --version 5.6.7");
         workflow.Should().Contain("$installSucceeded = $LASTEXITCODE -eq 0");
         workflow.Should().Contain("if (-not $installSucceeded)");
