@@ -846,15 +846,27 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 ModelProviderType.OpenAI =>
                 [
-                    "gpt-5.2",
-                    "gpt-5.1",
-                    "gpt-5",
-                    "gpt-5-mini",
-                    "gpt-5-nano",
+                    "gpt-5.5",
+                    "gpt-5.4",
+                    "gpt-5.4-mini",
+                    "gpt-5.4-nano",
                     "gpt-4.1",
                     "gpt-4.1-mini",
                     "gpt-4o",
                     "gpt-4o-mini"
+                ],
+                ModelProviderType.OpenRouter =>
+                [
+                    "openai/gpt-5.5",
+                    "openai/gpt-5.4",
+                    "openai/gpt-5.4-mini",
+                    "openai/gpt-5.4-nano",
+                    "openai/gpt-4.1-mini",
+                    "openai/gpt-4o-mini",
+                    "anthropic/claude-opus-4-7",
+                    "anthropic/claude-sonnet-4-6",
+                    "anthropic/claude-haiku-4-5-20251001",
+                    "google/gemini-2.0-flash-001"
                 ],
                 ModelProviderType.Ollama =>
                 [
@@ -865,9 +877,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 ],
                 _ =>
                 [
-                    "openai/gpt-4.1-mini",
+                    "openai/gpt-5.5",
+                    "openai/gpt-5.4-mini",
                     "openai/gpt-4o-mini",
-                    "anthropic/claude-3.5-sonnet",
+                    "anthropic/claude-opus-4-7",
+                    "anthropic/claude-sonnet-4-6",
+                    "anthropic/claude-haiku-4-5-20251001",
                     "google/gemini-2.0-flash-001"
                 ]
             };

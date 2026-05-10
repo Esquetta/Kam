@@ -31,6 +31,42 @@ public class SettingsViewModelAiProfileTests : IDisposable
     }
 
     [Fact]
+    public void OpenAiProvider_DefaultModelOptions_UseCurrentApiModelIds()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        using var viewModel = new SettingsViewModel(settingsService);
+
+        viewModel.AiProvider = "OpenAI";
+
+        viewModel.AiModelOptions.Should().ContainInOrder(
+            "gpt-5.5",
+            "gpt-5.4",
+            "gpt-5.4-mini",
+            "gpt-5.4-nano");
+        viewModel.AiModelOptions.Should().NotContain("gpt-5.2");
+        viewModel.AiModelOptions.Should().NotContain("gpt-5.1");
+    }
+
+    [Fact]
+    public void OpenRouterProvider_DefaultModelOptions_IncludeCurrentOpenAiAndClaudeModels()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        using var viewModel = new SettingsViewModel(settingsService);
+
+        viewModel.AiModelOptions.Should().ContainInOrder(
+            "openai/gpt-5.5",
+            "openai/gpt-5.4",
+            "openai/gpt-5.4-mini",
+            "openai/gpt-5.4-nano");
+        viewModel.AiModelOptions.Should().ContainInOrder(
+            "anthropic/claude-opus-4-7",
+            "anthropic/claude-sonnet-4-6",
+            "anthropic/claude-haiku-4-5-20251001");
+        viewModel.ChatModelOptions.Should().Contain("anthropic/claude-sonnet-4-6");
+        viewModel.AiModelOptions.Should().NotContain("anthropic/claude-3.5-sonnet");
+    }
+
+    [Fact]
     public async Task TestAiConnectionCommand_InvalidEndpoint_ShowsValidationError()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);
