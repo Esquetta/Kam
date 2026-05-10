@@ -115,6 +115,111 @@ public sealed class GitHubAppInstallationClientTests : IDisposable
     }
 
     [Fact]
+    public async Task GetStatusAsync_WhenInstallationHasNoRepositories_ReturnsRepoAccessGuidance()
+    {
+        var privateKeyPath = WritePrivateKey();
+        var client = CreateClient(new StaticHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath == "/app")
+            {
+                return JsonResponse("""
+                    {
+                      "name": "Kam Coding Agent",
+                      "slug": "kam-coding-agent"
+                    }
+                    """);
+            }
+
+            if (request.RequestUri.AbsolutePath == "/app/installations/98765/access_tokens")
+            {
+                return JsonResponse("""
+                    {
+                      "token": "installation-token",
+                      "expires_at": "2026-05-10T12:00:00Z"
+                    }
+                    """);
+            }
+
+            if (request.RequestUri.AbsolutePath == "/installation/repositories")
+            {
+                return JsonResponse("""
+                    {
+                      "total_count": 0,
+                      "repositories": []
+                    }
+                    """);
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }), new GitHubAppOptions
+        {
+            AppId = "12345",
+            InstallationId = "98765",
+            PrivateKeyPath = privateKeyPath
+        });
+
+        var status = await client.GetStatusAsync();
+
+        status.IsConfigured.Should().BeTrue();
+        status.IsConnected.Should().BeFalse();
+        status.AppName.Should().Be("Kam Coding Agent");
+        status.RepositoryCount.Should().Be(0);
+        status.Message.Should().Contain("No repositories");
+        status.Message.Should().Contain("install");
+        status.Message.Should().Contain("repository access");
+        status.Message.Should().NotContain(privateKeyPath);
+    }
+
+    [Fact]
+    public async Task GetStatusAsync_WhenRepositoryAccessIsForbidden_ReturnsPermissionGuidance()
+    {
+        var privateKeyPath = WritePrivateKey();
+        var client = CreateClient(new StaticHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath == "/app")
+            {
+                return JsonResponse("""
+                    {
+                      "name": "Kam Coding Agent",
+                      "slug": "kam-coding-agent"
+                    }
+                    """);
+            }
+
+            if (request.RequestUri.AbsolutePath == "/app/installations/98765/access_tokens")
+            {
+                return JsonResponse("""
+                    {
+                      "token": "installation-token",
+                      "expires_at": "2026-05-10T12:00:00Z"
+                    }
+                    """);
+            }
+
+            if (request.RequestUri.AbsolutePath == "/installation/repositories")
+            {
+                return new HttpResponseMessage(HttpStatusCode.Forbidden);
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }), new GitHubAppOptions
+        {
+            AppId = "12345",
+            InstallationId = "98765",
+            PrivateKeyPath = privateKeyPath
+        });
+
+        var status = await client.GetStatusAsync();
+
+        status.IsConfigured.Should().BeTrue();
+        status.IsConnected.Should().BeFalse();
+        status.Message.Should().Contain("repository permissions");
+        status.Message.Should().Contain("Contents");
+        status.Message.Should().Contain("Dependabot alerts");
+        status.Message.Should().NotContain(privateKeyPath);
+    }
+
+    [Fact]
     public async Task GetStatusAsync_WhenPrivateKeyCannotBeLoaded_DoesNotExposeConfiguredPrivateKeyPath()
     {
         var missingPath = Path.Combine(_settingsDirectory, "private-key.pem");

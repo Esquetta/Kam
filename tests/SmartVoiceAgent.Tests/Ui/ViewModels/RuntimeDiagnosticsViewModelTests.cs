@@ -1,6 +1,7 @@
 using FluentAssertions;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.AI;
+using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Core.Models.Updates;
 using SmartVoiceAgent.Ui.Services;
@@ -127,6 +128,45 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
             item.Name == "Twilio SMS" && item.Value == "Configured");
         viewModel.SummaryCards.Should().Contain(card =>
             card.Name == "Skills" && card.Value == "1/2 healthy");
+    }
+
+    [Fact]
+    public async Task RefreshAsync_WithGitHubAppClient_ReportsRepositoryAccessReadiness()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        settingsService.ModelProviderProfiles =
+        [
+            new ModelProviderProfile
+            {
+                Id = "local-planner",
+                Provider = ModelProviderType.Ollama,
+                Endpoint = "http://localhost:11434/v1",
+                ModelId = "llama3.1",
+                Roles = [ModelProviderRole.Planner],
+                Enabled = true
+            }
+        ];
+        settingsService.ActivePlannerProfileId = "local-planner";
+
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            githubAppClient: new StaticGitHubAppClient(
+                GitHubAppConnectionStatus.Connected(
+                    "12345",
+                    "98765",
+                    "https://api.github.com",
+                    "Kam Coding Agent",
+                    "kam-coding-agent",
+                    2)));
+
+        await viewModel.RefreshAsync();
+
+        viewModel.IntegrationItems.Should().Contain(item =>
+            item.Name == "GitHub App"
+            && item.Value == "2 repos"
+            && item.Detail.Contains("Kam Coding Agent", StringComparison.Ordinal)
+            && item.Detail.Contains("repo list access verified", StringComparison.OrdinalIgnoreCase)
+            && item.IsReady);
     }
 
     [Fact]
@@ -1028,6 +1068,28 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
         {
             ProfileIds.Add(profile.Id);
             return Task.FromResult(_result);
+        }
+    }
+
+    private sealed class StaticGitHubAppClient : IGitHubAppClient
+    {
+        private readonly GitHubAppConnectionStatus _status;
+
+        public StaticGitHubAppClient(GitHubAppConnectionStatus status)
+        {
+            _status = status;
+        }
+
+        public Task<GitHubAppConnectionStatus> GetStatusAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_status);
+        }
+
+        public Task<GitHubRepositoryListResult> ListRepositoriesAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(GitHubRepositoryListResult.Succeeded(
+                "0 repositories accessible.",
+                []));
         }
     }
 

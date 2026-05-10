@@ -38,6 +38,25 @@ public sealed record GitHubAppConnectionStatus(
             apiBaseUrl);
     }
 
+    public static GitHubAppConnectionStatus RepositoryAccessMissing(
+        string appId,
+        string installationId,
+        string apiBaseUrl,
+        string? appName,
+        string? appSlug)
+    {
+        return new GitHubAppConnectionStatus(
+            true,
+            false,
+            "No repositories are accessible; install the GitHub App on at least one repository and grant repository access permissions.",
+            appId,
+            installationId,
+            apiBaseUrl,
+            appName,
+            appSlug,
+            0);
+    }
+
     public static GitHubAppConnectionStatus Connected(
         string appId,
         string installationId,

@@ -46,6 +46,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private IApplicationUpdateService? _applicationUpdateService;
         private IApplicationRestartPlanner? _applicationRestartPlanner;
         private IApplicationVersionProvider? _applicationVersionProvider;
+        private IGitHubAppClient? _githubAppClient;
         private readonly IModelConnectionTestService _modelConnectionTestService = new ModelConnectionTestService();
 
         private const int MaxSkillExecutionHistoryScanCount = 50;
@@ -593,6 +594,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _applicationRestartPlanner = applicationRestartPlanner;
             _applicationVersionProvider = applicationVersionProvider;
         }
+
+        public void SetGitHubAppClient(IGitHubAppClient githubAppClient)
+        {
+            _githubAppClient = githubAppClient;
+        }
         
         private void OnHostStateChanged(object? sender, bool isRunning)
         {
@@ -681,6 +687,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     _applicationUpdateService,
                     _applicationRestartPlanner,
                     _applicationVersionProvider,
+                    _githubAppClient,
                     CopyRuntimeDiagnosticsText),
                 NavView.Plugins => CreatePluginsViewModel(),
                 NavView.Integrations => new IntegrationsViewModel(),

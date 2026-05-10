@@ -1,6 +1,7 @@
 using ReactiveUI;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.AI;
+using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Core.Models.Updates;
 using SmartVoiceAgent.Core.Security;
@@ -30,6 +31,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     private readonly IApplicationUpdateService? _applicationUpdateService;
     private readonly IApplicationRestartPlanner? _applicationRestartPlanner;
     private readonly IApplicationVersionProvider? _applicationVersionProvider;
+    private readonly IGitHubAppClient? _githubAppClient;
     private readonly Action<string, string>? _copyReport;
 
     private ApplicationUpdateCheckResult? _lastApplicationUpdateCheck;
@@ -70,6 +72,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         IApplicationUpdateService? applicationUpdateService = null,
         IApplicationRestartPlanner? applicationRestartPlanner = null,
         IApplicationVersionProvider? applicationVersionProvider = null,
+        IGitHubAppClient? githubAppClient = null,
         Action<string, string>? copyReport = null)
     {
         _settingsService = settingsService;
@@ -83,6 +86,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         _applicationUpdateService = applicationUpdateService;
         _applicationRestartPlanner = applicationRestartPlanner;
         _applicationVersionProvider = applicationVersionProvider;
+        _githubAppClient = githubAppClient;
         _copyReport = copyReport;
 
         Title = "Runtime Diagnostics";
@@ -269,6 +273,11 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         try
         {
             var plannerProfile = RefreshLocalState();
+
+            if (_githubAppClient is not null)
+            {
+                await ApplyGitHubAppDiagnosticsAsync();
+            }
 
             if (plannerProfile is not null
                 && _modelConnectionTestService is not null
@@ -655,6 +664,23 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             "Twilio SMS",
             isSmsConfigured,
             "SMS is optional and does not block core runtime readiness."));
+    }
+
+    private async Task ApplyGitHubAppDiagnosticsAsync()
+    {
+        try
+        {
+            var status = await _githubAppClient!.GetStatusAsync();
+            ReplaceIntegrationItem(BuildGitHubAppIntegrationItem(status));
+        }
+        catch (Exception ex)
+        {
+            ReplaceIntegrationItem(new RuntimeDiagnosticItemViewModel(
+                "GitHub App",
+                "Unavailable",
+                SecretRedactor.Redact($"GitHub App status check failed: {ex.Message}"),
+                RuntimeDiagnosticSeverity.Warning));
+        }
     }
 
     private void ApplyHostDiagnostics()
@@ -1344,6 +1370,55 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             isConfigured ? "Configured" : "Not configured",
             isConfigured ? $"{detail} Secret value is hidden." : detail,
             isConfigured ? RuntimeDiagnosticSeverity.Ready : RuntimeDiagnosticSeverity.Warning);
+    }
+
+    private static RuntimeDiagnosticItemViewModel BuildGitHubAppIntegrationItem(
+        GitHubAppConnectionStatus status)
+    {
+        if (!status.IsConfigured)
+        {
+            var missing = status.MissingSettings is { Count: > 0 }
+                ? $" Missing: {string.Join(", ", status.MissingSettings)}."
+                : string.Empty;
+            return new RuntimeDiagnosticItemViewModel(
+                "GitHub App",
+                "Not configured",
+                SecretRedactor.Redact($"{status.Message}{missing}"),
+                RuntimeDiagnosticSeverity.Warning);
+        }
+
+        if (!status.IsConnected)
+        {
+            return new RuntimeDiagnosticItemViewModel(
+                "GitHub App",
+                "Needs action",
+                SecretRedactor.Redact(status.Message),
+                RuntimeDiagnosticSeverity.Warning);
+        }
+
+        var repositoryCount = status.RepositoryCount.GetValueOrDefault();
+        var value = repositoryCount == 1 ? "1 repo" : $"{repositoryCount} repos";
+        var appName = string.IsNullOrWhiteSpace(status.AppName)
+            ? "Configured GitHub App"
+            : status.AppName.Trim();
+
+        return new RuntimeDiagnosticItemViewModel(
+            "GitHub App",
+            value,
+            SecretRedactor.Redact($"{appName} repo list access verified."),
+            RuntimeDiagnosticSeverity.Ready);
+    }
+
+    private void ReplaceIntegrationItem(RuntimeDiagnosticItemViewModel item)
+    {
+        var existing = IntegrationItems.FirstOrDefault(existingItem =>
+            existingItem.Name.Equals(item.Name, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null)
+        {
+            IntegrationItems.Remove(existing);
+        }
+
+        IntegrationItems.Add(item);
     }
 
     private void ReplaceRuntimeItem(

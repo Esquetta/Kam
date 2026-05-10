@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
@@ -47,6 +48,16 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
             var app = await GetAuthenticatedAppAsync(jwt, cancellationToken);
             var token = await CreateInstallationTokenAsync(jwt, cancellationToken);
             var repositoryCount = await GetRepositoryCountAsync(token.Token, cancellationToken);
+
+            if (repositoryCount <= 0)
+            {
+                return GitHubAppConnectionStatus.RepositoryAccessMissing(
+                    _options.AppId.Trim(),
+                    _options.InstallationId.Trim(),
+                    _options.GetApiBaseUri().ToString().TrimEnd('/'),
+                    app.Name,
+                    app.Slug);
+            }
 
             return GitHubAppConnectionStatus.Connected(
                 _options.AppId.Trim(),
@@ -119,7 +130,7 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
         if (!response.IsSuccessStatusCode)
         {
             throw new GitHubAppClientException(
-                $"GitHub App installation token request failed with HTTP {(int)response.StatusCode}.");
+                BuildInstallationTokenFailureMessage(response.StatusCode));
         }
 
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -147,7 +158,7 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
         if (!response.IsSuccessStatusCode)
         {
             throw new GitHubAppClientException(
-                $"GitHub App repository request failed with HTTP {(int)response.StatusCode}.");
+                BuildRepositoryAccessFailureMessage(response.StatusCode));
         }
 
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -173,7 +184,7 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
             if (!response.IsSuccessStatusCode)
             {
                 throw new GitHubAppClientException(
-                    $"GitHub App repository request failed with HTTP {(int)response.StatusCode}.");
+                    BuildRepositoryAccessFailureMessage(response.StatusCode));
             }
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -264,6 +275,20 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
             .TrimEnd('=')
             .Replace("+", "-", StringComparison.Ordinal)
             .Replace("/", "_", StringComparison.Ordinal);
+    }
+
+    private static string BuildInstallationTokenFailureMessage(HttpStatusCode statusCode)
+    {
+        return statusCode == HttpStatusCode.NotFound
+            ? "GitHub App installation token request failed with HTTP 404. Verify GitHubApp:InstallationId and confirm the app is installed on the target account."
+            : $"GitHub App installation token request failed with HTTP {(int)statusCode}.";
+    }
+
+    private static string BuildRepositoryAccessFailureMessage(HttpStatusCode statusCode)
+    {
+        return statusCode == HttpStatusCode.Forbidden
+            ? "GitHub App repository request failed with HTTP 403. Check repository permissions: Metadata, Contents, Pull requests, Issues, Actions, Checks, Commit statuses, and Dependabot alerts."
+            : $"GitHub App repository request failed with HTTP {(int)statusCode}.";
     }
 
     private sealed record GitHubInstallationToken(
