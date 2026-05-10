@@ -1,8 +1,8 @@
 ﻿using Core.CrossCuttingConcerns.Logging.Serilog.ConfigurationModels;
+using Elastic.Ingest.Elasticsearch;
+using Elastic.Serilog.Sinks;
 using Microsoft.Extensions.Configuration;
 using Serilog;
-using Serilog.Formatting.Elasticsearch;
-using Serilog.Sinks.Elasticsearch;
 
 namespace Core.CrossCuttingConcerns.Logging.Serilog.Logger;
 
@@ -17,12 +17,8 @@ public class ElasticSearchLogger : LoggerServiceBase
 
         Logger = new LoggerConfiguration().WriteTo
             .Elasticsearch(
-                new ElasticsearchSinkOptions(new Uri(logConfiguration.ConnectionString))
-                {
-                    AutoRegisterTemplate = true,
-                    AutoRegisterTemplateVersion = AutoRegisterTemplateVersion.ESv6,
-                    CustomFormatter = new ExceptionAsObjectJsonFormatter(renderMessage: true)
-                }
+                [new Uri(logConfiguration.ConnectionString)],
+                options => { options.BootstrapMethod = BootstrapMethod.Failure; }
             )
             .CreateLogger();
     }
