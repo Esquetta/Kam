@@ -39,6 +39,11 @@ public sealed class LocalProductionSmokeScriptTests
     {
         var workflow = File.ReadAllText(FindRepoFile(".github", "workflows", "dotnet.yml"));
 
+        workflow.Should().Contain("runs-on: windows-2025");
+        workflow.Should().NotContain("runs-on: windows-latest");
+        workflow.Should().Contain("uses: actions/checkout@v6");
+        workflow.Should().Contain("uses: actions/setup-dotnet@v5");
+        workflow.Should().Contain("uses: actions/upload-artifact@v7");
         workflow.Should().Contain("scripts/local-production-smoke.ps1");
         workflow.Should().Contain("-Configuration Release");
         workflow.Should().Contain("-Runtime win-x64");
