@@ -53,6 +53,20 @@ public sealed class LocalProductionSmokeScriptTests
         workflow.Should().Contain("command-smoke.md");
     }
 
+    [Fact]
+    public void DotnetWorkflow_SecurityScanFailsWhenAnalysisFindsIssues()
+    {
+        var workflow = File.ReadAllText(FindRepoFile(".github", "workflows", "dotnet.yml"));
+
+        workflow.Should().Contain("dotnet tool update --global security-scan --version 5.6.7");
+        workflow.Should().Contain("$installSucceeded = $LASTEXITCODE -eq 0");
+        workflow.Should().Contain("if (-not $installSucceeded)");
+        workflow.Should().Contain("Optional security-scan tool install failed. Skipping security analysis.");
+        workflow.Should().Contain("$env:PATH = \"$env:USERPROFILE\\.dotnet\\tools;$env:PATH\"");
+        workflow.Should().Contain("security-scan Kam.sln --excl-proj=\"**/SmartVoiceAgent.Tests.csproj\"");
+        workflow.Should().NotContain("security-scan Kam.sln --excl-proj=\"**/SmartVoiceAgent.Tests.csproj\" || true");
+    }
+
     private static string FindRepoFile(params string[] segments)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

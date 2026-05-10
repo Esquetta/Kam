@@ -69,6 +69,21 @@ jobs:
       run: dotnet list Kam.sln package --vulnerable --include-transitive
     
     - name: Run security analysis
+      shell: pwsh
       run: |
-        dotnet tool install --global security-scan --version 5.6.7 || true
-        security-scan Kam.sln --excl-proj="**/SmartVoiceAgent.Tests.csproj" || true
+        $installSucceeded = $false
+
+        try {
+          dotnet tool update --global security-scan --version 5.6.7
+          $installSucceeded = $LASTEXITCODE -eq 0
+        } catch {
+          $installSucceeded = $false
+        }
+
+        if (-not $installSucceeded) {
+          Write-Warning "Optional security-scan tool install failed. Skipping security analysis."
+          exit 0
+        }
+
+        $env:PATH = "$env:USERPROFILE\.dotnet\tools;$env:PATH"
+        security-scan Kam.sln --excl-proj="**/SmartVoiceAgent.Tests.csproj"
