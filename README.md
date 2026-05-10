@@ -102,6 +102,7 @@ assets/
 Optional integrations:
 
 - Todoist MCP token for Todoist task operations.
+- GitHub App installation credentials for read-only coding-agent repository discovery.
 - Hugging Face API key for cloud STT / language detection.
 - SMTP credentials for email sending.
 - Twilio credentials for SMS sending.
@@ -134,6 +135,16 @@ dotnet user-secrets set "AIService:Endpoint" "https://api.openai.com/v1" --proje
 
 The smoke gate also accepts `AIService:EndPoint` for backward compatibility.
 
+GitHub App setup for coding-agent repository discovery:
+
+```powershell
+dotnet user-secrets set "GitHubApp:AppId" "<app-id>" --project src/SmartVoiceAgent.AgentHost.ConsoleApp
+dotnet user-secrets set "GitHubApp:InstallationId" "<installation-id>" --project src/SmartVoiceAgent.AgentHost.ConsoleApp
+dotnet user-secrets set "GitHubApp:PrivateKeyPath" "C:\secure\kam-github-app.pem" --project src/SmartVoiceAgent.AgentHost.ConsoleApp
+```
+
+Start with read-only GitHub App permissions: Metadata, Contents, Pull requests, Issues, Actions, Checks, Commit statuses, and Dependabot alerts. Keep the PEM file outside the repository; Kam prints only configured/missing status, never PEM contents, JWTs, installation tokens, or private key paths.
+
 ## Development Commands
 
 ```powershell
@@ -141,6 +152,8 @@ dotnet restore Kam.sln
 dotnet build Kam.sln --configuration Release
 dotnet test Kam.sln --configuration Release
 dotnet run --project src/SmartVoiceAgent.AgentHost.ConsoleApp --configuration Release -- --skill-smoke --summary artifacts/manual-skill-smoke.md
+dotnet run --project src/SmartVoiceAgent.AgentHost.ConsoleApp --configuration Release -- --coding-agent --command "/github app"
+dotnet run --project src/SmartVoiceAgent.AgentHost.ConsoleApp --configuration Release -- --coding-agent --command "/github repos"
 ```
 
 ## Local Production Smoke
