@@ -6,6 +6,7 @@ using OpenAI;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
 using SmartVoiceAgent.Core.Models.CodingAgent;
+using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Infrastructure.Agent.Agents;
 using SmartVoiceAgent.Infrastructure.Agent.Conf;
 using SmartVoiceAgent.Infrastructure.Agent.Functions;
@@ -38,6 +39,7 @@ public static class ServiceCollectionExtensions
         // Configuration options
         services.Configure<GroupChatOptions>(configuration.GetSection("GroupChat"));
         services.Configure<CodingAgentOptions>(configuration.GetSection(CodingAgentOptions.SectionName));
+        services.Configure<GitHubAppOptions>(configuration.GetSection(GitHubAppOptions.SectionName));
 
         services.Configure<McpOptions>(configuration.GetSection("McpOptions"));
 

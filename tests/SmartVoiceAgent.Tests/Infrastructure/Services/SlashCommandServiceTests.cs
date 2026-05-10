@@ -19,7 +19,7 @@ public sealed class SlashCommandServiceTests
 
         suggestions.Select(command => command.Name)
             .Should()
-            .Contain(["/dependabot", "/diff", "/github", "/hooks", "/worktree", "/update", "/version"]);
+            .Contain(["/dependabot", "/diff", "/github", "/github-app", "/hooks", "/worktree", "/update", "/version"]);
     }
 
     [Fact]
@@ -69,6 +69,22 @@ public sealed class SlashCommandServiceTests
         result.Message.Should().Contain(Path.GetFullPath(workspace));
         result.Message.Should().Contain("kam coding-agent /dependabot");
         result.Message.Should().Contain("do not run shell, git, or gh workflows directly");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenGithubAppIsRequested_ReturnsSafeSetupGuidance()
+    {
+        var service = new SlashCommandService();
+
+        var result = await service.ExecuteAsync("/github-app");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("GitHub App");
+        result.Message.Should().Contain("Metadata: read");
+        result.Message.Should().Contain("Contents: read");
+        result.Message.Should().Contain("dotnet user-secrets set \"GitHubApp:AppId\"");
+        result.Message.Should().Contain("kam coding-agent /github app");
+        result.Message.Should().NotContain("PRIVATE KEY");
     }
 
     [Fact]

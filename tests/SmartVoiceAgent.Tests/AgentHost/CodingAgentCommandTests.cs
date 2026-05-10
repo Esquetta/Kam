@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using SmartVoiceAgent.AgentHost.ConsoleApp;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Commands;
+using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Infrastructure.Mcp;
 
@@ -79,6 +80,7 @@ public sealed class CodingAgentCommandTests : IDisposable
         runtime.ReceivedCommand.Should().BeNull();
         output.ToString().Should().Contain("/permissions");
         output.ToString().Should().Contain("/dependabot");
+        output.ToString().Should().Contain("/github app");
         output.ToString().Should().Contain("/worktree");
         error.ToString().Should().BeEmpty();
     }
@@ -380,6 +382,126 @@ public sealed class CodingAgentCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task RunAsync_GithubAppSlashCommand_ShowsGitHubAppConnectionStatus()
+    {
+        var githubApp = new StaticGitHubAppClient(
+            GitHubAppConnectionStatus.Connected(
+                "12345",
+                "98765",
+                "https://api.github.com",
+                "Kam Coding",
+                "kam-coding",
+                12),
+            GitHubRepositoryListResult.Failed("not used", []));
+        var command = new CodingAgentCommand(
+            new RecordingCommandRuntime(CommandRuntimeResult.Failed("Should not run.", SkillExecutionStatus.Failed, "unexpected")),
+            githubAppClient: githubApp);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await command.RunAsync(
+            new CodingAgentCommandOptions
+            {
+                CommandText = "/github app",
+                WorkspaceRoot = _workspace
+            },
+            output,
+            error);
+
+        exitCode.Should().Be(0);
+        output.ToString().Should().Contain("Kam GitHub App:");
+        output.ToString().Should().Contain("status: connected");
+        output.ToString().Should().Contain("repositories: 12 accessible");
+        output.ToString().Should().Contain("Metadata: read");
+        output.ToString().Should().NotContain("installation-token");
+        output.ToString().Should().NotContain("PRIVATE KEY");
+        error.ToString().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task RunAsync_GithubReposSlashCommand_ListsGitHubAppAccessibleRepositories()
+    {
+        var githubApp = new StaticGitHubAppClient(
+            GitHubAppConnectionStatus.Connected(
+                "12345",
+                "98765",
+                "https://api.github.com",
+                "Kam Coding",
+                "kam-coding",
+                2),
+            GitHubRepositoryListResult.Succeeded(
+                "2 repositories accessible.",
+                [
+                    new GitHubRepositorySummary(
+                        "Esquetta/Kam",
+                        true,
+                        "master",
+                        "https://github.com/Esquetta/Kam",
+                        "https://github.com/Esquetta/Kam.git"),
+                    new GitHubRepositorySummary(
+                        "Esquetta/PublicTool",
+                        false,
+                        "main",
+                        "https://github.com/Esquetta/PublicTool",
+                        "https://github.com/Esquetta/PublicTool.git")
+                ]));
+        var command = new CodingAgentCommand(
+            new RecordingCommandRuntime(CommandRuntimeResult.Failed("Should not run.", SkillExecutionStatus.Failed, "unexpected")),
+            githubAppClient: githubApp);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await command.RunAsync(
+            new CodingAgentCommandOptions
+            {
+                CommandText = "/github repos",
+                WorkspaceRoot = _workspace
+            },
+            output,
+            error);
+
+        exitCode.Should().Be(0);
+        output.ToString().Should().Contain("Kam GitHub App repositories:");
+        output.ToString().Should().Contain("Esquetta/Kam");
+        output.ToString().Should().Contain("private");
+        output.ToString().Should().Contain("default: master");
+        output.ToString().Should().Contain("Esquetta/PublicTool");
+        error.ToString().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task RunAsync_GithubReposSlashCommand_WhenGitHubAppIsUnavailable_ShowsSetupGuidance()
+    {
+        var githubApp = new StaticGitHubAppClient(
+            GitHubAppConnectionStatus.NotConfigured(
+                "GitHub App is not configured.",
+                ["GitHubApp:AppId", "GitHubApp:InstallationId", "GitHubApp:PrivateKeyPath"]),
+            GitHubRepositoryListResult.Failed(
+                "GitHub App is not configured.",
+                ["GitHubApp:AppId", "GitHubApp:InstallationId", "GitHubApp:PrivateKeyPath"]));
+        var command = new CodingAgentCommand(
+            new RecordingCommandRuntime(CommandRuntimeResult.Failed("Should not run.", SkillExecutionStatus.Failed, "unexpected")),
+            githubAppClient: githubApp);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await command.RunAsync(
+            new CodingAgentCommandOptions
+            {
+                CommandText = "/github repos",
+                WorkspaceRoot = _workspace
+            },
+            output,
+            error);
+
+        exitCode.Should().Be(0);
+        output.ToString().Should().Contain("GitHub App is not configured");
+        output.ToString().Should().Contain("dotnet user-secrets set \"GitHubApp:AppId\"");
+        output.ToString().Should().NotContain("PRIVATE KEY");
+        error.ToString().Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task RunAsync_PluginsSlashCommand_ShowsSkillHealthSummary()
     {
         var healthService = new StaticSkillHealthService([
@@ -650,6 +772,32 @@ public sealed class CodingAgentCommandTests : IDisposable
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_reports);
+        }
+    }
+
+    private sealed class StaticGitHubAppClient : IGitHubAppClient
+    {
+        private readonly GitHubAppConnectionStatus _status;
+        private readonly GitHubRepositoryListResult _repositories;
+
+        public StaticGitHubAppClient(
+            GitHubAppConnectionStatus status,
+            GitHubRepositoryListResult repositories)
+        {
+            _status = status;
+            _repositories = repositories;
+        }
+
+        public Task<GitHubAppConnectionStatus> GetStatusAsync(
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_status);
+        }
+
+        public Task<GitHubRepositoryListResult> ListRepositoriesAsync(
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_repositories);
         }
     }
 }

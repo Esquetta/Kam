@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.CodingAgent;
 using SmartVoiceAgent.Core.Models.Commands;
+using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Infrastructure.Mcp;
 
@@ -61,6 +62,7 @@ public sealed class CodingAgentCommand
     private readonly ISkillHealthService? _skillHealthService;
     private readonly ISkillTestService? _skillTestService;
     private readonly IAgentRegistry? _agentRegistry;
+    private readonly IGitHubAppClient? _githubAppClient;
     private readonly McpOptions _mcpOptions;
 
     public CodingAgentCommand(
@@ -69,6 +71,7 @@ public sealed class CodingAgentCommand
         ISkillHealthService? skillHealthService = null,
         ISkillTestService? skillTestService = null,
         IAgentRegistry? agentRegistry = null,
+        IGitHubAppClient? githubAppClient = null,
         IOptions<McpOptions>? mcpOptions = null)
     {
         _runtime = runtime;
@@ -76,6 +79,7 @@ public sealed class CodingAgentCommand
         _skillHealthService = skillHealthService;
         _skillTestService = skillTestService;
         _agentRegistry = agentRegistry;
+        _githubAppClient = githubAppClient;
         _mcpOptions = mcpOptions?.Value ?? new McpOptions();
     }
 
@@ -248,7 +252,7 @@ public sealed class CodingAgentCommand
             "/review" => await RunReviewWorkflowAsync(options, cancellationToken),
             "/test" => await RunTestWorkflowAsync(options, cancellationToken),
             "/dependabot" => await RunDependabotWorkflowAsync(options, cancellationToken),
-            "/github" => await RunGithubWorkflowAsync(options, cancellationToken),
+            "/github" => await RunGithubCommandAsync(options, cancellationToken),
             "/plugins" => await FormatPluginsAsync(cancellationToken),
             "/mcp" => CodingAgentCommandResult.Success(FormatMcp()),
             "/agents" => CodingAgentCommandResult.Success(FormatAgents()),
@@ -299,6 +303,8 @@ public sealed class CodingAgentCommand
             "  /test          Run the configured test command.",
             "  /dependabot    Run dependency audit and list Dependabot PRs when gh is available.",
             "  /github        Show GitHub PR and workflow status when gh is available.",
+            "  /github app    Show GitHub App connection and required repository permissions.",
+            "  /github repos  List repositories visible through the configured GitHub App.",
             "  /plugins       Show skill/plugin health summary.",
             "  /mcp           Show configured MCP endpoints.",
             "  /agents        Show registered runtime agents and coding role templates.",
@@ -474,6 +480,29 @@ public sealed class CodingAgentCommand
         return new CodingAgentCommandResult(exitCode, builder.ToString().TrimEnd(), false);
     }
 
+    private async Task<CodingAgentCommandResult> RunGithubCommandAsync(
+        CodingAgentCommandOptions options,
+        CancellationToken cancellationToken)
+    {
+        var arguments = GetSlashArguments(options.CommandText);
+        if (arguments.Count > 0 && IsCommand(arguments[0], "app", "status"))
+        {
+            if (arguments.Count > 1 && IsCommand(arguments[1], "repos", "repositories", "list"))
+            {
+                return await RunGitHubAppRepositoriesAsync(cancellationToken);
+            }
+
+            return await RunGitHubAppStatusAsync(cancellationToken);
+        }
+
+        if (arguments.Count > 0 && IsCommand(arguments[0], "repos", "repositories", "list"))
+        {
+            return await RunGitHubAppRepositoriesAsync(cancellationToken);
+        }
+
+        return await RunGithubWorkflowAsync(options, cancellationToken);
+    }
+
     private async Task<CodingAgentCommandResult> RunGithubWorkflowAsync(
         CodingAgentCommandOptions options,
         CancellationToken cancellationToken)
@@ -508,6 +537,130 @@ public sealed class CodingAgentCommand
         AppendWorkflowSection(builder, runs);
 
         return new CodingAgentCommandResult(remote.ExitCode == 0 ? 0 : 1, builder.ToString().TrimEnd(), false);
+    }
+
+    private async Task<CodingAgentCommandResult> RunGitHubAppStatusAsync(CancellationToken cancellationToken)
+    {
+        if (_githubAppClient is null)
+        {
+            return CodingAgentCommandResult.Success(FormatGitHubAppUnavailable());
+        }
+
+        var status = await _githubAppClient.GetStatusAsync(cancellationToken);
+        return CodingAgentCommandResult.Success(FormatGitHubAppStatus(status));
+    }
+
+    private async Task<CodingAgentCommandResult> RunGitHubAppRepositoriesAsync(CancellationToken cancellationToken)
+    {
+        if (_githubAppClient is null)
+        {
+            return CodingAgentCommandResult.Success(FormatGitHubAppUnavailable());
+        }
+
+        var result = await _githubAppClient.ListRepositoriesAsync(cancellationToken);
+        if (!result.Success)
+        {
+            return CodingAgentCommandResult.Success(FormatGitHubAppSetup(result.Message, result.MissingSettings));
+        }
+
+        var builder = new StringBuilder()
+            .AppendLine("Kam GitHub App repositories:")
+            .AppendLine($"  status: {result.Message}");
+
+        foreach (var repository in result.Repositories
+            .OrderBy(repository => repository.FullName, StringComparer.OrdinalIgnoreCase)
+            .Take(50))
+        {
+            builder.AppendLine(
+                $"  - {repository.FullName} ({(repository.IsPrivate ? "private" : "public")}, default: {repository.DefaultBranch})");
+        }
+
+        if (result.Repositories.Count > 50)
+        {
+            builder.AppendLine($"  ... {result.Repositories.Count - 50} more repositories hidden");
+        }
+
+        return CodingAgentCommandResult.Success(builder.ToString().TrimEnd());
+    }
+
+    private static string FormatGitHubAppStatus(GitHubAppConnectionStatus status)
+    {
+        if (!status.IsConfigured)
+        {
+            return FormatGitHubAppSetup(status.Message, status.MissingSettings);
+        }
+
+        var builder = new StringBuilder()
+            .AppendLine("Kam GitHub App:")
+            .AppendLine($"  status: {(status.IsConnected ? "connected" : "configured but unavailable")}")
+            .AppendLine($"  appId: {FormatConfiguredValue(status.AppId)}")
+            .AppendLine($"  installationId: {FormatConfiguredValue(status.InstallationId)}")
+            .AppendLine($"  endpoint: {FormatConfiguredValue(status.ApiBaseUrl)}")
+            .AppendLine("  privateKey: (configured)");
+
+        if (!string.IsNullOrWhiteSpace(status.AppName))
+        {
+            builder.AppendLine($"  app: {NormalizeMessage(status.AppName)}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(status.AppSlug))
+        {
+            builder.AppendLine($"  slug: {NormalizeMessage(status.AppSlug)}");
+        }
+
+        if (status.RepositoryCount is not null)
+        {
+            builder.AppendLine($"  repositories: {status.RepositoryCount} accessible");
+        }
+
+        builder
+            .AppendLine("  recommended permissions:")
+            .AppendLine("    Metadata: read")
+            .AppendLine("    Contents: read")
+            .AppendLine("    Pull requests: read")
+            .AppendLine("    Issues: read")
+            .AppendLine("    Actions: read")
+            .AppendLine("    Checks: read")
+            .AppendLine("    Commit statuses: read")
+            .AppendLine("    Dependabot alerts: read");
+
+        if (!status.IsConnected)
+        {
+            builder.AppendLine($"  message: {NormalizeMessage(status.Message)}");
+        }
+
+        return builder.ToString().TrimEnd();
+    }
+
+    private static string FormatGitHubAppUnavailable()
+    {
+        return FormatGitHubAppSetup(
+            "GitHub App service is not registered.",
+            ["GitHubApp:AppId", "GitHubApp:InstallationId", "GitHubApp:PrivateKeyPath"]);
+    }
+
+    private static string FormatGitHubAppSetup(
+        string message,
+        IReadOnlyList<string>? missingSettings)
+    {
+        var builder = new StringBuilder()
+            .AppendLine("Kam GitHub App:")
+            .AppendLine("  status: not configured")
+            .AppendLine($"  message: {NormalizeMessage(message)}");
+
+        if (missingSettings?.Count > 0)
+        {
+            builder.AppendLine($"  missing: {string.Join(", ", missingSettings)}");
+        }
+
+        builder
+            .AppendLine("  setup:")
+            .AppendLine("    dotnet user-secrets set \"GitHubApp:AppId\" \"<app-id>\"")
+            .AppendLine("    dotnet user-secrets set \"GitHubApp:InstallationId\" \"<installation-id>\"")
+            .AppendLine("    dotnet user-secrets set \"GitHubApp:PrivateKeyPath\" \"<absolute-pem-path>\"")
+            .AppendLine("  private key contents and installation tokens are never printed.");
+
+        return builder.ToString().TrimEnd();
     }
 
     private async Task<CodingAgentCommandResult> FormatPluginsAsync(CancellationToken cancellationToken)

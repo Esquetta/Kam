@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.CodingAgent;
+using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Core.Models.Updates;
 using SmartVoiceAgent.Infrastructure.Factories;
@@ -49,6 +50,7 @@ public static class ServiceRegistration
     {
         services.TryAddSingleton(configuration);
         services.Configure<CodingAgentOptions>(configuration.GetSection(CodingAgentOptions.SectionName));
+        services.Configure<GitHubAppOptions>(configuration.GetSection(GitHubAppOptions.SectionName));
         services.Configure<ApplicationUpdateOptions>(configuration.GetSection(ApplicationUpdateOptions.SectionName));
 
         services.AddScoped<ICommandLearningService, CommandLearningService>();
@@ -167,6 +169,7 @@ public static class ServiceRegistration
         services.AddSingleton<ISkillImportService, SkillImportService>();
         services.AddSingleton<IApplicationVersionProvider, AssemblyApplicationVersionProvider>();
         services.AddSingleton<IApplicationRestartPlanner, ApplicationRestartPlanner>();
+        services.AddHttpClient<IGitHubAppClient, GitHubAppInstallationClient>();
         services.AddHttpClient<IApplicationUpdateService, GitHubApplicationUpdateService>();
         services.AddScoped<ISlashCommandService, SlashCommandService>();
 

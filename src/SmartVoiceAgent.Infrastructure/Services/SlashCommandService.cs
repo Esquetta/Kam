@@ -23,6 +23,7 @@ public sealed class SlashCommandService : ISlashCommandService
         new("/diff", "Show how to inspect the workspace diff from coding-agent mode.", "/diff", "Workflow"),
         new("/dependabot", "Show how to run dependency audit and Dependabot checks.", "/dependabot", "Workflow"),
         new("/github", "Show how to inspect GitHub PR and workflow status.", "/github", "Workflow"),
+        new("/github-app", "Show GitHub App setup and repository permission guidance.", "/github-app", "Workflow"),
         new("/plugins", "Show skill/plugin health summary.", "/plugins", "Skills"),
         new("/mcp", "Show configured MCP endpoint status.", "/mcp", "Integrations"),
         new("/agents", "Show registered runtime agents.", "/agents", "Runtime"),
@@ -122,6 +123,7 @@ public sealed class SlashCommandService : ISlashCommandService
             "/diff" => SlashCommandResult.Succeeded("/diff", FormatCodingAgentWorkflow("/diff")),
             "/dependabot" => SlashCommandResult.Succeeded("/dependabot", FormatCodingAgentWorkflow("/dependabot")),
             "/github" => SlashCommandResult.Succeeded("/github", FormatCodingAgentWorkflow("/github")),
+            "/github-app" => SlashCommandResult.Succeeded("/github-app", FormatGitHubAppGuidance()),
             "/plugins" => SlashCommandResult.Succeeded("/plugins", await FormatPluginsAsync(cancellationToken)),
             "/mcp" => SlashCommandResult.Succeeded("/mcp", FormatMcp()),
             "/agents" => SlashCommandResult.Succeeded("/agents", FormatAgents()),
@@ -378,6 +380,30 @@ public sealed class SlashCommandService : ISlashCommandService
             $"  approvalMode: {_codingAgentOptions.ApprovalMode}",
             "  chat slash commands do not run shell, git, or gh workflows directly",
             $"  run from CLI: kam coding-agent {commandName}"
+        ]);
+    }
+
+    private static string FormatGitHubAppGuidance()
+    {
+        return string.Join(Environment.NewLine, [
+            "Kam GitHub App:",
+            "  purpose: read repository metadata for coding-agent workflows without a broad PAT",
+            "  recommended permissions:",
+            "    Metadata: read",
+            "    Contents: read",
+            "    Pull requests: read",
+            "    Issues: read",
+            "    Actions: read",
+            "    Checks: read",
+            "    Commit statuses: read",
+            "    Dependabot alerts: read",
+            "  setup:",
+            "    dotnet user-secrets set \"GitHubApp:AppId\" \"<app-id>\"",
+            "    dotnet user-secrets set \"GitHubApp:InstallationId\" \"<installation-id>\"",
+            "    dotnet user-secrets set \"GitHubApp:PrivateKeyPath\" \"<absolute-pem-path>\"",
+            "  run from CLI: kam coding-agent /github app",
+            "  list repos: kam coding-agent /github repos",
+            "  chat slash commands do not print private keys or installation tokens"
         ]);
     }
 
