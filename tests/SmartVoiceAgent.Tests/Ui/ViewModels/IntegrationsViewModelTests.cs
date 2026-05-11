@@ -256,5 +256,13 @@ public sealed class IntegrationsViewModelTests : IDisposable
         {
             return Task.FromResult(GitHubWorkflowRunListResult.Failed("not used"));
         }
+
+        public Task<GitHubWorkflowJobListResult> ListWorkflowRunJobsAsync(
+            string repositoryFullName,
+            long runId,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(GitHubWorkflowJobListResult.Failed("not used"));
+        }
     }
 }

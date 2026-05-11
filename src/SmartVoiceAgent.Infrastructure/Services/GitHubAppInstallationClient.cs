@@ -17,6 +17,7 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
     private const int PullRequestPageSize = 20;
     private const int WorkflowRunRepositoryLimit = 50;
     private const int WorkflowRunPageSize = 10;
+    private const int WorkflowJobPageSize = 100;
 
     private readonly HttpClient _httpClient;
     private readonly GitHubAppOptions _options;
@@ -192,6 +193,51 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
         catch (GitHubAppClientException ex)
         {
             return GitHubWorkflowRunListResult.Failed(ex.Message);
+        }
+    }
+
+    public async Task<GitHubWorkflowJobListResult> ListWorkflowRunJobsAsync(
+        string repositoryFullName,
+        long runId,
+        CancellationToken cancellationToken = default)
+    {
+        var missingSettings = _options.GetMissingSettings();
+        if (missingSettings.Count > 0)
+        {
+            return GitHubWorkflowJobListResult.Failed(
+                "GitHub App is not configured.",
+                missingSettings);
+        }
+
+        if (runId <= 0)
+        {
+            return GitHubWorkflowJobListResult.Failed("GitHub workflow run id must be greater than zero.");
+        }
+
+        try
+        {
+            var jwt = await CreateJsonWebTokenAsync(cancellationToken);
+            var token = await CreateInstallationTokenAsync(jwt, cancellationToken);
+            var jobs = await GetWorkflowRunJobsAsync(
+                token.Token,
+                repositoryFullName,
+                runId,
+                cancellationToken);
+            var message =
+                $"{jobs.Count} {Pluralize(jobs.Count, "job", "jobs")} for workflow run {runId} in {repositoryFullName}.";
+            return GitHubWorkflowJobListResult.Succeeded(
+                message,
+                repositoryFullName,
+                runId,
+                jobs
+                    .OrderBy(job => job.StartedAt ?? DateTimeOffset.MaxValue)
+                    .ThenBy(job => job.Name, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(job => job.Id)
+                    .ToArray());
+        }
+        catch (GitHubAppClientException ex)
+        {
+            return GitHubWorkflowJobListResult.Failed(ex.Message);
         }
     }
 
@@ -379,6 +425,43 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
             .ToArray();
     }
 
+    private async Task<IReadOnlyList<GitHubWorkflowJobSummary>> GetWorkflowRunJobsAsync(
+        string installationToken,
+        string repositoryFullName,
+        long runId,
+        CancellationToken cancellationToken)
+    {
+        using var request = CreateRequest(
+            HttpMethod.Get,
+            BuildWorkflowRunJobsPath(repositoryFullName, runId),
+            installationToken);
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new GitHubAppClientException(
+                BuildWorkflowRunAccessFailureMessage(response.StatusCode));
+        }
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var page = await JsonSerializer.DeserializeAsync<GitHubWorkflowJobPage>(
+            stream,
+            JsonOptions,
+            cancellationToken);
+        return (page?.Jobs ?? [])
+            .Where(item => item.Id > 0)
+            .Select(item => new GitHubWorkflowJobSummary(
+                repositoryFullName,
+                runId,
+                item.Id,
+                string.IsNullOrWhiteSpace(item.Name) ? "(unnamed)" : item.Name,
+                string.IsNullOrWhiteSpace(item.Status) ? "unknown" : item.Status,
+                item.Conclusion ?? string.Empty,
+                item.HtmlUrl ?? string.Empty,
+                item.StartedAt,
+                item.CompletedAt))
+            .ToArray();
+    }
+
     private HttpRequestMessage CreateRequest(
         HttpMethod method,
         string pathAndQuery,
@@ -495,6 +578,17 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
         return $"repos/{Uri.EscapeDataString(parts[0])}/{Uri.EscapeDataString(parts[1])}/actions/runs?per_page={WorkflowRunPageSize}";
     }
 
+    private static string BuildWorkflowRunJobsPath(string repositoryFullName, long runId)
+    {
+        var parts = repositoryFullName.Split('/', 2, StringSplitOptions.TrimEntries);
+        if (parts.Length != 2 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
+        {
+            throw new GitHubAppClientException("GitHub repository full name was invalid.");
+        }
+
+        return $"repos/{Uri.EscapeDataString(parts[0])}/{Uri.EscapeDataString(parts[1])}/actions/runs/{runId}/jobs?per_page={WorkflowJobPageSize}";
+    }
+
     private static string Pluralize(int count, string singular, string plural)
     {
         return count == 1 ? singular : plural;
@@ -552,6 +646,19 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
         [property: JsonPropertyName("html_url")] string? HtmlUrl,
         [property: JsonPropertyName("created_at")] DateTimeOffset? CreatedAt,
         [property: JsonPropertyName("updated_at")] DateTimeOffset? UpdatedAt);
+
+    private sealed record GitHubWorkflowJobPage(
+        [property: JsonPropertyName("total_count")] int TotalCount,
+        [property: JsonPropertyName("jobs")] IReadOnlyList<GitHubWorkflowJobItem>? Jobs);
+
+    private sealed record GitHubWorkflowJobItem(
+        [property: JsonPropertyName("id")] long Id,
+        [property: JsonPropertyName("name")] string? Name,
+        [property: JsonPropertyName("status")] string? Status,
+        [property: JsonPropertyName("conclusion")] string? Conclusion,
+        [property: JsonPropertyName("html_url")] string? HtmlUrl,
+        [property: JsonPropertyName("started_at")] DateTimeOffset? StartedAt,
+        [property: JsonPropertyName("completed_at")] DateTimeOffset? CompletedAt);
 
     private sealed class GitHubAppClientException(string message) : Exception(message);
 }

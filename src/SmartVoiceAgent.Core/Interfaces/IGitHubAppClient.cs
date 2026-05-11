@@ -15,4 +15,9 @@ public interface IGitHubAppClient
 
     Task<GitHubWorkflowRunListResult> ListWorkflowRunsAsync(
         CancellationToken cancellationToken = default);
+
+    Task<GitHubWorkflowJobListResult> ListWorkflowRunJobsAsync(
+        string repositoryFullName,
+        long runId,
+        CancellationToken cancellationToken = default);
 }

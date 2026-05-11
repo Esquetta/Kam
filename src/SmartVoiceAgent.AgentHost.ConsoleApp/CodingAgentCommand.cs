@@ -253,7 +253,7 @@ public sealed class CodingAgentCommand
             "/review" => await RunReviewWorkflowAsync(options, cancellationToken),
             "/test" => await RunTestWorkflowAsync(options, cancellationToken),
             "/dependabot" => await RunDependabotWorkflowAsync(options, cancellationToken),
-            "/github" => await RunGithubCommandAsync(options, cancellationToken),
+            "/github" or "/github-app" => await RunGithubCommandAsync(options, cancellationToken),
             "/plugins" => await FormatPluginsAsync(cancellationToken),
             "/mcp" => CodingAgentCommandResult.Success(FormatMcp()),
             "/agents" => CodingAgentCommandResult.Success(FormatAgents()),
@@ -307,6 +307,8 @@ public sealed class CodingAgentCommand
             "  /github app    Show GitHub App connection and required repository permissions.",
             "  /github repos  List repositories visible through the configured GitHub App.",
             "  /github actions  List GitHub Actions workflow runs visible through the configured GitHub App.",
+            "  /github run    List jobs for one GitHub Actions workflow run.",
+            "  /github-app    Alias for GitHub App repository, PR, workflow, and run commands.",
             "  /plugins       Show skill/plugin health summary.",
             "  /mcp           Show configured MCP endpoints.",
             "  /agents        Show registered runtime agents and coding role templates.",
@@ -499,6 +501,11 @@ public sealed class CodingAgentCommand
                 return await RunGitHubAppWorkflowRunsAsync(cancellationToken);
             }
 
+            if (arguments.Count > 1 && IsCommand(arguments[1], "run", "jobs"))
+            {
+                return await RunGitHubAppWorkflowRunJobsAsync(arguments, 2, cancellationToken);
+            }
+
             return await RunGitHubAppStatusAsync(cancellationToken);
         }
 
@@ -510,6 +517,11 @@ public sealed class CodingAgentCommand
         if (arguments.Count > 0 && IsCommand(arguments[0], "actions", "runs", "workflows", "workflow-runs"))
         {
             return await RunGitHubAppWorkflowRunsAsync(cancellationToken);
+        }
+
+        if (arguments.Count > 0 && IsCommand(arguments[0], "run", "jobs"))
+        {
+            return await RunGitHubAppWorkflowRunJobsAsync(arguments, 1, cancellationToken);
         }
 
         return await RunGithubWorkflowAsync(options, cancellationToken);
@@ -637,6 +649,64 @@ public sealed class CodingAgentCommand
         return CodingAgentCommandResult.Success(builder.ToString().TrimEnd());
     }
 
+    private async Task<CodingAgentCommandResult> RunGitHubAppWorkflowRunJobsAsync(
+        IReadOnlyList<string> arguments,
+        int firstArgumentIndex,
+        CancellationToken cancellationToken)
+    {
+        if (arguments.Count <= firstArgumentIndex + 1)
+        {
+            return new CodingAgentCommandResult(2, "Usage: /github run <owner/repo> <runId>", false);
+        }
+
+        if (!long.TryParse(arguments[firstArgumentIndex + 1], out var runId) || runId <= 0)
+        {
+            return new CodingAgentCommandResult(2, "Usage: /github run <owner/repo> <runId>", false);
+        }
+
+        if (_githubAppClient is null)
+        {
+            return CodingAgentCommandResult.Success(FormatGitHubAppUnavailable());
+        }
+
+        var repositoryFullName = arguments[firstArgumentIndex];
+        var result = await _githubAppClient.ListWorkflowRunJobsAsync(
+            repositoryFullName,
+            runId,
+            cancellationToken);
+        if (!result.Success)
+        {
+            return CodingAgentCommandResult.Success(FormatGitHubAppSetup(result.Message, result.MissingSettings));
+        }
+
+        var builder = new StringBuilder()
+            .AppendLine("Kam GitHub App workflow run jobs:")
+            .AppendLine($"  run: {NormalizeMessage(result.RepositoryFullName)}#{result.RunId}")
+            .AppendLine($"  status: {NormalizeMessage(result.Message)}");
+
+        foreach (var job in result.Jobs
+            .OrderBy(job => job.StartedAt ?? DateTimeOffset.MaxValue)
+            .ThenBy(job => job.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(job => job.Id)
+            .Take(50))
+        {
+            builder
+                .AppendLine($"  - {NormalizeMessage(job.Name)} ({FormatWorkflowJobState(job)})")
+                .AppendLine($"    {NormalizeMessage(job.HtmlUrl)}");
+        }
+
+        if (result.Jobs.Count == 0)
+        {
+            builder.AppendLine("  no jobs found for this workflow run");
+        }
+        else if (result.Jobs.Count > 50)
+        {
+            builder.AppendLine($"  ... {result.Jobs.Count - 50} more jobs hidden");
+        }
+
+        return CodingAgentCommandResult.Success(builder.ToString().TrimEnd());
+    }
+
     private static string FormatGitHubAppStatus(GitHubAppConnectionStatus status)
     {
         if (!status.IsConfigured)
@@ -714,6 +784,7 @@ public sealed class CodingAgentCommand
             .AppendLine("    dotnet user-secrets set \"GitHubApp:PrivateKeyPath\" \"<absolute-pem-path>\"")
             .AppendLine("  list repos: kam coding-agent /github repos")
             .AppendLine("  list workflow runs: kam coding-agent /github actions")
+            .AppendLine("  list workflow run jobs: kam coding-agent /github run <owner/repo> <runId>")
             .AppendLine("  private key contents and installation tokens are never printed.");
 
         return builder.ToString().TrimEnd();
@@ -1197,6 +1268,13 @@ public sealed class CodingAgentCommand
     {
         var status = NormalizeMessage(workflowRun.Status);
         var conclusion = NormalizeMessage(workflowRun.Conclusion);
+        return conclusion == "(empty)" ? status : $"{status}/{conclusion}";
+    }
+
+    private static string FormatWorkflowJobState(GitHubWorkflowJobSummary job)
+    {
+        var status = NormalizeMessage(job.Status);
+        var conclusion = NormalizeMessage(job.Conclusion);
         return conclusion == "(empty)" ? status : $"{status}/{conclusion}";
     }
 

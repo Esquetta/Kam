@@ -287,6 +287,81 @@ public sealed class GitHubAppInstallationClientTests : IDisposable
     }
 
     [Fact]
+    public async Task ListWorkflowRunJobsAsync_WhenConfigured_UsesInstallationTokenAndReturnsJobs()
+    {
+        var privateKeyPath = WritePrivateKey();
+        var seenInstallationToken = string.Empty;
+        var client = CreateClient(new StaticHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath == "/app/installations/98765/access_tokens")
+            {
+                return JsonResponse("""
+                    {
+                      "token": "installation-token",
+                      "expires_at": "2026-05-10T12:00:00Z"
+                    }
+                    """);
+            }
+
+            if (request.RequestUri.AbsolutePath == "/repos/Esquetta/Kam/actions/runs/1001/jobs")
+            {
+                seenInstallationToken = request.Headers.Authorization?.Parameter ?? string.Empty;
+                request.Headers.Authorization?.Scheme.Should().Be("Bearer");
+                request.RequestUri.Query.Should().Contain("per_page=100");
+
+                return JsonResponse("""
+                    {
+                      "total_count": 2,
+                      "jobs": [
+                        {
+                          "id": 2001,
+                          "name": "build",
+                          "status": "completed",
+                          "conclusion": "success",
+                          "html_url": "https://github.com/Esquetta/Kam/actions/runs/1001/job/2001",
+                          "started_at": "2026-05-11T10:00:00Z",
+                          "completed_at": "2026-05-11T10:05:00Z"
+                        },
+                        {
+                          "id": 2002,
+                          "name": "security-scan",
+                          "status": "completed",
+                          "conclusion": "failure",
+                          "html_url": "https://github.com/Esquetta/Kam/actions/runs/1001/job/2002",
+                          "started_at": "2026-05-11T10:00:00Z",
+                          "completed_at": "2026-05-11T10:04:00Z"
+                        }
+                      ]
+                    }
+                    """);
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }), new GitHubAppOptions
+        {
+            AppId = "12345",
+            InstallationId = "98765",
+            PrivateKeyPath = privateKeyPath
+        });
+
+        var result = await client.ListWorkflowRunJobsAsync("Esquetta/Kam", 1001);
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("2 jobs");
+        result.RepositoryFullName.Should().Be("Esquetta/Kam");
+        result.RunId.Should().Be(1001);
+        result.Jobs.Should().HaveCount(2);
+        result.Jobs[0].Name.Should().Be("build");
+        result.Jobs[0].Status.Should().Be("completed");
+        result.Jobs[0].Conclusion.Should().Be("success");
+        result.Jobs[1].Name.Should().Be("security-scan");
+        result.Jobs[1].Conclusion.Should().Be("failure");
+        seenInstallationToken.Should().Be("installation-token");
+        result.Message.Should().NotContain("installation-token");
+        result.Message.Should().NotContain(privateKeyPath);
+    }
+
+    [Fact]
     public async Task GetStatusAsync_WhenInstallationHasNoRepositories_ReturnsRepoAccessGuidance()
     {
         var privateKeyPath = WritePrivateKey();

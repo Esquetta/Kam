@@ -81,6 +81,7 @@ public sealed class CodingAgentCommandTests : IDisposable
         output.ToString().Should().Contain("/permissions");
         output.ToString().Should().Contain("/dependabot");
         output.ToString().Should().Contain("/github app");
+        output.ToString().Should().Contain("/github-app");
         output.ToString().Should().Contain("/worktree");
         error.ToString().Should().BeEmpty();
     }
@@ -472,6 +473,7 @@ public sealed class CodingAgentCommandTests : IDisposable
     [Theory]
     [InlineData("/github actions")]
     [InlineData("/github app actions")]
+    [InlineData("/github-app actions")]
     public async Task RunAsync_GithubActionsSlashCommand_ListsGitHubAppWorkflowRuns(string commandText)
     {
         var githubApp = new StaticGitHubAppClient(
@@ -522,6 +524,89 @@ public sealed class CodingAgentCommandTests : IDisposable
         output.ToString().Should().Contain("https://github.com/Esquetta/Kam/actions/runs/1001");
         output.ToString().Should().NotContain("installation-token");
         output.ToString().Should().NotContain("PRIVATE KEY");
+        error.ToString().Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("/github run Esquetta/Kam 1001")]
+    [InlineData("/github app run Esquetta/Kam 1001")]
+    [InlineData("/github-app run Esquetta/Kam 1001")]
+    public async Task RunAsync_GithubRunSlashCommand_ListsGitHubAppWorkflowRunJobs(string commandText)
+    {
+        var githubApp = new StaticGitHubAppClient(
+            GitHubAppConnectionStatus.Connected(
+                "12345",
+                "98765",
+                "https://api.github.com",
+                "Kam Coding",
+                "kam-coding",
+                1),
+            GitHubRepositoryListResult.Failed("not used"),
+            workflowJobs: GitHubWorkflowJobListResult.Succeeded(
+                "1 job for workflow run 1001 in Esquetta/Kam.",
+                "Esquetta/Kam",
+                1001,
+                [
+                    new GitHubWorkflowJobSummary(
+                        "Esquetta/Kam",
+                        1001,
+                        2001,
+                        "build",
+                        "completed",
+                        "success",
+                        "https://github.com/Esquetta/Kam/actions/runs/1001/job/2001",
+                        new DateTimeOffset(2026, 5, 11, 10, 0, 0, TimeSpan.Zero),
+                        new DateTimeOffset(2026, 5, 11, 10, 5, 0, TimeSpan.Zero))
+                ]));
+        var command = new CodingAgentCommand(
+            new RecordingCommandRuntime(CommandRuntimeResult.Failed("Should not run.", SkillExecutionStatus.Failed, "unexpected")),
+            githubAppClient: githubApp);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await command.RunAsync(
+            new CodingAgentCommandOptions
+            {
+                CommandText = commandText,
+                WorkspaceRoot = _workspace
+            },
+            output,
+            error);
+
+        exitCode.Should().Be(0);
+        output.ToString().Should().Contain("Kam GitHub App workflow run jobs:");
+        output.ToString().Should().Contain("run: Esquetta/Kam#1001");
+        output.ToString().Should().Contain("build");
+        output.ToString().Should().Contain("completed/success");
+        output.ToString().Should().Contain("https://github.com/Esquetta/Kam/actions/runs/1001/job/2001");
+        output.ToString().Should().NotContain("installation-token");
+        output.ToString().Should().NotContain("PRIVATE KEY");
+        error.ToString().Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("/github run Esquetta/Kam")]
+    [InlineData("/github run Esquetta/Kam abc")]
+    [InlineData("/github-app run Esquetta/Kam 0")]
+    [InlineData("/github app run Esquetta/Kam -1")]
+    public async Task RunAsync_GithubRunSlashCommand_WhenRunIdIsMissingOrInvalid_ReturnsUsage(string commandText)
+    {
+        var command = new CodingAgentCommand(
+            new RecordingCommandRuntime(CommandRuntimeResult.Failed("Should not run.", SkillExecutionStatus.Failed, "unexpected")));
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await command.RunAsync(
+            new CodingAgentCommandOptions
+            {
+                CommandText = commandText,
+                WorkspaceRoot = _workspace
+            },
+            output,
+            error);
+
+        exitCode.Should().Be(2);
+        output.ToString().Should().Contain("Usage: /github run <owner/repo> <runId>");
         error.ToString().Should().BeEmpty();
     }
 
@@ -894,15 +979,18 @@ public sealed class CodingAgentCommandTests : IDisposable
         private readonly GitHubAppConnectionStatus _status;
         private readonly GitHubRepositoryListResult _repositories;
         private readonly GitHubWorkflowRunListResult _workflowRuns;
+        private readonly GitHubWorkflowJobListResult _workflowJobs;
 
         public StaticGitHubAppClient(
             GitHubAppConnectionStatus status,
             GitHubRepositoryListResult repositories,
-            GitHubWorkflowRunListResult? workflowRuns = null)
+            GitHubWorkflowRunListResult? workflowRuns = null,
+            GitHubWorkflowJobListResult? workflowJobs = null)
         {
             _status = status;
             _repositories = repositories;
             _workflowRuns = workflowRuns ?? GitHubWorkflowRunListResult.Failed("not used");
+            _workflowJobs = workflowJobs ?? GitHubWorkflowJobListResult.Failed("not used");
         }
 
         public Task<GitHubAppConnectionStatus> GetStatusAsync(
@@ -927,6 +1015,14 @@ public sealed class CodingAgentCommandTests : IDisposable
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_workflowRuns);
+        }
+
+        public Task<GitHubWorkflowJobListResult> ListWorkflowRunJobsAsync(
+            string repositoryFullName,
+            long runId,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_workflowJobs);
         }
     }
 }

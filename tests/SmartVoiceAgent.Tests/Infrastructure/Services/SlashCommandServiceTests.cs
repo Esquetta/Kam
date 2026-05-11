@@ -29,12 +29,15 @@ public sealed class SlashCommandServiceTests
                 "/github app actions",
                 "/github app prs",
                 "/github app repos",
+                "/github app run",
                 "/github actions",
                 "/github prs",
                 "/github repos",
+                "/github run",
                 "/github-app",
                 "/github-app actions",
                 "/github-app prs",
+                "/github-app run",
                 "/hooks",
                 "/worktree",
                 "/update",
@@ -76,6 +79,18 @@ public sealed class SlashCommandServiceTests
         suggestions.Select(command => command.Name)
             .Should()
             .Contain("/github actions");
+    }
+
+    [Fact]
+    public void GetSuggestions_WhenGithubRunSubcommandIsTyped_IncludesRunCommand()
+    {
+        var service = new SlashCommandService();
+
+        var suggestions = service.GetSuggestions("/github ru");
+
+        suggestions.Select(command => command.Name)
+            .Should()
+            .Contain("/github run");
     }
 
     [Fact]
@@ -354,6 +369,80 @@ public sealed class SlashCommandServiceTests
         result.Message.Should().Contain("Security Scan");
         result.Message.Should().Contain("in_progress");
         result.Message.Should().Contain("https://github.com/Esquetta/Kam/actions/runs/1001");
+    }
+
+    [Theory]
+    [InlineData("/github run Esquetta/Kam 1001")]
+    [InlineData("/github-app run Esquetta/Kam 1001")]
+    [InlineData("/github app run Esquetta/Kam 1001")]
+    public async Task ExecuteAsync_WhenGithubRunAliasIsRequested_ListsWorkflowRunJobs(string command)
+    {
+        var service = new SlashCommandService(
+            githubAppClient: new StaticGitHubAppClient(
+                GitHubAppConnectionStatus.Connected(
+                    "12345",
+                    "98765",
+                    "https://api.github.com",
+                    "Kam Coding",
+                    "kam-coding",
+                    1),
+                GitHubRepositoryListResult.Failed("not used"),
+                GitHubPullRequestListResult.Failed("not used"),
+                GitHubWorkflowRunListResult.Failed("not used"),
+                GitHubWorkflowJobListResult.Succeeded(
+                    "2 jobs for workflow run 1001 in Esquetta/Kam.",
+                    "Esquetta/Kam",
+                    1001,
+                    [
+                        new GitHubWorkflowJobSummary(
+                            "Esquetta/Kam",
+                            1001,
+                            2001,
+                            "build",
+                            "completed",
+                            "success",
+                            "https://github.com/Esquetta/Kam/actions/runs/1001/job/2001",
+                            new DateTimeOffset(2026, 5, 11, 10, 0, 0, TimeSpan.Zero),
+                            new DateTimeOffset(2026, 5, 11, 10, 5, 0, TimeSpan.Zero)),
+                        new GitHubWorkflowJobSummary(
+                            "Esquetta/Kam",
+                            1001,
+                            2002,
+                            "security-scan",
+                            "completed",
+                            "failure",
+                            "https://github.com/Esquetta/Kam/actions/runs/1001/job/2002",
+                            new DateTimeOffset(2026, 5, 11, 10, 0, 0, TimeSpan.Zero),
+                            new DateTimeOffset(2026, 5, 11, 10, 4, 0, TimeSpan.Zero))
+                    ])));
+
+        var result = await service.ExecuteAsync(command);
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Kam GitHub App workflow run jobs:");
+        result.Message.Should().Contain("run: Esquetta/Kam#1001");
+        result.Message.Should().Contain("build");
+        result.Message.Should().Contain("completed/success");
+        result.Message.Should().Contain("security-scan");
+        result.Message.Should().Contain("completed/failure");
+        result.Message.Should().Contain("https://github.com/Esquetta/Kam/actions/runs/1001/job/2001");
+        result.Message.Should().NotContain("installation-token");
+        result.Message.Should().NotContain("PRIVATE KEY");
+    }
+
+    [Theory]
+    [InlineData("/github run Esquetta/Kam")]
+    [InlineData("/github run Esquetta/Kam abc")]
+    [InlineData("/github-app run Esquetta/Kam 0")]
+    [InlineData("/github app run Esquetta/Kam -1")]
+    public async Task ExecuteAsync_WhenGithubRunIdIsMissingOrInvalid_ReturnsUsage(string command)
+    {
+        var service = new SlashCommandService();
+
+        var result = await service.ExecuteAsync(command);
+
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Usage: /github run <owner/repo> <runId>");
     }
 
     [Fact]
@@ -661,17 +750,20 @@ public sealed class SlashCommandServiceTests
         private readonly GitHubRepositoryListResult _repositories;
         private readonly GitHubPullRequestListResult _pullRequests;
         private readonly GitHubWorkflowRunListResult _workflowRuns;
+        private readonly GitHubWorkflowJobListResult _workflowJobs;
 
         public StaticGitHubAppClient(
             GitHubAppConnectionStatus status,
             GitHubRepositoryListResult repositories,
             GitHubPullRequestListResult? pullRequests = null,
-            GitHubWorkflowRunListResult? workflowRuns = null)
+            GitHubWorkflowRunListResult? workflowRuns = null,
+            GitHubWorkflowJobListResult? workflowJobs = null)
         {
             _status = status;
             _repositories = repositories;
             _pullRequests = pullRequests ?? GitHubPullRequestListResult.Failed("not used");
             _workflowRuns = workflowRuns ?? GitHubWorkflowRunListResult.Failed("not used");
+            _workflowJobs = workflowJobs ?? GitHubWorkflowJobListResult.Failed("not used");
         }
 
         public Task<GitHubAppConnectionStatus> GetStatusAsync(
@@ -696,6 +788,14 @@ public sealed class SlashCommandServiceTests
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_workflowRuns);
+        }
+
+        public Task<GitHubWorkflowJobListResult> ListWorkflowRunJobsAsync(
+            string repositoryFullName,
+            long runId,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_workflowJobs);
         }
     }
 }
