@@ -16,6 +16,8 @@ public sealed class MainWindowSlashCommandTests
         viewModel.CommandInputText = "/";
 
         viewModel.IsSlashCommandPaletteVisible.Should().BeTrue();
+        viewModel.SelectedSlashCommandIndex.Should().Be(0);
+        viewModel.SlashCommandSuggestions[0].IsSelected.Should().BeTrue();
         viewModel.SlashCommandSuggestions.Select(command => command.Name)
             .Should()
             .Contain(["/help", "/plugins", "/status"]);
@@ -60,6 +62,7 @@ public sealed class MainWindowSlashCommandTests
 
         viewModel.IsSlashCommandPaletteVisible.Should().BeFalse();
         viewModel.SlashCommandSuggestions.Should().BeEmpty();
+        viewModel.SelectedSlashCommandIndex.Should().Be(-1);
     }
 
     [Fact]
@@ -104,6 +107,42 @@ public sealed class MainWindowSlashCommandTests
     }
 
     [Fact]
+    public void MoveSlashCommandSelection_WhenPaletteIsVisible_WrapsThroughSuggestions()
+    {
+        var viewModel = new MainWindowViewModel();
+        viewModel.SetSlashCommandService(new FakeSlashCommandService());
+        viewModel.CommandInputText = "/";
+
+        viewModel.MoveSlashCommandSelection(-1).Should().BeTrue();
+
+        viewModel.SelectedSlashCommandIndex.Should().Be(3);
+        viewModel.SlashCommandSuggestions[3].Name.Should().Be("/update");
+        viewModel.SlashCommandSuggestions[3].IsSelected.Should().BeTrue();
+
+        viewModel.MoveSlashCommandSelection(1).Should().BeTrue();
+
+        viewModel.SelectedSlashCommandIndex.Should().Be(0);
+        viewModel.SlashCommandSuggestions[0].Name.Should().Be("/help");
+        viewModel.SlashCommandSuggestions[0].IsSelected.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AcceptSelectedSlashCommandSuggestion_UsesCurrentSelection()
+    {
+        var viewModel = new MainWindowViewModel();
+        viewModel.SetSlashCommandService(new FakeSlashCommandService());
+        viewModel.CommandInputText = "/";
+
+        viewModel.MoveSlashCommandSelection(2);
+        var accepted = viewModel.AcceptSelectedSlashCommandSuggestion();
+
+        accepted.Should().BeTrue();
+        viewModel.CommandInputText.Should().Be("/status ");
+        viewModel.IsSlashCommandPaletteVisible.Should().BeFalse();
+        viewModel.SelectedSlashCommandIndex.Should().Be(-1);
+    }
+
+    [Fact]
     public void SelectSlashCommandCommand_WhenParameterIsNull_DoesNotChangeInput()
     {
         var viewModel = new MainWindowViewModel
@@ -134,6 +173,22 @@ public sealed class MainWindowSlashCommandTests
         commandInput.SubmittedCommands.Should().BeEmpty();
         viewModel.CommandInputText.Should().BeEmpty();
         viewModel.IsSlashCommandPaletteVisible.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SubmitCommandInputAsync_WithPluginsSlashCommand_UsesSlashServiceHealthCommand()
+    {
+        var slashService = new FakeSlashCommandService();
+        var commandInput = new RecordingCommandInputService();
+        var viewModel = new MainWindowViewModel();
+        viewModel.SetCommandInputService(commandInput);
+        viewModel.SetSlashCommandService(slashService);
+        viewModel.CommandInputText = "/plugins";
+
+        await viewModel.SubmitCommandInputAsync();
+
+        slashService.ExecutedInput.Should().Be("/plugins");
+        commandInput.SubmittedCommands.Should().BeEmpty();
     }
 
     [Fact]

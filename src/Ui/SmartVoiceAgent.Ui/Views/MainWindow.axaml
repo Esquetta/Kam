@@ -935,8 +935,8 @@
 									Background="{DynamicResource CardBgHoverBrush}"
 									BorderBrush="{DynamicResource AccentCyanDimBrush}"
 									BorderThickness="1"
-									CornerRadius="8"
-									Padding="8"
+									CornerRadius="10"
+									Padding="6"
 									Margin="0,0,0,8"
 									IsVisible="{Binding IsSlashCommandPaletteVisible}">
 								<ItemsControl ItemsSource="{Binding SlashCommandSuggestions}">
@@ -944,8 +944,10 @@
 										<DataTemplate DataType="vm:SlashCommandSuggestionViewModel">
 											<Button Command="{Binding $parent[Window].DataContext.SelectSlashCommandCommand}"
 													CommandParameter="{Binding}"
-													Background="Transparent"
-													BorderThickness="0"
+													Background="{Binding IsSelected, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentCyanGlowBrush|CardBgHoverBrush'}"
+													BorderBrush="{Binding IsSelected, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentCyanDimBrush|BorderSubtleBrush'}"
+													BorderThickness="1"
+													CornerRadius="7"
 													HorizontalContentAlignment="Stretch"
 													Padding="8,6"
 													Cursor="Hand">

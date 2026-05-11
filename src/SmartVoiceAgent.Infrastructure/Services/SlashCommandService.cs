@@ -6,6 +6,7 @@ using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Core.Models.SlashCommands;
 using SmartVoiceAgent.Core.Security;
+using SmartVoiceAgent.Infrastructure.Agent.Conf;
 using SmartVoiceAgent.Infrastructure.Mcp;
 
 namespace SmartVoiceAgent.Infrastructure.Services;
@@ -16,11 +17,19 @@ public sealed class SlashCommandService : ISlashCommandService
     [
         new("/help", "Show available slash commands.", "/help", "General", ["/commands"]),
         new("/commands", "List slash commands, optionally filtered.", "/commands [filter]", "General", ["/help"]),
+        new("/settings", "Open the settings screen.", "/settings", "Navigation"),
+        new("/integrations", "Open integration settings.", "/integrations", "Navigation"),
+        new("/diagnostics", "Open runtime diagnostics.", "/diagnostics", "Navigation", ["/runtime"]),
+        new("/coordinator", "Open the coordinator workspace.", "/coordinator", "Navigation", ["/home"]),
+        new("/theme", "Toggle the active theme.", "/theme", "General"),
+        new("/voice", "Toggle voice capture.", "/voice", "Runtime"),
         new("/version", "Show current Kam version and update channel.", "/version", "Updates"),
         new("/update", "Check for a newer Kam release.", "/update [check|download|restart]", "Updates"),
         new("/download", "Download the latest Kam release package.", "/download", "Updates"),
         new("/restart", "Show the Kam restart handoff plan.", "/restart [packagePath]", "Updates"),
         new("/status", "Show runtime and skill health status.", "/status", "Runtime"),
+        new("/model", "Show the active runtime AI provider and selected model.", "/model", "Runtime", ["/models"]),
+        new("/limits", "Show rate-limit, quota, and balance warning behavior.", "/limits", "Runtime", ["/quota", "/balance", "/rate-limit"]),
         new("/permissions", "Show chat command permission boundaries.", "/permissions", "Runtime"),
         new("/diff", "Show how to inspect the workspace diff from coding-agent mode.", "/diff", "Workflow"),
         new("/dependabot", "Show how to run dependency audit and Dependabot checks.", "/dependabot", "Workflow"),
@@ -67,6 +76,7 @@ public sealed class SlashCommandService : ISlashCommandService
     private readonly IApplicationUpdateSession _applicationUpdateSession;
     private readonly IApplicationRestartPlanner? _applicationRestartPlanner;
     private readonly IGitHubAppClient? _githubAppClient;
+    private readonly AIServiceConfiguration _aiServiceConfiguration;
 
     public SlashCommandService(
         IVoiceAgentHostControl? hostControl = null,
@@ -80,7 +90,8 @@ public sealed class SlashCommandService : ISlashCommandService
         IApplicationVersionProvider? applicationVersionProvider = null,
         IApplicationUpdateSession? applicationUpdateSession = null,
         IApplicationRestartPlanner? applicationRestartPlanner = null,
-        IGitHubAppClient? githubAppClient = null)
+        IGitHubAppClient? githubAppClient = null,
+        IOptions<AIServiceConfiguration>? aiServiceOptions = null)
     {
         _hostControl = hostControl;
         _skillHealthService = skillHealthService;
@@ -94,6 +105,7 @@ public sealed class SlashCommandService : ISlashCommandService
         _applicationUpdateSession = applicationUpdateSession ?? new ApplicationUpdateSession();
         _applicationRestartPlanner = applicationRestartPlanner;
         _githubAppClient = githubAppClient;
+        _aiServiceConfiguration = aiServiceOptions?.Value ?? new AIServiceConfiguration();
     }
 
     public IReadOnlyList<SlashCommandDefinition> GetCommands()
@@ -149,7 +161,15 @@ public sealed class SlashCommandService : ISlashCommandService
             "/download" => await DownloadUpdateAsync(cancellationToken),
             "/restart" => SlashCommandResult.Succeeded("/restart", FormatRestartPlan(argumentText)),
             "/status" => SlashCommandResult.Succeeded("/status", await FormatStatusAsync(cancellationToken)),
+            "/model" => SlashCommandResult.Succeeded("/model", FormatModelStatus()),
+            "/limits" => SlashCommandResult.Succeeded("/limits", FormatLimitWarnings()),
             "/permissions" => SlashCommandResult.Succeeded("/permissions", FormatPermissions()),
+            "/settings" => SlashCommandResult.Succeeded("/settings", "Opening Settings."),
+            "/integrations" => SlashCommandResult.Succeeded("/integrations", "Opening Integrations."),
+            "/diagnostics" => SlashCommandResult.Succeeded("/diagnostics", "Opening Runtime Diagnostics."),
+            "/coordinator" => SlashCommandResult.Succeeded("/coordinator", "Opening Coordinator."),
+            "/theme" => SlashCommandResult.Succeeded("/theme", "Theme toggled."),
+            "/voice" => SlashCommandResult.Succeeded("/voice", "Voice capture toggled."),
             "/diff" => SlashCommandResult.Succeeded("/diff", FormatCodingAgentWorkflow("/diff")),
             "/dependabot" => SlashCommandResult.Succeeded("/dependabot", FormatCodingAgentWorkflow("/dependabot")),
             "/github" => await RunGitHubCommandAsync(arguments, cancellationToken),
@@ -199,6 +219,29 @@ public sealed class SlashCommandService : ISlashCommandService
             "  files: no direct file mutation from chat slash commands",
             "  tests: limited to registered skill smoke tests",
             "  integrations: status output redacts secrets"
+        ]);
+    }
+
+    private string FormatModelStatus()
+    {
+        return string.Join(Environment.NewLine, [
+            "Kam AI runtime model:",
+            $"  provider: {FormatConfiguredValue(_aiServiceConfiguration.Provider)}",
+            $"  endpoint: {FormatConfiguredValue(_aiServiceConfiguration.Endpoint)}",
+            $"  model: {FormatConfiguredValue(_aiServiceConfiguration.ModelId)}",
+            "  scope: selected runtime profile is mapped into planner, chat, skills, and agents at startup",
+            "  changes: validate settings, then restart Kam to rebuild active AI clients"
+        ]);
+    }
+
+    private static string FormatLimitWarnings()
+    {
+        return string.Join(Environment.NewLine, [
+            "Kam provider-limit warnings:",
+            "  rate limit: activity log warns when provider returns 429 or rate-limit text",
+            "  quota/balance: activity log warns when billing, quota, balance, or credit errors are detected",
+            "  authentication: activity log warns when a provider rejects the configured API key",
+            "  action: switch model/provider, wait for reset, or update billing/API key in Settings"
         ]);
     }
 
@@ -1332,6 +1375,10 @@ public sealed class SlashCommandService : ISlashCommandService
         return commandName switch
         {
             "/commands" => "/help",
+            "/home" => "/coordinator",
+            "/runtime" => "/diagnostics",
+            "/models" => "/model",
+            "/quota" or "/balance" or "/rate-limit" => "/limits",
             _ => commandName
         };
     }

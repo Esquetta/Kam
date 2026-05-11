@@ -133,7 +133,19 @@ namespace SmartVoiceAgent.Ui.Views
                 return;
             }
 
-            if (e.Key == Key.Tab && vm.AcceptFirstSlashCommandSuggestion())
+            if (e.Key == Key.Down && vm.MoveSlashCommandSelection(1))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.Up && vm.MoveSlashCommandSelection(-1))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.Tab && vm.AcceptSelectedSlashCommandSuggestion())
             {
                 e.Handled = true;
                 return;
@@ -148,6 +160,12 @@ namespace SmartVoiceAgent.Ui.Views
 
             if (e.Key == Key.Enter)
             {
+                if (vm.IsSlashCommandPaletteVisible && vm.AcceptSelectedSlashCommandSuggestion())
+                {
+                    e.Handled = true;
+                    return;
+                }
+
                 vm.SubmitCommand.Execute(null);
                 e.Handled = true;
             }

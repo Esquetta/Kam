@@ -50,6 +50,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private IGitHubAppClient? _githubAppClient;
         private IGitHubAppClientFactory? _githubAppClientFactory;
         private readonly IModelConnectionTestService _modelConnectionTestService = new ModelConnectionTestService();
+        private readonly ISettingsService _pageSettingsService = new JsonSettingsService();
+        private readonly Dictionary<NavView, ViewModelBase> _viewModelCache = [];
 
         private const int MaxSkillExecutionHistoryScanCount = 50;
         private const int MaxSkillExecutionHistoryDisplayCount = 8;
@@ -251,6 +253,22 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             get => _isSlashCommandPaletteVisible;
             private set => this.RaiseAndSetIfChanged(ref _isSlashCommandPaletteVisible, value);
+        }
+
+        private int _selectedSlashCommandIndex = -1;
+        public int SelectedSlashCommandIndex
+        {
+            get => _selectedSlashCommandIndex;
+            private set
+            {
+                if (_selectedSlashCommandIndex == value)
+                {
+                    return;
+                }
+
+                this.RaiseAndSetIfChanged(ref _selectedSlashCommandIndex, value);
+                UpdateSlashCommandSelection();
+            }
         }
 
         private ObservableCollection<PendingSkillConfirmationViewModel> _pendingSkillConfirmations = new();
@@ -508,6 +526,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 Console.WriteLine("[SetVoiceAgentHostControl] Recreating CoordinatorViewModel with host control");
                 CurrentViewModel = new CoordinatorViewModel(_hostControl, this);
+                _viewModelCache[NavView.Coordinator] = CurrentViewModel;
                 ActiveView = NavView.Coordinator;
             }
         }
@@ -681,11 +700,24 @@ namespace SmartVoiceAgent.Ui.ViewModels
             CurrentViewModel?.OnNavigatedFrom();
             ActiveView = view;
 
-            CurrentViewModel = view switch
+            CurrentViewModel = GetOrCreateViewModel(view);
+
+            CurrentViewModel?.OnNavigatedTo();
+            AddLog($"NAVIGATED_TO: {view.ToString().ToUpper()}");
+        }
+
+        private ViewModelBase? GetOrCreateViewModel(NavView view)
+        {
+            if (_viewModelCache.TryGetValue(view, out var cachedViewModel))
+            {
+                return cachedViewModel;
+            }
+
+            ViewModelBase? viewModel = view switch
             {
                 NavView.Coordinator => new CoordinatorViewModel(_hostControl, this),
                 NavView.Diagnostics => new RuntimeDiagnosticsViewModel(
-                    new JsonSettingsService(),
+                    _pageSettingsService,
                     _hostControl,
                     _skillHealthService,
                     _modelConnectionTestService,
@@ -701,14 +733,18 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     CopyRuntimeDiagnosticsText),
                 NavView.Plugins => CreatePluginsViewModel(),
                 NavView.Integrations => new IntegrationsViewModel(
-                    new JsonSettingsService(),
+                    _pageSettingsService,
                     _githubAppClientFactory),
-                NavView.Settings => new SettingsViewModel(this),
+                NavView.Settings => new SettingsViewModel(_pageSettingsService, this),
                 _ => null
             };
 
-            CurrentViewModel?.OnNavigatedTo();
-            AddLog($"NAVIGATED_TO: {view.ToString().ToUpper()}");
+            if (viewModel is not null)
+            {
+                _viewModelCache[view] = viewModel;
+            }
+
+            return viewModel;
         }
 
         private PluginsViewModel CreatePluginsViewModel()
@@ -866,6 +902,14 @@ namespace SmartVoiceAgent.Ui.ViewModels
             var input = CommandInputText.Trim();
             AddLog($"> {input}");
 
+            if (TryExecuteLocalSlashCommand(input))
+            {
+                CommandInputText = string.Empty;
+                SlashCommandSuggestions.Clear();
+                IsSlashCommandPaletteVisible = false;
+                return;
+            }
+
             if (_slashCommandService?.IsSlashCommand(input) == true)
             {
                 var slashResult = await _slashCommandService.ExecuteAsync(input);
@@ -896,6 +940,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 || !_slashCommandService.IsSlashCommand(CommandInputText))
             {
                 IsSlashCommandPaletteVisible = false;
+                SelectedSlashCommandIndex = -1;
                 return;
             }
 
@@ -905,6 +950,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             }
 
             IsSlashCommandPaletteVisible = SlashCommandSuggestions.Count > 0;
+            SelectedSlashCommandIndex = IsSlashCommandPaletteVisible ? 0 : -1;
         }
 
         private void SelectSlashCommand(SlashCommandSuggestionViewModel? suggestion)
@@ -916,11 +962,22 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             CommandInputText = suggestion.Name + " ";
             IsSlashCommandPaletteVisible = false;
+            SelectedSlashCommandIndex = -1;
         }
 
         public bool AcceptFirstSlashCommandSuggestion()
         {
+            return AcceptSelectedSlashCommandSuggestion();
+        }
+
+        public bool AcceptSelectedSlashCommandSuggestion()
+        {
             var suggestion = SlashCommandSuggestions.FirstOrDefault();
+            if (SelectedSlashCommandIndex >= 0 && SelectedSlashCommandIndex < SlashCommandSuggestions.Count)
+            {
+                suggestion = SlashCommandSuggestions[SelectedSlashCommandIndex];
+            }
+
             if (suggestion is null)
             {
                 return false;
@@ -930,9 +987,79 @@ namespace SmartVoiceAgent.Ui.ViewModels
             return true;
         }
 
+        public bool MoveSlashCommandSelection(int delta)
+        {
+            if (!IsSlashCommandPaletteVisible || SlashCommandSuggestions.Count == 0)
+            {
+                return false;
+            }
+
+            var nextIndex = SelectedSlashCommandIndex < 0
+                ? 0
+                : SelectedSlashCommandIndex + delta;
+
+            if (nextIndex < 0)
+            {
+                nextIndex = SlashCommandSuggestions.Count - 1;
+            }
+            else if (nextIndex >= SlashCommandSuggestions.Count)
+            {
+                nextIndex = 0;
+            }
+
+            SelectedSlashCommandIndex = nextIndex;
+            return true;
+        }
+
         public void HideSlashCommandSuggestions()
         {
             IsSlashCommandPaletteVisible = false;
+            SelectedSlashCommandIndex = -1;
+        }
+
+        private void UpdateSlashCommandSelection()
+        {
+            for (var index = 0; index < SlashCommandSuggestions.Count; index++)
+            {
+                SlashCommandSuggestions[index].IsSelected = index == SelectedSlashCommandIndex;
+            }
+        }
+
+        private bool TryExecuteLocalSlashCommand(string input)
+        {
+            var commandName = input.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .FirstOrDefault()
+                ?.ToLowerInvariant();
+
+            switch (commandName)
+            {
+                case "/clear":
+                    AddLog("INPUT_CLEARED");
+                    return true;
+                case "/settings":
+                    NavigateTo(NavView.Settings);
+                    return true;
+                case "/integrations":
+                    NavigateTo(NavView.Integrations);
+                    return true;
+                case "/diagnostics":
+                    NavigateTo(NavView.Diagnostics);
+                    return true;
+                case "/coordinator":
+                case "/home":
+                    NavigateTo(NavView.Coordinator);
+                    return true;
+                case "/theme":
+                    ToggleTheme();
+                    AddLog($"THEME_SET: {(IsDarkMode ? "DARK" : "LIGHT")}");
+                    return true;
+                case "/voice":
+                    ToggleVoiceEnabled();
+                    AddLog($"VOICE_SET: {(IsVoiceEnabled ? "ON" : "OFF")}");
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private void OnCommandResult(object? sender, CommandResultEventArgs e)
@@ -1461,6 +1588,18 @@ namespace SmartVoiceAgent.Ui.ViewModels
             }
 
             _voiceCommandService?.Dispose();
+            foreach (var viewModel in _viewModelCache.Values.OfType<IDisposable>().Distinct())
+            {
+                viewModel.Dispose();
+            }
+
+            _viewModelCache.Clear();
+
+            if (_pageSettingsService is IDisposable disposableSettingsService)
+            {
+                disposableSettingsService.Dispose();
+            }
+
             if (_modelConnectionTestService is IDisposable disposableModelConnectionTestService)
             {
                 disposableModelConnectionTestService.Dispose();
@@ -1506,6 +1645,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
     }
 
     public sealed class SlashCommandSuggestionViewModel
+        : ReactiveObject
     {
         public SlashCommandSuggestionViewModel(SlashCommandDefinition definition)
         {
@@ -1522,6 +1662,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public string Usage { get; }
 
         public string Category { get; }
+
+        private bool _isSelected;
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set => this.RaiseAndSetIfChanged(ref _isSelected, value);
+        }
     }
 
     public sealed class SkillPlannerTraceItemViewModel

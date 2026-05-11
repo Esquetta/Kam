@@ -4,6 +4,7 @@ using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.CodingAgent;
 using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Core.Models.Updates;
+using SmartVoiceAgent.Infrastructure.Agent.Conf;
 using SmartVoiceAgent.Infrastructure.Mcp;
 using SmartVoiceAgent.Infrastructure.Services;
 using System.Security.Cryptography;
@@ -45,10 +46,50 @@ public sealed class SlashCommandServiceTests
                 "/github-app prs",
                 "/github-app run",
                 "/hooks",
+                "/integrations",
+                "/limits",
+                "/model",
+                "/settings",
+                "/theme",
+                "/voice",
                 "/worktree",
                 "/update",
                 "/version"
             ]);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenModelIsRequested_ReturnsConfiguredRuntimeModel()
+    {
+        var service = new SlashCommandService(
+            aiServiceOptions: Options.Create(new AIServiceConfiguration
+            {
+                Provider = "Anthropic",
+                Endpoint = "https://api.anthropic.com",
+                ModelId = "claude-sonnet-4-6"
+            }));
+
+        var result = await service.ExecuteAsync("/model");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("provider: Anthropic");
+        result.Message.Should().Contain("model: claude-sonnet-4-6");
+        result.Message.Should().Contain("planner, chat, skills, and agents");
+    }
+
+    [Theory]
+    [InlineData("/models")]
+    [InlineData("/quota")]
+    [InlineData("/balance")]
+    [InlineData("/rate-limit")]
+    public async Task ExecuteAsync_WhenRuntimeAliasesAreRequested_ReturnsRuntimeStatus(string command)
+    {
+        var service = new SlashCommandService();
+
+        var result = await service.ExecuteAsync(command);
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain(command == "/models" ? "Kam AI runtime model:" : "Kam provider-limit warnings:");
     }
 
     [Fact]

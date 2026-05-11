@@ -70,6 +70,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
         }
 
+        public SettingsViewModel(ISettingsService settingsService, MainWindowViewModel mainViewModel)
+            : this(settingsService, mainViewModel, null, null, null)
+        {
+        }
+
         private SettingsViewModel(
             ISettingsService settingsService,
             MainWindowViewModel? mainViewModel,
