@@ -2,8 +2,10 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.CodingAgent;
+using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Core.Models.SlashCommands;
+using SmartVoiceAgent.Core.Security;
 using SmartVoiceAgent.Infrastructure.Mcp;
 
 namespace SmartVoiceAgent.Infrastructure.Services;
@@ -23,7 +25,10 @@ public sealed class SlashCommandService : ISlashCommandService
         new("/diff", "Show how to inspect the workspace diff from coding-agent mode.", "/diff", "Workflow"),
         new("/dependabot", "Show how to run dependency audit and Dependabot checks.", "/dependabot", "Workflow"),
         new("/github", "Show how to inspect GitHub PR and workflow status.", "/github", "Workflow"),
+        new("/github app", "Show GitHub App connection status.", "/github app", "Workflow", ["/github-app"]),
+        new("/github repos", "List repositories visible through the configured GitHub App.", "/github repos", "Workflow"),
         new("/github-app", "Show GitHub App setup and repository permission guidance.", "/github-app", "Workflow"),
+        new("/github-app repos", "List repositories visible through the configured GitHub App.", "/github-app repos", "Workflow"),
         new("/plugins", "Show skill/plugin health summary.", "/plugins", "Skills"),
         new("/mcp", "Show configured MCP endpoint status.", "/mcp", "Integrations"),
         new("/agents", "Show registered runtime agents.", "/agents", "Runtime"),
@@ -43,6 +48,7 @@ public sealed class SlashCommandService : ISlashCommandService
     private readonly McpOptions _mcpOptions;
     private readonly IApplicationUpdateService? _applicationUpdateService;
     private readonly IApplicationRestartPlanner? _applicationRestartPlanner;
+    private readonly IGitHubAppClient? _githubAppClient;
 
     public SlashCommandService(
         IVoiceAgentHostControl? hostControl = null,
@@ -53,7 +59,8 @@ public sealed class SlashCommandService : ISlashCommandService
         IOptions<CodingAgentOptions>? codingAgentOptions = null,
         IOptions<McpOptions>? mcpOptions = null,
         IApplicationUpdateService? applicationUpdateService = null,
-        IApplicationRestartPlanner? applicationRestartPlanner = null)
+        IApplicationRestartPlanner? applicationRestartPlanner = null,
+        IGitHubAppClient? githubAppClient = null)
     {
         _hostControl = hostControl;
         _skillHealthService = skillHealthService;
@@ -64,6 +71,7 @@ public sealed class SlashCommandService : ISlashCommandService
         _mcpOptions = mcpOptions?.Value ?? new McpOptions();
         _applicationUpdateService = applicationUpdateService;
         _applicationRestartPlanner = applicationRestartPlanner;
+        _githubAppClient = githubAppClient;
     }
 
     public IReadOnlyList<SlashCommandDefinition> GetCommands()
@@ -122,8 +130,8 @@ public sealed class SlashCommandService : ISlashCommandService
             "/permissions" => SlashCommandResult.Succeeded("/permissions", FormatPermissions()),
             "/diff" => SlashCommandResult.Succeeded("/diff", FormatCodingAgentWorkflow("/diff")),
             "/dependabot" => SlashCommandResult.Succeeded("/dependabot", FormatCodingAgentWorkflow("/dependabot")),
-            "/github" => SlashCommandResult.Succeeded("/github", FormatCodingAgentWorkflow("/github")),
-            "/github-app" => SlashCommandResult.Succeeded("/github-app", FormatGitHubAppGuidance()),
+            "/github" => await RunGitHubCommandAsync(arguments, cancellationToken),
+            "/github-app" => await RunGitHubAppCommandAsync(arguments, cancellationToken),
             "/plugins" => SlashCommandResult.Succeeded("/plugins", await FormatPluginsAsync(cancellationToken)),
             "/mcp" => SlashCommandResult.Succeeded("/mcp", FormatMcp()),
             "/agents" => SlashCommandResult.Succeeded("/agents", FormatAgents()),
@@ -383,28 +391,170 @@ public sealed class SlashCommandService : ISlashCommandService
         ]);
     }
 
-    private static string FormatGitHubAppGuidance()
+    private async Task<SlashCommandResult> RunGitHubCommandAsync(
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken)
     {
-        return string.Join(Environment.NewLine, [
-            "Kam GitHub App:",
-            "  purpose: read repository metadata for coding-agent workflows without a broad PAT",
-            "  recommended permissions:",
-            "    Metadata: read",
-            "    Contents: read",
-            "    Pull requests: read",
-            "    Issues: read",
-            "    Actions: read",
-            "    Checks: read",
-            "    Commit statuses: read",
-            "    Dependabot alerts: read",
-            "  setup:",
-            "    dotnet user-secrets set \"GitHubApp:AppId\" \"<app-id>\"",
-            "    dotnet user-secrets set \"GitHubApp:InstallationId\" \"<installation-id>\"",
-            "    dotnet user-secrets set \"GitHubApp:PrivateKeyPath\" \"<absolute-pem-path>\"",
-            "  run from CLI: kam coding-agent /github app",
-            "  list repos: kam coding-agent /github repos",
-            "  chat slash commands do not print private keys or installation tokens"
-        ]);
+        if (arguments.Count > 0 && IsCommand(arguments[0], "app", "status"))
+        {
+            if (arguments.Count > 1 && IsCommand(arguments[1], "repos", "repositories", "list"))
+            {
+                return await RunGitHubAppRepositoriesAsync("/github", cancellationToken);
+            }
+
+            return await RunGitHubAppStatusAsync("/github", cancellationToken);
+        }
+
+        if (arguments.Count > 0 && IsCommand(arguments[0], "repos", "repositories", "list"))
+        {
+            return await RunGitHubAppRepositoriesAsync("/github", cancellationToken);
+        }
+
+        return SlashCommandResult.Succeeded(
+            "/github",
+            string.Join(Environment.NewLine, [
+                FormatCodingAgentWorkflow("/github"),
+                "  app status: /github app",
+                "  repo list: /github repos"
+            ]));
+    }
+
+    private async Task<SlashCommandResult> RunGitHubAppCommandAsync(
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken)
+    {
+        if (arguments.Count > 0 && IsCommand(arguments[0], "repos", "repositories", "list"))
+        {
+            return await RunGitHubAppRepositoriesAsync("/github-app", cancellationToken);
+        }
+
+        return await RunGitHubAppStatusAsync("/github-app", cancellationToken);
+    }
+
+    private async Task<SlashCommandResult> RunGitHubAppStatusAsync(
+        string commandName,
+        CancellationToken cancellationToken)
+    {
+        if (_githubAppClient is null)
+        {
+            return SlashCommandResult.Succeeded(commandName, FormatGitHubAppUnavailable());
+        }
+
+        var status = await _githubAppClient.GetStatusAsync(cancellationToken);
+        return SlashCommandResult.Succeeded(commandName, FormatGitHubAppStatus(status));
+    }
+
+    private async Task<SlashCommandResult> RunGitHubAppRepositoriesAsync(
+        string commandName,
+        CancellationToken cancellationToken)
+    {
+        if (_githubAppClient is null)
+        {
+            return SlashCommandResult.Succeeded(commandName, FormatGitHubAppUnavailable());
+        }
+
+        var result = await _githubAppClient.ListRepositoriesAsync(cancellationToken);
+        if (!result.Success)
+        {
+            return SlashCommandResult.Succeeded(
+                commandName,
+                FormatGitHubAppSetup(result.Message, result.MissingSettings));
+        }
+
+        var builder = new StringBuilder()
+            .AppendLine("Kam GitHub App repositories:")
+            .AppendLine($"  status: {NormalizeMessage(result.Message)}");
+
+        foreach (var repository in result.Repositories
+            .OrderBy(repository => repository.FullName, StringComparer.OrdinalIgnoreCase)
+            .Take(50))
+        {
+            builder.AppendLine(
+                $"  - {NormalizeMessage(repository.FullName)} ({(repository.IsPrivate ? "private" : "public")}, default: {NormalizeMessage(repository.DefaultBranch)})");
+        }
+
+        if (result.Repositories.Count > 50)
+        {
+            builder.AppendLine($"  ... {result.Repositories.Count - 50} more repositories hidden");
+        }
+
+        return SlashCommandResult.Succeeded(commandName, builder.ToString().TrimEnd());
+    }
+
+    private static string FormatGitHubAppStatus(GitHubAppConnectionStatus status)
+    {
+        if (!status.IsConfigured)
+        {
+            return FormatGitHubAppSetup(status.Message, status.MissingSettings);
+        }
+
+        var builder = new StringBuilder()
+            .AppendLine("Kam GitHub App:")
+            .AppendLine($"  status: {(status.IsConnected ? "connected" : "configured but unavailable")}")
+            .AppendLine($"  appId: {FormatConfiguredValue(status.AppId)}")
+            .AppendLine($"  installationId: {FormatConfiguredValue(status.InstallationId)}")
+            .AppendLine($"  endpoint: {FormatConfiguredValue(status.ApiBaseUrl)}")
+            .AppendLine("  privateKey: (configured)");
+
+        if (!string.IsNullOrWhiteSpace(status.AppName))
+        {
+            builder.AppendLine($"  app: {NormalizeMessage(status.AppName)}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(status.AppSlug))
+        {
+            builder.AppendLine($"  slug: {NormalizeMessage(status.AppSlug)}");
+        }
+
+        if (status.RepositoryCount is not null)
+        {
+            builder.AppendLine($"  repositories: {status.RepositoryCount} accessible");
+        }
+
+        AppendGitHubAppPermissions(builder);
+
+        if (!status.IsConnected)
+        {
+            builder.AppendLine($"  message: {NormalizeMessage(status.Message)}");
+        }
+
+        return builder.ToString().TrimEnd();
+    }
+
+    private static string FormatGitHubAppUnavailable()
+    {
+        return FormatGitHubAppSetup(
+            "GitHub App service is not registered.",
+            ["GitHubApp:AppId", "GitHubApp:InstallationId", "GitHubApp:PrivateKeyPath"]);
+    }
+
+    private static string FormatGitHubAppSetup(
+        string message,
+        IReadOnlyList<string>? missingSettings)
+    {
+        var builder = new StringBuilder()
+            .AppendLine("Kam GitHub App:")
+            .AppendLine("  status: not configured")
+            .AppendLine($"  message: {NormalizeMessage(message)}");
+
+        if (missingSettings?.Count > 0)
+        {
+            builder.AppendLine($"  missing: {string.Join(", ", missingSettings)}");
+        }
+
+        AppendGitHubAppPermissions(builder);
+
+        builder
+            .AppendLine("  setup:")
+            .AppendLine("    dotnet user-secrets set \"GitHubApp:AppId\" \"<app-id>\"")
+            .AppendLine("    dotnet user-secrets set \"GitHubApp:InstallationId\" \"<installation-id>\"")
+            .AppendLine("    dotnet user-secrets set \"GitHubApp:PrivateKeyPath\" \"<absolute-pem-path>\"")
+            .AppendLine("  list repos: /github-app repos or /github repos")
+            .AppendLine("  CLI status: kam coding-agent /github app")
+            .AppendLine("  CLI repos: kam coding-agent /github repos")
+            .AppendLine("  private key contents and installation tokens are never printed.");
+
+        return builder.ToString().TrimEnd();
     }
 
     private async Task<SlashCommandResult> RunSkillTestAsync(
@@ -494,6 +644,43 @@ public sealed class SlashCommandService : ISlashCommandService
             : $"{Environment.NewLine}Available smoke tests: {string.Join(", ", cases)}";
     }
 
+    private static void AppendGitHubAppPermissions(StringBuilder builder)
+    {
+        builder
+            .AppendLine("  recommended permissions:")
+            .AppendLine("    Metadata: read")
+            .AppendLine("    Contents: read")
+            .AppendLine("    Pull requests: read")
+            .AppendLine("    Issues: read")
+            .AppendLine("    Actions: read")
+            .AppendLine("    Checks: read")
+            .AppendLine("    Commit statuses: read")
+            .AppendLine("    Dependabot alerts: read");
+    }
+
+    private static bool IsCommand(string value, params string[] names)
+    {
+        return names.Any(name => value.Equals(name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string NormalizeMessage(string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return "(empty)";
+        }
+
+        var normalized = SecretRedactor.Redact(message)
+            .Replace("\r", " ", StringComparison.Ordinal)
+            .Replace("\n", " ", StringComparison.Ordinal)
+            .Trim();
+
+        const int maxLength = 500;
+        return normalized.Length <= maxLength
+            ? normalized
+            : normalized[..maxLength] + "...";
+    }
+
     private static string NormalizeAlias(string commandName)
     {
         return commandName switch
@@ -554,7 +741,7 @@ public sealed class SlashCommandService : ISlashCommandService
 
     private static string FormatConfiguredValue(string? value)
     {
-        return string.IsNullOrWhiteSpace(value) ? "(not configured)" : value.Trim();
+        return string.IsNullOrWhiteSpace(value) ? "(not configured)" : NormalizeMessage(value);
     }
 
     private static string FormatSecretStatus(string? value)
