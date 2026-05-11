@@ -73,6 +73,24 @@ public class JsonSettingsService : ISettingsService, IDisposable
         set => SetProperty(nameof(TodoistApiKey), value, v => _data.TodoistApiKey = v);
     }
 
+    public string GitHubAppId
+    {
+        get => _data.GitHubAppId ?? string.Empty;
+        set => SetProperty(nameof(GitHubAppId), value, v => _data.GitHubAppId = v);
+    }
+
+    public string GitHubAppInstallationId
+    {
+        get => _data.GitHubAppInstallationId ?? string.Empty;
+        set => SetProperty(nameof(GitHubAppInstallationId), value, v => _data.GitHubAppInstallationId = v);
+    }
+
+    public string GitHubAppPrivateKeyPath
+    {
+        get => _data.GitHubAppPrivateKeyPath ?? string.Empty;
+        set => SetProperty(nameof(GitHubAppPrivateKeyPath), value, v => _data.GitHubAppPrivateKeyPath = v);
+    }
+
     #region Email (SMTP) Properties
 
     public string SmtpHost
@@ -303,6 +321,9 @@ public class JsonSettingsService : ISettingsService, IDisposable
             nameof(ShowOnStartup) => (T?)(object?)_data.ShowOnStartup,
             nameof(StartupBehavior) => (T?)(object?)_data.StartupBehavior,
             nameof(TodoistApiKey) => (T?)(object?)_data.TodoistApiKey,
+            nameof(GitHubAppId) => (T?)(object?)_data.GitHubAppId,
+            nameof(GitHubAppInstallationId) => (T?)(object?)_data.GitHubAppInstallationId,
+            nameof(GitHubAppPrivateKeyPath) => (T?)(object?)_data.GitHubAppPrivateKeyPath,
             nameof(SmtpHost) => (T?)(object?)_data.SmtpHost,
             nameof(SmtpPort) => (T?)(object?)_data.SmtpPort,
             nameof(SmtpUsername) => (T?)(object?)_data.SmtpUsername,
@@ -331,6 +352,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
             var root = document.RootElement;
 
             migrated |= MigratePlaintextSecret(root, nameof(TodoistApiKey), value => _data.TodoistApiKey = value);
+            migrated |= MigratePlaintextSecret(root, nameof(GitHubAppPrivateKeyPath), value => _data.GitHubAppPrivateKeyPath = value);
             migrated |= MigratePlaintextSecret(root, nameof(SmtpPassword), value => _data.SmtpPassword = value);
             migrated |= MigratePlaintextSecret(root, nameof(TwilioAuthToken), value => _data.TwilioAuthToken = value);
 
@@ -389,6 +411,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
     private void LoadSecrets()
     {
         _data.TodoistApiKey = _secretStore.GetSecret(nameof(TodoistApiKey)) ?? _data.TodoistApiKey;
+        _data.GitHubAppPrivateKeyPath = _secretStore.GetSecret(nameof(GitHubAppPrivateKeyPath)) ?? _data.GitHubAppPrivateKeyPath;
         _data.SmtpPassword = _secretStore.GetSecret(nameof(SmtpPassword)) ?? _data.SmtpPassword;
         _data.TwilioAuthToken = _secretStore.GetSecret(nameof(TwilioAuthToken)) ?? _data.TwilioAuthToken;
 
@@ -406,6 +429,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
     private void SaveSecrets()
     {
         SaveSecret(nameof(TodoistApiKey), _data.TodoistApiKey);
+        SaveSecret(nameof(GitHubAppPrivateKeyPath), _data.GitHubAppPrivateKeyPath);
         SaveSecret(nameof(SmtpPassword), _data.SmtpPassword);
         SaveSecret(nameof(TwilioAuthToken), _data.TwilioAuthToken);
 
@@ -440,6 +464,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
     {
         var data = CloneSettingsData(_data);
         data.TodoistApiKey = null;
+        data.GitHubAppPrivateKeyPath = null;
         data.SmtpPassword = null;
         data.TwilioAuthToken = null;
 
@@ -461,6 +486,9 @@ public class JsonSettingsService : ISettingsService, IDisposable
             ShowOnStartup = source.ShowOnStartup,
             StartupBehavior = source.StartupBehavior,
             TodoistApiKey = source.TodoistApiKey,
+            GitHubAppId = source.GitHubAppId,
+            GitHubAppInstallationId = source.GitHubAppInstallationId,
+            GitHubAppPrivateKeyPath = source.GitHubAppPrivateKeyPath,
             SmtpHost = source.SmtpHost,
             SmtpPort = source.SmtpPort,
             SmtpUsername = source.SmtpUsername,
@@ -579,6 +607,9 @@ public class JsonSettingsService : ISettingsService, IDisposable
 
         // Integrations
         public string? TodoistApiKey { get; set; }
+        public string? GitHubAppId { get; set; }
+        public string? GitHubAppInstallationId { get; set; }
+        public string? GitHubAppPrivateKeyPath { get; set; }
 
         // Email (SMTP)
         public string? SmtpHost { get; set; }

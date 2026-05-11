@@ -83,6 +83,35 @@ public class JsonSettingsServiceAiProfileTests : IDisposable
     }
 
     [Fact]
+    public void SaveAndLoadGitHubAppSettings_KeepsPrivateKeyPathOutOfSettingsJson()
+    {
+        const string privateKeyPath = @"C:\secure\kam-github-app.pem";
+
+        using (var service = new JsonSettingsService(_settingsDirectory))
+        {
+            service.GitHubAppId = "12345";
+            service.GitHubAppInstallationId = "98765";
+            service.GitHubAppPrivateKeyPath = privateKeyPath;
+            service.Save();
+        }
+
+        using var reloaded = new JsonSettingsService(_settingsDirectory);
+
+        reloaded.GitHubAppId.Should().Be("12345");
+        reloaded.GitHubAppInstallationId.Should().Be("98765");
+        reloaded.GitHubAppPrivateKeyPath.Should().Be(privateKeyPath);
+
+        var settingsJson = File.ReadAllText(Path.Combine(_settingsDirectory, "settings.json"));
+        settingsJson.Should().Contain("\"GitHubAppId\"");
+        settingsJson.Should().Contain("\"GitHubAppInstallationId\"");
+        settingsJson.Should().NotContain(privateKeyPath);
+        settingsJson.Should().NotContain("\"GitHubAppPrivateKeyPath\"");
+
+        var secretStoreJson = File.ReadAllText(Path.Combine(_settingsDirectory, "settings.secrets.json"));
+        secretStoreJson.Should().NotContain(privateKeyPath);
+    }
+
+    [Fact]
     public void Load_LegacyPlaintextSecrets_MigratesSecretsOutOfSettingsJson()
     {
         Directory.CreateDirectory(_settingsDirectory);
@@ -92,6 +121,7 @@ public class JsonSettingsServiceAiProfileTests : IDisposable
             {
               "ShowOnStartup": true,
               "TodoistApiKey": "legacy-todoist-secret",
+              "GitHubAppPrivateKeyPath": "C:\\secure\\legacy-kam-github-app.pem",
               "SmtpPassword": "legacy-smtp-secret",
               "TwilioAuthToken": "legacy-twilio-secret",
               "ModelProviderProfiles": [
@@ -116,6 +146,7 @@ public class JsonSettingsServiceAiProfileTests : IDisposable
         using var service = new JsonSettingsService(_settingsDirectory);
 
         service.TodoistApiKey.Should().Be("legacy-todoist-secret");
+        service.GitHubAppPrivateKeyPath.Should().Be(@"C:\secure\legacy-kam-github-app.pem");
         service.SmtpPassword.Should().Be("legacy-smtp-secret");
         service.TwilioAuthToken.Should().Be("legacy-twilio-secret");
         service.ModelProviderProfiles.Should().ContainSingle(
@@ -123,10 +154,12 @@ public class JsonSettingsServiceAiProfileTests : IDisposable
 
         var settingsJson = File.ReadAllText(Path.Combine(_settingsDirectory, "settings.json"));
         settingsJson.Should().NotContain("legacy-todoist-secret");
+        settingsJson.Should().NotContain(@"C:\secure\legacy-kam-github-app.pem");
         settingsJson.Should().NotContain("legacy-smtp-secret");
         settingsJson.Should().NotContain("legacy-twilio-secret");
         settingsJson.Should().NotContain("legacy-openrouter-secret");
         settingsJson.Should().NotContain("\"TodoistApiKey\"");
+        settingsJson.Should().NotContain("\"GitHubAppPrivateKeyPath\"");
         settingsJson.Should().NotContain("\"SmtpPassword\"");
         settingsJson.Should().NotContain("\"TwilioAuthToken\"");
         settingsJson.Should().NotContain("\"ApiKey\"");

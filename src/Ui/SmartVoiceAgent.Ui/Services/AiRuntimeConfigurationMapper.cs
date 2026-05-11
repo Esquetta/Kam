@@ -72,6 +72,15 @@ public static class AiRuntimeConfigurationMapper
             overrides["Sms:TwilioPhoneNumber"] = settings.TwilioPhoneNumber;
         }
 
+        if (!string.IsNullOrWhiteSpace(settings.GitHubAppId)
+            && !string.IsNullOrWhiteSpace(settings.GitHubAppInstallationId)
+            && !string.IsNullOrWhiteSpace(settings.GitHubAppPrivateKeyPath))
+        {
+            overrides["GitHubApp:AppId"] = settings.GitHubAppId;
+            overrides["GitHubApp:InstallationId"] = settings.GitHubAppInstallationId;
+            overrides["GitHubApp:PrivateKeyPath"] = settings.GitHubAppPrivateKeyPath;
+        }
+
         return overrides;
     }
 

@@ -42,6 +42,21 @@ public interface ISettingsService
     /// </summary>
     string TodoistApiKey { get; set; }
 
+    /// <summary>
+    /// Gets or sets the GitHub App id used for repository access.
+    /// </summary>
+    string GitHubAppId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the GitHub App installation id used for repository access.
+    /// </summary>
+    string GitHubAppInstallationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the local PEM file path for the GitHub App private key.
+    /// </summary>
+    string GitHubAppPrivateKeyPath { get; set; }
+
     #region Email (SMTP) Settings
 
     /// <summary>

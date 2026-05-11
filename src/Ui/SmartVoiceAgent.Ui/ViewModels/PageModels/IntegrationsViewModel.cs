@@ -14,6 +14,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         // Todoist
         private string _todoistApiKey = string.Empty;
         private bool _isTaskAgentEnabled;
+
+        // GitHub App
+        private string _githubAppId = string.Empty;
+        private string _githubInstallationId = string.Empty;
+        private string _githubPrivateKeyPath = string.Empty;
+        private bool _isGitHubAppConfigured;
         
         // Email (SMTP)
         private string _smtpHost = string.Empty;
@@ -33,9 +39,14 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private bool _isSmsEnabled;
 
         public IntegrationsViewModel()
+            : this(new JsonSettingsService())
+        {
+        }
+
+        public IntegrationsViewModel(ISettingsService settingsService)
         {
             Title = "INTEGRATIONS";
-            _settingsService = new JsonSettingsService();
+            _settingsService = settingsService;
             
             // Load saved settings
             _settingsService.Load();
@@ -50,6 +61,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             
             SaveSmsCommand = ReactiveCommand.Create(SaveSms);
             ClearSmsCommand = ReactiveCommand.Create(ClearSms);
+
+            SaveGitHubAppCommand = ReactiveCommand.Create(SaveGitHubApp);
+            ClearGitHubAppCommand = ReactiveCommand.Create(ClearGitHubApp);
         }
 
         #region Todoist Properties
@@ -72,6 +86,53 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         public string TodoistDescription => "Connect to Todoist for task management capabilities. The Task Agent will be enabled when a valid API key is provided.";
         public string TodoistStatusText => IsTaskAgentEnabled ? "ACTIVE" : "NOT CONFIGURED";
+
+        #endregion
+
+        #region GitHub App Properties
+
+        public string GitHubAppId
+        {
+            get => _githubAppId;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _githubAppId, value);
+                RefreshGitHubAppConfigured();
+            }
+        }
+
+        public string GitHubInstallationId
+        {
+            get => _githubInstallationId;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _githubInstallationId, value);
+                RefreshGitHubAppConfigured();
+            }
+        }
+
+        public string GitHubPrivateKeyPath
+        {
+            get => _githubPrivateKeyPath;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _githubPrivateKeyPath, value);
+                RefreshGitHubAppConfigured();
+            }
+        }
+
+        public bool IsGitHubAppConfigured
+        {
+            get => _isGitHubAppConfigured;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _isGitHubAppConfigured, value);
+                this.RaisePropertyChanged(nameof(GitHubAppStatusText));
+            }
+        }
+
+        public string GitHubAppDescription => "Connect a GitHub App installation so Kam can inspect selected repositories with least-privilege access.";
+        public string GitHubAppStatusText => IsGitHubAppConfigured ? "CONFIGURED" : "NOT CONFIGURED";
 
         #endregion
 
@@ -187,6 +248,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public ICommand SaveSmsCommand { get; }
         public ICommand ClearSmsCommand { get; }
 
+        // GitHub App Commands
+        public ICommand SaveGitHubAppCommand { get; }
+        public ICommand ClearGitHubAppCommand { get; }
+
         #endregion
 
         #region Methods
@@ -195,6 +260,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             // Todoist
             TodoistApiKey = _settingsService.TodoistApiKey;
+
+            // GitHub App
+            GitHubAppId = _settingsService.GitHubAppId;
+            GitHubInstallationId = _settingsService.GitHubAppInstallationId;
+            GitHubPrivateKeyPath = _settingsService.GitHubAppPrivateKeyPath;
+            RefreshGitHubAppConfigured();
             
             // Email
             EmailProvider = _settingsService.EmailProvider;
@@ -249,6 +320,13 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
         }
 
+        private void RefreshGitHubAppConfigured()
+        {
+            IsGitHubAppConfigured = !string.IsNullOrWhiteSpace(GitHubAppId) &&
+                                    !string.IsNullOrWhiteSpace(GitHubInstallationId) &&
+                                    !string.IsNullOrWhiteSpace(GitHubPrivateKeyPath);
+        }
+
         #region Todoist Methods
 
         private void SaveTodoist()
@@ -262,6 +340,32 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             TodoistApiKey = string.Empty;
             _settingsService.TodoistApiKey = string.Empty;
             _settingsService.Save();
+        }
+
+        #endregion
+
+        #region GitHub App Methods
+
+        private void SaveGitHubApp()
+        {
+            _settingsService.GitHubAppId = GitHubAppId;
+            _settingsService.GitHubAppInstallationId = GitHubInstallationId;
+            _settingsService.GitHubAppPrivateKeyPath = GitHubPrivateKeyPath;
+            _settingsService.Save();
+            RefreshGitHubAppConfigured();
+        }
+
+        private void ClearGitHubApp()
+        {
+            GitHubAppId = string.Empty;
+            GitHubInstallationId = string.Empty;
+            GitHubPrivateKeyPath = string.Empty;
+
+            _settingsService.GitHubAppId = string.Empty;
+            _settingsService.GitHubAppInstallationId = string.Empty;
+            _settingsService.GitHubAppPrivateKeyPath = string.Empty;
+            _settingsService.Save();
+            IsGitHubAppConfigured = false;
         }
 
         #endregion
@@ -351,6 +455,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             // Auto-save when leaving the view
             SaveTodoist();
+            SaveGitHubApp();
             SaveEmail();
             SaveSms();
         }

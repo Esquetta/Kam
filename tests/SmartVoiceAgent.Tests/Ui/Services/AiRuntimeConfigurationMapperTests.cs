@@ -188,6 +188,21 @@ public class AiRuntimeConfigurationMapperTests
         overrides.Should().Contain("Sms:TwilioPhoneNumber", "+15551234567");
     }
 
+    [Fact]
+    public void CreateIntegrationOverrides_GitHubAppSettings_MapsGitHubAppRuntimeConfiguration()
+    {
+        using var settings = new JsonSettingsService(CreateTempSettingsDirectory());
+        settings.GitHubAppId = "12345";
+        settings.GitHubAppInstallationId = "98765";
+        settings.GitHubAppPrivateKeyPath = @"C:\secure\kam-github-app.pem";
+
+        var overrides = AiRuntimeConfigurationMapper.CreateIntegrationOverrides(settings);
+
+        overrides.Should().Contain("GitHubApp:AppId", "12345");
+        overrides.Should().Contain("GitHubApp:InstallationId", "98765");
+        overrides.Should().Contain("GitHubApp:PrivateKeyPath", @"C:\secure\kam-github-app.pem");
+    }
+
     private static string CreateTempSettingsDirectory()
     {
         return Path.Combine(
