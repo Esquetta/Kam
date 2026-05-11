@@ -260,6 +260,28 @@
                                            TextWrapping="Wrap"/>
                             </StackPanel>
 
+                            <Border Background="{DynamicResource SurfaceBgBrush}"
+                                    BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="12">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="{Binding GitHubConnectionStatusText}"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="{Binding GitHubConnectionDetailText}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding GitHubRepositoryPreviewText}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               TextWrapping="Wrap"
+                                               IsVisible="{Binding HasGitHubRepositoryPreview}"/>
+                                </StackPanel>
+                            </Border>
+
                             <!-- Buttons Stack -->
                             <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
                                 <!-- Save Button -->
@@ -272,6 +294,32 @@
                                               Height="16"
                                               Stretch="Uniform"/>
                                         <TextBlock Text="Save"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Command="{Binding TestGitHubAppConnectionCommand}"
+                                        Classes="IntegrationButton Secondary"
+                                        IsEnabled="{Binding CanTestGitHubAppConnection}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Path Data="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"
+                                              Fill="{DynamicResource TextMutedBrush}"
+                                              Width="16"
+                                              Height="16"
+                                              Stretch="Uniform"/>
+                                        <TextBlock Text="Test Connection"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Command="{Binding ListGitHubAppRepositoriesCommand}"
+                                        Classes="IntegrationButton Secondary"
+                                        IsEnabled="{Binding CanListGitHubAppRepositories}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Path Data="M10 4H2v16h20V6H12l-2-2zm0 4h10v10H4V6h5.17l.83 2z"
+                                              Fill="{DynamicResource TextMutedBrush}"
+                                              Width="16"
+                                              Height="16"
+                                              Stretch="Uniform"/>
+                                        <TextBlock Text="List Repositories"/>
                                     </StackPanel>
                                 </Button>
 

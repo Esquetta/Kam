@@ -40,4 +40,19 @@ public sealed class IntegrationsViewMetadataTests
         xaml.Should().Contain("Private Key Path");
         xaml.Should().Contain("never paste raw private key material");
     }
+
+    [Fact]
+    public void IntegrationsView_GitHubAppCard_ShouldExposeConnectionTestActions()
+    {
+        var xaml = File.ReadAllText(Path.GetFullPath(ViewPath));
+
+        xaml.Should().Contain("Test Connection");
+        xaml.Should().Contain("TestGitHubAppConnectionCommand");
+        xaml.Should().Contain("List Repositories");
+        xaml.Should().Contain("ListGitHubAppRepositoriesCommand");
+        xaml.Should().Contain("CanListGitHubAppRepositories");
+        xaml.Should().Contain("GitHubConnectionStatusText");
+        xaml.Should().Contain("GitHubConnectionDetailText");
+        xaml.Should().Contain("GitHubRepositoryPreviewText");
+    }
 }

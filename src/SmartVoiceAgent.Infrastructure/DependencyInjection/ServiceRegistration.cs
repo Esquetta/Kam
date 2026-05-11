@@ -169,6 +169,7 @@ public static class ServiceRegistration
         services.AddSingleton<ISkillImportService, SkillImportService>();
         services.AddSingleton<IApplicationVersionProvider, AssemblyApplicationVersionProvider>();
         services.AddSingleton<IApplicationRestartPlanner, ApplicationRestartPlanner>();
+        services.AddSingleton<IGitHubAppClientFactory, GitHubAppInstallationClientFactory>();
         services.AddHttpClient<IGitHubAppClient, GitHubAppInstallationClient>();
         services.AddHttpClient<IApplicationUpdateService, GitHubApplicationUpdateService>();
         services.AddScoped<ISlashCommandService, SlashCommandService>();

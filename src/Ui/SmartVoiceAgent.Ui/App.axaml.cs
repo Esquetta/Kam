@@ -104,6 +104,8 @@ namespace SmartVoiceAgent.Ui
 
                 var githubAppClient = services.GetRequiredService<IGitHubAppClient>();
                 _mainViewModel.SetGitHubAppClient(githubAppClient);
+                var githubAppClientFactory = services.GetRequiredService<IGitHubAppClientFactory>();
+                _mainViewModel.SetGitHubAppClientFactory(githubAppClientFactory);
 
                 // Connect VoiceAgent Host Control to ViewModel
                 var hostControl = services.GetRequiredService<IVoiceAgentHostControl>();

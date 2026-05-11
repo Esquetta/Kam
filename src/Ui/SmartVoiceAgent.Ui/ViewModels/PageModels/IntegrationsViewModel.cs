@@ -1,5 +1,14 @@
 using ReactiveUI;
+using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Core.Models.GitHub;
+using SmartVoiceAgent.Core.Security;
 using SmartVoiceAgent.Ui.Services;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reactive;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace SmartVoiceAgent.Ui.ViewModels.PageModels
@@ -10,6 +19,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
     public class IntegrationsViewModel : ViewModelBase
     {
         private readonly ISettingsService _settingsService;
+        private readonly IGitHubAppClientFactory? _githubAppClientFactory;
         
         // Todoist
         private string _todoistApiKey = string.Empty;
@@ -20,6 +30,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private string _githubInstallationId = string.Empty;
         private string _githubPrivateKeyPath = string.Empty;
         private bool _isGitHubAppConfigured;
+        private bool _isGitHubAppConnected;
+        private bool _isTestingGitHubAppConnection;
+        private string _githubConnectionStatusText = "Not tested";
+        private string _githubConnectionDetailText = "Save and test the GitHub App settings to verify repository access.";
+        private string _githubRepositoryPreviewText = string.Empty;
+        private bool _hasGitHubRepositoryPreview;
         
         // Email (SMTP)
         private string _smtpHost = string.Empty;
@@ -43,10 +59,13 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
         }
 
-        public IntegrationsViewModel(ISettingsService settingsService)
+        public IntegrationsViewModel(
+            ISettingsService settingsService,
+            IGitHubAppClientFactory? githubAppClientFactory = null)
         {
             Title = "INTEGRATIONS";
             _settingsService = settingsService;
+            _githubAppClientFactory = githubAppClientFactory;
             
             // Load saved settings
             _settingsService.Load();
@@ -64,6 +83,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
             SaveGitHubAppCommand = ReactiveCommand.Create(SaveGitHubApp);
             ClearGitHubAppCommand = ReactiveCommand.Create(ClearGitHubApp);
+            TestGitHubAppConnectionCommand = ReactiveCommand.CreateFromTask(TestGitHubAppConnectionAsync);
+            ListGitHubAppRepositoriesCommand = ReactiveCommand.CreateFromTask(ListGitHubAppRepositoriesAsync);
         }
 
         #region Todoist Properties
@@ -128,11 +149,51 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 this.RaiseAndSetIfChanged(ref _isGitHubAppConfigured, value);
                 this.RaisePropertyChanged(nameof(GitHubAppStatusText));
+                this.RaisePropertyChanged(nameof(CanTestGitHubAppConnection));
             }
         }
 
         public string GitHubAppDescription => "Connect a GitHub App installation so Kam can inspect selected repositories with least-privilege access.";
         public string GitHubAppStatusText => IsGitHubAppConfigured ? "CONFIGURED" : "NOT CONFIGURED";
+
+        public bool IsTestingGitHubAppConnection
+        {
+            get => _isTestingGitHubAppConnection;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _isTestingGitHubAppConnection, value);
+                this.RaisePropertyChanged(nameof(CanTestGitHubAppConnection));
+                this.RaisePropertyChanged(nameof(CanListGitHubAppRepositories));
+            }
+        }
+
+        public bool CanTestGitHubAppConnection => IsGitHubAppConfigured && !IsTestingGitHubAppConnection;
+
+        public bool CanListGitHubAppRepositories => _isGitHubAppConnected && !IsTestingGitHubAppConnection;
+
+        public string GitHubConnectionStatusText
+        {
+            get => _githubConnectionStatusText;
+            private set => this.RaiseAndSetIfChanged(ref _githubConnectionStatusText, value);
+        }
+
+        public string GitHubConnectionDetailText
+        {
+            get => _githubConnectionDetailText;
+            private set => this.RaiseAndSetIfChanged(ref _githubConnectionDetailText, value);
+        }
+
+        public string GitHubRepositoryPreviewText
+        {
+            get => _githubRepositoryPreviewText;
+            private set => this.RaiseAndSetIfChanged(ref _githubRepositoryPreviewText, value);
+        }
+
+        public bool HasGitHubRepositoryPreview
+        {
+            get => _hasGitHubRepositoryPreview;
+            private set => this.RaiseAndSetIfChanged(ref _hasGitHubRepositoryPreview, value);
+        }
 
         #endregion
 
@@ -251,6 +312,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         // GitHub App Commands
         public ICommand SaveGitHubAppCommand { get; }
         public ICommand ClearGitHubAppCommand { get; }
+        public ReactiveCommand<Unit, Unit> TestGitHubAppConnectionCommand { get; }
+        public ReactiveCommand<Unit, Unit> ListGitHubAppRepositoriesCommand { get; }
 
         #endregion
 
@@ -325,6 +388,19 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             IsGitHubAppConfigured = !string.IsNullOrWhiteSpace(GitHubAppId) &&
                                     !string.IsNullOrWhiteSpace(GitHubInstallationId) &&
                                     !string.IsNullOrWhiteSpace(GitHubPrivateKeyPath);
+            if (!IsGitHubAppConfigured)
+            {
+                SetGitHubAppDisconnected(
+                    "Missing settings",
+                    $"Missing settings: {string.Join(", ", GetMissingGitHubAppFieldLabels())}.");
+                return;
+            }
+
+            if (!_isGitHubAppConnected && GitHubConnectionStatusText == "Missing settings")
+            {
+                GitHubConnectionStatusText = "Not tested";
+                GitHubConnectionDetailText = "Settings are present. Test connection to verify repository access.";
+            }
         }
 
         #region Todoist Methods
@@ -353,6 +429,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _settingsService.GitHubAppPrivateKeyPath = GitHubPrivateKeyPath;
             _settingsService.Save();
             RefreshGitHubAppConfigured();
+            if (IsGitHubAppConfigured && !_isGitHubAppConnected)
+            {
+                GitHubConnectionStatusText = "Not tested";
+                GitHubConnectionDetailText = "Settings saved. Test connection to verify repository access.";
+            }
         }
 
         private void ClearGitHubApp()
@@ -366,6 +447,214 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _settingsService.GitHubAppPrivateKeyPath = string.Empty;
             _settingsService.Save();
             IsGitHubAppConfigured = false;
+            SetGitHubAppDisconnected("Not configured", "GitHub App settings were cleared.");
+        }
+
+        public async Task TestGitHubAppConnectionAsync(CancellationToken cancellationToken = default)
+        {
+            RefreshGitHubAppConfigured();
+            if (!IsGitHubAppConfigured)
+            {
+                SetGitHubAppDisconnected(
+                    "Missing settings",
+                    $"Missing settings: {string.Join(", ", GetMissingGitHubAppFieldLabels())}.");
+                return;
+            }
+
+            if (_githubAppClientFactory is null)
+            {
+                SetGitHubAppDisconnected(
+                    "Unavailable",
+                    "GitHub App client factory is not available in this runtime.");
+                return;
+            }
+
+            SaveGitHubApp();
+            IsTestingGitHubAppConnection = true;
+            GitHubConnectionStatusText = "Testing...";
+            GitHubConnectionDetailText = "Checking GitHub App credentials and repository access.";
+            GitHubRepositoryPreviewText = string.Empty;
+            HasGitHubRepositoryPreview = false;
+
+            try
+            {
+                var client = CreateGitHubAppClientFromCurrentSettings();
+                var status = await client.GetStatusAsync(cancellationToken);
+                if (!status.IsConnected)
+                {
+                    SetGitHubAppDisconnected(
+                        status.IsConfigured ? "Needs action" : "Missing settings",
+                        BuildGitHubAppStatusDetail(status));
+                    return;
+                }
+
+                _isGitHubAppConnected = true;
+                this.RaisePropertyChanged(nameof(CanListGitHubAppRepositories));
+                GitHubConnectionStatusText = "Connected";
+                GitHubConnectionDetailText = BuildGitHubAppStatusDetail(status);
+
+                var repositories = await client.ListRepositoriesAsync(cancellationToken);
+                ApplyGitHubRepositoryListResult(status, repositories);
+            }
+            catch (Exception ex)
+            {
+                SetGitHubAppDisconnected(
+                    "Unavailable",
+                    SecretRedactor.Redact($"GitHub App connection test failed: {ex.Message}"));
+            }
+            finally
+            {
+                IsTestingGitHubAppConnection = false;
+            }
+        }
+
+        public async Task ListGitHubAppRepositoriesAsync(CancellationToken cancellationToken = default)
+        {
+            if (!CanListGitHubAppRepositories)
+            {
+                GitHubConnectionStatusText = "Not tested";
+                GitHubConnectionDetailText = "Test connection before listing repositories.";
+                GitHubRepositoryPreviewText = string.Empty;
+                HasGitHubRepositoryPreview = false;
+                return;
+            }
+
+            if (_githubAppClientFactory is null)
+            {
+                SetGitHubAppDisconnected(
+                    "Unavailable",
+                    "GitHub App client factory is not available in this runtime.");
+                return;
+            }
+
+            IsTestingGitHubAppConnection = true;
+            try
+            {
+                var status = GitHubAppConnectionStatus.Connected(
+                    GitHubAppId,
+                    GitHubInstallationId,
+                    "https://api.github.com",
+                    null,
+                    null,
+                    null);
+                var repositories = await CreateGitHubAppClientFromCurrentSettings()
+                    .ListRepositoriesAsync(cancellationToken);
+                ApplyGitHubRepositoryListResult(status, repositories);
+            }
+            catch (Exception ex)
+            {
+                SetGitHubAppDisconnected(
+                    "Unavailable",
+                    SecretRedactor.Redact($"GitHub App repository list failed: {ex.Message}"));
+            }
+            finally
+            {
+                IsTestingGitHubAppConnection = false;
+            }
+        }
+
+        private IGitHubAppClient CreateGitHubAppClientFromCurrentSettings()
+        {
+            return _githubAppClientFactory!.Create(new GitHubAppOptions
+            {
+                AppId = GitHubAppId,
+                InstallationId = GitHubInstallationId,
+                PrivateKeyPath = GitHubPrivateKeyPath
+            });
+        }
+
+        private void ApplyGitHubRepositoryListResult(
+            GitHubAppConnectionStatus status,
+            GitHubRepositoryListResult repositories)
+        {
+            if (!repositories.Success)
+            {
+                SetGitHubAppDisconnected(
+                    "Needs action",
+                    SecretRedactor.Redact($"GitHub App connected, but repository list failed: {repositories.Message}"));
+                return;
+            }
+
+            _isGitHubAppConnected = true;
+            this.RaisePropertyChanged(nameof(CanListGitHubAppRepositories));
+            var repositoryCount = status.RepositoryCount ?? repositories.Repositories.Count;
+            GitHubConnectionStatusText = "Connected";
+            GitHubConnectionDetailText = $"GitHub App connected. {repositoryCount} repositories visible.";
+            GitHubRepositoryPreviewText = FormatGitHubRepositoryPreview(repositories.Repositories, repositoryCount);
+            HasGitHubRepositoryPreview = !string.IsNullOrWhiteSpace(GitHubRepositoryPreviewText);
+        }
+
+        private void SetGitHubAppDisconnected(string status, string detail)
+        {
+            _isGitHubAppConnected = false;
+            this.RaisePropertyChanged(nameof(CanListGitHubAppRepositories));
+            GitHubConnectionStatusText = status;
+            GitHubConnectionDetailText = SecretRedactor.Redact(detail);
+            GitHubRepositoryPreviewText = string.Empty;
+            HasGitHubRepositoryPreview = false;
+        }
+
+        private string BuildGitHubAppStatusDetail(GitHubAppConnectionStatus status)
+        {
+            var detail = status.Message;
+            if (status.MissingSettings is { Count: > 0 })
+            {
+                detail += $" Missing: {string.Join(", ", status.MissingSettings)}.";
+            }
+
+            if (status.IsConnected && status.RepositoryCount is not null)
+            {
+                detail += $" {status.RepositoryCount} repositories visible.";
+            }
+
+            return SecretRedactor.Redact(detail);
+        }
+
+        private IReadOnlyList<string> GetMissingGitHubAppFieldLabels()
+        {
+            var missing = new List<string>();
+            if (string.IsNullOrWhiteSpace(GitHubAppId))
+            {
+                missing.Add("App ID");
+            }
+
+            if (string.IsNullOrWhiteSpace(GitHubInstallationId))
+            {
+                missing.Add("Installation ID");
+            }
+
+            if (string.IsNullOrWhiteSpace(GitHubPrivateKeyPath))
+            {
+                missing.Add("Private Key Path");
+            }
+
+            return missing;
+        }
+
+        private static string FormatGitHubRepositoryPreview(
+            IReadOnlyList<GitHubRepositorySummary> repositories,
+            int expectedRepositoryCount)
+        {
+            if (repositories.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            const int maxVisibleRepositories = 5;
+            var visible = repositories
+                .OrderBy(repository => repository.FullName, StringComparer.OrdinalIgnoreCase)
+                .Take(maxVisibleRepositories)
+                .Select(repository =>
+                    $"{repository.FullName} ({(repository.IsPrivate ? "private" : "public")}, {repository.DefaultBranch})")
+                .ToArray();
+            var preview = string.Join(Environment.NewLine, visible);
+            var hiddenCount = Math.Max(expectedRepositoryCount, repositories.Count) - visible.Length;
+            if (hiddenCount > 0)
+            {
+                preview += $"{Environment.NewLine}+ {hiddenCount} more";
+            }
+
+            return preview;
         }
 
         #endregion
