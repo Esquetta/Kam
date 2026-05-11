@@ -585,6 +585,180 @@ public sealed class CodingAgentCommandTests : IDisposable
     }
 
     [Theory]
+    [InlineData("/github diagnose Esquetta/Kam 1001")]
+    [InlineData("/github app diagnose Esquetta/Kam 1001")]
+    [InlineData("/github-app diagnose Esquetta/Kam 1001")]
+    public async Task RunAsync_GithubDiagnoseSlashCommand_ReportsFailedJobsAndSteps(string commandText)
+    {
+        var githubApp = new StaticGitHubAppClient(
+            GitHubAppConnectionStatus.Connected(
+                "12345",
+                "98765",
+                "https://api.github.com",
+                "Kam Coding",
+                "kam-coding",
+                1),
+            GitHubRepositoryListResult.Failed("not used"),
+            workflowJobs: GitHubWorkflowJobListResult.Succeeded(
+                "1 job for workflow run 1001 in Esquetta/Kam.",
+                "Esquetta/Kam",
+                1001,
+                [
+                    new GitHubWorkflowJobSummary(
+                        "Esquetta/Kam",
+                        1001,
+                        2001,
+                        "build",
+                        "completed",
+                        "failure",
+                        "https://github.com/Esquetta/Kam/actions/runs/1001/job/2001",
+                        new DateTimeOffset(2026, 5, 11, 10, 0, 0, TimeSpan.Zero),
+                        new DateTimeOffset(2026, 5, 11, 10, 5, 0, TimeSpan.Zero))
+                    {
+                        Steps =
+                        [
+                            new GitHubWorkflowJobStepSummary(
+                                1,
+                                "dotnet test",
+                                "completed",
+                                "failure",
+                                new DateTimeOffset(2026, 5, 11, 10, 2, 0, TimeSpan.Zero),
+                                new DateTimeOffset(2026, 5, 11, 10, 4, 0, TimeSpan.Zero))
+                        ]
+                    }
+                ]));
+        var command = new CodingAgentCommand(
+            new RecordingCommandRuntime(CommandRuntimeResult.Failed("Should not run.", SkillExecutionStatus.Failed, "unexpected")),
+            githubAppClient: githubApp);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await command.RunAsync(
+            new CodingAgentCommandOptions
+            {
+                CommandText = commandText,
+                WorkspaceRoot = _workspace
+            },
+            output,
+            error);
+
+        exitCode.Should().Be(0);
+        output.ToString().Should().Contain("Kam GitHub CI doctor:");
+        output.ToString().Should().Contain("run: Esquetta/Kam#1001");
+        output.ToString().Should().Contain("diagnosis: 1 failing job, 1 failing step.");
+        output.ToString().Should().Contain("build (completed/failure)");
+        output.ToString().Should().Contain("dotnet test (completed/failure)");
+        output.ToString().Should().Contain("next: inspect job log");
+        output.ToString().Should().NotContain("installation-token");
+        output.ToString().Should().NotContain("PRIVATE KEY");
+        error.ToString().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task RunAsync_GithubDiagnoseSlashCommand_WhenRunIdIsOmitted_SelectsLatestUnhealthyRun()
+    {
+        var githubApp = new StaticGitHubAppClient(
+            GitHubAppConnectionStatus.Connected(
+                "12345",
+                "98765",
+                "https://api.github.com",
+                "Kam Coding",
+                "kam-coding",
+                1),
+            GitHubRepositoryListResult.Failed("not used"),
+            workflowRuns: GitHubWorkflowRunListResult.Succeeded(
+                "2 workflow runs across 1 repository.",
+                [
+                    new GitHubWorkflowRunSummary(
+                        "Esquetta/Kam",
+                        1001,
+                        ".NET CI",
+                        "Previous success",
+                        "completed",
+                        "success",
+                        "push",
+                        "master",
+                        "https://github.com/Esquetta/Kam/actions/runs/1001",
+                        new DateTimeOffset(2026, 5, 11, 9, 0, 0, TimeSpan.Zero),
+                        new DateTimeOffset(2026, 5, 11, 9, 5, 0, TimeSpan.Zero)),
+                    new GitHubWorkflowRunSummary(
+                        "Esquetta/Kam",
+                        1002,
+                        ".NET CI",
+                        "Broken push",
+                        "completed",
+                        "failure",
+                        "push",
+                        "master",
+                        "https://github.com/Esquetta/Kam/actions/runs/1002",
+                        new DateTimeOffset(2026, 5, 11, 10, 0, 0, TimeSpan.Zero),
+                        new DateTimeOffset(2026, 5, 11, 10, 5, 0, TimeSpan.Zero))
+                ]),
+            workflowJobs: GitHubWorkflowJobListResult.Succeeded(
+                "1 job for workflow run 1002 in Esquetta/Kam.",
+                "Esquetta/Kam",
+                1002,
+                [
+                    new GitHubWorkflowJobSummary(
+                        "Esquetta/Kam",
+                        1002,
+                        2002,
+                        "build",
+                        "completed",
+                        "failure",
+                        "https://github.com/Esquetta/Kam/actions/runs/1002/job/2002",
+                        new DateTimeOffset(2026, 5, 11, 10, 0, 0, TimeSpan.Zero),
+                        new DateTimeOffset(2026, 5, 11, 10, 4, 0, TimeSpan.Zero))
+                ]));
+        var command = new CodingAgentCommand(
+            new RecordingCommandRuntime(CommandRuntimeResult.Failed("Should not run.", SkillExecutionStatus.Failed, "unexpected")),
+            githubAppClient: githubApp);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await command.RunAsync(
+            new CodingAgentCommandOptions
+            {
+                CommandText = "/github diagnose Esquetta/Kam",
+                WorkspaceRoot = _workspace
+            },
+            output,
+            error);
+
+        exitCode.Should().Be(0);
+        output.ToString().Should().Contain("run: Esquetta/Kam#1002");
+        output.ToString().Should().Contain("selected: latest failing or in-progress workflow run");
+        output.ToString().Should().Contain("build (completed/failure)");
+        error.ToString().Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("/github diagnose")]
+    [InlineData("/github diagnose Esquetta/Kam abc")]
+    [InlineData("/github-app diagnose Esquetta/Kam 0")]
+    [InlineData("/github app diagnose Esquetta/Kam -1")]
+    public async Task RunAsync_GithubDiagnoseSlashCommand_WhenArgumentsAreInvalid_ReturnsUsage(string commandText)
+    {
+        var command = new CodingAgentCommand(
+            new RecordingCommandRuntime(CommandRuntimeResult.Failed("Should not run.", SkillExecutionStatus.Failed, "unexpected")));
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await command.RunAsync(
+            new CodingAgentCommandOptions
+            {
+                CommandText = commandText,
+                WorkspaceRoot = _workspace
+            },
+            output,
+            error);
+
+        exitCode.Should().Be(2);
+        output.ToString().Should().Contain("Usage: /github diagnose <owner/repo> [runId]");
+        error.ToString().Should().BeEmpty();
+    }
+
+    [Theory]
     [InlineData("/github run Esquetta/Kam")]
     [InlineData("/github run Esquetta/Kam abc")]
     [InlineData("/github-app run Esquetta/Kam 0")]

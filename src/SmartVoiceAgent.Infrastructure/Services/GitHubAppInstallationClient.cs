@@ -458,7 +458,21 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
                 item.Conclusion ?? string.Empty,
                 item.HtmlUrl ?? string.Empty,
                 item.StartedAt,
-                item.CompletedAt))
+                item.CompletedAt)
+            {
+                Steps = (item.Steps ?? [])
+                    .Where(step => step.Number > 0 || !string.IsNullOrWhiteSpace(step.Name))
+                    .Select(step => new GitHubWorkflowJobStepSummary(
+                        step.Number,
+                        string.IsNullOrWhiteSpace(step.Name) ? "(unnamed)" : step.Name,
+                        string.IsNullOrWhiteSpace(step.Status) ? "unknown" : step.Status,
+                        step.Conclusion ?? string.Empty,
+                        step.StartedAt,
+                        step.CompletedAt))
+                    .OrderBy(step => step.Number)
+                    .ThenBy(step => step.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToArray()
+            })
             .ToArray();
     }
 
@@ -657,6 +671,15 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
         [property: JsonPropertyName("status")] string? Status,
         [property: JsonPropertyName("conclusion")] string? Conclusion,
         [property: JsonPropertyName("html_url")] string? HtmlUrl,
+        [property: JsonPropertyName("started_at")] DateTimeOffset? StartedAt,
+        [property: JsonPropertyName("completed_at")] DateTimeOffset? CompletedAt,
+        [property: JsonPropertyName("steps")] IReadOnlyList<GitHubWorkflowJobStepItem>? Steps);
+
+    private sealed record GitHubWorkflowJobStepItem(
+        [property: JsonPropertyName("name")] string? Name,
+        [property: JsonPropertyName("status")] string? Status,
+        [property: JsonPropertyName("conclusion")] string? Conclusion,
+        [property: JsonPropertyName("number")] int Number,
         [property: JsonPropertyName("started_at")] DateTimeOffset? StartedAt,
         [property: JsonPropertyName("completed_at")] DateTimeOffset? CompletedAt);
 

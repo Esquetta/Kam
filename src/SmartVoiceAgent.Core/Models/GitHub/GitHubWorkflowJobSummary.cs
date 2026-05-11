@@ -9,4 +9,7 @@ public sealed record GitHubWorkflowJobSummary(
     string Conclusion,
     string HtmlUrl,
     DateTimeOffset? StartedAt,
-    DateTimeOffset? CompletedAt);
+    DateTimeOffset? CompletedAt)
+{
+    public IReadOnlyList<GitHubWorkflowJobStepSummary> Steps { get; init; } = [];
+}

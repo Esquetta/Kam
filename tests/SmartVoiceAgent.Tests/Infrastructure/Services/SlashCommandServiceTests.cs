@@ -29,13 +29,16 @@ public sealed class SlashCommandServiceTests
                 "/github app actions",
                 "/github app prs",
                 "/github app repos",
+                "/github app diagnose",
                 "/github app run",
                 "/github actions",
+                "/github diagnose",
                 "/github prs",
                 "/github repos",
                 "/github run",
                 "/github-app",
                 "/github-app actions",
+                "/github-app diagnose",
                 "/github-app prs",
                 "/github-app run",
                 "/hooks",
@@ -428,6 +431,166 @@ public sealed class SlashCommandServiceTests
         result.Message.Should().Contain("https://github.com/Esquetta/Kam/actions/runs/1001/job/2001");
         result.Message.Should().NotContain("installation-token");
         result.Message.Should().NotContain("PRIVATE KEY");
+    }
+
+    [Theory]
+    [InlineData("/github diagnose Esquetta/Kam 1001")]
+    [InlineData("/github-app diagnose Esquetta/Kam 1001")]
+    [InlineData("/github app diagnose Esquetta/Kam 1001")]
+    public async Task ExecuteAsync_WhenGithubDiagnoseRunIsRequested_ReportsFailedJobsAndSteps(string command)
+    {
+        var service = new SlashCommandService(
+            githubAppClient: new StaticGitHubAppClient(
+                GitHubAppConnectionStatus.Connected(
+                    "12345",
+                    "98765",
+                    "https://api.github.com",
+                    "Kam Coding",
+                    "kam-coding",
+                    1),
+                GitHubRepositoryListResult.Failed("not used"),
+                GitHubPullRequestListResult.Failed("not used"),
+                GitHubWorkflowRunListResult.Failed("not used"),
+                GitHubWorkflowJobListResult.Succeeded(
+                    "2 jobs for workflow run 1001 in Esquetta/Kam.",
+                    "Esquetta/Kam",
+                    1001,
+                    [
+                        new GitHubWorkflowJobSummary(
+                            "Esquetta/Kam",
+                            1001,
+                            2001,
+                            "build",
+                            "completed",
+                            "success",
+                            "https://github.com/Esquetta/Kam/actions/runs/1001/job/2001",
+                            new DateTimeOffset(2026, 5, 11, 10, 0, 0, TimeSpan.Zero),
+                            new DateTimeOffset(2026, 5, 11, 10, 5, 0, TimeSpan.Zero)),
+                        new GitHubWorkflowJobSummary(
+                            "Esquetta/Kam",
+                            1001,
+                            2002,
+                            "security-scan",
+                            "completed",
+                            "failure",
+                            "https://github.com/Esquetta/Kam/actions/runs/1001/job/2002",
+                            new DateTimeOffset(2026, 5, 11, 10, 0, 0, TimeSpan.Zero),
+                            new DateTimeOffset(2026, 5, 11, 10, 4, 0, TimeSpan.Zero))
+                        {
+                            Steps =
+                            [
+                                new GitHubWorkflowJobStepSummary(
+                                    1,
+                                    "Restore dependencies",
+                                    "completed",
+                                    "success",
+                                    new DateTimeOffset(2026, 5, 11, 10, 0, 0, TimeSpan.Zero),
+                                    new DateTimeOffset(2026, 5, 11, 10, 1, 0, TimeSpan.Zero)),
+                                new GitHubWorkflowJobStepSummary(
+                                    2,
+                                    "Audit vulnerable NuGet packages",
+                                    "completed",
+                                    "failure",
+                                    new DateTimeOffset(2026, 5, 11, 10, 1, 0, TimeSpan.Zero),
+                                    new DateTimeOffset(2026, 5, 11, 10, 2, 0, TimeSpan.Zero))
+                            ]
+                        }
+                    ])));
+
+        var result = await service.ExecuteAsync(command);
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Kam GitHub CI doctor:");
+        result.Message.Should().Contain("run: Esquetta/Kam#1001");
+        result.Message.Should().Contain("diagnosis: 1 failing job, 1 failing step.");
+        result.Message.Should().Contain("security-scan (completed/failure)");
+        result.Message.Should().Contain("Audit vulnerable NuGet packages (completed/failure)");
+        result.Message.Should().Contain("next: inspect job log");
+        result.Message.Should().Contain("https://github.com/Esquetta/Kam/actions/runs/1001/job/2002");
+        result.Message.Should().NotContain("installation-token");
+        result.Message.Should().NotContain("PRIVATE KEY");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenGithubDiagnoseRunIdIsOmitted_SelectsLatestUnhealthyRun()
+    {
+        var service = new SlashCommandService(
+            githubAppClient: new StaticGitHubAppClient(
+                GitHubAppConnectionStatus.Connected(
+                    "12345",
+                    "98765",
+                    "https://api.github.com",
+                    "Kam Coding",
+                    "kam-coding",
+                    1),
+                GitHubRepositoryListResult.Failed("not used"),
+                GitHubPullRequestListResult.Failed("not used"),
+                GitHubWorkflowRunListResult.Succeeded(
+                    "2 workflow runs across 1 repository.",
+                    [
+                        new GitHubWorkflowRunSummary(
+                            "Esquetta/Kam",
+                            1001,
+                            ".NET CI",
+                            "Previous success",
+                            "completed",
+                            "success",
+                            "push",
+                            "master",
+                            "https://github.com/Esquetta/Kam/actions/runs/1001",
+                            new DateTimeOffset(2026, 5, 11, 9, 0, 0, TimeSpan.Zero),
+                            new DateTimeOffset(2026, 5, 11, 9, 5, 0, TimeSpan.Zero)),
+                        new GitHubWorkflowRunSummary(
+                            "Esquetta/Kam",
+                            1002,
+                            ".NET CI",
+                            "Broken push",
+                            "completed",
+                            "failure",
+                            "push",
+                            "master",
+                            "https://github.com/Esquetta/Kam/actions/runs/1002",
+                            new DateTimeOffset(2026, 5, 11, 10, 0, 0, TimeSpan.Zero),
+                            new DateTimeOffset(2026, 5, 11, 10, 5, 0, TimeSpan.Zero))
+                    ]),
+                GitHubWorkflowJobListResult.Succeeded(
+                    "1 job for workflow run 1002 in Esquetta/Kam.",
+                    "Esquetta/Kam",
+                    1002,
+                    [
+                        new GitHubWorkflowJobSummary(
+                            "Esquetta/Kam",
+                            1002,
+                            2002,
+                            "build",
+                            "completed",
+                            "failure",
+                            "https://github.com/Esquetta/Kam/actions/runs/1002/job/2002",
+                            new DateTimeOffset(2026, 5, 11, 10, 0, 0, TimeSpan.Zero),
+                            new DateTimeOffset(2026, 5, 11, 10, 4, 0, TimeSpan.Zero))
+                    ])));
+
+        var result = await service.ExecuteAsync("/github diagnose Esquetta/Kam");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("run: Esquetta/Kam#1002");
+        result.Message.Should().Contain("selected: latest failing or in-progress workflow run");
+        result.Message.Should().Contain("build (completed/failure)");
+    }
+
+    [Theory]
+    [InlineData("/github diagnose")]
+    [InlineData("/github diagnose Esquetta/Kam abc")]
+    [InlineData("/github-app diagnose Esquetta/Kam 0")]
+    [InlineData("/github app diagnose Esquetta/Kam -1")]
+    public async Task ExecuteAsync_WhenGithubDiagnoseArgumentsAreInvalid_ReturnsUsage(string command)
+    {
+        var service = new SlashCommandService();
+
+        var result = await service.ExecuteAsync(command);
+
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Usage: /github diagnose <owner/repo> [runId]");
     }
 
     [Theory]

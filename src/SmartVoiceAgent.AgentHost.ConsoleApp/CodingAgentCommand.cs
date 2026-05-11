@@ -6,6 +6,7 @@ using SmartVoiceAgent.Core.Models.CodingAgent;
 using SmartVoiceAgent.Core.Models.Commands;
 using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Core.Security;
 using SmartVoiceAgent.Infrastructure.Mcp;
 
 namespace SmartVoiceAgent.AgentHost.ConsoleApp;
@@ -307,6 +308,7 @@ public sealed class CodingAgentCommand
             "  /github app    Show GitHub App connection and required repository permissions.",
             "  /github repos  List repositories visible through the configured GitHub App.",
             "  /github actions  List GitHub Actions workflow runs visible through the configured GitHub App.",
+            "  /github diagnose  Diagnose one GitHub Actions workflow run.",
             "  /github run    List jobs for one GitHub Actions workflow run.",
             "  /github-app    Alias for GitHub App repository, PR, workflow, and run commands.",
             "  /plugins       Show skill/plugin health summary.",
@@ -501,6 +503,11 @@ public sealed class CodingAgentCommand
                 return await RunGitHubAppWorkflowRunsAsync(cancellationToken);
             }
 
+            if (arguments.Count > 1 && IsCommand(arguments[1], "diagnose", "doctor", "ci"))
+            {
+                return await RunGitHubAppWorkflowDiagnosisAsync(arguments, 2, cancellationToken);
+            }
+
             if (arguments.Count > 1 && IsCommand(arguments[1], "run", "jobs"))
             {
                 return await RunGitHubAppWorkflowRunJobsAsync(arguments, 2, cancellationToken);
@@ -517,6 +524,11 @@ public sealed class CodingAgentCommand
         if (arguments.Count > 0 && IsCommand(arguments[0], "actions", "runs", "workflows", "workflow-runs"))
         {
             return await RunGitHubAppWorkflowRunsAsync(cancellationToken);
+        }
+
+        if (arguments.Count > 0 && IsCommand(arguments[0], "diagnose", "doctor", "ci"))
+        {
+            return await RunGitHubAppWorkflowDiagnosisAsync(arguments, 1, cancellationToken);
         }
 
         if (arguments.Count > 0 && IsCommand(arguments[0], "run", "jobs"))
@@ -647,6 +659,70 @@ public sealed class CodingAgentCommand
         }
 
         return CodingAgentCommandResult.Success(builder.ToString().TrimEnd());
+    }
+
+    private async Task<CodingAgentCommandResult> RunGitHubAppWorkflowDiagnosisAsync(
+        IReadOnlyList<string> arguments,
+        int firstArgumentIndex,
+        CancellationToken cancellationToken)
+    {
+        if (arguments.Count <= firstArgumentIndex)
+        {
+            return new CodingAgentCommandResult(2, "Usage: /github diagnose <owner/repo> [runId]", false);
+        }
+
+        long? requestedRunId = null;
+        if (arguments.Count > firstArgumentIndex + 1)
+        {
+            if (!long.TryParse(arguments[firstArgumentIndex + 1], out var runId) || runId <= 0)
+            {
+                return new CodingAgentCommandResult(2, "Usage: /github diagnose <owner/repo> [runId]", false);
+            }
+
+            requestedRunId = runId;
+        }
+
+        if (_githubAppClient is null)
+        {
+            return CodingAgentCommandResult.Success(FormatGitHubAppUnavailable());
+        }
+
+        var repositoryFullName = arguments[firstArgumentIndex];
+        GitHubWorkflowRunSummary? selectedRun = null;
+        string? selectionMessage = null;
+        var runIdToDiagnose = requestedRunId;
+        if (runIdToDiagnose is null)
+        {
+            var workflowRuns = await _githubAppClient.ListWorkflowRunsAsync(cancellationToken);
+            if (!workflowRuns.Success)
+            {
+                return CodingAgentCommandResult.Success(
+                    FormatGitHubAppSetup(workflowRuns.Message, workflowRuns.MissingSettings));
+            }
+
+            selectedRun = SelectWorkflowRunForDiagnosis(workflowRuns.WorkflowRuns, repositoryFullName);
+            if (selectedRun is null)
+            {
+                return CodingAgentCommandResult.Success(
+                    $"Kam GitHub CI doctor:{Environment.NewLine}  repository: {NormalizeMessage(repositoryFullName)}{Environment.NewLine}  no workflow runs found for this repository");
+            }
+
+            runIdToDiagnose = selectedRun.Id;
+            selectionMessage = IsUnhealthyWorkflowRun(selectedRun)
+                ? "latest failing or in-progress workflow run"
+                : "latest workflow run";
+        }
+
+        var jobs = await _githubAppClient.ListWorkflowRunJobsAsync(
+            repositoryFullName,
+            runIdToDiagnose.Value,
+            cancellationToken);
+        if (!jobs.Success)
+        {
+            return CodingAgentCommandResult.Success(FormatGitHubAppSetup(jobs.Message, jobs.MissingSettings));
+        }
+
+        return CodingAgentCommandResult.Success(FormatWorkflowDiagnosis(jobs, selectedRun, selectionMessage));
     }
 
     private async Task<CodingAgentCommandResult> RunGitHubAppWorkflowRunJobsAsync(
@@ -784,6 +860,7 @@ public sealed class CodingAgentCommand
             .AppendLine("    dotnet user-secrets set \"GitHubApp:PrivateKeyPath\" \"<absolute-pem-path>\"")
             .AppendLine("  list repos: kam coding-agent /github repos")
             .AppendLine("  list workflow runs: kam coding-agent /github actions")
+            .AppendLine("  diagnose workflow run: kam coding-agent /github diagnose <owner/repo> [runId]")
             .AppendLine("  list workflow run jobs: kam coding-agent /github run <owner/repo> <runId>")
             .AppendLine("  private key contents and installation tokens are never printed.");
 
@@ -1278,6 +1355,139 @@ public sealed class CodingAgentCommand
         return conclusion == "(empty)" ? status : $"{status}/{conclusion}";
     }
 
+    private static string FormatWorkflowStepState(GitHubWorkflowJobStepSummary step)
+    {
+        var status = NormalizeMessage(step.Status);
+        var conclusion = NormalizeMessage(step.Conclusion);
+        return conclusion == "(empty)" ? status : $"{status}/{conclusion}";
+    }
+
+    private static string FormatWorkflowDiagnosis(
+        GitHubWorkflowJobListResult jobs,
+        GitHubWorkflowRunSummary? selectedRun,
+        string? selectionMessage)
+    {
+        var unhealthyJobs = jobs.Jobs
+            .Where(IsUnhealthyWorkflowJob)
+            .OrderBy(job => job.StartedAt ?? DateTimeOffset.MaxValue)
+            .ThenBy(job => job.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(job => job.Id)
+            .ToArray();
+        var unhealthyStepsByJob = unhealthyJobs.ToDictionary(
+            job => job.Id,
+            job => job.Steps
+                .Where(IsUnhealthyWorkflowStep)
+                .OrderBy(step => step.Number)
+                .ThenBy(step => step.Name, StringComparer.OrdinalIgnoreCase)
+                .ToArray());
+        var unhealthyStepCount = unhealthyStepsByJob.Values.Sum(steps => steps.Length);
+
+        var builder = new StringBuilder()
+            .AppendLine("Kam GitHub CI doctor:")
+            .AppendLine($"  run: {NormalizeMessage(jobs.RepositoryFullName)}#{jobs.RunId}");
+
+        if (!string.IsNullOrWhiteSpace(selectionMessage))
+        {
+            builder.AppendLine($"  selected: {NormalizeMessage(selectionMessage)}");
+        }
+
+        if (selectedRun is not null)
+        {
+            builder
+                .AppendLine($"  workflow: {NormalizeMessage(selectedRun.Name)} ({FormatWorkflowRunState(selectedRun)}, {NormalizeMessage(selectedRun.Event)}, {NormalizeMessage(selectedRun.HeadBranch)})")
+                .AppendLine($"  title: {NormalizeMessage(selectedRun.DisplayTitle)}");
+        }
+
+        builder.AppendLine(
+            $"  diagnosis: {unhealthyJobs.Length} {Pluralize(unhealthyJobs.Length, "failing job", "failing jobs")}, {unhealthyStepCount} {Pluralize(unhealthyStepCount, "failing step", "failing steps")}.");
+
+        if (unhealthyJobs.Length == 0)
+        {
+            builder.AppendLine("  no failing or active jobs found for this workflow run");
+            return builder.ToString().TrimEnd();
+        }
+
+        foreach (var job in unhealthyJobs.Take(10))
+        {
+            builder
+                .AppendLine($"  - {NormalizeMessage(job.Name)} ({FormatWorkflowJobState(job)})")
+                .AppendLine($"    {NormalizeMessage(job.HtmlUrl)}");
+
+            var steps = unhealthyStepsByJob[job.Id];
+            if (steps.Length == 0)
+            {
+                builder.AppendLine("    step: no failed step details returned");
+            }
+            else
+            {
+                foreach (var step in steps.Take(8))
+                {
+                    builder.AppendLine(
+                        $"    step: {NormalizeMessage(step.Name)} ({FormatWorkflowStepState(step)})");
+                }
+
+                if (steps.Length > 8)
+                {
+                    builder.AppendLine($"    ... {steps.Length - 8} more failing steps hidden");
+                }
+            }
+
+            builder.AppendLine($"    next: inspect job log for {NormalizeMessage(job.Name)}");
+        }
+
+        if (unhealthyJobs.Length > 10)
+        {
+            builder.AppendLine($"  ... {unhealthyJobs.Length - 10} more failing jobs hidden");
+        }
+
+        return builder.ToString().TrimEnd();
+    }
+
+    private static GitHubWorkflowRunSummary? SelectWorkflowRunForDiagnosis(
+        IReadOnlyList<GitHubWorkflowRunSummary> workflowRuns,
+        string repositoryFullName)
+    {
+        var repositoryRuns = workflowRuns
+            .Where(run => run.RepositoryFullName.Equals(repositoryFullName, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(run => run.UpdatedAt ?? run.CreatedAt ?? DateTimeOffset.MinValue)
+            .ThenByDescending(run => run.Id)
+            .ToArray();
+
+        return repositoryRuns.FirstOrDefault(IsUnhealthyWorkflowRun)
+            ?? repositoryRuns.FirstOrDefault();
+    }
+
+    private static bool IsUnhealthyWorkflowRun(GitHubWorkflowRunSummary workflowRun)
+    {
+        return !workflowRun.Status.Equals("completed", StringComparison.OrdinalIgnoreCase)
+            || IsFailureConclusion(workflowRun.Conclusion);
+    }
+
+    private static bool IsUnhealthyWorkflowJob(GitHubWorkflowJobSummary job)
+    {
+        return !job.Status.Equals("completed", StringComparison.OrdinalIgnoreCase)
+            || IsFailureConclusion(job.Conclusion);
+    }
+
+    private static bool IsUnhealthyWorkflowStep(GitHubWorkflowJobStepSummary step)
+    {
+        return !step.Status.Equals("completed", StringComparison.OrdinalIgnoreCase)
+            || IsFailureConclusion(step.Conclusion);
+    }
+
+    private static bool IsFailureConclusion(string? conclusion)
+    {
+        return !string.IsNullOrWhiteSpace(conclusion)
+            && !conclusion.Equals("success", StringComparison.OrdinalIgnoreCase)
+            && !conclusion.Equals("neutral", StringComparison.OrdinalIgnoreCase)
+            && !conclusion.Equals("skipped", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string Pluralize(int count, string singular, string plural)
+    {
+        return count == 1 ? singular : plural;
+    }
+
     private static string NormalizeWorkspaceRoot(string workspaceRoot)
     {
         if (string.IsNullOrWhiteSpace(workspaceRoot))
@@ -1302,7 +1512,7 @@ public sealed class CodingAgentCommand
             return "(empty)";
         }
 
-        var normalized = message
+        var normalized = SecretRedactor.Redact(message)
             .Replace("\r", " ", StringComparison.Ordinal)
             .Replace("\n", " ", StringComparison.Ordinal)
             .Trim();

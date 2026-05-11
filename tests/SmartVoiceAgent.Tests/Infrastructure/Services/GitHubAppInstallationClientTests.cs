@@ -329,7 +329,25 @@ public sealed class GitHubAppInstallationClientTests : IDisposable
                           "conclusion": "failure",
                           "html_url": "https://github.com/Esquetta/Kam/actions/runs/1001/job/2002",
                           "started_at": "2026-05-11T10:00:00Z",
-                          "completed_at": "2026-05-11T10:04:00Z"
+                          "completed_at": "2026-05-11T10:04:00Z",
+                          "steps": [
+                            {
+                              "name": "Restore dependencies",
+                              "status": "completed",
+                              "conclusion": "success",
+                              "number": 1,
+                              "started_at": "2026-05-11T10:00:00Z",
+                              "completed_at": "2026-05-11T10:01:00Z"
+                            },
+                            {
+                              "name": "Audit vulnerable NuGet packages",
+                              "status": "completed",
+                              "conclusion": "failure",
+                              "number": 2,
+                              "started_at": "2026-05-11T10:01:00Z",
+                              "completed_at": "2026-05-11T10:02:00Z"
+                            }
+                          ]
                         }
                       ]
                     }
@@ -356,6 +374,12 @@ public sealed class GitHubAppInstallationClientTests : IDisposable
         result.Jobs[0].Conclusion.Should().Be("success");
         result.Jobs[1].Name.Should().Be("security-scan");
         result.Jobs[1].Conclusion.Should().Be("failure");
+        result.Jobs[1].Steps.Should().HaveCount(2);
+        result.Jobs[1].Steps[0].Name.Should().Be("Restore dependencies");
+        result.Jobs[1].Steps[0].Conclusion.Should().Be("success");
+        result.Jobs[1].Steps[1].Number.Should().Be(2);
+        result.Jobs[1].Steps[1].Name.Should().Be("Audit vulnerable NuGet packages");
+        result.Jobs[1].Steps[1].Conclusion.Should().Be("failure");
         seenInstallationToken.Should().Be("installation-token");
         result.Message.Should().NotContain("installation-token");
         result.Message.Should().NotContain(privateKeyPath);
