@@ -56,6 +56,7 @@ public class AppServiceScopeTests
         scope.ServiceProvider.GetRequiredService<ISkillExecutionPipeline>().Should().NotBeNull();
         scope.ServiceProvider.GetRequiredService<ISlashCommandService>().Should().NotBeNull();
         scope.ServiceProvider.GetRequiredService<IApplicationUpdateService>().Should().NotBeNull();
+        scope.ServiceProvider.GetRequiredService<IApplicationUpdateSession>().Should().NotBeNull();
         scope.ServiceProvider.GetRequiredService<IApplicationRestartPlanner>().Should().NotBeNull();
         scope.ServiceProvider.GetRequiredService<IApplicationVersionProvider>().Should().NotBeNull();
         scope.ServiceProvider.GetRequiredService<IEmailService>().Should().NotBeNull();

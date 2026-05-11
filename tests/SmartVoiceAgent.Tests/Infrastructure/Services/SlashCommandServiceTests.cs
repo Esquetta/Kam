@@ -6,6 +6,7 @@ using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Core.Models.Updates;
 using SmartVoiceAgent.Infrastructure.Mcp;
 using SmartVoiceAgent.Infrastructure.Services;
+using System.Security.Cryptography;
 
 namespace SmartVoiceAgent.Tests.Infrastructure.Services;
 
@@ -303,25 +304,67 @@ public sealed class SlashCommandServiceTests
     [Fact]
     public async Task ExecuteAsync_WhenRestartIsRequested_ReturnsRestartPlan()
     {
+        var package = CreatePackage("Kam Updates", "Kam-1.2.0-x64.msi", "verified-package");
         var service = new SlashCommandService(
             applicationUpdateService: new FakeApplicationUpdateService(
                 downloadResult: ApplicationUpdateDownloadResult.Succeeded(
-                    @"C:\Program Files\Kam Updates\Kam-1.2.0-x64.msi",
+                    package.Path,
                     "1.2.0",
-                    1024,
+                    package.SizeBytes,
                     isVerified: true,
                     verificationStatus: "SHA256 verified",
-                    expectedSha256: new string('a', 64),
-                    actualSha256: new string('a', 64))),
+                    expectedSha256: package.Sha256,
+                    actualSha256: package.Sha256)),
             applicationRestartPlanner: new FakeApplicationRestartPlanner());
 
-        await service.ExecuteAsync("/download");
-        var result = await service.ExecuteAsync(@"/restart C:\Program Files\Kam Updates\Kam-1.2.0-x64.msi");
+        try
+        {
+            await service.ExecuteAsync("/download");
+            var result = await service.ExecuteAsync($"/restart \"{package.Path}\"");
 
-        result.Success.Should().BeTrue();
-        result.Message.Should().Contain("Kam restart plan");
-        result.Message.Should().Contain(@"C:\Program Files\Kam Updates\Kam-1.2.0-x64.msi");
-        result.Message.Should().Contain("Start installer");
+            result.Success.Should().BeTrue();
+            result.Message.Should().Contain("Kam restart plan");
+            result.Message.Should().Contain(package.Path);
+            result.Message.Should().Contain("Start installer");
+        }
+        finally
+        {
+            Directory.Delete(package.DirectoryPath, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenVerifiedRestartPackageWasModified_BlocksInstallerHandoff()
+    {
+        var package = CreatePackage("Kam Updates", "Kam-1.2.0-x64.msi", "verified-package");
+        var service = new SlashCommandService(
+            applicationUpdateService: new FakeApplicationUpdateService(
+                downloadResult: ApplicationUpdateDownloadResult.Succeeded(
+                    package.Path,
+                    "1.2.0",
+                    package.SizeBytes,
+                    isVerified: true,
+                    verificationStatus: "SHA256 verified",
+                    expectedSha256: package.Sha256,
+                    actualSha256: package.Sha256)),
+            applicationRestartPlanner: new FakeApplicationRestartPlanner());
+
+        try
+        {
+            await service.ExecuteAsync("/download");
+            File.AppendAllText(package.Path, "-tampered");
+
+            var result = await service.ExecuteAsync($"/restart \"{package.Path}\"");
+
+            result.Success.Should().BeTrue();
+            result.Message.Should().Contain("status: blocked");
+            result.Message.Should().Contain("SHA256 no longer matches");
+            result.Message.Should().NotContain("Start installer");
+        }
+        finally
+        {
+            Directory.Delete(package.DirectoryPath, recursive: true);
+        }
     }
 
     [Fact]
@@ -342,7 +385,7 @@ public sealed class SlashCommandServiceTests
 
         result.Success.Should().BeTrue();
         result.Message.Should().Contain("status: blocked");
-        result.Message.Should().Contain("Restart handoff requires a verified package downloaded in this chat session.");
+        result.Message.Should().Contain("Restart handoff requires a verified package downloaded in the current session.");
         result.Message.Should().NotContain("Start installer");
     }
 
@@ -356,8 +399,28 @@ public sealed class SlashCommandServiceTests
 
         result.Success.Should().BeTrue();
         result.Message.Should().Contain("status: blocked");
-        result.Message.Should().Contain("Restart handoff requires a verified package downloaded in this chat session.");
+        result.Message.Should().Contain("Restart handoff requires a verified package downloaded in the current session.");
         result.Message.Should().NotContain("Start installer");
+    }
+
+    private static (string DirectoryPath, string Path, long SizeBytes, string Sha256) CreatePackage(
+        string directoryName,
+        string fileName,
+        string contents)
+    {
+        var directoryPath = System.IO.Path.Combine(
+            System.IO.Path.GetTempPath(),
+            "kam-slash-command-tests",
+            directoryName + "-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directoryPath);
+        var packagePath = System.IO.Path.Combine(directoryPath, fileName);
+        File.WriteAllText(packagePath, contents);
+        return (directoryPath, packagePath, new FileInfo(packagePath).Length, ComputeSha256(packagePath));
+    }
+
+    private static string ComputeSha256(string filePath)
+    {
+        return Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(filePath))).ToLowerInvariant();
     }
 
     private sealed class FakeApplicationUpdateService : IApplicationUpdateService

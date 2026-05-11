@@ -4,9 +4,11 @@ using SmartVoiceAgent.Core.Models.AI;
 using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Core.Models.Updates;
+using SmartVoiceAgent.Infrastructure.Services;
 using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.ViewModels.PageModels;
 using System.Reflection;
+using System.Security.Cryptography;
 using UiCommand = System.Windows.Input.ICommand;
 
 namespace SmartVoiceAgent.Tests.Ui.ViewModels;
@@ -959,6 +961,97 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task PlanApplicationRestart_WhenVerifiedPackageChangesAfterDownload_BlocksPlannerHandoff()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var packagePath = CreatePackage("Kam-1.2.0-x64.msi", "verified-package");
+        var sha256 = ComputeSha256(packagePath);
+        var updateService = new RecordingApplicationUpdateService(
+            "1.0.0",
+            ApplicationUpdateCheckResult.UpdateAvailable(
+                "1.0.0",
+                "1.2.0",
+                "Kam 1.2.0",
+                "https://github.com/Esquetta/Kam/releases/tag/v1.2.0",
+                null,
+                new ApplicationUpdateAsset(
+                    "Kam-1.2.0-x64.msi",
+                    "https://downloads.example/Kam-1.2.0-x64.msi",
+                    2_097_152,
+                    "application/octet-stream")),
+            ApplicationUpdateDownloadResult.Succeeded(
+                packagePath,
+                "1.2.0",
+                new FileInfo(packagePath).Length,
+                isVerified: true,
+                verificationStatus: "SHA256 verified",
+                expectedSha256: sha256,
+                actualSha256: sha256));
+        var restartPlanner = new RecordingApplicationRestartPlanner(
+            new ApplicationRestartPlan(
+                true,
+                "Installer handoff ready.",
+                @"C:\Program Files\Kam\Kam.exe",
+                packagePath,
+                ["Start installer", "Close Kam", "Relaunch Kam"]));
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            applicationUpdateService: updateService,
+            applicationRestartPlanner: restartPlanner,
+            applicationVersionProvider: new StaticApplicationVersionProvider("1.0.0"),
+            applicationUpdateSession: new ApplicationUpdateSession());
+
+        await viewModel.DownloadApplicationUpdateAsync();
+        File.AppendAllText(packagePath, "-tampered");
+        viewModel.PlanApplicationRestart();
+
+        restartPlanner.CreateCount.Should().Be(1);
+        viewModel.ApplicationUpdateActionStatus.Should().Contain("SHA256 no longer matches");
+        viewModel.ApplicationUpdateItems.Should().Contain(item =>
+            item.Name == "Restart Plan"
+            && item.Value == "Blocked"
+            && item.Detail.Contains("SHA256 no longer matches", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void PlanApplicationRestart_WhenSharedSessionHasVerifiedPackage_UsesSessionPackage()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var packagePath = CreatePackage("Kam-1.2.0-x64.msi", "verified-package");
+        var sha256 = ComputeSha256(packagePath);
+        var updateSession = new ApplicationUpdateSession();
+        updateSession.RecordDownload(ApplicationUpdateDownloadResult.Succeeded(
+            packagePath,
+            "1.2.0",
+            new FileInfo(packagePath).Length,
+            isVerified: true,
+            verificationStatus: "SHA256 verified",
+            expectedSha256: sha256,
+            actualSha256: sha256));
+        var restartPlanner = new RecordingApplicationRestartPlanner(
+            new ApplicationRestartPlan(
+                true,
+                "Installer handoff ready.",
+                @"C:\Program Files\Kam\Kam.exe",
+                packagePath,
+                ["Start installer", "Close Kam", "Relaunch Kam"]));
+        var viewModel = new RuntimeDiagnosticsViewModel(
+            settingsService,
+            applicationRestartPlanner: restartPlanner,
+            applicationVersionProvider: new StaticApplicationVersionProvider("1.0.0"),
+            applicationUpdateSession: updateSession);
+
+        viewModel.PlanApplicationRestart();
+
+        restartPlanner.LastPackagePath.Should().Be(packagePath);
+        viewModel.DownloadedUpdatePackagePath.Should().Be(packagePath);
+        viewModel.ApplicationUpdateItems.Should().Contain(item =>
+            item.Name == "Restart Plan"
+            && item.Value == "Ready"
+            && item.Detail.Contains("Installer handoff ready", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task DownloadApplicationUpdateAsync_WithUnverifiedDownloadedInstaller_DoesNotBuildRestartPlan()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);
@@ -1376,10 +1469,26 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
 
         public string? LastPackagePath { get; private set; }
 
+        public int CreateCount { get; private set; }
+
         public ApplicationRestartPlan CreateRestartPlan(string? updatePackagePath = null)
         {
+            CreateCount++;
             LastPackagePath = updatePackagePath;
             return _plan;
         }
+    }
+
+    private string CreatePackage(string fileName, string contents)
+    {
+        Directory.CreateDirectory(_settingsDirectory);
+        var packagePath = Path.Combine(_settingsDirectory, fileName);
+        File.WriteAllText(packagePath, contents);
+        return packagePath;
+    }
+
+    private static string ComputeSha256(string filePath)
+    {
+        return Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(filePath))).ToLowerInvariant();
     }
 }

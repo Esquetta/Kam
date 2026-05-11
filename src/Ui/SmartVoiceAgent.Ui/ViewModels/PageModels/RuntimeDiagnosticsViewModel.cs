@@ -32,11 +32,13 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     private readonly IApplicationRestartPlanner? _applicationRestartPlanner;
     private readonly IApplicationVersionProvider? _applicationVersionProvider;
     private readonly IGitHubAppClient? _githubAppClient;
+    private readonly IApplicationUpdateSession? _applicationUpdateSession;
     private readonly Action<string, string>? _copyReport;
 
     private ApplicationUpdateCheckResult? _lastApplicationUpdateCheck;
     private ApplicationUpdateDownloadResult? _lastApplicationUpdateDownload;
     private ApplicationRestartPlan? _lastApplicationRestartPlan;
+    private bool _isApplicationRestartBlocked;
     private string _coreReadinessStatus = "ACTION_NEEDED";
     private string _hostStatus = "Unknown";
     private string _skillStatus = "Unavailable";
@@ -73,6 +75,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         IApplicationRestartPlanner? applicationRestartPlanner = null,
         IApplicationVersionProvider? applicationVersionProvider = null,
         IGitHubAppClient? githubAppClient = null,
+        IApplicationUpdateSession? applicationUpdateSession = null,
         Action<string, string>? copyReport = null)
     {
         _settingsService = settingsService;
@@ -87,6 +90,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         _applicationRestartPlanner = applicationRestartPlanner;
         _applicationVersionProvider = applicationVersionProvider;
         _githubAppClient = githubAppClient;
+        _applicationUpdateSession = applicationUpdateSession;
         _copyReport = copyReport;
 
         Title = "Runtime Diagnostics";
@@ -363,6 +367,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             _lastApplicationUpdateCheck = ApplicationUpdateCheckResult.Failed(
                 CurrentApplicationVersion(),
                 "Application update service is unavailable.");
+            _applicationUpdateSession?.RecordCheck(_lastApplicationUpdateCheck);
             ApplicationUpdateActionStatus = _lastApplicationUpdateCheck.Message;
             ApplyApplicationUpdateDiagnostics();
             RebuildSummary();
@@ -375,6 +380,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             _lastApplicationUpdateCheck = await _applicationUpdateService
                 .CheckForUpdatesAsync()
                 .ConfigureAwait(true);
+            _applicationUpdateSession?.RecordCheck(_lastApplicationUpdateCheck);
             ApplicationUpdateActionStatus = _lastApplicationUpdateCheck.Message;
         }
         catch (Exception ex)
@@ -382,6 +388,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             _lastApplicationUpdateCheck = ApplicationUpdateCheckResult.Failed(
                 CurrentApplicationVersion(),
                 $"Update check failed: {ex.Message}");
+            _applicationUpdateSession?.RecordCheck(_lastApplicationUpdateCheck);
             ApplicationUpdateActionStatus = _lastApplicationUpdateCheck.Message;
         }
 
@@ -396,6 +403,9 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         {
             _lastApplicationUpdateDownload = ApplicationUpdateDownloadResult.Failed(
                 "Application update service is unavailable.");
+            _lastApplicationRestartPlan = null;
+            _isApplicationRestartBlocked = false;
+            _applicationUpdateSession?.ClearDownload();
             ApplicationUpdateActionStatus = _lastApplicationUpdateDownload.Message;
             ApplyApplicationUpdateDiagnostics();
             RebuildSummary();
@@ -415,6 +425,8 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
                 $"Update package download failed: {ex.Message}");
         }
 
+        _applicationUpdateSession?.RecordDownload(_lastApplicationUpdateDownload);
+
         if (_lastApplicationUpdateDownload.Success)
         {
             DownloadedUpdatePackagePath = _lastApplicationUpdateDownload.FilePath ?? string.Empty;
@@ -427,27 +439,60 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             }
 
             _lastApplicationRestartPlan = null;
+            _isApplicationRestartBlocked = true;
             ApplyApplicationUpdateDiagnostics();
             RebuildSummary();
             ApplicationUpdateActionStatus = "Verify the downloaded package before restart handoff.";
             return;
         }
 
+        _applicationUpdateSession?.ClearDownload();
         ApplicationUpdateActionStatus = _lastApplicationUpdateDownload.Message;
+        _lastApplicationRestartPlan = null;
+        _isApplicationRestartBlocked = false;
         ApplyApplicationUpdateDiagnostics();
         RebuildSummary();
     }
 
     public void PlanApplicationRestart()
     {
+        HydrateApplicationUpdateSessionState();
+
         if (_lastApplicationUpdateDownload?.Success == true
             && !_lastApplicationUpdateDownload.IsVerified)
         {
             _lastApplicationRestartPlan = null;
+            _isApplicationRestartBlocked = true;
             ApplicationUpdateActionStatus = "Verify the downloaded package before restart handoff.";
             ApplyApplicationUpdateDiagnostics();
             RebuildSummary();
             return;
+        }
+
+        _isApplicationRestartBlocked = false;
+        var packagePath = string.IsNullOrWhiteSpace(DownloadedUpdatePackagePath)
+            ? null
+            : DownloadedUpdatePackagePath;
+        if (!string.IsNullOrWhiteSpace(packagePath)
+            && _applicationUpdateSession is not null)
+        {
+            var validation = _applicationUpdateSession.ValidateRestartPackage(packagePath);
+            if (!validation.CanRestart)
+            {
+                _isApplicationRestartBlocked = true;
+                _lastApplicationRestartPlan = new ApplicationRestartPlan(
+                    false,
+                    validation.Message,
+                    null,
+                    validation.NormalizedPackagePath ?? packagePath,
+                    ["Download and verify the package again before restart handoff."]);
+                ApplicationUpdateActionStatus = validation.Message;
+                ApplyApplicationUpdateDiagnostics();
+                RebuildSummary();
+                return;
+            }
+
+            packagePath = validation.NormalizedPackagePath ?? packagePath;
         }
 
         if (_applicationRestartPlanner is null)
@@ -456,15 +501,12 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
                 false,
                 "Application restart planner is unavailable.",
                 null,
-                DownloadedUpdatePackagePath,
+                packagePath,
                 ["Restart planner service is not registered."]);
         }
         else
         {
-            _lastApplicationRestartPlan = _applicationRestartPlanner.CreateRestartPlan(
-                string.IsNullOrWhiteSpace(DownloadedUpdatePackagePath)
-                    ? null
-                    : DownloadedUpdatePackagePath);
+            _lastApplicationRestartPlan = _applicationRestartPlanner.CreateRestartPlan(packagePath);
         }
 
         ApplicationUpdateActionStatus = _lastApplicationRestartPlan.Message;
@@ -543,10 +585,36 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         ApplyIntegrationDiagnostics();
         ApplyHostDiagnostics();
         ApplyCommandLoopDiagnostics();
+        HydrateApplicationUpdateSessionState();
         ApplyApplicationUpdateDiagnostics();
         RebuildSummary();
 
         return plannerProfile;
+    }
+
+    private void HydrateApplicationUpdateSessionState()
+    {
+        if (_applicationUpdateSession is null)
+        {
+            return;
+        }
+
+        _lastApplicationUpdateCheck ??= _applicationUpdateSession.LastCheck;
+        if (_lastApplicationUpdateDownload?.Success == true
+            || _applicationUpdateSession.LastVerifiedPackage is not { } package)
+        {
+            return;
+        }
+
+        DownloadedUpdatePackagePath = package.FilePath;
+        _lastApplicationUpdateDownload = ApplicationUpdateDownloadResult.Succeeded(
+            package.FilePath,
+            package.Version,
+            package.SizeBytes ?? 0,
+            isVerified: true,
+            verificationStatus: package.VerificationStatus,
+            expectedSha256: package.ExpectedSha256,
+            actualSha256: package.ActualSha256);
     }
 
     private void ApplyPlannerDiagnostics(ModelProviderProfile? plannerProfile)
@@ -1248,6 +1316,16 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
                 "Not planned",
                 "Download a package or request a restart plan before closing the app.",
                 RuntimeDiagnosticSeverity.Warning));
+            return;
+        }
+
+        if (_isApplicationRestartBlocked)
+        {
+            ApplicationUpdateItems.Add(new RuntimeDiagnosticItemViewModel(
+                "Restart Plan",
+                "Blocked",
+                SecretRedactor.Redact(_lastApplicationRestartPlan.Message),
+                RuntimeDiagnosticSeverity.Blocked));
             return;
         }
 

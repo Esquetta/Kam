@@ -97,10 +97,12 @@ namespace SmartVoiceAgent.Ui
                 var applicationUpdateService = services.GetRequiredService<IApplicationUpdateService>();
                 var applicationRestartPlanner = services.GetRequiredService<IApplicationRestartPlanner>();
                 var applicationVersionProvider = services.GetRequiredService<IApplicationVersionProvider>();
+                var applicationUpdateSession = services.GetRequiredService<IApplicationUpdateSession>();
                 _mainViewModel.SetApplicationUpdateServices(
                     applicationUpdateService,
                     applicationRestartPlanner,
-                    applicationVersionProvider);
+                    applicationVersionProvider,
+                    applicationUpdateSession);
 
                 var githubAppClient = services.GetRequiredService<IGitHubAppClient>();
                 _mainViewModel.SetGitHubAppClient(githubAppClient);

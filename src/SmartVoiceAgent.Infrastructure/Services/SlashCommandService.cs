@@ -48,9 +48,9 @@ public sealed class SlashCommandService : ISlashCommandService
     private readonly McpOptions _mcpOptions;
     private readonly IApplicationUpdateService? _applicationUpdateService;
     private readonly IApplicationVersionProvider? _applicationVersionProvider;
+    private readonly IApplicationUpdateSession _applicationUpdateSession;
     private readonly IApplicationRestartPlanner? _applicationRestartPlanner;
     private readonly IGitHubAppClient? _githubAppClient;
-    private string? _lastVerifiedUpdatePackagePath;
 
     public SlashCommandService(
         IVoiceAgentHostControl? hostControl = null,
@@ -62,6 +62,7 @@ public sealed class SlashCommandService : ISlashCommandService
         IOptions<McpOptions>? mcpOptions = null,
         IApplicationUpdateService? applicationUpdateService = null,
         IApplicationVersionProvider? applicationVersionProvider = null,
+        IApplicationUpdateSession? applicationUpdateSession = null,
         IApplicationRestartPlanner? applicationRestartPlanner = null,
         IGitHubAppClient? githubAppClient = null)
     {
@@ -74,6 +75,7 @@ public sealed class SlashCommandService : ISlashCommandService
         _mcpOptions = mcpOptions?.Value ?? new McpOptions();
         _applicationUpdateService = applicationUpdateService;
         _applicationVersionProvider = applicationVersionProvider;
+        _applicationUpdateSession = applicationUpdateSession ?? new ApplicationUpdateSession();
         _applicationRestartPlanner = applicationRestartPlanner;
         _githubAppClient = githubAppClient;
     }
@@ -218,6 +220,7 @@ public sealed class SlashCommandService : ISlashCommandService
         }
 
         var update = await _applicationUpdateService.CheckForUpdatesAsync(cancellationToken);
+        _applicationUpdateSession.RecordCheck(update);
         if (!update.Success)
         {
             return SlashCommandResult.Failed("/update", update.Message);
@@ -266,13 +269,11 @@ public sealed class SlashCommandService : ISlashCommandService
         var download = await _applicationUpdateService.DownloadLatestAsync(cancellationToken);
         if (!download.Success)
         {
-            _lastVerifiedUpdatePackagePath = null;
+            _applicationUpdateSession.ClearDownload();
             return SlashCommandResult.Failed("/download", download.Message);
         }
 
-        _lastVerifiedUpdatePackagePath = download.IsVerified && !string.IsNullOrWhiteSpace(download.FilePath)
-            ? NormalizePackagePathForComparison(download.FilePath)
-            : null;
+        _applicationUpdateSession.RecordDownload(download);
 
         var nextStep = download.IsVerified
             ? "next: /restart <file>"
@@ -302,13 +303,16 @@ public sealed class SlashCommandService : ISlashCommandService
         }
 
         var normalizedPackagePath = NormalizePathArgument(updatePackagePath);
-        if (!string.IsNullOrWhiteSpace(normalizedPackagePath)
-            && !IsLatestVerifiedUpdatePackage(normalizedPackagePath))
+        var validation = _applicationUpdateSession.ValidateRestartPackage(normalizedPackagePath);
+        if (!validation.CanRestart)
         {
-            return FormatBlockedRestartPlan(normalizedPackagePath);
+            return FormatBlockedRestartPlan(validation.NormalizedPackagePath ?? normalizedPackagePath, validation.Message);
         }
 
-        var plan = _applicationRestartPlanner.CreateRestartPlan(normalizedPackagePath);
+        var plan = _applicationRestartPlanner.CreateRestartPlan(
+            string.IsNullOrWhiteSpace(normalizedPackagePath)
+                ? null
+                : validation.NormalizedPackagePath ?? normalizedPackagePath);
         var lines = new List<string>
         {
             "Kam restart plan:",
@@ -334,24 +338,22 @@ public sealed class SlashCommandService : ISlashCommandService
         return string.Join(Environment.NewLine, lines);
     }
 
-    private bool IsLatestVerifiedUpdatePackage(string updatePackagePath)
+    private static string FormatBlockedRestartPlan(string? updatePackagePath, string message)
     {
-        return !string.IsNullOrWhiteSpace(_lastVerifiedUpdatePackagePath)
-            && string.Equals(
-                NormalizePackagePathForComparison(updatePackagePath),
-                _lastVerifiedUpdatePackagePath,
-                StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string FormatBlockedRestartPlan(string updatePackagePath)
-    {
-        return string.Join(Environment.NewLine, [
+        var lines = new List<string>
+        {
             "Kam restart plan:",
             "  status: blocked",
-            "  message: Restart handoff requires a verified package downloaded in this chat session.",
-            $"  package: {updatePackagePath}",
+            $"  message: {message}",
             "  verification: run /download successfully, then pass the verified package path to /restart"
-        ]);
+        };
+
+        if (!string.IsNullOrWhiteSpace(updatePackagePath))
+        {
+            lines.Insert(3, $"  package: {updatePackagePath}");
+        }
+
+        return string.Join(Environment.NewLine, lines);
     }
 
     private string CurrentApplicationVersion()
@@ -789,23 +791,6 @@ public sealed class SlashCommandService : ISlashCommandService
         return trimmed.Length >= 2 && trimmed[0] == '"' && trimmed[^1] == '"'
             ? trimmed[1..^1]
             : trimmed;
-    }
-
-    private static string NormalizePackagePathForComparison(string value)
-    {
-        var trimmed = value.Trim();
-        try
-        {
-            return Path.GetFullPath(trimmed);
-        }
-        catch (ArgumentException)
-        {
-            return trimmed;
-        }
-        catch (NotSupportedException)
-        {
-            return trimmed;
-        }
     }
 
     private static string FormatConfiguredValue(string? value)

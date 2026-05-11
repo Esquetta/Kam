@@ -46,6 +46,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private IApplicationUpdateService? _applicationUpdateService;
         private IApplicationRestartPlanner? _applicationRestartPlanner;
         private IApplicationVersionProvider? _applicationVersionProvider;
+        private IApplicationUpdateSession? _applicationUpdateSession;
         private IGitHubAppClient? _githubAppClient;
         private IGitHubAppClientFactory? _githubAppClientFactory;
         private readonly IModelConnectionTestService _modelConnectionTestService = new ModelConnectionTestService();
@@ -589,11 +590,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public void SetApplicationUpdateServices(
             IApplicationUpdateService applicationUpdateService,
             IApplicationRestartPlanner applicationRestartPlanner,
-            IApplicationVersionProvider applicationVersionProvider)
+            IApplicationVersionProvider applicationVersionProvider,
+            IApplicationUpdateSession applicationUpdateSession)
         {
             _applicationUpdateService = applicationUpdateService;
             _applicationRestartPlanner = applicationRestartPlanner;
             _applicationVersionProvider = applicationVersionProvider;
+            _applicationUpdateSession = applicationUpdateSession;
         }
 
         public void SetGitHubAppClient(IGitHubAppClient githubAppClient)
@@ -694,6 +697,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     _applicationRestartPlanner,
                     _applicationVersionProvider,
                     _githubAppClient,
+                    _applicationUpdateSession,
                     CopyRuntimeDiagnosticsText),
                 NavView.Plugins => CreatePluginsViewModel(),
                 NavView.Integrations => new IntegrationsViewModel(
