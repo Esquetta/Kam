@@ -70,8 +70,8 @@
                             
                             <!-- Status Badge -->
                             <Border Grid.Column="2" 
-                                    Background="{Binding IsTaskAgentEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenGlowBrush|AccentErrorGlowBrush'}"
-                                    BorderBrush="{Binding IsTaskAgentEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenDimBrush|AccentErrorDimBrush'}"
+                                    Background="{Binding IsTaskAgentEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenGlowBrush|CardBgHoverBrush'}"
+                                    BorderBrush="{Binding IsTaskAgentEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|BorderSubtleBrush'}"
                                     BorderThickness="1"
                                     CornerRadius="4"
                                     Padding="8,4"
@@ -81,7 +81,7 @@
                                 <TextBlock Text="{Binding TodoistStatusText}"
                                            FontSize="11"
                                            FontWeight="Medium"
-                                           Foreground="{Binding IsTaskAgentEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|AccentErrorBrush'}"
+                                           Foreground="{Binding IsTaskAgentEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|TextMutedBrush'}"
                                            LetterSpacing="1"/>
                             </Border>
                         </Grid>
@@ -189,8 +189,8 @@
 
                             <!-- Status Badge -->
                             <Border Grid.Column="2"
-                                    Background="{Binding IsGitHubStatusPositive, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenGlowBrush|AccentErrorGlowBrush'}"
-                                    BorderBrush="{Binding IsGitHubStatusPositive, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenDimBrush|AccentErrorDimBrush'}"
+                                    Background="{Binding IsGitHubStatusPositive, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenGlowBrush|CardBgHoverBrush'}"
+                                    BorderBrush="{Binding IsGitHubStatusPositive, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|BorderSubtleBrush'}"
                                     BorderThickness="1"
                                     CornerRadius="4"
                                     Padding="8,4"
@@ -200,7 +200,7 @@
                                 <TextBlock Text="{Binding GitHubAppStatusText}"
                                            FontSize="11"
                                            FontWeight="Medium"
-                                           Foreground="{Binding IsGitHubStatusPositive, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|AccentErrorBrush'}"
+                                           Foreground="{Binding IsGitHubStatusPositive, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|TextMutedBrush'}"
                                            LetterSpacing="1"/>
                             </Border>
                         </Grid>
@@ -472,8 +472,8 @@
                             
                             <!-- Status Badge -->
                             <Border Grid.Column="2" 
-                                    Background="{Binding IsEmailEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenGlowBrush|AccentErrorGlowBrush'}"
-                                    BorderBrush="{Binding IsEmailEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenDimBrush|AccentErrorDimBrush'}"
+                                    Background="{Binding IsEmailEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenGlowBrush|CardBgHoverBrush'}"
+                                    BorderBrush="{Binding IsEmailEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|BorderSubtleBrush'}"
                                     BorderThickness="1"
                                     CornerRadius="4"
                                     Padding="8,4"
@@ -483,7 +483,7 @@
                                 <TextBlock Text="{Binding EmailStatusText}"
                                            FontSize="11"
                                            FontWeight="Medium"
-                                           Foreground="{Binding IsEmailEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|AccentErrorBrush'}"
+                                           Foreground="{Binding IsEmailEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|TextMutedBrush'}"
                                            LetterSpacing="1"/>
                             </Border>
                         </Grid>
@@ -686,8 +686,8 @@
                             
                             <!-- Status Badge -->
                             <Border Grid.Column="2" 
-                                    Background="{Binding IsSmsEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenGlowBrush|AccentErrorGlowBrush'}"
-                                    BorderBrush="{Binding IsSmsEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenDimBrush|AccentErrorDimBrush'}"
+                                    Background="{Binding IsSmsEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenGlowBrush|CardBgHoverBrush'}"
+                                    BorderBrush="{Binding IsSmsEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|BorderSubtleBrush'}"
                                     BorderThickness="1"
                                     CornerRadius="4"
                                     Padding="8,4"
@@ -697,7 +697,7 @@
                                 <TextBlock Text="{Binding SmsStatusText}"
                                            FontSize="11"
                                            FontWeight="Medium"
-                                           Foreground="{Binding IsSmsEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|AccentErrorBrush'}"
+                                           Foreground="{Binding IsSmsEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|TextMutedBrush'}"
                                            LetterSpacing="1"/>
                             </Border>
                         </Grid>

@@ -22,13 +22,17 @@
     <SolidColorBrush x:Key="AccentCyanDimBrush" Color="{DynamicResource AccentCyanDim}" />
     <SolidColorBrush x:Key="AccentCyanGlowBrush" Color="{DynamicResource AccentCyanGlow}" />
     <SolidColorBrush x:Key="AccentGreenBrush" Color="{DynamicResource AccentGreen}" />
+    <SolidColorBrush x:Key="AccentGreenDimBrush" Color="{DynamicResource AccentGreenDim}" />
     <SolidColorBrush x:Key="AccentGreenGlowBrush" Color="{DynamicResource AccentGreenGlow}" />
     <SolidColorBrush x:Key="AccentGreenOnBrush" Color="{DynamicResource AccentGreenOn}" />
     <SolidColorBrush x:Key="AccentPurpleBrush" Color="{DynamicResource AccentPurple}" />
+    <SolidColorBrush x:Key="AccentPurpleDimBrush" Color="{DynamicResource AccentPurpleDim}" />
     <SolidColorBrush x:Key="AccentPurpleGlowBrush" Color="{DynamicResource AccentPurpleGlow}" />
     <SolidColorBrush x:Key="AccentOrangeBrush" Color="{DynamicResource AccentOrange}" />
+    <SolidColorBrush x:Key="AccentOrangeDimBrush" Color="{DynamicResource AccentOrangeDim}" />
     <SolidColorBrush x:Key="AccentOrangeGlowBrush" Color="{DynamicResource AccentOrangeGlow}" />
     <SolidColorBrush x:Key="AccentErrorBrush" Color="{DynamicResource AccentError}" />
+    <SolidColorBrush x:Key="AccentErrorDimBrush" Color="{DynamicResource AccentErrorDim}" />
     <SolidColorBrush x:Key="AccentErrorGlowBrush" Color="{DynamicResource AccentErrorGlow}" />
     <SolidColorBrush x:Key="AccentErrorOnBrush" Color="{DynamicResource AccentErrorOn}" />
 
