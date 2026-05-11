@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -149,7 +150,7 @@ namespace SmartVoiceAgent.Ui
                 ApplyStartupBehavior(desktop, settingsService);
 
                 // Start the host
-                _host.StartAsync();
+                _ = StartHostAsync(_host);
 
                 desktop.ShutdownRequested += async (s, e) =>
                 {
@@ -374,6 +375,12 @@ namespace SmartVoiceAgent.Ui
             _errorHandlingService.LogInformation("Application starting - Global exception handling initialized");
 
             // Handle UI thread exceptions
+            Dispatcher.UIThread.UnhandledException += (sender, e) =>
+            {
+                Console.WriteLine($"UI THREAD ERROR: {e.Exception.Message}");
+                _errorHandlingService?.LogError(e.Exception, "Unhandled Avalonia UI thread exception");
+            };
+
             AppDomain.CurrentDomain.UnhandledException += async (sender, e) =>
             {
                 var exception = e.ExceptionObject as Exception;
@@ -393,6 +400,19 @@ namespace SmartVoiceAgent.Ui
                 _errorHandlingService?.HandleUnobservedException(e.Exception);
                 e.SetObserved(); // Prevent crash
             };
+        }
+
+        private async Task StartHostAsync(IHost host)
+        {
+            try
+            {
+                await host.StartAsync();
+            }
+            catch (Exception ex)
+            {
+                _errorHandlingService?.LogError(ex, "Host failed to start");
+                Console.WriteLine($"HOST START ERROR: {ex.Message}");
+            }
         }
 
         /// <summary>

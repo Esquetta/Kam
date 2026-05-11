@@ -24,6 +24,16 @@ public sealed class AppStartupSecurityMetadataTests
         source.Should().NotContain("dotnet user-secrets set \"HuggingFaceConfig:ApiKey\"");
     }
 
+    [Fact]
+    public void AppStartup_LogsAvaloniaDispatcherAndHostStartupFailures()
+    {
+        var source = File.ReadAllText(FindAppSourcePath());
+
+        source.Should().Contain("Dispatcher.UIThread.UnhandledException");
+        source.Should().Contain("StartHostAsync(_host)");
+        source.Should().Contain("Host failed to start");
+    }
+
     private static string FindAppSourcePath()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

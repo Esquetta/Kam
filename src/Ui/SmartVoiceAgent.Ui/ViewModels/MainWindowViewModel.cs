@@ -1313,9 +1313,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _voiceCommandService.StatusChanged += OnVoiceStatusChanged;
             _voiceCommandService.OnTranscriptionResult += OnVoiceTranscriptionResult;
             _voiceCommandService.OnError += OnVoiceError;
-            
-            // Auto-start wake word detection
-            ToggleVoiceEnabled();
+
+            IsVoiceEnabled = false;
+            IsListeningForWakeWord = false;
+            VoiceStatusText = "Voice: Off";
+            VoiceStatusColor = s_voiceIdleColor;
+            _trayIconService?.SetVoiceEnabled(false);
+            _trayIconService?.UpdateStatus("Ready", false);
         }
 
         private void OnVoiceStatusChanged(object? sender, VoiceStatusEventArgs e)
