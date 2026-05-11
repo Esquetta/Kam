@@ -215,6 +215,63 @@
 
                         <!-- GitHub App Configuration -->
                         <StackPanel Grid.Row="2" Margin="0,24,0,0" Spacing="16">
+                            <StackPanel Spacing="10"
+                                        IsVisible="{Binding HasGitHubAppSetupSteps}">
+                                <TextBlock Text="SETUP_CHECKLIST"
+                                           FontSize="12"
+                                           FontFamily="Consolas"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource AccentGreenBrush}"
+                                           LetterSpacing="1"/>
+                                <ItemsControl ItemsSource="{Binding GitHubAppSetupSteps}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:RuntimeDiagnosticItemViewModel">
+                                            <Grid ColumnDefinitions="Auto,*,Auto"
+                                                  ColumnSpacing="10"
+                                                  Margin="0,0,0,8">
+                                                <Ellipse Grid.Column="0"
+                                                         Width="8"
+                                                         Height="8"
+                                                         Fill="{DynamicResource AccentGreenBrush}"
+                                                         VerticalAlignment="Center"
+                                                         IsVisible="{Binding IsReady}"/>
+                                                <Ellipse Grid.Column="0"
+                                                         Width="8"
+                                                         Height="8"
+                                                         Fill="{DynamicResource AccentOrangeBrush}"
+                                                         VerticalAlignment="Center"
+                                                         IsVisible="{Binding IsWarning}"/>
+                                                <Ellipse Grid.Column="0"
+                                                         Width="8"
+                                                         Height="8"
+                                                         Fill="{DynamicResource AccentErrorBrush}"
+                                                         VerticalAlignment="Center"
+                                                         IsVisible="{Binding IsBlocked}"/>
+                                                <StackPanel Grid.Column="1" Spacing="2">
+                                                    <TextBlock Text="{Binding Name}"
+                                                               FontSize="12"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                    <TextBlock Text="{Binding Detail}"
+                                                               FontSize="11"
+                                                               Foreground="{DynamicResource TextMutedBrush}"
+                                                               TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2"
+                                                           Text="{Binding Value}"
+                                                           FontSize="11"
+                                                           FontFamily="Consolas"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                                           TextWrapping="Wrap"
+                                                           MaxWidth="120"
+                                                           TextAlignment="Right"
+                                                           VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
                             <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
                                 <StackPanel Grid.Column="0" Spacing="8">
                                     <TextBlock Text="App ID"

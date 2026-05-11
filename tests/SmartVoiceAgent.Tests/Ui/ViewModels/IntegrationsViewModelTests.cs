@@ -31,6 +31,141 @@ public sealed class IntegrationsViewModelTests : IDisposable
     }
 
     [Fact]
+    public void Constructor_WithoutGitHubAppSettings_ExposesActionableSetupChecklist()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+
+        var viewModel = new IntegrationsViewModel(settingsService);
+
+        viewModel.GitHubAppSetupSteps.Should().Contain(step =>
+            step.Name == "App ID"
+            && step.Value == "Required"
+            && step.Detail.Contains("GitHub App settings", StringComparison.OrdinalIgnoreCase)
+            && step.IsBlocked);
+        viewModel.GitHubAppSetupSteps.Should().Contain(step =>
+            step.Name == "Installation ID"
+            && step.Value == "Required"
+            && step.Detail.Contains("Install the app", StringComparison.OrdinalIgnoreCase)
+            && step.IsBlocked);
+        viewModel.GitHubAppSetupSteps.Should().Contain(step =>
+            step.Name == "Private Key Path"
+            && step.Value == "Required"
+            && step.Detail.Contains("PEM", StringComparison.OrdinalIgnoreCase)
+            && step.IsBlocked);
+        viewModel.GitHubAppSetupSteps.Should().Contain(step =>
+            step.Name == "Connection Test"
+            && step.Value == "Required"
+            && step.Detail.Contains("Complete required fields", StringComparison.OrdinalIgnoreCase)
+            && step.IsBlocked);
+        viewModel.HasGitHubAppSetupSteps.Should().BeTrue();
+    }
+
+    [Fact]
+    public void GitHubAppSetupChecklist_UpdatesAsFieldsChangeAndWarnsForMissingPemFile()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var missingPemPath = Path.Combine(_settingsDirectory, "missing-key.pem");
+        var viewModel = new IntegrationsViewModel(settingsService)
+        {
+            GitHubAppId = "12345",
+            GitHubInstallationId = "98765",
+            GitHubPrivateKeyPath = missingPemPath
+        };
+
+        viewModel.GitHubAppSetupSteps.Should().Contain(step =>
+            step.Name == "App ID"
+            && step.Value == "Provided"
+            && step.IsReady);
+        viewModel.GitHubAppSetupSteps.Should().Contain(step =>
+            step.Name == "Installation ID"
+            && step.Value == "Provided"
+            && step.IsReady);
+        viewModel.GitHubAppSetupSteps.Should().Contain(step =>
+            step.Name == "Private Key Path"
+            && step.Value == "Check path"
+            && step.Detail.Contains("PEM file was not found", StringComparison.OrdinalIgnoreCase)
+            && step.IsWarning);
+        viewModel.GitHubAppSetupSteps.Should().Contain(step =>
+            step.Name == "Connection Test"
+            && step.Value == "Run test"
+            && step.Detail.Contains("Test Connection", StringComparison.OrdinalIgnoreCase)
+            && step.IsWarning);
+        viewModel.GitHubAppSetupSteps.Select(step => step.Detail).Should().NotContain(missingPemPath);
+    }
+
+    [Fact]
+    public void GitHubAppSetupChecklist_WhenPemFileExists_MarksPrivateKeyPathReadyWithoutDisplayingPath()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        Directory.CreateDirectory(_settingsDirectory);
+        var pemPath = Path.Combine(_settingsDirectory, "kam-github-app.pem");
+        File.WriteAllText(pemPath, "not read by the checklist");
+        var viewModel = new IntegrationsViewModel(settingsService)
+        {
+            GitHubAppId = "12345",
+            GitHubInstallationId = "98765",
+            GitHubPrivateKeyPath = pemPath
+        };
+
+        viewModel.GitHubAppSetupSteps.Should().Contain(step =>
+            step.Name == "Private Key Path"
+            && step.Value == "Provided"
+            && step.Detail.Contains("key material is not displayed", StringComparison.OrdinalIgnoreCase)
+            && step.IsReady);
+        viewModel.GitHubAppSetupSteps.Select(step => step.Detail)
+            .Should().NotContain(detail => detail.Contains(pemPath, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void GitHubAppSetupChecklist_WhenPemPathIsMalformed_DoesNotThrowAndWarnsWithoutEchoingInput()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var malformedPath = $"C:{Path.DirectorySeparatorChar}\0not-a-valid-path.pem";
+        var viewModel = new IntegrationsViewModel(settingsService)
+        {
+            GitHubAppId = "12345",
+            GitHubInstallationId = "98765"
+        };
+
+        var act = () => viewModel.GitHubPrivateKeyPath = malformedPath;
+
+        act.Should().NotThrow();
+        viewModel.GitHubAppSetupSteps.Should().Contain(step =>
+            step.Name == "Private Key Path"
+            && step.Value == "Check path"
+            && step.Detail.Contains("PEM file was not found", StringComparison.OrdinalIgnoreCase)
+            && step.IsWarning);
+        viewModel.GitHubAppSetupSteps.Select(step => step.Detail)
+            .Should().NotContain(detail => detail.Contains(malformedPath, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void GitHubAppSetupChecklist_WhenRawPrivateKeyMaterialIsPasted_BlocksAndDoesNotPersistKeyMaterial()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        const string rawPrivateKey = "-----BEGIN PRIVATE KEY-----\nabc123\n-----END PRIVATE KEY-----";
+        var viewModel = new IntegrationsViewModel(settingsService)
+        {
+            GitHubAppId = "12345",
+            GitHubInstallationId = "98765",
+            GitHubPrivateKeyPath = rawPrivateKey
+        };
+
+        viewModel.CanTestGitHubAppConnection.Should().BeFalse();
+        viewModel.GitHubAppSetupSteps.Should().Contain(step =>
+            step.Name == "Private Key Path"
+            && step.Value == "Invalid input"
+            && step.Detail.Contains("file path only", StringComparison.OrdinalIgnoreCase)
+            && step.IsBlocked);
+
+        viewModel.SaveGitHubAppCommand.Execute(null);
+
+        settingsService.GitHubAppPrivateKeyPath.Should().BeEmpty();
+        viewModel.GitHubPrivateKeyPath.Should().BeEmpty();
+        viewModel.GitHubConnectionDetailText.Should().NotContain(rawPrivateKey);
+    }
+
+    [Fact]
     public void SaveGitHubAppCommand_PersistsGitHubAppSettings()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);
@@ -110,6 +245,73 @@ public sealed class IntegrationsViewModelTests : IDisposable
         viewModel.GitHubRepositoryPreviewText.Should().Contain("Esquetta/Kam");
         viewModel.HasGitHubRepositoryPreview.Should().BeTrue();
         viewModel.CanListGitHubAppRepositories.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GitHubAppFieldChange_AfterConnectedApp_RequiresRetestBeforeRepositoryListing()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var factory = new RecordingGitHubAppClientFactory
+        {
+            Status = GitHubAppConnectionStatus.Connected(
+                "12345",
+                "98765",
+                "https://api.github.com",
+                "Kam",
+                "kam",
+                1),
+            Repositories = GitHubRepositoryListResult.Succeeded(
+                "1 repository visible.",
+                [
+                    new GitHubRepositorySummary("Esquetta/Kam", true, "master", "https://github.com/Esquetta/Kam", "https://github.com/Esquetta/Kam.git")
+                ])
+        };
+        var viewModel = new IntegrationsViewModel(settingsService, factory)
+        {
+            GitHubAppId = "12345",
+            GitHubInstallationId = "98765",
+            GitHubPrivateKeyPath = @"C:\secure\kam-github-app.pem"
+        };
+        await viewModel.TestGitHubAppConnectionAsync();
+
+        viewModel.GitHubInstallationId = "98766";
+
+        viewModel.CanListGitHubAppRepositories.Should().BeFalse();
+        viewModel.GitHubConnectionStatusText.Should().Be("Retest required");
+        viewModel.GitHubConnectionDetailText.Should().Contain("Test connection");
+        viewModel.GitHubRepositoryPreviewText.Should().BeEmpty();
+        viewModel.GitHubAppSetupSteps.Should().Contain(step =>
+            step.Name == "Connection Test"
+            && step.Value == "Run test"
+            && step.IsWarning);
+    }
+
+    [Fact]
+    public async Task TestGitHubAppConnectionCommand_FailureDetails_RedactCurrentPemPathAndTokens()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var pemPath = Path.Combine(_settingsDirectory, "kam-github-app.pem");
+        const string token = "ghp_abcdefghijklmnopqrstuvwxyz";
+        var factory = new RecordingGitHubAppClientFactory
+        {
+            Status = GitHubAppConnectionStatus.Failed(
+                $"Failed to load {pemPath} with {token}.",
+                "12345",
+                "98765",
+                "https://api.github.com")
+        };
+        var viewModel = new IntegrationsViewModel(settingsService, factory)
+        {
+            GitHubAppId = "12345",
+            GitHubInstallationId = "98765",
+            GitHubPrivateKeyPath = pemPath
+        };
+
+        await viewModel.TestGitHubAppConnectionAsync();
+
+        viewModel.GitHubConnectionDetailText.Should().NotContain(pemPath);
+        viewModel.GitHubConnectionDetailText.Should().NotContain(token);
+        viewModel.GitHubConnectionDetailText.Should().Contain("[redacted]");
     }
 
     [Fact]

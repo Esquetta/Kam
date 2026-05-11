@@ -5,6 +5,8 @@ using SmartVoiceAgent.Core.Security;
 using SmartVoiceAgent.Ui.Services;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Reactive;
 using System.Threading;
@@ -36,6 +38,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private string _githubConnectionDetailText = "Save and test the GitHub App settings to verify repository access.";
         private string _githubRepositoryPreviewText = string.Empty;
         private bool _hasGitHubRepositoryPreview;
+        private bool _isLoadingSettings;
         
         // Email (SMTP)
         private string _smtpHost = string.Empty;
@@ -117,8 +120,14 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             get => _githubAppId;
             set
             {
+                if (_githubAppId == value)
+                {
+                    return;
+                }
+
+                var requiresRetest = _isGitHubAppConnected && !_isLoadingSettings;
                 this.RaiseAndSetIfChanged(ref _githubAppId, value);
-                RefreshGitHubAppConfigured();
+                RefreshGitHubAppConfigured(requiresRetest);
             }
         }
 
@@ -127,8 +136,14 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             get => _githubInstallationId;
             set
             {
+                if (_githubInstallationId == value)
+                {
+                    return;
+                }
+
+                var requiresRetest = _isGitHubAppConnected && !_isLoadingSettings;
                 this.RaiseAndSetIfChanged(ref _githubInstallationId, value);
-                RefreshGitHubAppConfigured();
+                RefreshGitHubAppConfigured(requiresRetest);
             }
         }
 
@@ -137,8 +152,14 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             get => _githubPrivateKeyPath;
             set
             {
+                if (_githubPrivateKeyPath == value)
+                {
+                    return;
+                }
+
+                var requiresRetest = _isGitHubAppConnected && !_isLoadingSettings;
                 this.RaiseAndSetIfChanged(ref _githubPrivateKeyPath, value);
-                RefreshGitHubAppConfigured();
+                RefreshGitHubAppConfigured(requiresRetest);
             }
         }
 
@@ -164,6 +185,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 this.RaiseAndSetIfChanged(ref _isTestingGitHubAppConnection, value);
                 this.RaisePropertyChanged(nameof(CanTestGitHubAppConnection));
                 this.RaisePropertyChanged(nameof(CanListGitHubAppRepositories));
+                RefreshGitHubAppSetupSteps();
             }
         }
 
@@ -194,6 +216,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             get => _hasGitHubRepositoryPreview;
             private set => this.RaiseAndSetIfChanged(ref _hasGitHubRepositoryPreview, value);
         }
+
+        public ObservableCollection<RuntimeDiagnosticItemViewModel> GitHubAppSetupSteps { get; } = [];
+
+        public bool HasGitHubAppSetupSteps => GitHubAppSetupSteps.Count > 0;
 
         #endregion
 
@@ -325,9 +351,18 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             TodoistApiKey = _settingsService.TodoistApiKey;
 
             // GitHub App
-            GitHubAppId = _settingsService.GitHubAppId;
-            GitHubInstallationId = _settingsService.GitHubAppInstallationId;
-            GitHubPrivateKeyPath = _settingsService.GitHubAppPrivateKeyPath;
+            _isLoadingSettings = true;
+            try
+            {
+                GitHubAppId = _settingsService.GitHubAppId;
+                GitHubInstallationId = _settingsService.GitHubAppInstallationId;
+                GitHubPrivateKeyPath = _settingsService.GitHubAppPrivateKeyPath;
+            }
+            finally
+            {
+                _isLoadingSettings = false;
+            }
+
             RefreshGitHubAppConfigured();
             
             // Email
@@ -383,11 +418,20 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
         }
 
-        private void RefreshGitHubAppConfigured()
+        private void RefreshGitHubAppConfigured(bool requiresRetest = false)
         {
             IsGitHubAppConfigured = !string.IsNullOrWhiteSpace(GitHubAppId) &&
                                     !string.IsNullOrWhiteSpace(GitHubInstallationId) &&
-                                    !string.IsNullOrWhiteSpace(GitHubPrivateKeyPath);
+                                    !string.IsNullOrWhiteSpace(GitHubPrivateKeyPath) &&
+                                    !ContainsRawPrivateKeyMaterial(GitHubPrivateKeyPath);
+            if (ContainsRawPrivateKeyMaterial(GitHubPrivateKeyPath))
+            {
+                SetGitHubAppDisconnected(
+                    "Invalid private key path",
+                    "Enter the PEM file path only. Do not paste raw private key material into this field.");
+                return;
+            }
+
             if (!IsGitHubAppConfigured)
             {
                 SetGitHubAppDisconnected(
@@ -396,11 +440,21 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 return;
             }
 
+            if (requiresRetest)
+            {
+                SetGitHubAppDisconnected(
+                    "Retest required",
+                    "GitHub App settings changed. Test connection again before listing repositories.");
+                return;
+            }
+
             if (!_isGitHubAppConnected && GitHubConnectionStatusText == "Missing settings")
             {
                 GitHubConnectionStatusText = "Not tested";
                 GitHubConnectionDetailText = "Settings are present. Test connection to verify repository access.";
             }
+
+            RefreshGitHubAppSetupSteps();
         }
 
         #region Todoist Methods
@@ -424,6 +478,19 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         private void SaveGitHubApp()
         {
+            if (ContainsRawPrivateKeyMaterial(GitHubPrivateKeyPath))
+            {
+                GitHubPrivateKeyPath = string.Empty;
+                _settingsService.GitHubAppId = GitHubAppId;
+                _settingsService.GitHubAppInstallationId = GitHubInstallationId;
+                _settingsService.GitHubAppPrivateKeyPath = string.Empty;
+                _settingsService.Save();
+                SetGitHubAppDisconnected(
+                    "Invalid private key path",
+                    "Raw private key material was discarded. Enter the PEM file path only.");
+                return;
+            }
+
             _settingsService.GitHubAppId = GitHubAppId;
             _settingsService.GitHubAppInstallationId = GitHubInstallationId;
             _settingsService.GitHubAppPrivateKeyPath = GitHubPrivateKeyPath;
@@ -434,6 +501,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 GitHubConnectionStatusText = "Not tested";
                 GitHubConnectionDetailText = "Settings saved. Test connection to verify repository access.";
             }
+
+            RefreshGitHubAppSetupSteps();
         }
 
         private void ClearGitHubApp()
@@ -455,6 +524,14 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             RefreshGitHubAppConfigured();
             if (!IsGitHubAppConfigured)
             {
+                if (ContainsRawPrivateKeyMaterial(GitHubPrivateKeyPath))
+                {
+                    SetGitHubAppDisconnected(
+                        "Invalid private key path",
+                        "Enter the PEM file path only. Do not paste raw private key material into this field.");
+                    return;
+                }
+
                 SetGitHubAppDisconnected(
                     "Missing settings",
                     $"Missing settings: {string.Join(", ", GetMissingGitHubAppFieldLabels())}.");
@@ -500,7 +577,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 SetGitHubAppDisconnected(
                     "Unavailable",
-                    SecretRedactor.Redact($"GitHub App connection test failed: {ex.Message}"));
+                    $"GitHub App connection test failed: {ex.Message}");
             }
             finally
             {
@@ -516,6 +593,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 GitHubConnectionDetailText = "Test connection before listing repositories.";
                 GitHubRepositoryPreviewText = string.Empty;
                 HasGitHubRepositoryPreview = false;
+                RefreshGitHubAppSetupSteps();
                 return;
             }
 
@@ -545,7 +623,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 SetGitHubAppDisconnected(
                     "Unavailable",
-                    SecretRedactor.Redact($"GitHub App repository list failed: {ex.Message}"));
+                    $"GitHub App repository list failed: {ex.Message}");
             }
             finally
             {
@@ -571,7 +649,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 SetGitHubAppDisconnected(
                     "Needs action",
-                    SecretRedactor.Redact($"GitHub App connected, but repository list failed: {repositories.Message}"));
+                    $"GitHub App connected, but repository list failed: {repositories.Message}");
                 return;
             }
 
@@ -582,6 +660,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             GitHubConnectionDetailText = $"GitHub App connected. {repositoryCount} repositories visible.";
             GitHubRepositoryPreviewText = FormatGitHubRepositoryPreview(repositories.Repositories, repositoryCount);
             HasGitHubRepositoryPreview = !string.IsNullOrWhiteSpace(GitHubRepositoryPreviewText);
+            RefreshGitHubAppSetupSteps();
         }
 
         private void SetGitHubAppDisconnected(string status, string detail)
@@ -589,9 +668,150 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _isGitHubAppConnected = false;
             this.RaisePropertyChanged(nameof(CanListGitHubAppRepositories));
             GitHubConnectionStatusText = status;
-            GitHubConnectionDetailText = SecretRedactor.Redact(detail);
+            GitHubConnectionDetailText = SanitizeGitHubAppDetail(detail);
             GitHubRepositoryPreviewText = string.Empty;
             HasGitHubRepositoryPreview = false;
+            RefreshGitHubAppSetupSteps();
+        }
+
+        private void RefreshGitHubAppSetupSteps()
+        {
+            GitHubAppSetupSteps.Clear();
+            GitHubAppSetupSteps.Add(BuildRequiredFieldStep(
+                "App ID",
+                GitHubAppId,
+                "Copy the App ID from the GitHub App settings page."));
+            GitHubAppSetupSteps.Add(BuildRequiredFieldStep(
+                "Installation ID",
+                GitHubInstallationId,
+                "Install the app on selected repositories, then copy the installation ID."));
+            GitHubAppSetupSteps.Add(BuildPrivateKeyPathStep());
+            GitHubAppSetupSteps.Add(BuildConnectionTestStep());
+            this.RaisePropertyChanged(nameof(HasGitHubAppSetupSteps));
+        }
+
+        private static RuntimeDiagnosticItemViewModel BuildRequiredFieldStep(
+            string name,
+            string value,
+            string detail)
+        {
+            return string.IsNullOrWhiteSpace(value)
+                ? new RuntimeDiagnosticItemViewModel(
+                    name,
+                    "Required",
+                    detail,
+                    RuntimeDiagnosticSeverity.Blocked)
+                : new RuntimeDiagnosticItemViewModel(
+                    name,
+                    "Provided",
+                    $"{name} is present.",
+                    RuntimeDiagnosticSeverity.Ready);
+        }
+
+        private RuntimeDiagnosticItemViewModel BuildPrivateKeyPathStep()
+        {
+            if (string.IsNullOrWhiteSpace(GitHubPrivateKeyPath))
+            {
+                return new RuntimeDiagnosticItemViewModel(
+                    "Private Key Path",
+                    "Required",
+                    "Create a GitHub App private key, store the PEM outside the repository, then enter its file path.",
+                    RuntimeDiagnosticSeverity.Blocked);
+            }
+
+            if (ContainsRawPrivateKeyMaterial(GitHubPrivateKeyPath))
+            {
+                return new RuntimeDiagnosticItemViewModel(
+                    "Private Key Path",
+                    "Invalid input",
+                    "Enter a PEM file path only. Key contents are not displayed or saved by this screen.",
+                    RuntimeDiagnosticSeverity.Blocked);
+            }
+
+            if (FileExists(GitHubPrivateKeyPath))
+            {
+                return new RuntimeDiagnosticItemViewModel(
+                    "Private Key Path",
+                    "Provided",
+                    "PEM file path is present and key material is not displayed.",
+                    RuntimeDiagnosticSeverity.Ready);
+            }
+
+            return new RuntimeDiagnosticItemViewModel(
+                "Private Key Path",
+                "Check path",
+                "PEM file was not found. Keep the key outside the repository and verify the path before testing.",
+                RuntimeDiagnosticSeverity.Warning);
+        }
+
+        private RuntimeDiagnosticItemViewModel BuildConnectionTestStep()
+        {
+            if (_isGitHubAppConnected)
+            {
+                return new RuntimeDiagnosticItemViewModel(
+                    "Connection Test",
+                    "Verified",
+                    "GitHub App credentials and repository access were verified.",
+                    RuntimeDiagnosticSeverity.Ready);
+            }
+
+            if (IsTestingGitHubAppConnection)
+            {
+                return new RuntimeDiagnosticItemViewModel(
+                    "Connection Test",
+                    "Testing",
+                    "Checking GitHub App credentials and repository access.",
+                    RuntimeDiagnosticSeverity.Warning);
+            }
+
+            if (!IsGitHubAppConfigured)
+            {
+                return new RuntimeDiagnosticItemViewModel(
+                    "Connection Test",
+                    "Required",
+                    "Complete required fields, save, then run Test Connection.",
+                    RuntimeDiagnosticSeverity.Blocked);
+            }
+
+            return new RuntimeDiagnosticItemViewModel(
+                "Connection Test",
+                "Run test",
+                "Run Test Connection to verify credentials and selected repository access.",
+                RuntimeDiagnosticSeverity.Warning);
+        }
+
+        private static bool FileExists(string path)
+        {
+            try
+            {
+                return File.Exists(path);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool ContainsRawPrivateKeyMaterial(string value)
+        {
+            return value.Contains("-----BEGIN ", StringComparison.OrdinalIgnoreCase) &&
+                   value.Contains("PRIVATE KEY-----", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private string SanitizeGitHubAppDetail(string? detail)
+        {
+            var redacted = SecretRedactor.Redact(detail);
+            var currentPath = GitHubPrivateKeyPath.Trim();
+            if (!string.IsNullOrWhiteSpace(currentPath) &&
+                !ContainsRawPrivateKeyMaterial(currentPath))
+            {
+                redacted = redacted.Replace(
+                    currentPath,
+                    SecretRedactor.Replacement,
+                    StringComparison.OrdinalIgnoreCase);
+            }
+
+            return redacted;
         }
 
         private string BuildGitHubAppStatusDetail(GitHubAppConnectionStatus status)
@@ -607,7 +827,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 detail += $" {status.RepositoryCount} repositories visible.";
             }
 
-            return SecretRedactor.Redact(detail);
+            return SanitizeGitHubAppDetail(detail);
         }
 
         private IReadOnlyList<string> GetMissingGitHubAppFieldLabels()
