@@ -20,4 +20,9 @@ public interface IGitHubAppClient
         string repositoryFullName,
         long runId,
         CancellationToken cancellationToken = default);
+
+    Task<GitHubWorkflowJobLogResult> GetWorkflowJobLogAsync(
+        string repositoryFullName,
+        long jobId,
+        CancellationToken cancellationToken = default);
 }

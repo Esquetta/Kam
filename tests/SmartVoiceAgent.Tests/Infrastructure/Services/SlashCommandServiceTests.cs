@@ -30,15 +30,18 @@ public sealed class SlashCommandServiceTests
                 "/github app prs",
                 "/github app repos",
                 "/github app diagnose",
+                "/github app logs",
                 "/github app run",
                 "/github actions",
                 "/github diagnose",
+                "/github logs",
                 "/github prs",
                 "/github repos",
                 "/github run",
                 "/github-app",
                 "/github-app actions",
                 "/github-app diagnose",
+                "/github-app logs",
                 "/github-app prs",
                 "/github-app run",
                 "/hooks",
@@ -594,6 +597,84 @@ public sealed class SlashCommandServiceTests
     }
 
     [Theory]
+    [InlineData("/github logs Esquetta/Kam 2001")]
+    [InlineData("/github-app logs Esquetta/Kam 2001")]
+    [InlineData("/github app logs Esquetta/Kam 2001")]
+    public async Task ExecuteAsync_WhenGithubLogsAliasIsRequested_ReturnsTemporaryJobLogUrl(string command)
+    {
+        var service = new SlashCommandService(
+            githubAppClient: new StaticGitHubAppClient(
+                GitHubAppConnectionStatus.Connected(
+                    "12345",
+                    "98765",
+                    "https://api.github.com",
+                    "Kam Coding",
+                    "kam-coding",
+                    1),
+                GitHubRepositoryListResult.Failed("not used"),
+                workflowJobLog: GitHubWorkflowJobLogResult.Succeeded(
+                    "GitHub returned a temporary workflow job log download URL.",
+                    "Esquetta/Kam",
+                    2001,
+                    "https://pipelines.actions.githubusercontent.com/logs/2001",
+                    string.Empty)));
+
+        var result = await service.ExecuteAsync(command);
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Kam GitHub App workflow job logs:");
+        result.Message.Should().Contain("job: Esquetta/Kam#2001");
+        result.Message.Should().Contain("download: https://pipelines.actions.githubusercontent.com/logs/2001");
+        result.Message.Should().Contain("expires: GitHub log download URLs expire after 1 minute");
+        result.Message.Should().NotContain("installation-token");
+        result.Message.Should().NotContain("PRIVATE KEY");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenGithubLogsPreviewIsReturned_RedactsAndTruncatesPreview()
+    {
+        var service = new SlashCommandService(
+            githubAppClient: new StaticGitHubAppClient(
+                GitHubAppConnectionStatus.Connected(
+                    "12345",
+                    "98765",
+                    "https://api.github.com",
+                    "Kam Coding",
+                    "kam-coding",
+                    1),
+                GitHubRepositoryListResult.Failed("not used"),
+                workflowJobLog: GitHubWorkflowJobLogResult.Succeeded(
+                    "Downloaded workflow job log preview.",
+                    "Esquetta/Kam",
+                    2001,
+                    string.Empty,
+                    "Run dotnet test\ntoken=secret-value-token\nBuild failed")));
+
+        var result = await service.ExecuteAsync("/github logs Esquetta/Kam 2001");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("preview:");
+        result.Message.Should().Contain("Run dotnet test");
+        result.Message.Should().Contain("Build failed");
+        result.Message.Should().NotContain("secret-value-token");
+    }
+
+    [Theory]
+    [InlineData("/github logs")]
+    [InlineData("/github logs Esquetta/Kam abc")]
+    [InlineData("/github-app logs Esquetta/Kam 0")]
+    [InlineData("/github app logs Esquetta/Kam -1")]
+    public async Task ExecuteAsync_WhenGithubLogsArgumentsAreInvalid_ReturnsUsage(string command)
+    {
+        var service = new SlashCommandService();
+
+        var result = await service.ExecuteAsync(command);
+
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Usage: /github logs <owner/repo> <jobId>");
+    }
+
+    [Theory]
     [InlineData("/github run Esquetta/Kam")]
     [InlineData("/github run Esquetta/Kam abc")]
     [InlineData("/github-app run Esquetta/Kam 0")]
@@ -914,19 +995,22 @@ public sealed class SlashCommandServiceTests
         private readonly GitHubPullRequestListResult _pullRequests;
         private readonly GitHubWorkflowRunListResult _workflowRuns;
         private readonly GitHubWorkflowJobListResult _workflowJobs;
+        private readonly GitHubWorkflowJobLogResult _workflowJobLog;
 
         public StaticGitHubAppClient(
             GitHubAppConnectionStatus status,
             GitHubRepositoryListResult repositories,
             GitHubPullRequestListResult? pullRequests = null,
             GitHubWorkflowRunListResult? workflowRuns = null,
-            GitHubWorkflowJobListResult? workflowJobs = null)
+            GitHubWorkflowJobListResult? workflowJobs = null,
+            GitHubWorkflowJobLogResult? workflowJobLog = null)
         {
             _status = status;
             _repositories = repositories;
             _pullRequests = pullRequests ?? GitHubPullRequestListResult.Failed("not used");
             _workflowRuns = workflowRuns ?? GitHubWorkflowRunListResult.Failed("not used");
             _workflowJobs = workflowJobs ?? GitHubWorkflowJobListResult.Failed("not used");
+            _workflowJobLog = workflowJobLog ?? GitHubWorkflowJobLogResult.Failed("not used");
         }
 
         public Task<GitHubAppConnectionStatus> GetStatusAsync(
@@ -959,6 +1043,14 @@ public sealed class SlashCommandServiceTests
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_workflowJobs);
+        }
+
+        public Task<GitHubWorkflowJobLogResult> GetWorkflowJobLogAsync(
+            string repositoryFullName,
+            long jobId,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_workflowJobLog);
         }
     }
 }

@@ -759,6 +759,78 @@ public sealed class CodingAgentCommandTests : IDisposable
     }
 
     [Theory]
+    [InlineData("/github logs Esquetta/Kam 2001")]
+    [InlineData("/github app logs Esquetta/Kam 2001")]
+    [InlineData("/github-app logs Esquetta/Kam 2001")]
+    public async Task RunAsync_GithubLogsSlashCommand_ReturnsTemporaryJobLogUrl(string commandText)
+    {
+        var githubApp = new StaticGitHubAppClient(
+            GitHubAppConnectionStatus.Connected(
+                "12345",
+                "98765",
+                "https://api.github.com",
+                "Kam Coding",
+                "kam-coding",
+                1),
+            GitHubRepositoryListResult.Failed("not used"),
+            workflowJobLog: GitHubWorkflowJobLogResult.Succeeded(
+                "GitHub returned a temporary workflow job log download URL.",
+                "Esquetta/Kam",
+                2001,
+                "https://pipelines.actions.githubusercontent.com/logs/2001",
+                string.Empty));
+        var command = new CodingAgentCommand(
+            new RecordingCommandRuntime(CommandRuntimeResult.Failed("Should not run.", SkillExecutionStatus.Failed, "unexpected")),
+            githubAppClient: githubApp);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await command.RunAsync(
+            new CodingAgentCommandOptions
+            {
+                CommandText = commandText,
+                WorkspaceRoot = _workspace
+            },
+            output,
+            error);
+
+        exitCode.Should().Be(0);
+        output.ToString().Should().Contain("Kam GitHub App workflow job logs:");
+        output.ToString().Should().Contain("job: Esquetta/Kam#2001");
+        output.ToString().Should().Contain("download: https://pipelines.actions.githubusercontent.com/logs/2001");
+        output.ToString().Should().Contain("expires: GitHub log download URLs expire after 1 minute");
+        output.ToString().Should().NotContain("installation-token");
+        output.ToString().Should().NotContain("PRIVATE KEY");
+        error.ToString().Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("/github logs")]
+    [InlineData("/github logs Esquetta/Kam abc")]
+    [InlineData("/github-app logs Esquetta/Kam 0")]
+    [InlineData("/github app logs Esquetta/Kam -1")]
+    public async Task RunAsync_GithubLogsSlashCommand_WhenArgumentsAreInvalid_ReturnsUsage(string commandText)
+    {
+        var command = new CodingAgentCommand(
+            new RecordingCommandRuntime(CommandRuntimeResult.Failed("Should not run.", SkillExecutionStatus.Failed, "unexpected")));
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await command.RunAsync(
+            new CodingAgentCommandOptions
+            {
+                CommandText = commandText,
+                WorkspaceRoot = _workspace
+            },
+            output,
+            error);
+
+        exitCode.Should().Be(2);
+        output.ToString().Should().Contain("Usage: /github logs <owner/repo> <jobId>");
+        error.ToString().Should().BeEmpty();
+    }
+
+    [Theory]
     [InlineData("/github run Esquetta/Kam")]
     [InlineData("/github run Esquetta/Kam abc")]
     [InlineData("/github-app run Esquetta/Kam 0")]
@@ -1154,17 +1226,20 @@ public sealed class CodingAgentCommandTests : IDisposable
         private readonly GitHubRepositoryListResult _repositories;
         private readonly GitHubWorkflowRunListResult _workflowRuns;
         private readonly GitHubWorkflowJobListResult _workflowJobs;
+        private readonly GitHubWorkflowJobLogResult _workflowJobLog;
 
         public StaticGitHubAppClient(
             GitHubAppConnectionStatus status,
             GitHubRepositoryListResult repositories,
             GitHubWorkflowRunListResult? workflowRuns = null,
-            GitHubWorkflowJobListResult? workflowJobs = null)
+            GitHubWorkflowJobListResult? workflowJobs = null,
+            GitHubWorkflowJobLogResult? workflowJobLog = null)
         {
             _status = status;
             _repositories = repositories;
             _workflowRuns = workflowRuns ?? GitHubWorkflowRunListResult.Failed("not used");
             _workflowJobs = workflowJobs ?? GitHubWorkflowJobListResult.Failed("not used");
+            _workflowJobLog = workflowJobLog ?? GitHubWorkflowJobLogResult.Failed("not used");
         }
 
         public Task<GitHubAppConnectionStatus> GetStatusAsync(
@@ -1197,6 +1272,14 @@ public sealed class CodingAgentCommandTests : IDisposable
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_workflowJobs);
+        }
+
+        public Task<GitHubWorkflowJobLogResult> GetWorkflowJobLogAsync(
+            string repositoryFullName,
+            long jobId,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_workflowJobLog);
         }
     }
 }

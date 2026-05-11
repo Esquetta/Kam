@@ -1332,6 +1332,14 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
         {
             return Task.FromResult(GitHubWorkflowJobListResult.Failed("not used"));
         }
+
+        public Task<GitHubWorkflowJobLogResult> GetWorkflowJobLogAsync(
+            string repositoryFullName,
+            long jobId,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(GitHubWorkflowJobLogResult.Failed("not used"));
+        }
     }
 
     private sealed class RecordingSkillEvalHarness : ISkillEvalHarness

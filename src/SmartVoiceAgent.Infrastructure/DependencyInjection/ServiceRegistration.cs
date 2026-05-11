@@ -171,11 +171,24 @@ public static class ServiceRegistration
         services.AddSingleton<IApplicationRestartPlanner, ApplicationRestartPlanner>();
         services.AddScoped<IApplicationUpdateSession, ApplicationUpdateSession>();
         services.AddSingleton<IGitHubAppClientFactory, GitHubAppInstallationClientFactory>();
-        services.AddHttpClient<IGitHubAppClient, GitHubAppInstallationClient>();
+        services
+            .AddHttpClient(nameof(GitHubAppInstallationClient))
+            .ConfigurePrimaryHttpMessageHandler(CreateGitHubAppHttpMessageHandler);
+        services
+            .AddHttpClient<IGitHubAppClient, GitHubAppInstallationClient>()
+            .ConfigurePrimaryHttpMessageHandler(CreateGitHubAppHttpMessageHandler);
         services.AddHttpClient<IApplicationUpdateService, GitHubApplicationUpdateService>();
         services.AddScoped<ISlashCommandService, SlashCommandService>();
 
         return services;
+    }
+
+    private static System.Net.Http.HttpMessageHandler CreateGitHubAppHttpMessageHandler()
+    {
+        return new System.Net.Http.HttpClientHandler
+        {
+            AllowAutoRedirect = false
+        };
     }
 
     private static void ApplyCodingAgentPolicy(

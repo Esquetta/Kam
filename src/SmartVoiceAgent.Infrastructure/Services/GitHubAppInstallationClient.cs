@@ -18,6 +18,7 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
     private const int WorkflowRunRepositoryLimit = 50;
     private const int WorkflowRunPageSize = 10;
     private const int WorkflowJobPageSize = 100;
+    private const int WorkflowJobLogPreviewLength = 6000;
 
     private readonly HttpClient _httpClient;
     private readonly GitHubAppOptions _options;
@@ -238,6 +239,40 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
         catch (GitHubAppClientException ex)
         {
             return GitHubWorkflowJobListResult.Failed(ex.Message);
+        }
+    }
+
+    public async Task<GitHubWorkflowJobLogResult> GetWorkflowJobLogAsync(
+        string repositoryFullName,
+        long jobId,
+        CancellationToken cancellationToken = default)
+    {
+        var missingSettings = _options.GetMissingSettings();
+        if (missingSettings.Count > 0)
+        {
+            return GitHubWorkflowJobLogResult.Failed(
+                "GitHub App is not configured.",
+                missingSettings);
+        }
+
+        if (jobId <= 0)
+        {
+            return GitHubWorkflowJobLogResult.Failed("GitHub workflow job id must be greater than zero.");
+        }
+
+        try
+        {
+            var jwt = await CreateJsonWebTokenAsync(cancellationToken);
+            var token = await CreateInstallationTokenAsync(jwt, cancellationToken);
+            return await GetWorkflowJobLogAsync(
+                token.Token,
+                repositoryFullName,
+                jobId,
+                cancellationToken);
+        }
+        catch (GitHubAppClientException ex)
+        {
+            return GitHubWorkflowJobLogResult.Failed(ex.Message);
         }
     }
 
@@ -476,6 +511,46 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
             .ToArray();
     }
 
+    private async Task<GitHubWorkflowJobLogResult> GetWorkflowJobLogAsync(
+        string installationToken,
+        string repositoryFullName,
+        long jobId,
+        CancellationToken cancellationToken)
+    {
+        using var request = CreateRequest(
+            HttpMethod.Get,
+            BuildWorkflowJobLogsPath(repositoryFullName, jobId),
+            installationToken);
+        using var response = await _httpClient.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+
+        if (IsRedirect(response.StatusCode) && response.Headers.Location is not null)
+        {
+            return GitHubWorkflowJobLogResult.Succeeded(
+                "GitHub returned a temporary workflow job log download URL.",
+                repositoryFullName,
+                jobId,
+                response.Headers.Location.ToString(),
+                string.Empty);
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new GitHubAppClientException(
+                BuildWorkflowJobLogAccessFailureMessage(response.StatusCode));
+        }
+
+        var preview = await ReadLogPreviewAsync(response.Content, cancellationToken);
+        return GitHubWorkflowJobLogResult.Succeeded(
+            "Downloaded workflow job log preview.",
+            repositoryFullName,
+            jobId,
+            string.Empty,
+            preview);
+    }
+
     private HttpRequestMessage CreateRequest(
         HttpMethod method,
         string pathAndQuery,
@@ -570,6 +645,13 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
             : $"GitHub App workflow run list request failed with HTTP {(int)statusCode}.";
     }
 
+    private static string BuildWorkflowJobLogAccessFailureMessage(HttpStatusCode statusCode)
+    {
+        return statusCode == HttpStatusCode.Forbidden
+            ? "GitHub App workflow job log request failed with HTTP 403. Check repository permissions: Metadata and Actions."
+            : $"GitHub App workflow job log request failed with HTTP {(int)statusCode}.";
+    }
+
     private static string BuildPullRequestsPath(string repositoryFullName)
     {
         var parts = repositoryFullName.Split('/', 2, StringSplitOptions.TrimEntries);
@@ -601,6 +683,34 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
         }
 
         return $"repos/{Uri.EscapeDataString(parts[0])}/{Uri.EscapeDataString(parts[1])}/actions/runs/{runId}/jobs?per_page={WorkflowJobPageSize}";
+    }
+
+    private static string BuildWorkflowJobLogsPath(string repositoryFullName, long jobId)
+    {
+        var parts = repositoryFullName.Split('/', 2, StringSplitOptions.TrimEntries);
+        if (parts.Length != 2 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
+        {
+            throw new GitHubAppClientException("GitHub repository full name was invalid.");
+        }
+
+        return $"repos/{Uri.EscapeDataString(parts[0])}/{Uri.EscapeDataString(parts[1])}/actions/jobs/{jobId}/logs";
+    }
+
+    private static bool IsRedirect(HttpStatusCode statusCode)
+    {
+        var numericStatusCode = (int)statusCode;
+        return numericStatusCode >= 300 && numericStatusCode <= 399;
+    }
+
+    private static async Task<string> ReadLogPreviewAsync(
+        HttpContent content,
+        CancellationToken cancellationToken)
+    {
+        await using var stream = await content.ReadAsStreamAsync(cancellationToken);
+        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: false);
+        var buffer = new char[WorkflowJobLogPreviewLength];
+        var read = await reader.ReadBlockAsync(buffer.AsMemory(0, buffer.Length), cancellationToken);
+        return new string(buffer, 0, read);
     }
 
     private static string Pluralize(int count, string singular, string plural)

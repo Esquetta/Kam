@@ -309,6 +309,7 @@ public sealed class CodingAgentCommand
             "  /github repos  List repositories visible through the configured GitHub App.",
             "  /github actions  List GitHub Actions workflow runs visible through the configured GitHub App.",
             "  /github diagnose  Diagnose one GitHub Actions workflow run.",
+            "  /github logs   Get a temporary download URL or preview for one GitHub Actions job log.",
             "  /github run    List jobs for one GitHub Actions workflow run.",
             "  /github-app    Alias for GitHub App repository, PR, workflow, and run commands.",
             "  /plugins       Show skill/plugin health summary.",
@@ -508,6 +509,11 @@ public sealed class CodingAgentCommand
                 return await RunGitHubAppWorkflowDiagnosisAsync(arguments, 2, cancellationToken);
             }
 
+            if (arguments.Count > 1 && IsCommand(arguments[1], "logs", "log"))
+            {
+                return await RunGitHubAppWorkflowJobLogsAsync(arguments, 2, cancellationToken);
+            }
+
             if (arguments.Count > 1 && IsCommand(arguments[1], "run", "jobs"))
             {
                 return await RunGitHubAppWorkflowRunJobsAsync(arguments, 2, cancellationToken);
@@ -529,6 +535,11 @@ public sealed class CodingAgentCommand
         if (arguments.Count > 0 && IsCommand(arguments[0], "diagnose", "doctor", "ci"))
         {
             return await RunGitHubAppWorkflowDiagnosisAsync(arguments, 1, cancellationToken);
+        }
+
+        if (arguments.Count > 0 && IsCommand(arguments[0], "logs", "log"))
+        {
+            return await RunGitHubAppWorkflowJobLogsAsync(arguments, 1, cancellationToken);
         }
 
         if (arguments.Count > 0 && IsCommand(arguments[0], "run", "jobs"))
@@ -725,6 +736,39 @@ public sealed class CodingAgentCommand
         return CodingAgentCommandResult.Success(FormatWorkflowDiagnosis(jobs, selectedRun, selectionMessage));
     }
 
+    private async Task<CodingAgentCommandResult> RunGitHubAppWorkflowJobLogsAsync(
+        IReadOnlyList<string> arguments,
+        int firstArgumentIndex,
+        CancellationToken cancellationToken)
+    {
+        if (arguments.Count <= firstArgumentIndex + 1)
+        {
+            return new CodingAgentCommandResult(2, "Usage: /github logs <owner/repo> <jobId>", false);
+        }
+
+        if (!long.TryParse(arguments[firstArgumentIndex + 1], out var jobId) || jobId <= 0)
+        {
+            return new CodingAgentCommandResult(2, "Usage: /github logs <owner/repo> <jobId>", false);
+        }
+
+        if (_githubAppClient is null)
+        {
+            return CodingAgentCommandResult.Success(FormatGitHubAppUnavailable());
+        }
+
+        var repositoryFullName = arguments[firstArgumentIndex];
+        var result = await _githubAppClient.GetWorkflowJobLogAsync(
+            repositoryFullName,
+            jobId,
+            cancellationToken);
+        if (!result.Success)
+        {
+            return CodingAgentCommandResult.Success(FormatGitHubAppSetup(result.Message, result.MissingSettings));
+        }
+
+        return CodingAgentCommandResult.Success(FormatWorkflowJobLogs(result));
+    }
+
     private async Task<CodingAgentCommandResult> RunGitHubAppWorkflowRunJobsAsync(
         IReadOnlyList<string> arguments,
         int firstArgumentIndex,
@@ -861,6 +905,7 @@ public sealed class CodingAgentCommand
             .AppendLine("  list repos: kam coding-agent /github repos")
             .AppendLine("  list workflow runs: kam coding-agent /github actions")
             .AppendLine("  diagnose workflow run: kam coding-agent /github diagnose <owner/repo> [runId]")
+            .AppendLine("  workflow job logs: kam coding-agent /github logs <owner/repo> <jobId>")
             .AppendLine("  list workflow run jobs: kam coding-agent /github run <owner/repo> <runId>")
             .AppendLine("  private key contents and installation tokens are never printed.");
 
@@ -1438,6 +1483,37 @@ public sealed class CodingAgentCommand
         if (unhealthyJobs.Length > 10)
         {
             builder.AppendLine($"  ... {unhealthyJobs.Length - 10} more failing jobs hidden");
+        }
+
+        return builder.ToString().TrimEnd();
+    }
+
+    private static string FormatWorkflowJobLogs(GitHubWorkflowJobLogResult result)
+    {
+        var builder = new StringBuilder()
+            .AppendLine("Kam GitHub App workflow job logs:")
+            .AppendLine($"  job: {NormalizeMessage(result.RepositoryFullName)}#{result.JobId}")
+            .AppendLine($"  status: {NormalizeMessage(result.Message)}");
+
+        if (!string.IsNullOrWhiteSpace(result.DownloadUrl))
+        {
+            builder
+                .AppendLine($"  download: {NormalizeMessage(result.DownloadUrl)}")
+                .AppendLine("  expires: GitHub log download URLs expire after 1 minute.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(result.LogPreview))
+        {
+            builder.AppendLine("  preview:");
+            foreach (var line in result.LogPreview
+                .Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Replace('\r', '\n')
+                .Split('\n')
+                .Where(line => !string.IsNullOrWhiteSpace(line))
+                .Take(20))
+            {
+                builder.AppendLine($"    {NormalizeMessage(line)}");
+            }
         }
 
         return builder.ToString().TrimEnd();

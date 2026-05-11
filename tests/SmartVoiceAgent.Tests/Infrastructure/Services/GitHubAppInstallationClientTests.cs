@@ -386,6 +386,149 @@ public sealed class GitHubAppInstallationClientTests : IDisposable
     }
 
     [Fact]
+    public async Task GetWorkflowJobLogAsync_WhenConfigured_UsesInstallationTokenAndReturnsDownloadUrl()
+    {
+        var privateKeyPath = WritePrivateKey();
+        var seenInstallationToken = string.Empty;
+        var client = CreateClient(new StaticHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath == "/app/installations/98765/access_tokens")
+            {
+                return JsonResponse("""
+                    {
+                      "token": "installation-token",
+                      "expires_at": "2026-05-10T12:00:00Z"
+                    }
+                    """);
+            }
+
+            if (request.RequestUri.AbsolutePath == "/repos/Esquetta/Kam/actions/jobs/2001/logs")
+            {
+                seenInstallationToken = request.Headers.Authorization?.Parameter ?? string.Empty;
+                request.Headers.Authorization?.Scheme.Should().Be("Bearer");
+
+                var response = new HttpResponseMessage(HttpStatusCode.Found);
+                response.Headers.Location = new Uri("https://pipelines.actions.githubusercontent.com/logs/2001");
+                return response;
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }), new GitHubAppOptions
+        {
+            AppId = "12345",
+            InstallationId = "98765",
+            PrivateKeyPath = privateKeyPath
+        });
+
+        var result = await client.GetWorkflowJobLogAsync("Esquetta/Kam", 2001);
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("temporary");
+        result.RepositoryFullName.Should().Be("Esquetta/Kam");
+        result.JobId.Should().Be(2001);
+        result.DownloadUrl.Should().Be("https://pipelines.actions.githubusercontent.com/logs/2001");
+        result.LogPreview.Should().BeEmpty();
+        seenInstallationToken.Should().Be("installation-token");
+        result.Message.Should().NotContain("installation-token");
+        result.Message.Should().NotContain(privateKeyPath);
+    }
+
+    [Fact]
+    public async Task GetWorkflowJobLogAsync_WhenGitHubReturnsPlainText_ReturnsPreview()
+    {
+        var privateKeyPath = WritePrivateKey();
+        var client = CreateClient(new StaticHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath == "/app/installations/98765/access_tokens")
+            {
+                return JsonResponse("""
+                    {
+                      "token": "installation-token",
+                      "expires_at": "2026-05-10T12:00:00Z"
+                    }
+                    """);
+            }
+
+            if (request.RequestUri.AbsolutePath == "/repos/Esquetta/Kam/actions/jobs/2001/logs")
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("Run dotnet test\nBuild failed", Encoding.UTF8, "text/plain")
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }), new GitHubAppOptions
+        {
+            AppId = "12345",
+            InstallationId = "98765",
+            PrivateKeyPath = privateKeyPath
+        });
+
+        var result = await client.GetWorkflowJobLogAsync("Esquetta/Kam", 2001);
+
+        result.Success.Should().BeTrue();
+        result.DownloadUrl.Should().BeEmpty();
+        result.LogPreview.Should().Contain("Run dotnet test");
+        result.LogPreview.Should().Contain("Build failed");
+    }
+
+    [Fact]
+    public async Task GetWorkflowJobLogAsync_WhenRedirectHasNoLocation_ReturnsFailure()
+    {
+        var privateKeyPath = WritePrivateKey();
+        var client = CreateClient(new StaticHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath == "/app/installations/98765/access_tokens")
+            {
+                return JsonResponse("""
+                    {
+                      "token": "installation-token",
+                      "expires_at": "2026-05-10T12:00:00Z"
+                    }
+                    """);
+            }
+
+            if (request.RequestUri.AbsolutePath == "/repos/Esquetta/Kam/actions/jobs/2001/logs")
+            {
+                return new HttpResponseMessage(HttpStatusCode.Found);
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }), new GitHubAppOptions
+        {
+            AppId = "12345",
+            InstallationId = "98765",
+            PrivateKeyPath = privateKeyPath
+        });
+
+        var result = await client.GetWorkflowJobLogAsync("Esquetta/Kam", 2001);
+
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("HTTP 302");
+        result.DownloadUrl.Should().BeEmpty();
+        result.LogPreview.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetWorkflowJobLogAsync_WhenJobIdIsInvalid_DoesNotSendHttpRequest()
+    {
+        var privateKeyPath = WritePrivateKey();
+        var client = CreateClient(new StaticHttpMessageHandler(_ =>
+            throw new InvalidOperationException("No HTTP requests should be sent.")), new GitHubAppOptions
+        {
+            AppId = "12345",
+            InstallationId = "98765",
+            PrivateKeyPath = privateKeyPath
+        });
+
+        var result = await client.GetWorkflowJobLogAsync("Esquetta/Kam", 0);
+
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("greater than zero");
+    }
+
+    [Fact]
     public async Task GetStatusAsync_WhenInstallationHasNoRepositories_ReturnsRepoAccessGuidance()
     {
         var privateKeyPath = WritePrivateKey();

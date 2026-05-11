@@ -28,17 +28,20 @@ public sealed class SlashCommandService : ISlashCommandService
         new("/github app", "Show GitHub App connection status.", "/github app", "Workflow", ["/github-app"]),
         new("/github app actions", "List GitHub Actions workflow runs visible through the configured GitHub App.", "/github app actions", "Workflow"),
         new("/github app diagnose", "Diagnose a GitHub Actions workflow run from jobs and failed steps.", "/github app diagnose <owner/repo> [runId]", "Workflow"),
+        new("/github app logs", "Get a temporary download URL or preview for one GitHub Actions job log.", "/github app logs <owner/repo> <jobId>", "Workflow"),
         new("/github app prs", "List open pull requests visible through the configured GitHub App.", "/github app prs", "Workflow"),
         new("/github app repos", "List repositories visible through the configured GitHub App.", "/github app repos", "Workflow"),
         new("/github app run", "List jobs for one GitHub Actions workflow run.", "/github app run <owner/repo> <runId>", "Workflow"),
         new("/github actions", "List GitHub Actions workflow runs visible through the configured GitHub App.", "/github actions", "Workflow"),
         new("/github diagnose", "Diagnose a GitHub Actions workflow run from jobs and failed steps.", "/github diagnose <owner/repo> [runId]", "Workflow", ["/github doctor", "/github ci"]),
+        new("/github logs", "Get a temporary download URL or preview for one GitHub Actions job log.", "/github logs <owner/repo> <jobId>", "Workflow", ["/github log"]),
         new("/github prs", "List open pull requests visible through the configured GitHub App.", "/github prs", "Workflow", ["/github pr", "/github pull-requests"]),
         new("/github repos", "List repositories visible through the configured GitHub App.", "/github repos", "Workflow"),
         new("/github run", "List jobs for one GitHub Actions workflow run.", "/github run <owner/repo> <runId>", "Workflow", ["/github jobs"]),
         new("/github-app", "Show GitHub App setup and repository permission guidance.", "/github-app", "Workflow"),
         new("/github-app actions", "List GitHub Actions workflow runs visible through the configured GitHub App.", "/github-app actions", "Workflow"),
         new("/github-app diagnose", "Diagnose a GitHub Actions workflow run from jobs and failed steps.", "/github-app diagnose <owner/repo> [runId]", "Workflow", ["/github-app doctor", "/github-app ci"]),
+        new("/github-app logs", "Get a temporary download URL or preview for one GitHub Actions job log.", "/github-app logs <owner/repo> <jobId>", "Workflow", ["/github-app log"]),
         new("/github-app prs", "List open pull requests visible through the configured GitHub App.", "/github-app prs", "Workflow", ["/github-app pr", "/github-app pull-requests"]),
         new("/github-app repos", "List repositories visible through the configured GitHub App.", "/github-app repos", "Workflow"),
         new("/github-app run", "List jobs for one GitHub Actions workflow run.", "/github-app run <owner/repo> <runId>", "Workflow", ["/github-app jobs"]),
@@ -488,6 +491,15 @@ public sealed class SlashCommandService : ISlashCommandService
                     cancellationToken);
             }
 
+            if (arguments.Count > 1 && IsCommand(arguments[1], "logs", "log"))
+            {
+                return await RunGitHubAppWorkflowJobLogsAsync(
+                    "/github",
+                    arguments,
+                    2,
+                    cancellationToken);
+            }
+
             if (arguments.Count > 1 && IsCommand(arguments[1], "run", "jobs"))
             {
                 return await RunGitHubAppWorkflowRunJobsAsync(
@@ -524,6 +536,15 @@ public sealed class SlashCommandService : ISlashCommandService
                 cancellationToken);
         }
 
+        if (arguments.Count > 0 && IsCommand(arguments[0], "logs", "log"))
+        {
+            return await RunGitHubAppWorkflowJobLogsAsync(
+                "/github",
+                arguments,
+                1,
+                cancellationToken);
+        }
+
         if (arguments.Count > 0 && IsCommand(arguments[0], "run", "jobs"))
         {
             return await RunGitHubAppWorkflowRunJobsAsync(
@@ -540,6 +561,7 @@ public sealed class SlashCommandService : ISlashCommandService
                 "  app status: /github app",
                 "  workflow runs: /github actions",
                 "  diagnose workflow run: /github diagnose <owner/repo> [runId]",
+                "  workflow job logs: /github logs <owner/repo> <jobId>",
                 "  workflow run jobs: /github run <owner/repo> <runId>",
                 "  pull requests: /github prs",
                 "  repo list: /github repos"
@@ -568,6 +590,15 @@ public sealed class SlashCommandService : ISlashCommandService
         if (arguments.Count > 0 && IsCommand(arguments[0], "diagnose", "doctor", "ci"))
         {
             return await RunGitHubAppWorkflowDiagnosisAsync(
+                "/github-app",
+                arguments,
+                1,
+                cancellationToken);
+        }
+
+        if (arguments.Count > 0 && IsCommand(arguments[0], "logs", "log"))
+        {
+            return await RunGitHubAppWorkflowJobLogsAsync(
                 "/github-app",
                 arguments,
                 1,
@@ -757,6 +788,46 @@ public sealed class SlashCommandService : ISlashCommandService
             FormatWorkflowDiagnosis(jobs, selectedRun, selectionMessage));
     }
 
+    private async Task<SlashCommandResult> RunGitHubAppWorkflowJobLogsAsync(
+        string commandName,
+        IReadOnlyList<string> arguments,
+        int firstArgumentIndex,
+        CancellationToken cancellationToken)
+    {
+        if (arguments.Count <= firstArgumentIndex + 1)
+        {
+            return SlashCommandResult.Failed(
+                commandName,
+                "Usage: /github logs <owner/repo> <jobId>");
+        }
+
+        if (!long.TryParse(arguments[firstArgumentIndex + 1], out var jobId) || jobId <= 0)
+        {
+            return SlashCommandResult.Failed(
+                commandName,
+                "Usage: /github logs <owner/repo> <jobId>");
+        }
+
+        if (_githubAppClient is null)
+        {
+            return SlashCommandResult.Succeeded(commandName, FormatGitHubAppUnavailable());
+        }
+
+        var repositoryFullName = arguments[firstArgumentIndex];
+        var result = await _githubAppClient.GetWorkflowJobLogAsync(
+            repositoryFullName,
+            jobId,
+            cancellationToken);
+        if (!result.Success)
+        {
+            return SlashCommandResult.Succeeded(
+                commandName,
+                FormatGitHubAppSetup(result.Message, result.MissingSettings));
+        }
+
+        return SlashCommandResult.Succeeded(commandName, FormatWorkflowJobLogs(result));
+    }
+
     private async Task<SlashCommandResult> RunGitHubAppWorkflowRunJobsAsync(
         string commandName,
         IReadOnlyList<string> arguments,
@@ -941,11 +1012,13 @@ public sealed class SlashCommandService : ISlashCommandService
             .AppendLine("  list PRs: /github-app prs or /github prs")
             .AppendLine("  list workflow runs: /github-app actions or /github actions")
             .AppendLine("  diagnose workflow run: /github-app diagnose <owner/repo> [runId] or /github diagnose <owner/repo> [runId]")
+            .AppendLine("  workflow job logs: /github-app logs <owner/repo> <jobId> or /github logs <owner/repo> <jobId>")
             .AppendLine("  list workflow run jobs: /github-app run <owner/repo> <runId> or /github run <owner/repo> <runId>")
             .AppendLine("  CLI status: kam coding-agent /github app")
             .AppendLine("  CLI repos: kam coding-agent /github repos")
             .AppendLine("  CLI workflow runs: kam coding-agent /github actions")
             .AppendLine("  CLI diagnose workflow run: kam coding-agent /github diagnose <owner/repo> [runId]")
+            .AppendLine("  CLI workflow job logs: kam coding-agent /github logs <owner/repo> <jobId>")
             .AppendLine("  CLI workflow run jobs: kam coding-agent /github run <owner/repo> <runId>")
             .AppendLine("  private key contents and installation tokens are never printed.");
 
@@ -1173,6 +1246,37 @@ public sealed class SlashCommandService : ISlashCommandService
         if (unhealthyJobs.Length > 10)
         {
             builder.AppendLine($"  ... {unhealthyJobs.Length - 10} more failing jobs hidden");
+        }
+
+        return builder.ToString().TrimEnd();
+    }
+
+    private static string FormatWorkflowJobLogs(GitHubWorkflowJobLogResult result)
+    {
+        var builder = new StringBuilder()
+            .AppendLine("Kam GitHub App workflow job logs:")
+            .AppendLine($"  job: {NormalizeMessage(result.RepositoryFullName)}#{result.JobId}")
+            .AppendLine($"  status: {NormalizeMessage(result.Message)}");
+
+        if (!string.IsNullOrWhiteSpace(result.DownloadUrl))
+        {
+            builder
+                .AppendLine($"  download: {NormalizeMessage(result.DownloadUrl)}")
+                .AppendLine("  expires: GitHub log download URLs expire after 1 minute.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(result.LogPreview))
+        {
+            builder.AppendLine("  preview:");
+            foreach (var line in result.LogPreview
+                .Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Replace('\r', '\n')
+                .Split('\n')
+                .Where(line => !string.IsNullOrWhiteSpace(line))
+                .Take(20))
+            {
+                builder.AppendLine($"    {NormalizeMessage(line)}");
+            }
         }
 
         return builder.ToString().TrimEnd();
