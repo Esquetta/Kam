@@ -63,7 +63,7 @@
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto"
+        <Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, Auto"
               RowSpacing="16"
               Margin="0,18,0,24"
               MaxWidth="980"
@@ -250,7 +250,55 @@
                 </Grid>
             </Border>
 
-            <Border Grid.Row="3" Classes="DiagnosticPanel">
+            <Border Grid.Row="3"
+                    Classes="DiagnosticPanel"
+                    IsVisible="{Binding HasSetupActionItems}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="SETUP_ACTIONS"
+                               FontSize="12"
+                               FontFamily="Consolas"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource AccentCyanBrush}"
+                               LetterSpacing="2"/>
+                    <ItemsControl ItemsSource="{Binding SetupActionItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:RuntimeDiagnosticItemViewModel">
+                                <Border Classes="DiagnosticRow"
+                                        Classes.Ready="{Binding IsReady}"
+                                        Classes.Warning="{Binding IsWarning}"
+                                        Classes.Blocked="{Binding IsBlocked}">
+                                    <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="10">
+                                        <Ellipse Grid.Column="0" Classes="StatusDot ReadyDot" IsVisible="{Binding IsReady}"/>
+                                        <Ellipse Grid.Column="0" Classes="StatusDot WarningDot" IsVisible="{Binding IsWarning}"/>
+                                        <Ellipse Grid.Column="0" Classes="StatusDot BlockedDot" IsVisible="{Binding IsBlocked}"/>
+                                        <StackPanel Grid.Column="1" Spacing="3">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="12"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding Detail}"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding Value}"
+                                                   FontSize="12"
+                                                   FontFamily="Consolas"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   TextWrapping="Wrap"
+                                                   MaxWidth="160"
+                                                   TextAlignment="Right"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="4" Classes="DiagnosticPanel">
                 <Grid RowDefinitions="Auto, Auto" RowSpacing="14">
                     <Grid ColumnDefinitions="*, Auto, Auto, Auto" ColumnSpacing="12">
                         <StackPanel Spacing="6">
@@ -357,7 +405,7 @@
                 </Grid>
             </Border>
 
-            <Border Grid.Row="4"
+            <Border Grid.Row="5"
                     Classes="DiagnosticPanel"
                     IsVisible="{Binding HasBlockingItems}">
                 <StackPanel Spacing="10">
@@ -381,7 +429,7 @@
                 </StackPanel>
             </Border>
 
-            <Grid Grid.Row="5"
+            <Grid Grid.Row="6"
                   ColumnDefinitions="*, *"
                   RowDefinitions="Auto, Auto"
                   ColumnSpacing="16"

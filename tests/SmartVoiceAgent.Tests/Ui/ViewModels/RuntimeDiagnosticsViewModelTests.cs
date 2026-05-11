@@ -774,6 +774,22 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
     }
 
     [Fact]
+    public void BuildReadinessReport_WithMissingCoreSetup_IncludesActionableSetupActions()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+
+        var viewModel = new RuntimeDiagnosticsViewModel(settingsService);
+
+        var report = viewModel.BuildReadinessReport();
+
+        report.Should().Contain("Setup Actions");
+        report.Should().Contain("Configure AI Runtime: Required");
+        report.Should().Contain("Open Settings > AI Runtime and save an enabled planner profile.");
+        report.Should().Contain("Start Agent Host: Required");
+        report.Should().Contain("Start the local agent host before live testing.");
+    }
+
+    [Fact]
     public async Task BuildReadinessReport_RedactsSecretsFromPlannerTraceAndSkillHistoryEvidence()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);

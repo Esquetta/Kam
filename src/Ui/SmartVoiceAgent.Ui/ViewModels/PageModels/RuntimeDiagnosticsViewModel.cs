@@ -143,6 +143,8 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
 
     public ObservableCollection<RuntimeDiagnosticItemViewModel> LiveTestSteps { get; } = [];
 
+    public ObservableCollection<RuntimeDiagnosticItemViewModel> SetupActionItems { get; } = [];
+
     public ObservableCollection<string> BlockingItems { get; } = [];
 
     public string CoreReadinessStatus
@@ -242,6 +244,8 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     }
 
     public bool HasBlockingItems => BlockingItems.Count > 0;
+
+    public bool HasSetupActionItems => SetupActionItems.Count > 0;
 
     public override void OnNavigatedTo()
     {
@@ -525,6 +529,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         report.AppendLine();
 
         AppendReportSection(report, "Live Production Test", LiveTestSteps);
+        AppendReportSection(report, "Setup Actions", SetupActionItems);
         AppendReportSection(report, "Summary", SummaryCards);
         AppendReportSection(report, "AI Runtime", AiRuntimeItems);
         AppendReportSection(report, "Application Updates", ApplicationUpdateItems);
@@ -1044,7 +1049,9 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             GetApplicationUpdateSummarySeverity()));
 
         RebuildLiveTestSession();
+        RebuildSetupActions();
         this.RaisePropertyChanged(nameof(HasBlockingItems));
+        this.RaisePropertyChanged(nameof(HasSetupActionItems));
     }
 
     private void RebuildLiveTestSession()
@@ -1175,6 +1182,79 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             "Command Loop" when step.IsBlocked => "Fix the latest planner or skill execution blocker.",
             "Command Loop" => "Run a production command loop smoke.",
             _ => "Resolve the first non-ready live test step."
+        };
+    }
+
+    private void RebuildSetupActions()
+    {
+        SetupActionItems.Clear();
+
+        if (!IsCoreReady)
+        {
+            SetupActionItems.Add(new RuntimeDiagnosticItemViewModel(
+                "Configure AI Runtime",
+                "Required",
+                "Open Settings > AI Runtime and save an enabled planner profile.",
+                RuntimeDiagnosticSeverity.Blocked));
+        }
+
+        foreach (var step in LiveTestSteps.Where(step => !step.IsReady))
+        {
+            if (!IsCoreReady && step.Name.Equals("Planner Live Connection", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var action = BuildSetupAction(step);
+            if (SetupActionItems.Any(item => item.Name.Equals(action.Name, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            SetupActionItems.Add(action);
+        }
+    }
+
+    private static RuntimeDiagnosticItemViewModel BuildSetupAction(RuntimeDiagnosticItemViewModel step)
+    {
+        return step.Name switch
+        {
+            "Core AI" => new RuntimeDiagnosticItemViewModel(
+                "Configure AI Runtime",
+                "Required",
+                "Open Settings > AI Runtime and save an enabled planner profile.",
+                RuntimeDiagnosticSeverity.Blocked),
+            "Planner Live Connection" => new RuntimeDiagnosticItemViewModel(
+                "Verify Planner Connection",
+                step.IsBlocked ? "Required" : "Review",
+                step.IsBlocked
+                    ? "Update model credentials, then refresh diagnostics."
+                    : "Click Refresh to verify the planner model connection.",
+                step.Severity),
+            "Agent Host" => new RuntimeDiagnosticItemViewModel(
+                "Start Agent Host",
+                "Required",
+                "Start the local agent host before live testing.",
+                step.IsBlocked ? RuntimeDiagnosticSeverity.Blocked : RuntimeDiagnosticSeverity.Warning),
+            "Skill Smoke" => new RuntimeDiagnosticItemViewModel(
+                "Run Skill Smoke",
+                step.IsBlocked ? "Required" : "Recommended",
+                step.IsBlocked
+                    ? "Fix failing skill smoke evals, then rerun smoke."
+                    : "Run Skill Smoke to verify executable built-in skill behavior.",
+                step.Severity),
+            "Planner Trace" or "Skill Result" or "Command Loop" => new RuntimeDiagnosticItemViewModel(
+                "Run Command Loop",
+                step.IsBlocked ? "Required" : "Recommended",
+                step.IsBlocked
+                    ? "Fix the latest planner or skill execution blocker."
+                    : "Submit a real command to produce planner JSON and skill result evidence.",
+                step.Severity),
+            _ => new RuntimeDiagnosticItemViewModel(
+                $"Resolve {step.Name}",
+                step.IsBlocked ? "Required" : "Review",
+                GetLiveTestNextAction(step),
+                step.Severity)
         };
     }
 
