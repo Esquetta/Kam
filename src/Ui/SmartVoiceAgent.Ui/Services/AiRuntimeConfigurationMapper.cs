@@ -26,12 +26,19 @@ public static class AiRuntimeConfigurationMapper
         AddProfileOverrides(overrides, "AIService:Planner", plannerProfile);
 
         var chatProfile = SelectProfile(profiles, activeChatProfileId, ModelProviderRole.Chat);
-        if (chatProfile is not null && chatProfile.Enabled && chatProfile.Validate().IsValid)
-        {
-            AddProfileOverrides(overrides, "AIService:Chat", chatProfile);
-        }
+        AddProfileOverrides(
+            overrides,
+            "AIService:Chat",
+            IsUsableProfile(chatProfile) ? chatProfile! : plannerProfile);
 
         return overrides;
+    }
+
+    private static bool IsUsableProfile(ModelProviderProfile? profile)
+    {
+        return profile is not null
+            && profile.Enabled
+            && profile.Validate().IsValid;
     }
 
     public static IReadOnlyDictionary<string, string?> CreateIntegrationOverrides(ISettingsService settings)

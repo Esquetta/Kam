@@ -60,7 +60,7 @@ public static class ServiceCollectionExtensions
                 .Get<AIServiceConfiguration>()
                 ?? throw new InvalidOperationException("AIService configuration is missing.");
 
-            return CreateChatClient(config);
+            return CreateObservedChatClient(sp, config);
         });
 
         services.AddSingleton<IAgentFactory, AgentFactory>();
@@ -110,7 +110,7 @@ public static class ServiceCollectionExtensions
                     .Get<AIServiceConfiguration>();
 
                 return IsUsableAiConfiguration(chatConfig)
-                    ? CreateChatClient(chatConfig!)
+                    ? CreateObservedChatClient(sp, chatConfig!)
                     : sp.GetRequiredService<IChatClient>();
             });
 
@@ -152,6 +152,14 @@ public static class ServiceCollectionExtensions
             _ => throw new NotSupportedException(
                 $"AI provider '{config.Provider}' is not supported.")
         };
+    }
+
+    static IChatClient CreateObservedChatClient(IServiceProvider sp, AIServiceConfiguration config)
+    {
+        return new AiProviderAlertingChatClient(
+            CreateChatClient(config),
+            sp.GetService<IUiLogService>(),
+            config.ModelId);
     }
 
     static IChatClient CreateOpenAICompatibleClient(AIServiceConfiguration config)

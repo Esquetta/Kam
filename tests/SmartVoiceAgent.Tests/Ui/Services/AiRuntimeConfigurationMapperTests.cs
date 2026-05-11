@@ -28,6 +28,42 @@ public class AiRuntimeConfigurationMapperTests
         overrides.Should().Contain("AIService:Endpoint", "https://openrouter.ai/api/v1");
         overrides.Should().Contain("AIService:ApiKey", "sk-test");
         overrides.Should().Contain("AIService:ModelId", "openai/gpt-4.1-mini");
+        overrides.Should().Contain("AIService:Chat:Provider", "OpenRouter");
+        overrides.Should().Contain("AIService:Chat:ModelId", "openai/gpt-4.1-mini");
+    }
+
+    [Fact]
+    public void CreateAiServiceOverrides_WhenChatProfileIsInvalid_FallsBackToActivePlannerForChatRuntime()
+    {
+        var overrides = AiRuntimeConfigurationMapper.CreateAiServiceOverrides(
+            [
+                new ModelProviderProfile
+                {
+                    Id = "planner",
+                    Provider = ModelProviderType.Anthropic,
+                    Endpoint = "https://api.anthropic.com",
+                    ApiKey = "sk-ant-test",
+                    ModelId = "claude-sonnet-4-6",
+                    Roles = [ModelProviderRole.Planner],
+                    Enabled = true
+                },
+                new ModelProviderProfile
+                {
+                    Id = "chat",
+                    Provider = ModelProviderType.OpenAICompatible,
+                    Endpoint = "not-a-url",
+                    ApiKey = "sk-chat",
+                    ModelId = "custom/chat-model",
+                    Roles = [ModelProviderRole.Chat],
+                    Enabled = true
+                }
+            ],
+            "planner",
+            "chat");
+
+        overrides.Should().Contain("AIService:Chat:Provider", "Anthropic");
+        overrides.Should().Contain("AIService:Chat:Endpoint", "https://api.anthropic.com");
+        overrides.Should().Contain("AIService:Chat:ModelId", "claude-sonnet-4-6");
     }
 
     [Fact]
