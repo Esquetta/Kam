@@ -22,6 +22,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
     {
         private readonly ISettingsService _settingsService;
         private readonly IGitHubAppClientFactory? _githubAppClientFactory;
+        private readonly IGitHubDesktopConnector _githubDesktopConnector;
         
         // Todoist
         private string _todoistApiKey = string.Empty;
@@ -33,9 +34,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private string _githubPrivateKeyPath = string.Empty;
         private bool _isGitHubAppConfigured;
         private bool _isGitHubAppConnected;
+        private bool _isGitHubDesktopConnected;
         private bool _isTestingGitHubAppConnection;
-        private string _githubConnectionStatusText = "Not tested";
-        private string _githubConnectionDetailText = "Save and test the GitHub App settings to verify repository access.";
+        private bool _isConnectingGitHub;
+        private bool _showGitHubAppAdvancedSettings;
+        private string _githubConnectionStatusText = "Not connected";
+        private string _githubConnectionDetailText = "Connect GitHub with your local sign-in, or use Advanced GitHub App settings for organization-scoped access.";
         private string _githubRepositoryPreviewText = string.Empty;
         private bool _hasGitHubRepositoryPreview;
         private bool _isLoadingSettings;
@@ -64,11 +68,13 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         public IntegrationsViewModel(
             ISettingsService settingsService,
-            IGitHubAppClientFactory? githubAppClientFactory = null)
+            IGitHubAppClientFactory? githubAppClientFactory = null,
+            IGitHubDesktopConnector? githubDesktopConnector = null)
         {
             Title = "INTEGRATIONS";
             _settingsService = settingsService;
             _githubAppClientFactory = githubAppClientFactory;
+            _githubDesktopConnector = githubDesktopConnector ?? new GitHubCliDesktopConnector();
             
             // Load saved settings
             _settingsService.Load();
@@ -86,6 +92,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
             SaveGitHubAppCommand = ReactiveCommand.Create(SaveGitHubApp);
             ClearGitHubAppCommand = ReactiveCommand.Create(ClearGitHubApp);
+            ConnectGitHubCommand = ReactiveCommand.CreateFromTask(ConnectGitHubAsync);
+            ToggleGitHubAppAdvancedSettingsCommand = ReactiveCommand.Create(ToggleGitHubAppAdvancedSettings);
             TestGitHubAppConnectionCommand = ReactiveCommand.CreateFromTask(TestGitHubAppConnectionAsync);
             ListGitHubAppRepositoriesCommand = ReactiveCommand.CreateFromTask(ListGitHubAppRepositoriesAsync);
         }
@@ -170,12 +178,19 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 this.RaiseAndSetIfChanged(ref _isGitHubAppConfigured, value);
                 this.RaisePropertyChanged(nameof(GitHubAppStatusText));
+                this.RaisePropertyChanged(nameof(IsGitHubStatusPositive));
                 this.RaisePropertyChanged(nameof(CanTestGitHubAppConnection));
             }
         }
 
-        public string GitHubAppDescription => "Connect a GitHub App installation so Kam can inspect selected repositories with least-privilege access.";
-        public string GitHubAppStatusText => IsGitHubAppConfigured ? "CONFIGURED" : "NOT CONFIGURED";
+        public string GitHubAppDescription => "Connect GitHub so Kam can inspect repositories when coding tasks need repository context. Advanced GitHub App mode remains available for organization-scoped installations.";
+        public string GitHubAppStatusText => _isGitHubDesktopConnected || _isGitHubAppConnected
+            ? "CONNECTED"
+            : IsGitHubAppConfigured
+                ? "CONFIGURED"
+                : "NOT CONNECTED";
+
+        public bool IsGitHubStatusPositive => _isGitHubDesktopConnected || _isGitHubAppConnected || IsGitHubAppConfigured;
 
         public bool IsTestingGitHubAppConnection
         {
@@ -185,13 +200,32 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 this.RaiseAndSetIfChanged(ref _isTestingGitHubAppConnection, value);
                 this.RaisePropertyChanged(nameof(CanTestGitHubAppConnection));
                 this.RaisePropertyChanged(nameof(CanListGitHubAppRepositories));
+                this.RaisePropertyChanged(nameof(CanConnectGitHub));
                 RefreshGitHubAppSetupSteps();
             }
         }
 
         public bool CanTestGitHubAppConnection => IsGitHubAppConfigured && !IsTestingGitHubAppConnection;
 
-        public bool CanListGitHubAppRepositories => _isGitHubAppConnected && !IsTestingGitHubAppConnection;
+        public bool CanListGitHubAppRepositories => (_isGitHubAppConnected || _isGitHubDesktopConnected) && !IsTestingGitHubAppConnection;
+
+        public bool IsConnectingGitHub
+        {
+            get => _isConnectingGitHub;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _isConnectingGitHub, value);
+                this.RaisePropertyChanged(nameof(CanConnectGitHub));
+            }
+        }
+
+        public bool CanConnectGitHub => !IsConnectingGitHub && !IsTestingGitHubAppConnection;
+
+        public bool ShowGitHubAppAdvancedSettings
+        {
+            get => _showGitHubAppAdvancedSettings;
+            private set => this.RaiseAndSetIfChanged(ref _showGitHubAppAdvancedSettings, value);
+        }
 
         public string GitHubConnectionStatusText
         {
@@ -338,6 +372,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         // GitHub App Commands
         public ICommand SaveGitHubAppCommand { get; }
         public ICommand ClearGitHubAppCommand { get; }
+        public ReactiveCommand<Unit, Unit> ConnectGitHubCommand { get; }
+        public ICommand ToggleGitHubAppAdvancedSettingsCommand { get; }
         public ReactiveCommand<Unit, Unit> TestGitHubAppConnectionCommand { get; }
         public ReactiveCommand<Unit, Unit> ListGitHubAppRepositoriesCommand { get; }
 
@@ -424,6 +460,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                                     !string.IsNullOrWhiteSpace(GitHubInstallationId) &&
                                     !string.IsNullOrWhiteSpace(GitHubPrivateKeyPath) &&
                                     !ContainsRawPrivateKeyMaterial(GitHubPrivateKeyPath);
+            if (_isGitHubDesktopConnected)
+            {
+                RefreshGitHubAppSetupSteps();
+                return;
+            }
+
             if (ContainsRawPrivateKeyMaterial(GitHubPrivateKeyPath))
             {
                 SetGitHubAppDisconnected(
@@ -434,9 +476,17 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
             if (!IsGitHubAppConfigured)
             {
-                SetGitHubAppDisconnected(
-                    "Missing settings",
-                    $"Missing settings: {string.Join(", ", GetMissingGitHubAppFieldLabels())}.");
+                if (ShowGitHubAppAdvancedSettings)
+                {
+                    SetGitHubAppDisconnected(
+                        "Missing settings",
+                        $"Missing settings: {string.Join(", ", GetMissingGitHubAppFieldLabels())}.");
+                }
+                else
+                {
+                    SetGitHubConnectionIdle();
+                }
+
                 return;
             }
 
@@ -454,6 +504,20 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 GitHubConnectionDetailText = "Settings are present. Test connection to verify repository access.";
             }
 
+            RefreshGitHubAppSetupSteps();
+        }
+
+        private void SetGitHubConnectionIdle()
+        {
+            _isGitHubAppConnected = false;
+            _isGitHubDesktopConnected = false;
+            this.RaisePropertyChanged(nameof(GitHubAppStatusText));
+            this.RaisePropertyChanged(nameof(IsGitHubStatusPositive));
+            this.RaisePropertyChanged(nameof(CanListGitHubAppRepositories));
+            GitHubConnectionStatusText = "Not connected";
+            GitHubConnectionDetailText = "Connect GitHub with your local sign-in, or use Advanced GitHub App settings for organization-scoped access.";
+            GitHubRepositoryPreviewText = string.Empty;
+            HasGitHubRepositoryPreview = false;
             RefreshGitHubAppSetupSteps();
         }
 
@@ -475,6 +539,43 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         #endregion
 
         #region GitHub App Methods
+
+        private void ToggleGitHubAppAdvancedSettings()
+        {
+            ShowGitHubAppAdvancedSettings = !ShowGitHubAppAdvancedSettings;
+            RefreshGitHubAppConfigured();
+        }
+
+        public async Task ConnectGitHubAsync(CancellationToken cancellationToken = default)
+        {
+            IsConnectingGitHub = true;
+            GitHubConnectionStatusText = "Connecting...";
+            GitHubConnectionDetailText = "Checking local GitHub sign-in and repository access.";
+            GitHubRepositoryPreviewText = string.Empty;
+            HasGitHubRepositoryPreview = false;
+
+            try
+            {
+                var result = await _githubDesktopConnector.ConnectAsync(cancellationToken);
+                if (!result.Success)
+                {
+                    _isGitHubDesktopConnected = false;
+                    SetGitHubAppDisconnected("Sign-in required", result.Message);
+                    return;
+                }
+
+                ApplyGitHubDesktopConnectionResult(result);
+            }
+            catch (Exception ex)
+            {
+                _isGitHubDesktopConnected = false;
+                SetGitHubAppDisconnected("Unavailable", $"GitHub connection failed: {ex.Message}");
+            }
+            finally
+            {
+                IsConnectingGitHub = false;
+            }
+        }
 
         private void SaveGitHubApp()
         {
@@ -597,6 +698,32 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 return;
             }
 
+            if (_isGitHubDesktopConnected)
+            {
+                IsTestingGitHubAppConnection = true;
+                try
+                {
+                    var result = await _githubDesktopConnector.ListRepositoriesAsync(cancellationToken);
+                    if (!result.Success)
+                    {
+                        SetGitHubAppDisconnected("Needs action", result.Message);
+                        return;
+                    }
+
+                    ApplyGitHubDesktopConnectionResult(result);
+                }
+                catch (Exception ex)
+                {
+                    SetGitHubAppDisconnected("Unavailable", $"GitHub repository list failed: {ex.Message}");
+                }
+                finally
+                {
+                    IsTestingGitHubAppConnection = false;
+                }
+
+                return;
+            }
+
             if (_githubAppClientFactory is null)
             {
                 SetGitHubAppDisconnected(
@@ -663,9 +790,27 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             RefreshGitHubAppSetupSteps();
         }
 
+        private void ApplyGitHubDesktopConnectionResult(GitHubDesktopConnectionResult result)
+        {
+            _isGitHubDesktopConnected = true;
+            _isGitHubAppConnected = false;
+            this.RaisePropertyChanged(nameof(GitHubAppStatusText));
+            this.RaisePropertyChanged(nameof(IsGitHubStatusPositive));
+            this.RaisePropertyChanged(nameof(CanListGitHubAppRepositories));
+            var repositoryCount = result.Repositories.Count;
+            GitHubConnectionStatusText = "Connected";
+            GitHubConnectionDetailText = result.Message;
+            GitHubRepositoryPreviewText = FormatGitHubRepositoryPreview(result.Repositories, repositoryCount);
+            HasGitHubRepositoryPreview = !string.IsNullOrWhiteSpace(GitHubRepositoryPreviewText);
+            RefreshGitHubAppSetupSteps();
+        }
+
         private void SetGitHubAppDisconnected(string status, string detail)
         {
             _isGitHubAppConnected = false;
+            _isGitHubDesktopConnected = false;
+            this.RaisePropertyChanged(nameof(GitHubAppStatusText));
+            this.RaisePropertyChanged(nameof(IsGitHubStatusPositive));
             this.RaisePropertyChanged(nameof(CanListGitHubAppRepositories));
             GitHubConnectionStatusText = status;
             GitHubConnectionDetailText = SanitizeGitHubAppDetail(detail);

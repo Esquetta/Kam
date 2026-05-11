@@ -23,7 +23,11 @@ public sealed class IntegrationsViewMetadataTests
     {
         var xaml = File.ReadAllText(Path.GetFullPath(ViewPath));
 
-        xaml.Should().Contain("GitHub App");
+        xaml.Should().Contain("GitHub");
+        xaml.Should().Contain("Connect GitHub");
+        xaml.Should().Contain("ConnectGitHubCommand");
+        xaml.Should().Contain("Advanced GitHub App");
+        xaml.Should().Contain("ShowGitHubAppAdvancedSettings");
         xaml.Should().Contain("GitHubAppId");
         xaml.Should().Contain("GitHubInstallationId");
         xaml.Should().Contain("GitHubPrivateKeyPath");
@@ -67,9 +71,14 @@ public sealed class IntegrationsViewMetadataTests
         xaml.Should().Contain("GitHubAppSetupSteps");
         xaml.Should().Contain("HasGitHubAppSetupSteps");
 
-        var githubCard = FindIntegrationCard(view, "GitHub App");
+        var githubCard = FindIntegrationCard(view, "GitHub");
         AttributeValue(githubCard.Elements().Single(e => e.Name.LocalName == "Grid"), "RowDefinitions")
             .Should().Be("Auto,Auto,Auto");
+
+        githubCard.Descendants()
+            .Single(e => e.Name.LocalName == "StackPanel"
+                && AttributeValue(e, "IsVisible") == "{Binding ShowGitHubAppAdvancedSettings}")
+            .Should().NotBeNull();
 
         var checklistHost = githubCard.Descendants()
             .Single(e => e.Name.LocalName == "StackPanel"

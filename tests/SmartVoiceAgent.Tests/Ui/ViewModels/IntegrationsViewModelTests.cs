@@ -31,6 +31,88 @@ public sealed class IntegrationsViewModelTests : IDisposable
     }
 
     [Fact]
+    public void Constructor_DefaultGitHubState_PresentsDirectConnectionBeforeAdvancedAppSettings()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+
+        var viewModel = new IntegrationsViewModel(settingsService);
+
+        viewModel.GitHubAppStatusText.Should().Be("NOT CONNECTED");
+        viewModel.GitHubConnectionStatusText.Should().Be("Not connected");
+        viewModel.GitHubConnectionDetailText.Should().Contain("Connect GitHub");
+        viewModel.ShowGitHubAppAdvancedSettings.Should().BeFalse();
+        viewModel.CanConnectGitHub.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ConnectGitHubCommand_WithDesktopConnector_ShowsRepositoryPreview()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var desktopConnector = new RecordingGitHubDesktopConnector
+        {
+            ConnectResult = GitHubDesktopConnectionResult.Connected(
+                "2 repositories visible through your GitHub sign-in.",
+                [
+                    new GitHubRepositorySummary("Esquetta/Kam", true, "master", "https://github.com/Esquetta/Kam", string.Empty),
+                    new GitHubRepositorySummary("Esquetta/KamDocs", false, "main", "https://github.com/Esquetta/KamDocs", string.Empty)
+                ])
+        };
+        var viewModel = new IntegrationsViewModel(settingsService, githubDesktopConnector: desktopConnector);
+
+        await viewModel.ConnectGitHubAsync();
+
+        desktopConnector.ConnectCallCount.Should().Be(1);
+        viewModel.GitHubAppStatusText.Should().Be("CONNECTED");
+        viewModel.GitHubConnectionStatusText.Should().Be("Connected");
+        viewModel.GitHubConnectionDetailText.Should().Contain("2 repositories");
+        viewModel.GitHubRepositoryPreviewText.Should().Contain("Esquetta/Kam");
+        viewModel.CanListGitHubAppRepositories.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ListGitHubAppRepositoriesCommand_WhenDesktopConnected_RefreshesThroughDesktopConnector()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var desktopConnector = new RecordingGitHubDesktopConnector
+        {
+            ConnectResult = GitHubDesktopConnectionResult.Connected(
+                "1 repository visible through your GitHub sign-in.",
+                [
+                    new GitHubRepositorySummary("Esquetta/Kam", true, "master", "https://github.com/Esquetta/Kam", string.Empty)
+                ]),
+            ListResult = GitHubDesktopConnectionResult.Connected(
+                "1 repository visible through your GitHub sign-in.",
+                [
+                    new GitHubRepositorySummary("Esquetta/KamRuntime", true, "main", "https://github.com/Esquetta/KamRuntime", string.Empty)
+                ])
+        };
+        var viewModel = new IntegrationsViewModel(settingsService, githubDesktopConnector: desktopConnector);
+        await viewModel.ConnectGitHubAsync();
+
+        await viewModel.ListGitHubAppRepositoriesAsync();
+
+        desktopConnector.ListCallCount.Should().Be(1);
+        viewModel.GitHubRepositoryPreviewText.Should().Contain("Esquetta/KamRuntime");
+        viewModel.GitHubConnectionStatusText.Should().Be("Connected");
+    }
+
+    [Fact]
+    public void ToggleGitHubAppAdvancedSettings_ShowsExistingGitHubAppChecklist()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var viewModel = new IntegrationsViewModel(settingsService);
+
+        viewModel.ToggleGitHubAppAdvancedSettingsCommand.Execute(null);
+
+        viewModel.ShowGitHubAppAdvancedSettings.Should().BeTrue();
+        viewModel.GitHubConnectionStatusText.Should().Be("Missing settings");
+        viewModel.GitHubAppSetupSteps.Should().Contain(step =>
+            step.Name == "App ID"
+            && step.Value == "Required"
+            && step.IsBlocked);
+    }
+
+    [Fact]
     public void Constructor_WithoutGitHubAppSettings_ExposesActionableSetupChecklist()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);
@@ -421,6 +503,30 @@ public sealed class IntegrationsViewModelTests : IDisposable
         {
             CreatedOptions = options;
             return Client;
+        }
+    }
+
+    private sealed class RecordingGitHubDesktopConnector : IGitHubDesktopConnector
+    {
+        public GitHubDesktopConnectionResult ConnectResult { get; set; } =
+            GitHubDesktopConnectionResult.Failed("not connected");
+
+        public GitHubDesktopConnectionResult ListResult { get; set; } =
+            GitHubDesktopConnectionResult.Failed("not connected");
+
+        public int ConnectCallCount { get; private set; }
+        public int ListCallCount { get; private set; }
+
+        public Task<GitHubDesktopConnectionResult> ConnectAsync(CancellationToken cancellationToken = default)
+        {
+            ConnectCallCount++;
+            return Task.FromResult(ConnectResult);
+        }
+
+        public Task<GitHubDesktopConnectionResult> ListRepositoriesAsync(CancellationToken cancellationToken = default)
+        {
+            ListCallCount++;
+            return Task.FromResult(ListResult);
         }
     }
 
