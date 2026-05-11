@@ -15,6 +15,8 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private const int PullRequestRepositoryLimit = 50;
     private const int PullRequestPageSize = 20;
+    private const int WorkflowRunRepositoryLimit = 50;
+    private const int WorkflowRunPageSize = 10;
 
     private readonly HttpClient _httpClient;
     private readonly GitHubAppOptions _options;
@@ -146,6 +148,50 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
         catch (GitHubAppClientException ex)
         {
             return GitHubPullRequestListResult.Failed(ex.Message);
+        }
+    }
+
+    public async Task<GitHubWorkflowRunListResult> ListWorkflowRunsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var missingSettings = _options.GetMissingSettings();
+        if (missingSettings.Count > 0)
+        {
+            return GitHubWorkflowRunListResult.Failed(
+                "GitHub App is not configured.",
+                missingSettings);
+        }
+
+        try
+        {
+            var jwt = await CreateJsonWebTokenAsync(cancellationToken);
+            var token = await CreateInstallationTokenAsync(jwt, cancellationToken);
+            var repositories = await GetRepositoriesAsync(token.Token, cancellationToken);
+            var workflowRuns = new List<GitHubWorkflowRunSummary>();
+
+            foreach (var repository in repositories.Take(WorkflowRunRepositoryLimit))
+            {
+                workflowRuns.AddRange(await GetWorkflowRunsAsync(
+                    token.Token,
+                    repository.FullName,
+                    cancellationToken));
+            }
+
+            var repositoryCount = Math.Min(repositories.Count, WorkflowRunRepositoryLimit);
+            var message =
+                $"{workflowRuns.Count} {Pluralize(workflowRuns.Count, "workflow run", "workflow runs")} " +
+                $"across {repositoryCount} {Pluralize(repositoryCount, "repository", "repositories")}.";
+            return GitHubWorkflowRunListResult.Succeeded(
+                message,
+                workflowRuns
+                    .OrderByDescending(run => run.UpdatedAt ?? run.CreatedAt ?? DateTimeOffset.MinValue)
+                    .ThenBy(run => run.RepositoryFullName, StringComparer.OrdinalIgnoreCase)
+                    .ThenByDescending(run => run.Id)
+                    .ToArray());
+        }
+        catch (GitHubAppClientException ex)
+        {
+            return GitHubWorkflowRunListResult.Failed(ex.Message);
         }
     }
 
@@ -295,6 +341,44 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
             .ToArray();
     }
 
+    private async Task<IReadOnlyList<GitHubWorkflowRunSummary>> GetWorkflowRunsAsync(
+        string installationToken,
+        string repositoryFullName,
+        CancellationToken cancellationToken)
+    {
+        using var request = CreateRequest(
+            HttpMethod.Get,
+            BuildWorkflowRunsPath(repositoryFullName),
+            installationToken);
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new GitHubAppClientException(
+                BuildWorkflowRunAccessFailureMessage(response.StatusCode));
+        }
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var page = await JsonSerializer.DeserializeAsync<GitHubWorkflowRunPage>(
+            stream,
+            JsonOptions,
+            cancellationToken);
+        return (page?.WorkflowRuns ?? [])
+            .Where(item => item.Id > 0)
+            .Select(item => new GitHubWorkflowRunSummary(
+                repositoryFullName,
+                item.Id,
+                string.IsNullOrWhiteSpace(item.Name) ? "(unnamed)" : item.Name,
+                string.IsNullOrWhiteSpace(item.DisplayTitle) ? "(untitled)" : item.DisplayTitle,
+                string.IsNullOrWhiteSpace(item.Status) ? "unknown" : item.Status,
+                item.Conclusion ?? string.Empty,
+                string.IsNullOrWhiteSpace(item.Event) ? "(unknown)" : item.Event,
+                string.IsNullOrWhiteSpace(item.HeadBranch) ? "(unknown)" : item.HeadBranch,
+                item.HtmlUrl ?? string.Empty,
+                item.CreatedAt,
+                item.UpdatedAt))
+            .ToArray();
+    }
+
     private HttpRequestMessage CreateRequest(
         HttpMethod method,
         string pathAndQuery,
@@ -382,6 +466,13 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
             : $"GitHub App pull request list request failed with HTTP {(int)statusCode}.";
     }
 
+    private static string BuildWorkflowRunAccessFailureMessage(HttpStatusCode statusCode)
+    {
+        return statusCode == HttpStatusCode.Forbidden
+            ? "GitHub App workflow run list request failed with HTTP 403. Check repository permissions: Metadata and Actions."
+            : $"GitHub App workflow run list request failed with HTTP {(int)statusCode}.";
+    }
+
     private static string BuildPullRequestsPath(string repositoryFullName)
     {
         var parts = repositoryFullName.Split('/', 2, StringSplitOptions.TrimEntries);
@@ -391,6 +482,17 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
         }
 
         return $"repos/{Uri.EscapeDataString(parts[0])}/{Uri.EscapeDataString(parts[1])}/pulls?state=open&per_page={PullRequestPageSize}";
+    }
+
+    private static string BuildWorkflowRunsPath(string repositoryFullName)
+    {
+        var parts = repositoryFullName.Split('/', 2, StringSplitOptions.TrimEntries);
+        if (parts.Length != 2 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
+        {
+            throw new GitHubAppClientException("GitHub repository full name was invalid.");
+        }
+
+        return $"repos/{Uri.EscapeDataString(parts[0])}/{Uri.EscapeDataString(parts[1])}/actions/runs?per_page={WorkflowRunPageSize}";
     }
 
     private static string Pluralize(int count, string singular, string plural)
@@ -434,6 +536,22 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
 
     private sealed record GitHubPullRequestRef(
         [property: JsonPropertyName("ref")] string? Ref);
+
+    private sealed record GitHubWorkflowRunPage(
+        [property: JsonPropertyName("total_count")] int TotalCount,
+        [property: JsonPropertyName("workflow_runs")] IReadOnlyList<GitHubWorkflowRunItem>? WorkflowRuns);
+
+    private sealed record GitHubWorkflowRunItem(
+        [property: JsonPropertyName("id")] long Id,
+        [property: JsonPropertyName("name")] string? Name,
+        [property: JsonPropertyName("display_title")] string? DisplayTitle,
+        [property: JsonPropertyName("status")] string? Status,
+        [property: JsonPropertyName("conclusion")] string? Conclusion,
+        [property: JsonPropertyName("event")] string? Event,
+        [property: JsonPropertyName("head_branch")] string? HeadBranch,
+        [property: JsonPropertyName("html_url")] string? HtmlUrl,
+        [property: JsonPropertyName("created_at")] DateTimeOffset? CreatedAt,
+        [property: JsonPropertyName("updated_at")] DateTimeOffset? UpdatedAt);
 
     private sealed class GitHubAppClientException(string message) : Exception(message);
 }

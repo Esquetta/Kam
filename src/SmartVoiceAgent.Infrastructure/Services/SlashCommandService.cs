@@ -26,11 +26,14 @@ public sealed class SlashCommandService : ISlashCommandService
         new("/dependabot", "Show how to run dependency audit and Dependabot checks.", "/dependabot", "Workflow"),
         new("/github", "Show how to inspect GitHub PR and workflow status.", "/github", "Workflow"),
         new("/github app", "Show GitHub App connection status.", "/github app", "Workflow", ["/github-app"]),
+        new("/github app actions", "List GitHub Actions workflow runs visible through the configured GitHub App.", "/github app actions", "Workflow"),
         new("/github app prs", "List open pull requests visible through the configured GitHub App.", "/github app prs", "Workflow"),
         new("/github app repos", "List repositories visible through the configured GitHub App.", "/github app repos", "Workflow"),
+        new("/github actions", "List GitHub Actions workflow runs visible through the configured GitHub App.", "/github actions", "Workflow"),
         new("/github prs", "List open pull requests visible through the configured GitHub App.", "/github prs", "Workflow", ["/github pr", "/github pull-requests"]),
         new("/github repos", "List repositories visible through the configured GitHub App.", "/github repos", "Workflow"),
         new("/github-app", "Show GitHub App setup and repository permission guidance.", "/github-app", "Workflow"),
+        new("/github-app actions", "List GitHub Actions workflow runs visible through the configured GitHub App.", "/github-app actions", "Workflow"),
         new("/github-app prs", "List open pull requests visible through the configured GitHub App.", "/github-app prs", "Workflow", ["/github-app pr", "/github-app pull-requests"]),
         new("/github-app repos", "List repositories visible through the configured GitHub App.", "/github-app repos", "Workflow"),
         new("/plugins", "Show skill/plugin health summary.", "/plugins", "Skills"),
@@ -465,6 +468,11 @@ public sealed class SlashCommandService : ISlashCommandService
                 return await RunGitHubAppPullRequestsAsync("/github", cancellationToken);
             }
 
+            if (arguments.Count > 1 && IsCommand(arguments[1], "actions", "runs", "workflows", "workflow-runs"))
+            {
+                return await RunGitHubAppWorkflowRunsAsync("/github", cancellationToken);
+            }
+
             return await RunGitHubAppStatusAsync("/github", cancellationToken);
         }
 
@@ -478,11 +486,17 @@ public sealed class SlashCommandService : ISlashCommandService
             return await RunGitHubAppPullRequestsAsync("/github", cancellationToken);
         }
 
+        if (arguments.Count > 0 && IsCommand(arguments[0], "actions", "runs", "workflows", "workflow-runs"))
+        {
+            return await RunGitHubAppWorkflowRunsAsync("/github", cancellationToken);
+        }
+
         return SlashCommandResult.Succeeded(
             "/github",
             string.Join(Environment.NewLine, [
                 FormatCodingAgentWorkflow("/github"),
                 "  app status: /github app",
+                "  workflow runs: /github actions",
                 "  pull requests: /github prs",
                 "  repo list: /github repos"
             ]));
@@ -500,6 +514,11 @@ public sealed class SlashCommandService : ISlashCommandService
         if (arguments.Count > 0 && IsCommand(arguments[0], "prs", "pr", "pulls", "pull-requests"))
         {
             return await RunGitHubAppPullRequestsAsync("/github-app", cancellationToken);
+        }
+
+        if (arguments.Count > 0 && IsCommand(arguments[0], "actions", "runs", "workflows", "workflow-runs"))
+        {
+            return await RunGitHubAppWorkflowRunsAsync("/github-app", cancellationToken);
         }
 
         return await RunGitHubAppStatusAsync("/github-app", cancellationToken);
@@ -550,6 +569,52 @@ public sealed class SlashCommandService : ISlashCommandService
         if (result.Repositories.Count > 50)
         {
             builder.AppendLine($"  ... {result.Repositories.Count - 50} more repositories hidden");
+        }
+
+        return SlashCommandResult.Succeeded(commandName, builder.ToString().TrimEnd());
+    }
+
+    private async Task<SlashCommandResult> RunGitHubAppWorkflowRunsAsync(
+        string commandName,
+        CancellationToken cancellationToken)
+    {
+        if (_githubAppClient is null)
+        {
+            return SlashCommandResult.Succeeded(commandName, FormatGitHubAppUnavailable());
+        }
+
+        var result = await _githubAppClient.ListWorkflowRunsAsync(cancellationToken);
+        if (!result.Success)
+        {
+            return SlashCommandResult.Succeeded(
+                commandName,
+                FormatGitHubAppSetup(result.Message, result.MissingSettings));
+        }
+
+        var builder = new StringBuilder()
+            .AppendLine("Kam GitHub App workflow runs:")
+            .AppendLine($"  status: {NormalizeMessage(result.Message)}");
+
+        foreach (var workflowRun in result.WorkflowRuns
+            .OrderByDescending(workflowRun => workflowRun.UpdatedAt ?? workflowRun.CreatedAt ?? DateTimeOffset.MinValue)
+            .ThenBy(workflowRun => workflowRun.RepositoryFullName, StringComparer.OrdinalIgnoreCase)
+            .ThenByDescending(workflowRun => workflowRun.Id)
+            .Take(50))
+        {
+            builder
+                .AppendLine(
+                    $"  - {NormalizeMessage(workflowRun.RepositoryFullName)}#{workflowRun.Id} {NormalizeMessage(workflowRun.Name)} ({FormatWorkflowRunState(workflowRun)}, {NormalizeMessage(workflowRun.Event)}, {NormalizeMessage(workflowRun.HeadBranch)})")
+                .AppendLine($"    title: {NormalizeMessage(workflowRun.DisplayTitle)}")
+                .AppendLine($"    {NormalizeMessage(workflowRun.HtmlUrl)}");
+        }
+
+        if (result.WorkflowRuns.Count == 0)
+        {
+            builder.AppendLine("  no workflow runs found");
+        }
+        else if (result.WorkflowRuns.Count > 50)
+        {
+            builder.AppendLine($"  ... {result.WorkflowRuns.Count - 50} more workflow runs hidden");
         }
 
         return SlashCommandResult.Succeeded(commandName, builder.ToString().TrimEnd());
@@ -671,8 +736,10 @@ public sealed class SlashCommandService : ISlashCommandService
             .AppendLine("    dotnet user-secrets set \"GitHubApp:PrivateKeyPath\" \"<absolute-pem-path>\"")
             .AppendLine("  list repos: /github-app repos or /github repos")
             .AppendLine("  list PRs: /github-app prs or /github prs")
+            .AppendLine("  list workflow runs: /github-app actions or /github actions")
             .AppendLine("  CLI status: kam coding-agent /github app")
             .AppendLine("  CLI repos: kam coding-agent /github repos")
+            .AppendLine("  CLI workflow runs: kam coding-agent /github actions")
             .AppendLine("  private key contents and installation tokens are never printed.");
 
         return builder.ToString().TrimEnd();
@@ -800,6 +867,13 @@ public sealed class SlashCommandService : ISlashCommandService
         return normalized.Length <= maxLength
             ? normalized
             : normalized[..maxLength] + "...";
+    }
+
+    private static string FormatWorkflowRunState(GitHubWorkflowRunSummary workflowRun)
+    {
+        var status = NormalizeMessage(workflowRun.Status);
+        var conclusion = NormalizeMessage(workflowRun.Conclusion);
+        return conclusion == "(empty)" ? status : $"{status}/{conclusion}";
     }
 
     private static string NormalizeAlias(string commandName)

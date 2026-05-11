@@ -306,6 +306,7 @@ public sealed class CodingAgentCommand
             "  /github        Show GitHub PR and workflow status when gh is available.",
             "  /github app    Show GitHub App connection and required repository permissions.",
             "  /github repos  List repositories visible through the configured GitHub App.",
+            "  /github actions  List GitHub Actions workflow runs visible through the configured GitHub App.",
             "  /plugins       Show skill/plugin health summary.",
             "  /mcp           Show configured MCP endpoints.",
             "  /agents        Show registered runtime agents and coding role templates.",
@@ -493,12 +494,22 @@ public sealed class CodingAgentCommand
                 return await RunGitHubAppRepositoriesAsync(cancellationToken);
             }
 
+            if (arguments.Count > 1 && IsCommand(arguments[1], "actions", "runs", "workflows", "workflow-runs"))
+            {
+                return await RunGitHubAppWorkflowRunsAsync(cancellationToken);
+            }
+
             return await RunGitHubAppStatusAsync(cancellationToken);
         }
 
         if (arguments.Count > 0 && IsCommand(arguments[0], "repos", "repositories", "list"))
         {
             return await RunGitHubAppRepositoriesAsync(cancellationToken);
+        }
+
+        if (arguments.Count > 0 && IsCommand(arguments[0], "actions", "runs", "workflows", "workflow-runs"))
+        {
+            return await RunGitHubAppWorkflowRunsAsync(cancellationToken);
         }
 
         return await RunGithubWorkflowAsync(options, cancellationToken);
@@ -584,6 +595,48 @@ public sealed class CodingAgentCommand
         return CodingAgentCommandResult.Success(builder.ToString().TrimEnd());
     }
 
+    private async Task<CodingAgentCommandResult> RunGitHubAppWorkflowRunsAsync(CancellationToken cancellationToken)
+    {
+        if (_githubAppClient is null)
+        {
+            return CodingAgentCommandResult.Success(FormatGitHubAppUnavailable());
+        }
+
+        var result = await _githubAppClient.ListWorkflowRunsAsync(cancellationToken);
+        if (!result.Success)
+        {
+            return CodingAgentCommandResult.Success(FormatGitHubAppSetup(result.Message, result.MissingSettings));
+        }
+
+        var builder = new StringBuilder()
+            .AppendLine("Kam GitHub App workflow runs:")
+            .AppendLine($"  status: {NormalizeMessage(result.Message)}");
+
+        foreach (var workflowRun in result.WorkflowRuns
+            .OrderByDescending(workflowRun => workflowRun.UpdatedAt ?? workflowRun.CreatedAt ?? DateTimeOffset.MinValue)
+            .ThenBy(workflowRun => workflowRun.RepositoryFullName, StringComparer.OrdinalIgnoreCase)
+            .ThenByDescending(workflowRun => workflowRun.Id)
+            .Take(50))
+        {
+            builder
+                .AppendLine(
+                    $"  - {NormalizeMessage(workflowRun.RepositoryFullName)}#{workflowRun.Id} {NormalizeMessage(workflowRun.Name)} ({FormatWorkflowRunState(workflowRun)}, {NormalizeMessage(workflowRun.Event)}, {NormalizeMessage(workflowRun.HeadBranch)})")
+                .AppendLine($"    title: {NormalizeMessage(workflowRun.DisplayTitle)}")
+                .AppendLine($"    {NormalizeMessage(workflowRun.HtmlUrl)}");
+        }
+
+        if (result.WorkflowRuns.Count == 0)
+        {
+            builder.AppendLine("  no workflow runs found");
+        }
+        else if (result.WorkflowRuns.Count > 50)
+        {
+            builder.AppendLine($"  ... {result.WorkflowRuns.Count - 50} more workflow runs hidden");
+        }
+
+        return CodingAgentCommandResult.Success(builder.ToString().TrimEnd());
+    }
+
     private static string FormatGitHubAppStatus(GitHubAppConnectionStatus status)
     {
         if (!status.IsConfigured)
@@ -659,6 +712,8 @@ public sealed class CodingAgentCommand
             .AppendLine("    dotnet user-secrets set \"GitHubApp:AppId\" \"<app-id>\"")
             .AppendLine("    dotnet user-secrets set \"GitHubApp:InstallationId\" \"<installation-id>\"")
             .AppendLine("    dotnet user-secrets set \"GitHubApp:PrivateKeyPath\" \"<absolute-pem-path>\"")
+            .AppendLine("  list repos: kam coding-agent /github repos")
+            .AppendLine("  list workflow runs: kam coding-agent /github actions")
             .AppendLine("  private key contents and installation tokens are never printed.");
 
         return builder.ToString().TrimEnd();
@@ -1136,6 +1191,13 @@ public sealed class CodingAgentCommand
     private static string FormatSecretStatus(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? "(not configured)" : "(configured)";
+    }
+
+    private static string FormatWorkflowRunState(GitHubWorkflowRunSummary workflowRun)
+    {
+        var status = NormalizeMessage(workflowRun.Status);
+        var conclusion = NormalizeMessage(workflowRun.Conclusion);
+        return conclusion == "(empty)" ? status : $"{status}/{conclusion}";
     }
 
     private static string NormalizeWorkspaceRoot(string workspaceRoot)

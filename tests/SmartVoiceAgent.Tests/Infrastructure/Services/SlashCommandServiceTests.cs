@@ -26,11 +26,14 @@ public sealed class SlashCommandServiceTests
                 "/diff",
                 "/github",
                 "/github app",
+                "/github app actions",
                 "/github app prs",
                 "/github app repos",
+                "/github actions",
                 "/github prs",
                 "/github repos",
                 "/github-app",
+                "/github-app actions",
                 "/github-app prs",
                 "/hooks",
                 "/worktree",
@@ -61,6 +64,18 @@ public sealed class SlashCommandServiceTests
         suggestions.Select(command => command.Name)
             .Should()
             .Contain("/github prs");
+    }
+
+    [Fact]
+    public void GetSuggestions_WhenGithubActionsSubcommandIsTyped_IncludesActionsCommand()
+    {
+        var service = new SlashCommandService();
+
+        var suggestions = service.GetSuggestions("/github a");
+
+        suggestions.Select(command => command.Name)
+            .Should()
+            .Contain("/github actions");
     }
 
     [Fact]
@@ -278,6 +293,67 @@ public sealed class SlashCommandServiceTests
         result.Message.Should().Contain("Draft release notes");
         result.Message.Should().Contain("draft");
         result.Message.Should().Contain("https://github.com/Esquetta/Kam/pull/42");
+    }
+
+    [Theory]
+    [InlineData("/github actions")]
+    [InlineData("/github-app actions")]
+    [InlineData("/github app actions")]
+    public async Task ExecuteAsync_WhenGithubActionsAliasIsRequested_ListsWorkflowRuns(string command)
+    {
+        var service = new SlashCommandService(
+            githubAppClient: new StaticGitHubAppClient(
+                GitHubAppConnectionStatus.Connected(
+                    "12345",
+                    "98765",
+                    "https://api.github.com",
+                    "Kam Coding",
+                    "kam-coding",
+                    1),
+                GitHubRepositoryListResult.Failed("not used"),
+                GitHubPullRequestListResult.Failed("not used"),
+                GitHubWorkflowRunListResult.Succeeded(
+                    "2 workflow runs across 1 repository.",
+                    [
+                        new GitHubWorkflowRunSummary(
+                            "Esquetta/Kam",
+                            1001,
+                            ".NET CI",
+                            "Add GitHub App PR slash command",
+                            "completed",
+                            "success",
+                            "push",
+                            "master",
+                            "https://github.com/Esquetta/Kam/actions/runs/1001",
+                            new DateTimeOffset(2026, 5, 11, 10, 0, 0, TimeSpan.Zero),
+                            new DateTimeOffset(2026, 5, 11, 10, 5, 0, TimeSpan.Zero)),
+                        new GitHubWorkflowRunSummary(
+                            "Esquetta/Kam",
+                            1002,
+                            "Security Scan",
+                            "Check advisories",
+                            "in_progress",
+                            string.Empty,
+                            "workflow_dispatch",
+                            "master",
+                            "https://github.com/Esquetta/Kam/actions/runs/1002",
+                            new DateTimeOffset(2026, 5, 11, 10, 10, 0, TimeSpan.Zero),
+                            new DateTimeOffset(2026, 5, 11, 10, 12, 0, TimeSpan.Zero))
+                    ])));
+
+        var result = await service.ExecuteAsync(command);
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Kam GitHub App workflow runs:");
+        result.Message.Should().Contain("Esquetta/Kam#1001");
+        result.Message.Should().Contain(".NET CI");
+        result.Message.Should().Contain("completed/success");
+        result.Message.Should().Contain("push");
+        result.Message.Should().Contain("master");
+        result.Message.Should().Contain("Add GitHub App PR slash command");
+        result.Message.Should().Contain("Security Scan");
+        result.Message.Should().Contain("in_progress");
+        result.Message.Should().Contain("https://github.com/Esquetta/Kam/actions/runs/1001");
     }
 
     [Fact]
@@ -584,15 +660,18 @@ public sealed class SlashCommandServiceTests
         private readonly GitHubAppConnectionStatus _status;
         private readonly GitHubRepositoryListResult _repositories;
         private readonly GitHubPullRequestListResult _pullRequests;
+        private readonly GitHubWorkflowRunListResult _workflowRuns;
 
         public StaticGitHubAppClient(
             GitHubAppConnectionStatus status,
             GitHubRepositoryListResult repositories,
-            GitHubPullRequestListResult? pullRequests = null)
+            GitHubPullRequestListResult? pullRequests = null,
+            GitHubWorkflowRunListResult? workflowRuns = null)
         {
             _status = status;
             _repositories = repositories;
             _pullRequests = pullRequests ?? GitHubPullRequestListResult.Failed("not used");
+            _workflowRuns = workflowRuns ?? GitHubWorkflowRunListResult.Failed("not used");
         }
 
         public Task<GitHubAppConnectionStatus> GetStatusAsync(
@@ -611,6 +690,12 @@ public sealed class SlashCommandServiceTests
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_pullRequests);
+        }
+
+        public Task<GitHubWorkflowRunListResult> ListWorkflowRunsAsync(
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_workflowRuns);
         }
     }
 }

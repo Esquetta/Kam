@@ -12,4 +12,7 @@ public interface IGitHubAppClient
 
     Task<GitHubPullRequestListResult> ListPullRequestsAsync(
         CancellationToken cancellationToken = default);
+
+    Task<GitHubWorkflowRunListResult> ListWorkflowRunsAsync(
+        CancellationToken cancellationToken = default);
 }

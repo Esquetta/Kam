@@ -469,6 +469,62 @@ public sealed class CodingAgentCommandTests : IDisposable
         error.ToString().Should().BeEmpty();
     }
 
+    [Theory]
+    [InlineData("/github actions")]
+    [InlineData("/github app actions")]
+    public async Task RunAsync_GithubActionsSlashCommand_ListsGitHubAppWorkflowRuns(string commandText)
+    {
+        var githubApp = new StaticGitHubAppClient(
+            GitHubAppConnectionStatus.Connected(
+                "12345",
+                "98765",
+                "https://api.github.com",
+                "Kam Coding",
+                "kam-coding",
+                1),
+            GitHubRepositoryListResult.Failed("not used"),
+            GitHubWorkflowRunListResult.Succeeded(
+                "1 workflow run across 1 repository.",
+                [
+                    new GitHubWorkflowRunSummary(
+                        "Esquetta/Kam",
+                        1001,
+                        ".NET CI",
+                        "Add GitHub App PR slash command",
+                        "completed",
+                        "success",
+                        "push",
+                        "master",
+                        "https://github.com/Esquetta/Kam/actions/runs/1001",
+                        new DateTimeOffset(2026, 5, 11, 10, 0, 0, TimeSpan.Zero),
+                        new DateTimeOffset(2026, 5, 11, 10, 5, 0, TimeSpan.Zero))
+                ]));
+        var command = new CodingAgentCommand(
+            new RecordingCommandRuntime(CommandRuntimeResult.Failed("Should not run.", SkillExecutionStatus.Failed, "unexpected")),
+            githubAppClient: githubApp);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await command.RunAsync(
+            new CodingAgentCommandOptions
+            {
+                CommandText = commandText,
+                WorkspaceRoot = _workspace
+            },
+            output,
+            error);
+
+        exitCode.Should().Be(0);
+        output.ToString().Should().Contain("Kam GitHub App workflow runs:");
+        output.ToString().Should().Contain("Esquetta/Kam#1001");
+        output.ToString().Should().Contain(".NET CI");
+        output.ToString().Should().Contain("completed/success");
+        output.ToString().Should().Contain("https://github.com/Esquetta/Kam/actions/runs/1001");
+        output.ToString().Should().NotContain("installation-token");
+        output.ToString().Should().NotContain("PRIVATE KEY");
+        error.ToString().Should().BeEmpty();
+    }
+
     [Fact]
     public async Task RunAsync_GithubReposSlashCommand_WhenGitHubAppIsUnavailable_ShowsSetupGuidance()
     {
@@ -837,13 +893,16 @@ public sealed class CodingAgentCommandTests : IDisposable
     {
         private readonly GitHubAppConnectionStatus _status;
         private readonly GitHubRepositoryListResult _repositories;
+        private readonly GitHubWorkflowRunListResult _workflowRuns;
 
         public StaticGitHubAppClient(
             GitHubAppConnectionStatus status,
-            GitHubRepositoryListResult repositories)
+            GitHubRepositoryListResult repositories,
+            GitHubWorkflowRunListResult? workflowRuns = null)
         {
             _status = status;
             _repositories = repositories;
+            _workflowRuns = workflowRuns ?? GitHubWorkflowRunListResult.Failed("not used");
         }
 
         public Task<GitHubAppConnectionStatus> GetStatusAsync(
@@ -862,6 +921,12 @@ public sealed class CodingAgentCommandTests : IDisposable
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(GitHubPullRequestListResult.Failed("not used"));
+        }
+
+        public Task<GitHubWorkflowRunListResult> ListWorkflowRunsAsync(
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_workflowRuns);
         }
     }
 }
