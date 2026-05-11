@@ -582,6 +582,64 @@ public sealed class CodingAgentCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task RunAsync_WorktreeAddWithExecuteFlag_RunsStructuredGitWorktreeAdd()
+    {
+        var processRunner = new RecordingProcessRunner(
+            new CodingAgentProcessResult(0, "Preparing worktree", string.Empty, false));
+        var command = new CodingAgentCommand(
+            new RecordingCommandRuntime(CommandRuntimeResult.Failed("Should not run.", SkillExecutionStatus.Failed, "unexpected")),
+            processRunner);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var expectedWorktreePath = Path.GetFullPath(Path.Combine(_workspace, "..", "kam-feature"));
+
+        var exitCode = await command.RunAsync(
+            new CodingAgentCommandOptions
+            {
+                CommandText = "/worktree add --execute ../kam-feature feature/test",
+                WorkspaceRoot = _workspace
+            },
+            output,
+            error);
+
+        exitCode.Should().Be(0);
+        processRunner.Requests.Should().ContainSingle();
+        var request = processRunner.Requests.Single();
+        request.FileName.Should().Be("git");
+        request.Arguments.Should().Equal("worktree", "add", expectedWorktreePath, "feature/test");
+        request.WorkingDirectory.Should().Be(_workspace);
+        output.ToString().Should().Contain("[PASS] git worktree add");
+        output.ToString().Should().Contain("Preparing worktree");
+        error.ToString().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task RunAsync_WorktreeAddWithExecuteFlag_RejectsPathOutsideWorkspaceParent()
+    {
+        var processRunner = new RecordingProcessRunner(
+            new CodingAgentProcessResult(0, "should not run", string.Empty, false));
+        var command = new CodingAgentCommand(
+            new RecordingCommandRuntime(CommandRuntimeResult.Failed("Should not run.", SkillExecutionStatus.Failed, "unexpected")),
+            processRunner);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await command.RunAsync(
+            new CodingAgentCommandOptions
+            {
+                CommandText = "/worktree add --execute ../../outside feature/test",
+                WorkspaceRoot = _workspace
+            },
+            output,
+            error);
+
+        exitCode.Should().Be(2);
+        processRunner.Requests.Should().BeEmpty();
+        output.ToString().Should().Contain("Worktree path must stay under the workspace parent");
+        error.ToString().Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task RunAsync_AgentsSlashCommand_ShowsCodingRoleTemplates()
     {
         var command = new CodingAgentCommand(

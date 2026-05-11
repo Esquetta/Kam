@@ -13,7 +13,7 @@ Implemented scope:
 - `/plugins`: summarizes registered skill/plugin health through `ISkillHealthService`.
 - `/mcp`: reports configured MCP endpoint status without printing secrets.
 - `/agents`: lists registered runtime agents plus coding role templates.
-- `/worktree`: lists worktrees and prints a plan; creation is intentionally not wired in non-interactive mode.
+- `/worktree`: lists worktrees and prints a plan; creation requires an explicit `/worktree add --execute <sibling-path> <branch>` confirmation and keeps the target under the workspace parent.
 - `/hooks`: lists configured hooks only; hook execution is intentionally not wired.
 
 Safety rules:
@@ -22,7 +22,8 @@ Safety rules:
 - Use `ProcessStartInfo.ArgumentList` for all process execution.
 - Keep GitHub and Dependabot commands read-only.
 - Keep GitHub App credentials in user secrets or environment variables; never persist PEM content, JWTs, installation tokens, or private key paths in UI settings or command output.
-- Keep MCP, plugin, agent, hook, and worktree mutating operations advisory until an explicit confirmation path exists.
+- Keep MCP, plugin, agent, and hook mutating operations advisory until an explicit confirmation path exists.
+- Keep worktree creation gated behind the explicit `--execute` flag and validated sibling-path boundaries.
 - Keep summary files inside the active workspace.
 - Keep file-skill reads, listings, metadata probes, and searches scoped to the configured workspace.
 

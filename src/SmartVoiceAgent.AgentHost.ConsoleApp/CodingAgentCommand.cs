@@ -56,6 +56,7 @@ public sealed class CodingAgentCommand
     private static readonly TimeSpan TestTimeout = TimeSpan.FromSeconds(900);
     private static readonly TimeSpan ReviewStepTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan StatusStepTimeout = TimeSpan.FromSeconds(30);
+    private const string WorktreeExecuteFlag = "--execute";
 
     private readonly ICommandRuntimeService _runtime;
     private readonly ICodingAgentProcessRunner _processRunner;
@@ -775,13 +776,62 @@ public sealed class CodingAgentCommand
 
         if (IsCommand(arguments[0], "add"))
         {
-            return new CodingAgentCommandResult(
-                2,
-                "Worktree creation is intentionally not wired in non-interactive coding-agent mode. Use /worktree plan <slug> first, then run the approved git command manually.",
-                false);
+            return await RunWorktreeAddCommandAsync(options, arguments, cancellationToken);
         }
 
         return new CodingAgentCommandResult(2, $"Unknown worktree command: {options.CommandText}", false);
+    }
+
+    private async Task<CodingAgentCommandResult> RunWorktreeAddCommandAsync(
+        CodingAgentCommandOptions options,
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken)
+    {
+        if (!arguments.Any(argument => argument.Equals(WorktreeExecuteFlag, StringComparison.OrdinalIgnoreCase)))
+        {
+            return new CodingAgentCommandResult(
+                2,
+                "Worktree creation is intentionally not wired without explicit execution confirmation. Add --execute after /worktree add to run git worktree add.",
+                false);
+        }
+
+        var values = arguments
+            .Skip(1)
+            .Where(argument => !argument.Equals(WorktreeExecuteFlag, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        if (values.Length < 2)
+        {
+            return new CodingAgentCommandResult(
+                2,
+                "Usage: /worktree add --execute <sibling-path> <branch>",
+                false);
+        }
+
+        if (!TryResolveWorktreePath(options.WorkspaceRoot, values[0], out var worktreePath))
+        {
+            return new CodingAgentCommandResult(
+                2,
+                "Worktree path must stay under the workspace parent.",
+                false);
+        }
+
+        var branchName = values[1];
+        if (!IsSafeWorktreeBranchName(branchName))
+        {
+            return new CodingAgentCommandResult(
+                2,
+                "Worktree branch name contains unsupported characters.",
+                false);
+        }
+
+        return await RunProcessStepAsync(
+            "git worktree add",
+            "git",
+            ["worktree", "add", worktreePath, branchName],
+            options,
+            cancellationToken,
+            timeout: ReviewStepTimeout);
     }
 
     private static string FormatHooks(CodingAgentCommandOptions options)
@@ -973,6 +1023,50 @@ public sealed class CodingAgentCommand
         return false;
     }
 
+    private static bool TryResolveWorktreePath(
+        string workspaceRoot,
+        string path,
+        out string resolvedPath)
+    {
+        resolvedPath = string.Empty;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return false;
+            }
+
+            var workspace = Path.GetFullPath(workspaceRoot);
+            var parent = Directory.GetParent(workspace)?.FullName;
+            if (string.IsNullOrWhiteSpace(parent))
+            {
+                return false;
+            }
+
+            var candidate = Path.IsPathRooted(path)
+                ? Path.GetFullPath(path)
+                : Path.GetFullPath(Path.Combine(workspace, path));
+
+            if (!IsSameOrChildPath(parent, candidate))
+            {
+                return false;
+            }
+
+            if (IsSameOrChildPath(workspace, candidate))
+            {
+                return false;
+            }
+
+            resolvedPath = candidate;
+            return true;
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return false;
+        }
+    }
+
     private static bool IsSameOrChildPath(string root, string candidate)
     {
         var normalizedRoot = Path.GetFullPath(root).TrimEnd(
@@ -1011,6 +1105,22 @@ public sealed class CodingAgentCommand
     private static bool IsCommand(string value, params string[] names)
     {
         return names.Any(name => value.Equals(name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsSafeWorktreeBranchName(string branchName)
+    {
+        if (string.IsNullOrWhiteSpace(branchName)
+            || branchName.StartsWith("-", StringComparison.Ordinal)
+            || branchName.Contains("..", StringComparison.Ordinal)
+            || branchName.Contains('\\', StringComparison.Ordinal)
+            || branchName.Any(char.IsWhiteSpace))
+        {
+            return false;
+        }
+
+        return branchName.All(character =>
+            char.IsLetterOrDigit(character)
+            || character is '/' or '-' or '_' or '.');
     }
 
     private static string FormatHookList(IReadOnlyList<string> hooks)
