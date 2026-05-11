@@ -429,7 +429,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             _lastApplicationRestartPlan = null;
             ApplyApplicationUpdateDiagnostics();
             RebuildSummary();
-            ApplicationUpdateActionStatus = "Downloaded Kam update package.";
+            ApplicationUpdateActionStatus = "Verify the downloaded package before restart handoff.";
             return;
         }
 

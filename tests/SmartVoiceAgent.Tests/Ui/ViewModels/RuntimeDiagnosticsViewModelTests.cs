@@ -999,6 +999,7 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
         await viewModel.DownloadApplicationUpdateAsync();
 
         restartPlanner.LastPackagePath.Should().BeNull();
+        viewModel.ApplicationUpdateActionStatus.Should().Be("Verify the downloaded package before restart handoff.");
         viewModel.ApplicationUpdateItems.Should().Contain(item =>
             item.Name == "Package Verification"
             && item.Value == "Not verified"

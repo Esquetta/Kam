@@ -218,6 +218,20 @@ public sealed class SlashCommandServiceTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_WhenVersionProviderIsAvailable_UsesSharedApplicationVersion()
+    {
+        var service = new SlashCommandService(
+            applicationUpdateService: new FakeApplicationUpdateService(currentVersion: "1.0.0"),
+            applicationVersionProvider: new FakeApplicationVersionProvider("2.0.0"));
+
+        var result = await service.ExecuteAsync("/version");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("current: 2.0.0");
+        result.Message.Should().NotContain("current: 1.0.0");
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WhenUpdateIsRequested_ReturnsReleaseStatus()
     {
         var service = new SlashCommandService(
@@ -228,6 +242,27 @@ public sealed class SlashCommandServiceTests
         result.Success.Should().BeTrue();
         result.Message.Should().Contain("update available");
         result.Message.Should().Contain("Kam-1.2.0-x64.msi");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenUpdateHasNoReleaseAsset_DoesNotOfferDownloadNextStep()
+    {
+        var service = new SlashCommandService(
+            applicationUpdateService: new FakeApplicationUpdateService(
+                checkResult: ApplicationUpdateCheckResult.UpdateAvailable(
+                    "1.0.0",
+                    "1.2.0",
+                    "Kam 1.2.0",
+                    "https://github.com/Esquetta/Kam/releases/tag/v1.2.0",
+                    DateTimeOffset.Parse("2026-05-09T12:00:00Z"),
+                    asset: null)));
+
+        var result = await service.ExecuteAsync("/update");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("status: update available");
+        result.Message.Should().Contain("download: no release package asset found");
+        result.Message.Should().NotContain("next: /download");
     }
 
     [Fact]
@@ -261,6 +296,7 @@ public sealed class SlashCommandServiceTests
         result.Success.Should().BeTrue();
         result.Message.Should().Contain("verification: Checksum missing");
         result.Message.Should().Contain("next: verify release package before restart");
+        result.Message.Should().Contain("restart: blocked until package verification succeeds");
         result.Message.Should().NotContain("next: /restart <file>");
     }
 
@@ -268,8 +304,18 @@ public sealed class SlashCommandServiceTests
     public async Task ExecuteAsync_WhenRestartIsRequested_ReturnsRestartPlan()
     {
         var service = new SlashCommandService(
+            applicationUpdateService: new FakeApplicationUpdateService(
+                downloadResult: ApplicationUpdateDownloadResult.Succeeded(
+                    @"C:\Program Files\Kam Updates\Kam-1.2.0-x64.msi",
+                    "1.2.0",
+                    1024,
+                    isVerified: true,
+                    verificationStatus: "SHA256 verified",
+                    expectedSha256: new string('a', 64),
+                    actualSha256: new string('a', 64))),
             applicationRestartPlanner: new FakeApplicationRestartPlanner());
 
+        await service.ExecuteAsync("/download");
         var result = await service.ExecuteAsync(@"/restart C:\Program Files\Kam Updates\Kam-1.2.0-x64.msi");
 
         result.Success.Should().BeTrue();
@@ -278,8 +324,45 @@ public sealed class SlashCommandServiceTests
         result.Message.Should().Contain("Start installer");
     }
 
+    [Fact]
+    public async Task ExecuteAsync_WhenRestartPackageWasNotVerified_BlocksInstallerHandoff()
+    {
+        var service = new SlashCommandService(
+            applicationUpdateService: new FakeApplicationUpdateService(
+                ApplicationUpdateDownloadResult.Succeeded(
+                    @"C:\Updates\Kam-1.2.0-x64.msi",
+                    "1.2.0",
+                    1024,
+                    isVerified: false,
+                    verificationStatus: "Checksum missing")),
+            applicationRestartPlanner: new FakeApplicationRestartPlanner());
+
+        await service.ExecuteAsync("/download");
+        var result = await service.ExecuteAsync(@"/restart C:\Updates\Kam-1.2.0-x64.msi");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("status: blocked");
+        result.Message.Should().Contain("Restart handoff requires a verified package downloaded in this chat session.");
+        result.Message.Should().NotContain("Start installer");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenRestartPackageWasNotDownloadedInSlashSession_BlocksInstallerHandoff()
+    {
+        var service = new SlashCommandService(
+            applicationRestartPlanner: new FakeApplicationRestartPlanner());
+
+        var result = await service.ExecuteAsync(@"/restart C:\Updates\Kam-1.2.0-x64.msi");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("status: blocked");
+        result.Message.Should().Contain("Restart handoff requires a verified package downloaded in this chat session.");
+        result.Message.Should().NotContain("Start installer");
+    }
+
     private sealed class FakeApplicationUpdateService : IApplicationUpdateService
     {
+        private readonly ApplicationUpdateCheckResult? _checkResult;
         private readonly ApplicationUpdateDownloadResult _downloadResult;
 
         public FakeApplicationUpdateService()
@@ -294,17 +377,29 @@ public sealed class SlashCommandServiceTests
         {
         }
 
-        public FakeApplicationUpdateService(ApplicationUpdateDownloadResult downloadResult)
+        public FakeApplicationUpdateService(
+            ApplicationUpdateDownloadResult? downloadResult = null,
+            ApplicationUpdateCheckResult? checkResult = null,
+            string currentVersion = "1.0.0")
         {
-            _downloadResult = downloadResult;
+            _downloadResult = downloadResult ?? ApplicationUpdateDownloadResult.Succeeded(
+                @"C:\Updates\Kam-1.2.0-x64.msi",
+                "1.2.0",
+                1024,
+                isVerified: true,
+                verificationStatus: "SHA256 verified",
+                expectedSha256: new string('a', 64),
+                actualSha256: new string('a', 64));
+            _checkResult = checkResult;
+            CurrentVersion = currentVersion;
         }
 
-        public string CurrentVersion => "1.0.0";
+        public string CurrentVersion { get; }
 
         public Task<ApplicationUpdateCheckResult> CheckForUpdatesAsync(
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(ApplicationUpdateCheckResult.UpdateAvailable(
+            return Task.FromResult(_checkResult ?? ApplicationUpdateCheckResult.UpdateAvailable(
                 "1.0.0",
                 "1.2.0",
                 "Kam 1.2.0",
@@ -322,6 +417,16 @@ public sealed class SlashCommandServiceTests
         {
             return Task.FromResult(_downloadResult);
         }
+    }
+
+    private sealed class FakeApplicationVersionProvider : IApplicationVersionProvider
+    {
+        public FakeApplicationVersionProvider(string currentVersion)
+        {
+            CurrentVersion = currentVersion;
+        }
+
+        public string CurrentVersion { get; }
     }
 
     private sealed class FakeApplicationRestartPlanner : IApplicationRestartPlanner

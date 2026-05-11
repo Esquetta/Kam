@@ -47,8 +47,10 @@ public sealed class SlashCommandService : ISlashCommandService
     private readonly CodingAgentOptions _codingAgentOptions;
     private readonly McpOptions _mcpOptions;
     private readonly IApplicationUpdateService? _applicationUpdateService;
+    private readonly IApplicationVersionProvider? _applicationVersionProvider;
     private readonly IApplicationRestartPlanner? _applicationRestartPlanner;
     private readonly IGitHubAppClient? _githubAppClient;
+    private string? _lastVerifiedUpdatePackagePath;
 
     public SlashCommandService(
         IVoiceAgentHostControl? hostControl = null,
@@ -59,6 +61,7 @@ public sealed class SlashCommandService : ISlashCommandService
         IOptions<CodingAgentOptions>? codingAgentOptions = null,
         IOptions<McpOptions>? mcpOptions = null,
         IApplicationUpdateService? applicationUpdateService = null,
+        IApplicationVersionProvider? applicationVersionProvider = null,
         IApplicationRestartPlanner? applicationRestartPlanner = null,
         IGitHubAppClient? githubAppClient = null)
     {
@@ -70,6 +73,7 @@ public sealed class SlashCommandService : ISlashCommandService
         _codingAgentOptions = codingAgentOptions?.Value ?? new CodingAgentOptions();
         _mcpOptions = mcpOptions?.Value ?? new McpOptions();
         _applicationUpdateService = applicationUpdateService;
+        _applicationVersionProvider = applicationVersionProvider;
         _applicationRestartPlanner = applicationRestartPlanner;
         _githubAppClient = githubAppClient;
     }
@@ -184,7 +188,7 @@ public sealed class SlashCommandService : ISlashCommandService
     {
         return string.Join(Environment.NewLine, [
             "Kam version:",
-            $"  current: {_applicationUpdateService?.CurrentVersion ?? "(unavailable)"}",
+            $"  current: {CurrentApplicationVersion()}",
             "  release feed: GitHub Releases"
         ]);
     }
@@ -243,6 +247,11 @@ public sealed class SlashCommandService : ISlashCommandService
             lines.Add($"  checksum: {(string.IsNullOrWhiteSpace(update.Asset.ChecksumDownloadUrl) ? "missing" : update.Asset.ChecksumName ?? "available")}");
             lines.Add("  next: /download");
         }
+        else if (update.IsUpdateAvailable)
+        {
+            lines.Add("  download: no release package asset found");
+            lines.Add("  next: wait for a packaged Kam release asset");
+        }
 
         return SlashCommandResult.Succeeded("/update", string.Join(Environment.NewLine, lines));
     }
@@ -257,12 +266,20 @@ public sealed class SlashCommandService : ISlashCommandService
         var download = await _applicationUpdateService.DownloadLatestAsync(cancellationToken);
         if (!download.Success)
         {
+            _lastVerifiedUpdatePackagePath = null;
             return SlashCommandResult.Failed("/download", download.Message);
         }
+
+        _lastVerifiedUpdatePackagePath = download.IsVerified && !string.IsNullOrWhiteSpace(download.FilePath)
+            ? NormalizePackagePathForComparison(download.FilePath)
+            : null;
 
         var nextStep = download.IsVerified
             ? "next: /restart <file>"
             : "next: verify release package before restart";
+        var restartStatus = download.IsVerified
+            ? "restart: ready after verified package review"
+            : "restart: blocked until package verification succeeds";
 
         return SlashCommandResult.Succeeded(
             "/download",
@@ -272,6 +289,7 @@ public sealed class SlashCommandService : ISlashCommandService
                 $"  file: {download.FilePath}",
                 $"  size: {FormatBytes(download.SizeBytes ?? 0)}",
                 $"  verification: {download.VerificationStatus}",
+                $"  {restartStatus}",
                 $"  {nextStep}"
             ]));
     }
@@ -283,7 +301,14 @@ public sealed class SlashCommandService : ISlashCommandService
             return "Kam restart planner is unavailable.";
         }
 
-        var plan = _applicationRestartPlanner.CreateRestartPlan(NormalizePathArgument(updatePackagePath));
+        var normalizedPackagePath = NormalizePathArgument(updatePackagePath);
+        if (!string.IsNullOrWhiteSpace(normalizedPackagePath)
+            && !IsLatestVerifiedUpdatePackage(normalizedPackagePath))
+        {
+            return FormatBlockedRestartPlan(normalizedPackagePath);
+        }
+
+        var plan = _applicationRestartPlanner.CreateRestartPlan(normalizedPackagePath);
         var lines = new List<string>
         {
             "Kam restart plan:",
@@ -307,6 +332,33 @@ public sealed class SlashCommandService : ISlashCommandService
         }
 
         return string.Join(Environment.NewLine, lines);
+    }
+
+    private bool IsLatestVerifiedUpdatePackage(string updatePackagePath)
+    {
+        return !string.IsNullOrWhiteSpace(_lastVerifiedUpdatePackagePath)
+            && string.Equals(
+                NormalizePackagePathForComparison(updatePackagePath),
+                _lastVerifiedUpdatePackagePath,
+                StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string FormatBlockedRestartPlan(string updatePackagePath)
+    {
+        return string.Join(Environment.NewLine, [
+            "Kam restart plan:",
+            "  status: blocked",
+            "  message: Restart handoff requires a verified package downloaded in this chat session.",
+            $"  package: {updatePackagePath}",
+            "  verification: run /download successfully, then pass the verified package path to /restart"
+        ]);
+    }
+
+    private string CurrentApplicationVersion()
+    {
+        return _applicationVersionProvider?.CurrentVersion
+            ?? _applicationUpdateService?.CurrentVersion
+            ?? "(unavailable)";
     }
 
     private async Task<string> FormatPluginsAsync(CancellationToken cancellationToken)
@@ -737,6 +789,23 @@ public sealed class SlashCommandService : ISlashCommandService
         return trimmed.Length >= 2 && trimmed[0] == '"' && trimmed[^1] == '"'
             ? trimmed[1..^1]
             : trimmed;
+    }
+
+    private static string NormalizePackagePathForComparison(string value)
+    {
+        var trimmed = value.Trim();
+        try
+        {
+            return Path.GetFullPath(trimmed);
+        }
+        catch (ArgumentException)
+        {
+            return trimmed;
+        }
+        catch (NotSupportedException)
+        {
+            return trimmed;
+        }
     }
 
     private static string FormatConfiguredValue(string? value)
