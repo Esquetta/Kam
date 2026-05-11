@@ -1314,6 +1314,11 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
             ListRepositoriesCallCount++;
             return Task.FromResult(_repositories);
         }
+
+        public Task<GitHubPullRequestListResult> ListPullRequestsAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(GitHubPullRequestListResult.Failed("not used"));
+        }
     }
 
     private sealed class RecordingSkillEvalHarness : ISkillEvalHarness

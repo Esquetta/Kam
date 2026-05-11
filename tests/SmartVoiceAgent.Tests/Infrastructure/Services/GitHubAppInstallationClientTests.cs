@@ -115,6 +115,90 @@ public sealed class GitHubAppInstallationClientTests : IDisposable
     }
 
     [Fact]
+    public async Task ListPullRequestsAsync_WhenConfigured_UsesInstallationTokenAndReturnsOpenPullRequests()
+    {
+        var privateKeyPath = WritePrivateKey();
+        var seenInstallationToken = string.Empty;
+        var client = CreateClient(new StaticHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath == "/app/installations/98765/access_tokens")
+            {
+                return JsonResponse("""
+                    {
+                      "token": "installation-token",
+                      "expires_at": "2026-05-10T12:00:00Z"
+                    }
+                    """);
+            }
+
+            if (request.RequestUri.AbsolutePath == "/installation/repositories")
+            {
+                return JsonResponse("""
+                    {
+                      "total_count": 1,
+                      "repositories": [
+                        {
+                          "full_name": "Esquetta/Kam",
+                          "private": true,
+                          "html_url": "https://github.com/Esquetta/Kam",
+                          "clone_url": "https://github.com/Esquetta/Kam.git",
+                          "default_branch": "master"
+                        }
+                      ]
+                    }
+                    """);
+            }
+
+            if (request.RequestUri.AbsolutePath == "/repos/Esquetta/Kam/pulls")
+            {
+                seenInstallationToken = request.Headers.Authorization?.Parameter ?? string.Empty;
+                request.Headers.Authorization?.Scheme.Should().Be("Bearer");
+                request.RequestUri.Query.Should().Contain("state=open");
+                request.RequestUri.Query.Should().Contain("per_page=20");
+
+                return JsonResponse("""
+                    [
+                      {
+                        "number": 42,
+                        "title": "Fix CI",
+                        "state": "open",
+                        "html_url": "https://github.com/Esquetta/Kam/pull/42",
+                        "draft": false,
+                        "user": { "login": "alice" },
+                        "head": { "ref": "feature/fix-ci" },
+                        "base": { "ref": "master" },
+                        "created_at": "2026-05-10T12:00:00Z",
+                        "updated_at": "2026-05-11T12:00:00Z"
+                      }
+                    ]
+                    """);
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }), new GitHubAppOptions
+        {
+            AppId = "12345",
+            InstallationId = "98765",
+            PrivateKeyPath = privateKeyPath
+        });
+
+        var result = await client.ListPullRequestsAsync();
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("1 open pull request");
+        result.PullRequests.Should().ContainSingle();
+        result.PullRequests[0].RepositoryFullName.Should().Be("Esquetta/Kam");
+        result.PullRequests[0].Number.Should().Be(42);
+        result.PullRequests[0].Title.Should().Be("Fix CI");
+        result.PullRequests[0].AuthorLogin.Should().Be("alice");
+        result.PullRequests[0].HeadRefName.Should().Be("feature/fix-ci");
+        result.PullRequests[0].BaseRefName.Should().Be("master");
+        seenInstallationToken.Should().Be("installation-token");
+        result.Message.Should().NotContain("installation-token");
+        result.Message.Should().NotContain(privateKeyPath);
+    }
+
+    [Fact]
     public async Task GetStatusAsync_WhenInstallationHasNoRepositories_ReturnsRepoAccessGuidance()
     {
         var privateKeyPath = WritePrivateKey();

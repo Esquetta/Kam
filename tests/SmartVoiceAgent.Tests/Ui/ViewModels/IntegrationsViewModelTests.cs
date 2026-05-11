@@ -246,5 +246,10 @@ public sealed class IntegrationsViewModelTests : IDisposable
             ListRepositoriesCallCount++;
             return Task.FromResult(Repositories);
         }
+
+        public Task<GitHubPullRequestListResult> ListPullRequestsAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(GitHubPullRequestListResult.Failed("not used"));
+        }
     }
 }

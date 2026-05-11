@@ -26,8 +26,12 @@ public sealed class SlashCommandService : ISlashCommandService
         new("/dependabot", "Show how to run dependency audit and Dependabot checks.", "/dependabot", "Workflow"),
         new("/github", "Show how to inspect GitHub PR and workflow status.", "/github", "Workflow"),
         new("/github app", "Show GitHub App connection status.", "/github app", "Workflow", ["/github-app"]),
+        new("/github app prs", "List open pull requests visible through the configured GitHub App.", "/github app prs", "Workflow"),
+        new("/github app repos", "List repositories visible through the configured GitHub App.", "/github app repos", "Workflow"),
+        new("/github prs", "List open pull requests visible through the configured GitHub App.", "/github prs", "Workflow", ["/github pr", "/github pull-requests"]),
         new("/github repos", "List repositories visible through the configured GitHub App.", "/github repos", "Workflow"),
         new("/github-app", "Show GitHub App setup and repository permission guidance.", "/github-app", "Workflow"),
+        new("/github-app prs", "List open pull requests visible through the configured GitHub App.", "/github-app prs", "Workflow", ["/github-app pr", "/github-app pull-requests"]),
         new("/github-app repos", "List repositories visible through the configured GitHub App.", "/github-app repos", "Workflow"),
         new("/plugins", "Show skill/plugin health summary.", "/plugins", "Skills"),
         new("/mcp", "Show configured MCP endpoint status.", "/mcp", "Integrations"),
@@ -456,6 +460,11 @@ public sealed class SlashCommandService : ISlashCommandService
                 return await RunGitHubAppRepositoriesAsync("/github", cancellationToken);
             }
 
+            if (arguments.Count > 1 && IsCommand(arguments[1], "prs", "pr", "pulls", "pull-requests"))
+            {
+                return await RunGitHubAppPullRequestsAsync("/github", cancellationToken);
+            }
+
             return await RunGitHubAppStatusAsync("/github", cancellationToken);
         }
 
@@ -464,11 +473,17 @@ public sealed class SlashCommandService : ISlashCommandService
             return await RunGitHubAppRepositoriesAsync("/github", cancellationToken);
         }
 
+        if (arguments.Count > 0 && IsCommand(arguments[0], "prs", "pr", "pulls", "pull-requests"))
+        {
+            return await RunGitHubAppPullRequestsAsync("/github", cancellationToken);
+        }
+
         return SlashCommandResult.Succeeded(
             "/github",
             string.Join(Environment.NewLine, [
                 FormatCodingAgentWorkflow("/github"),
                 "  app status: /github app",
+                "  pull requests: /github prs",
                 "  repo list: /github repos"
             ]));
     }
@@ -480,6 +495,11 @@ public sealed class SlashCommandService : ISlashCommandService
         if (arguments.Count > 0 && IsCommand(arguments[0], "repos", "repositories", "list"))
         {
             return await RunGitHubAppRepositoriesAsync("/github-app", cancellationToken);
+        }
+
+        if (arguments.Count > 0 && IsCommand(arguments[0], "prs", "pr", "pulls", "pull-requests"))
+        {
+            return await RunGitHubAppPullRequestsAsync("/github-app", cancellationToken);
         }
 
         return await RunGitHubAppStatusAsync("/github-app", cancellationToken);
@@ -530,6 +550,52 @@ public sealed class SlashCommandService : ISlashCommandService
         if (result.Repositories.Count > 50)
         {
             builder.AppendLine($"  ... {result.Repositories.Count - 50} more repositories hidden");
+        }
+
+        return SlashCommandResult.Succeeded(commandName, builder.ToString().TrimEnd());
+    }
+
+    private async Task<SlashCommandResult> RunGitHubAppPullRequestsAsync(
+        string commandName,
+        CancellationToken cancellationToken)
+    {
+        if (_githubAppClient is null)
+        {
+            return SlashCommandResult.Succeeded(commandName, FormatGitHubAppUnavailable());
+        }
+
+        var result = await _githubAppClient.ListPullRequestsAsync(cancellationToken);
+        if (!result.Success)
+        {
+            return SlashCommandResult.Succeeded(
+                commandName,
+                FormatGitHubAppSetup(result.Message, result.MissingSettings));
+        }
+
+        var builder = new StringBuilder()
+            .AppendLine("Kam GitHub App pull requests:")
+            .AppendLine($"  status: {NormalizeMessage(result.Message)}");
+
+        foreach (var pullRequest in result.PullRequests
+            .OrderByDescending(pullRequest => pullRequest.UpdatedAt ?? pullRequest.CreatedAt ?? DateTimeOffset.MinValue)
+            .ThenBy(pullRequest => pullRequest.RepositoryFullName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(pullRequest => pullRequest.Number)
+            .Take(50))
+        {
+            var draftSuffix = pullRequest.IsDraft ? ", draft" : string.Empty;
+            builder
+                .AppendLine(
+                    $"  - {NormalizeMessage(pullRequest.RepositoryFullName)}#{pullRequest.Number} {NormalizeMessage(pullRequest.Title)} ({NormalizeMessage(pullRequest.State)}, {NormalizeMessage(pullRequest.AuthorLogin)}, {NormalizeMessage(pullRequest.HeadRefName)} -> {NormalizeMessage(pullRequest.BaseRefName)}{draftSuffix})")
+                .AppendLine($"    {NormalizeMessage(pullRequest.HtmlUrl)}");
+        }
+
+        if (result.PullRequests.Count == 0)
+        {
+            builder.AppendLine("  no open pull requests found");
+        }
+        else if (result.PullRequests.Count > 50)
+        {
+            builder.AppendLine($"  ... {result.PullRequests.Count - 50} more pull requests hidden");
         }
 
         return SlashCommandResult.Succeeded(commandName, builder.ToString().TrimEnd());
@@ -604,6 +670,7 @@ public sealed class SlashCommandService : ISlashCommandService
             .AppendLine("    dotnet user-secrets set \"GitHubApp:InstallationId\" \"<installation-id>\"")
             .AppendLine("    dotnet user-secrets set \"GitHubApp:PrivateKeyPath\" \"<absolute-pem-path>\"")
             .AppendLine("  list repos: /github-app repos or /github repos")
+            .AppendLine("  list PRs: /github-app prs or /github prs")
             .AppendLine("  CLI status: kam coding-agent /github app")
             .AppendLine("  CLI repos: kam coding-agent /github repos")
             .AppendLine("  private key contents and installation tokens are never printed.");

@@ -9,4 +9,7 @@ public interface IGitHubAppClient
 
     Task<GitHubRepositoryListResult> ListRepositoriesAsync(
         CancellationToken cancellationToken = default);
+
+    Task<GitHubPullRequestListResult> ListPullRequestsAsync(
+        CancellationToken cancellationToken = default);
 }

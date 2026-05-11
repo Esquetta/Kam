@@ -13,6 +13,8 @@ namespace SmartVoiceAgent.Infrastructure.Services;
 public sealed class GitHubAppInstallationClient : IGitHubAppClient
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private const int PullRequestRepositoryLimit = 50;
+    private const int PullRequestPageSize = 20;
 
     private readonly HttpClient _httpClient;
     private readonly GitHubAppOptions _options;
@@ -100,6 +102,50 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
         catch (GitHubAppClientException ex)
         {
             return GitHubRepositoryListResult.Failed(ex.Message);
+        }
+    }
+
+    public async Task<GitHubPullRequestListResult> ListPullRequestsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var missingSettings = _options.GetMissingSettings();
+        if (missingSettings.Count > 0)
+        {
+            return GitHubPullRequestListResult.Failed(
+                "GitHub App is not configured.",
+                missingSettings);
+        }
+
+        try
+        {
+            var jwt = await CreateJsonWebTokenAsync(cancellationToken);
+            var token = await CreateInstallationTokenAsync(jwt, cancellationToken);
+            var repositories = await GetRepositoriesAsync(token.Token, cancellationToken);
+            var pullRequests = new List<GitHubPullRequestSummary>();
+
+            foreach (var repository in repositories.Take(PullRequestRepositoryLimit))
+            {
+                pullRequests.AddRange(await GetOpenPullRequestsAsync(
+                    token.Token,
+                    repository.FullName,
+                    cancellationToken));
+            }
+
+            var repositoryCount = Math.Min(repositories.Count, PullRequestRepositoryLimit);
+            var message =
+                $"{pullRequests.Count} open {Pluralize(pullRequests.Count, "pull request", "pull requests")} " +
+                $"across {repositoryCount} {Pluralize(repositoryCount, "repository", "repositories")}.";
+            return GitHubPullRequestListResult.Succeeded(
+                message,
+                pullRequests
+                    .OrderByDescending(pullRequest => pullRequest.UpdatedAt ?? pullRequest.CreatedAt ?? DateTimeOffset.MinValue)
+                    .ThenBy(pullRequest => pullRequest.RepositoryFullName, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(pullRequest => pullRequest.Number)
+                    .ToArray());
+        }
+        catch (GitHubAppClientException ex)
+        {
+            return GitHubPullRequestListResult.Failed(ex.Message);
         }
     }
 
@@ -211,6 +257,44 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
         return repositories;
     }
 
+    private async Task<IReadOnlyList<GitHubPullRequestSummary>> GetOpenPullRequestsAsync(
+        string installationToken,
+        string repositoryFullName,
+        CancellationToken cancellationToken)
+    {
+        using var request = CreateRequest(
+            HttpMethod.Get,
+            BuildPullRequestsPath(repositoryFullName),
+            installationToken);
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new GitHubAppClientException(
+                BuildPullRequestAccessFailureMessage(response.StatusCode));
+        }
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var items = await JsonSerializer.DeserializeAsync<IReadOnlyList<GitHubPullRequestItem>>(
+            stream,
+            JsonOptions,
+            cancellationToken);
+        return (items ?? [])
+            .Where(item => item.Number > 0)
+            .Select(item => new GitHubPullRequestSummary(
+                repositoryFullName,
+                item.Number,
+                string.IsNullOrWhiteSpace(item.Title) ? "(untitled)" : item.Title,
+                string.IsNullOrWhiteSpace(item.State) ? "unknown" : item.State,
+                string.IsNullOrWhiteSpace(item.User?.Login) ? "(unknown)" : item.User.Login,
+                item.HtmlUrl ?? string.Empty,
+                string.IsNullOrWhiteSpace(item.Head?.Ref) ? "(unknown)" : item.Head.Ref,
+                string.IsNullOrWhiteSpace(item.Base?.Ref) ? "(unknown)" : item.Base.Ref,
+                item.Draft,
+                item.CreatedAt,
+                item.UpdatedAt))
+            .ToArray();
+    }
+
     private HttpRequestMessage CreateRequest(
         HttpMethod method,
         string pathAndQuery,
@@ -291,6 +375,29 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
             : $"GitHub App repository request failed with HTTP {(int)statusCode}.";
     }
 
+    private static string BuildPullRequestAccessFailureMessage(HttpStatusCode statusCode)
+    {
+        return statusCode == HttpStatusCode.Forbidden
+            ? "GitHub App pull request list request failed with HTTP 403. Check repository permissions: Metadata and Pull requests."
+            : $"GitHub App pull request list request failed with HTTP {(int)statusCode}.";
+    }
+
+    private static string BuildPullRequestsPath(string repositoryFullName)
+    {
+        var parts = repositoryFullName.Split('/', 2, StringSplitOptions.TrimEntries);
+        if (parts.Length != 2 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
+        {
+            throw new GitHubAppClientException("GitHub repository full name was invalid.");
+        }
+
+        return $"repos/{Uri.EscapeDataString(parts[0])}/{Uri.EscapeDataString(parts[1])}/pulls?state=open&per_page={PullRequestPageSize}";
+    }
+
+    private static string Pluralize(int count, string singular, string plural)
+    {
+        return count == 1 ? singular : plural;
+    }
+
     private sealed record GitHubInstallationToken(
         [property: JsonPropertyName("token")] string Token,
         [property: JsonPropertyName("expires_at")] DateTimeOffset? ExpiresAt);
@@ -309,6 +416,24 @@ public sealed class GitHubAppInstallationClient : IGitHubAppClient
         [property: JsonPropertyName("html_url")] string? HtmlUrl,
         [property: JsonPropertyName("clone_url")] string? CloneUrl,
         [property: JsonPropertyName("default_branch")] string? DefaultBranch);
+
+    private sealed record GitHubPullRequestItem(
+        [property: JsonPropertyName("number")] int Number,
+        [property: JsonPropertyName("title")] string? Title,
+        [property: JsonPropertyName("state")] string? State,
+        [property: JsonPropertyName("html_url")] string? HtmlUrl,
+        [property: JsonPropertyName("draft")] bool Draft,
+        [property: JsonPropertyName("user")] GitHubUser? User,
+        [property: JsonPropertyName("head")] GitHubPullRequestRef? Head,
+        [property: JsonPropertyName("base")] GitHubPullRequestRef? Base,
+        [property: JsonPropertyName("created_at")] DateTimeOffset? CreatedAt,
+        [property: JsonPropertyName("updated_at")] DateTimeOffset? UpdatedAt);
+
+    private sealed record GitHubUser(
+        [property: JsonPropertyName("login")] string? Login);
+
+    private sealed record GitHubPullRequestRef(
+        [property: JsonPropertyName("ref")] string? Ref);
 
     private sealed class GitHubAppClientException(string message) : Exception(message);
 }
