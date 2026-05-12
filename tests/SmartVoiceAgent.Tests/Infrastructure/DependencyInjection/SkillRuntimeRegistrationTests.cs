@@ -64,6 +64,8 @@ public class SkillRuntimeRegistrationTests
 
         var executors = provider.GetServices<ISkillExecutor>().ToArray();
 
+        provider.GetService<IRuntimeAgentFactory>().Should().NotBeNull();
+
         var missingExecutorSkillIds = BuiltInSkillManifestCatalog.CreateAll()
             .Where(manifest => !executors.Any(executor => executor.CanExecute(manifest.Id)))
             .Select(manifest => manifest.Id)

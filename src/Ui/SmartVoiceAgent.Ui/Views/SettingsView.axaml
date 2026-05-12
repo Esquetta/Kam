@@ -261,7 +261,7 @@
                                       Stretch="Uniform"/>
                             </Border>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Chat / Skill Execution Model"
+                                <TextBlock Text="Agent / Chat / Skill Execution Model"
                                            FontSize="13"
                                            FontWeight="Medium"
                                            Foreground="{DynamicResource TextSecondaryBrush}"/>

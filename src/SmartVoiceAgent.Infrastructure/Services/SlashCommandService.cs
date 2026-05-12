@@ -56,6 +56,7 @@ public sealed class SlashCommandService : ISlashCommandService
         new("/github-app run", "List jobs for one GitHub Actions workflow run.", "/github-app run <owner/repo> <runId>", "Workflow", ["/github-app jobs"]),
         new("/plugins", "Show skill/plugin health summary.", "/plugins", "Skills"),
         new("/mcp", "Show configured MCP endpoint status.", "/mcp", "Integrations"),
+        new("/agent", "Create a short-lived task agent for one request.", "/agent <task>", "Runtime", ["/task-agent"]),
         new("/agents", "Show registered runtime agents.", "/agents", "Runtime"),
         new("/test", "Run a registered smoke test for one skill.", "/test <skillId>", "Skills"),
         new("/review", "Review current skill health state.", "/review", "Skills"),
@@ -77,6 +78,7 @@ public sealed class SlashCommandService : ISlashCommandService
     private readonly IApplicationRestartPlanner? _applicationRestartPlanner;
     private readonly IGitHubAppClient? _githubAppClient;
     private readonly AIServiceConfiguration _aiServiceConfiguration;
+    private readonly ISkillExecutionPipeline? _skillExecutionPipeline;
 
     public SlashCommandService(
         IVoiceAgentHostControl? hostControl = null,
@@ -91,7 +93,8 @@ public sealed class SlashCommandService : ISlashCommandService
         IApplicationUpdateSession? applicationUpdateSession = null,
         IApplicationRestartPlanner? applicationRestartPlanner = null,
         IGitHubAppClient? githubAppClient = null,
-        IOptions<AIServiceConfiguration>? aiServiceOptions = null)
+        IOptions<AIServiceConfiguration>? aiServiceOptions = null,
+        ISkillExecutionPipeline? skillExecutionPipeline = null)
     {
         _hostControl = hostControl;
         _skillHealthService = skillHealthService;
@@ -106,6 +109,7 @@ public sealed class SlashCommandService : ISlashCommandService
         _applicationRestartPlanner = applicationRestartPlanner;
         _githubAppClient = githubAppClient;
         _aiServiceConfiguration = aiServiceOptions?.Value ?? new AIServiceConfiguration();
+        _skillExecutionPipeline = skillExecutionPipeline;
     }
 
     public IReadOnlyList<SlashCommandDefinition> GetCommands()
@@ -176,6 +180,7 @@ public sealed class SlashCommandService : ISlashCommandService
             "/github-app" => await RunGitHubAppCommandAsync(arguments, cancellationToken),
             "/plugins" => SlashCommandResult.Succeeded("/plugins", await FormatPluginsAsync(cancellationToken)),
             "/mcp" => SlashCommandResult.Succeeded("/mcp", FormatMcp()),
+            "/agent" => await RunAgentCommandAsync(argumentText, cancellationToken),
             "/agents" => SlashCommandResult.Succeeded("/agents", FormatAgents()),
             "/test" => await RunSkillTestAsync(arguments, cancellationToken),
             "/review" => SlashCommandResult.Succeeded("/review", await FormatReviewAsync(cancellationToken)),
@@ -468,6 +473,36 @@ public sealed class SlashCommandService : ISlashCommandService
             $"  Todoist API key: {FormatSecretStatus(_mcpOptions.TodoistApiKey)}",
             "  MCP commands in chat are status-only"
         ]);
+    }
+
+    private async Task<SlashCommandResult> RunAgentCommandAsync(
+        string argumentText,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(argumentText))
+        {
+            return SlashCommandResult.Failed("/agent", "Usage: /agent <task>");
+        }
+
+        if (_skillExecutionPipeline is null)
+        {
+            return SlashCommandResult.Failed("/agent", "Task agent runtime is unavailable.");
+        }
+
+        var result = await _skillExecutionPipeline.ExecuteAsync(
+            SkillPlan.FromObject(
+                "agents.run",
+                new
+                {
+                    task = argumentText,
+                    role = "general",
+                    agentName = "TaskAgent"
+                }),
+            cancellationToken);
+
+        return result.Success
+            ? SlashCommandResult.Succeeded("/agent", result.Message)
+            : SlashCommandResult.Failed("/agent", result.ErrorMessage);
     }
 
     private string FormatAgents()
@@ -1379,6 +1414,7 @@ public sealed class SlashCommandService : ISlashCommandService
             "/runtime" => "/diagnostics",
             "/models" => "/model",
             "/quota" or "/balance" or "/rate-limit" => "/limits",
+            "/task-agent" => "/agent",
             _ => commandName
         };
     }

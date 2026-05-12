@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.CodingAgent;
 using SmartVoiceAgent.Core.Models.GitHub;
+using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Core.Models.Updates;
 using SmartVoiceAgent.Infrastructure.Agent.Conf;
 using SmartVoiceAgent.Infrastructure.Mcp;
@@ -45,6 +46,7 @@ public sealed class SlashCommandServiceTests
                 "/github-app logs",
                 "/github-app prs",
                 "/github-app run",
+                "/agent",
                 "/hooks",
                 "/integrations",
                 "/limits",
@@ -56,6 +58,21 @@ public sealed class SlashCommandServiceTests
                 "/update",
                 "/version"
             ]);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenAgentCommandIsRequested_RunsTaskAgentSkill()
+    {
+        var pipeline = new CapturingSkillExecutionPipeline(SkillResult.Succeeded("agent response"));
+        var service = new SlashCommandService(skillExecutionPipeline: pipeline);
+
+        var result = await service.ExecuteAsync("/agent inspect the current workspace");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Be("agent response");
+        pipeline.LastPlan.Should().NotBeNull();
+        pipeline.LastPlan!.SkillId.Should().Be("agents.run");
+        pipeline.LastPlan.Arguments["task"].GetString().Should().Be("inspect the current workspace");
     }
 
     [Fact]
@@ -1092,6 +1109,26 @@ public sealed class SlashCommandServiceTests
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(_workflowJobLog);
+        }
+    }
+
+    private sealed class CapturingSkillExecutionPipeline : ISkillExecutionPipeline
+    {
+        private readonly SkillResult _result;
+
+        public CapturingSkillExecutionPipeline(SkillResult result)
+        {
+            _result = result;
+        }
+
+        public SkillPlan? LastPlan { get; private set; }
+
+        public Task<SkillResult> ExecuteAsync(
+            SkillPlan plan,
+            CancellationToken cancellationToken = default)
+        {
+            LastPlan = plan;
+            return Task.FromResult(_result);
         }
     }
 }

@@ -26,10 +26,12 @@ public static class AiRuntimeConfigurationMapper
         AddProfileOverrides(overrides, "AIService:Planner", plannerProfile);
 
         var chatProfile = SelectProfile(profiles, activeChatProfileId, ModelProviderRole.Chat);
+        var agentProfile = IsUsableProfile(chatProfile) ? chatProfile! : plannerProfile;
         AddProfileOverrides(
             overrides,
             "AIService:Chat",
-            IsUsableProfile(chatProfile) ? chatProfile! : plannerProfile);
+            agentProfile);
+        AddProfileOverrides(overrides, "AIService:Agents", agentProfile);
 
         return overrides;
     }

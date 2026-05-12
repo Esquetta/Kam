@@ -13,6 +13,7 @@ public class BuiltInSkillManifestCatalogTests
 
         skillIds.Should().Contain(
         [
+            "agents.run",
             "apps.open",
             "apps.close",
             "apps.check",
@@ -101,5 +102,7 @@ public class BuiltInSkillManifestCatalogTests
         manifests["workspace.map"].RiskLevel.Should().Be(SmartVoiceAgent.Core.Models.Skills.SkillRiskLevel.Low);
         manifests["workspace.map"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.FileSystemRead);
         manifests["code.outline"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.FileSystemRead);
+        manifests["agents.run"].RiskLevel.Should().Be(SmartVoiceAgent.Core.Models.Skills.SkillRiskLevel.Low);
+        manifests["agents.run"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.Network);
     }
 }

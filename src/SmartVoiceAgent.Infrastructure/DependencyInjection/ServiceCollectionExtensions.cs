@@ -63,7 +63,32 @@ public static class ServiceCollectionExtensions
             return CreateObservedChatClient(sp, config);
         });
 
-        services.AddSingleton<IAgentFactory, AgentFactory>();
+        services.AddSingleton<IAgentFactory>(sp =>
+        {
+            var agentConfig = ResolveAgentModelConfiguration(configuration);
+            var chatClient = IsUsableAiConfiguration(agentConfig)
+                ? CreateObservedChatClient(sp, agentConfig!)
+                : sp.GetRequiredService<IChatClient>();
+
+            return new AgentFactory(
+                chatClient,
+                sp,
+                sp.GetRequiredService<ILogger<AgentFactory>>());
+        });
+        services.AddSingleton<IRuntimeAgentFactory>(sp =>
+        {
+            var agentConfig = ResolveAgentModelConfiguration(configuration);
+            var chatClient = new Lazy<IChatClient>(() =>
+                IsUsableAiConfiguration(agentConfig)
+                    ? CreateObservedChatClient(sp, agentConfig!)
+                    : sp.GetRequiredService<IChatClient>());
+
+            return new RuntimeAgentFactory(
+                () => chatClient.Value,
+                sp.GetRequiredService<ILogger<RuntimeAgentFactory>>(),
+                sp.GetService<IUiLogService>(),
+                agentConfig?.ModelId ?? string.Empty);
+        });
         services.AddSingleton<IAgentRegistry, AgentRegistry>();
 
         services.AddSingleton<IAgentOrchestrator>(sp =>
@@ -96,6 +121,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISkillExecutor, ClipboardSkillExecutor>();
         services.AddSingleton<ISkillExecutor, SystemInformationSkillExecutor>();
         services.AddScoped<ISkillExecutor, ShellSkillExecutor>();
+        services.AddScoped<ISkillExecutor, RuntimeAgentSkillExecutor>();
         services.AddHttpClient<WebPageSkillExecutor>();
         services.AddScoped<ISkillExecutor>(sp => sp.GetRequiredService<WebPageSkillExecutor>());
         services.AddScoped<ISkillExecutor>(sp => new WindowContextSkillExecutor(sp));
@@ -231,6 +257,29 @@ public static class ServiceCollectionExtensions
             .GetSection("AIService")
             .Get<AIServiceConfiguration>()
             ?.ModelId ?? string.Empty;
+    }
+
+    private static AIServiceConfiguration? ResolveAgentModelConfiguration(IConfiguration configuration)
+    {
+        var agentConfig = configuration
+            .GetSection("AIService:Agents")
+            .Get<AIServiceConfiguration>();
+        if (IsUsableAiConfiguration(agentConfig))
+        {
+            return agentConfig;
+        }
+
+        var chatConfig = configuration
+            .GetSection("AIService:Chat")
+            .Get<AIServiceConfiguration>();
+        if (IsUsableAiConfiguration(chatConfig))
+        {
+            return chatConfig;
+        }
+
+        return configuration
+            .GetSection("AIService")
+            .Get<AIServiceConfiguration>();
     }
 
     private static bool IsOllamaProvider(string provider)

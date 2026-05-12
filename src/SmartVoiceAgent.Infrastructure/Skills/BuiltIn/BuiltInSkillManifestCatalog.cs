@@ -10,6 +10,18 @@ public static class BuiltInSkillManifestCatalog
         return
         [
             Create(
+                "agents.run",
+                "Run Task Agent",
+                SkillRiskLevel.Low,
+                [SkillPermission.Network],
+                [
+                    RequiredString("task", "Task for the short-lived runtime agent to reason about."),
+                    OptionalString("role", "Agent role or specialization for this task."),
+                    OptionalString("agentName", "Optional display name for the task agent.")
+                ],
+                timeoutMilliseconds: 60000,
+                runtimeOptions: SmokeNotApplicable("Calls the configured AI model and depends on provider availability.")),
+            Create(
                 "apps.open",
                 "Open Application",
                 SkillRiskLevel.Medium,

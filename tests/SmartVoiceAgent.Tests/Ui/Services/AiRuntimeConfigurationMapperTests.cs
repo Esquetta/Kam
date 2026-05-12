@@ -30,6 +30,8 @@ public class AiRuntimeConfigurationMapperTests
         overrides.Should().Contain("AIService:ModelId", "openai/gpt-4.1-mini");
         overrides.Should().Contain("AIService:Chat:Provider", "OpenRouter");
         overrides.Should().Contain("AIService:Chat:ModelId", "openai/gpt-4.1-mini");
+        overrides.Should().Contain("AIService:Agents:Provider", "OpenRouter");
+        overrides.Should().Contain("AIService:Agents:ModelId", "openai/gpt-4.1-mini");
     }
 
     [Fact]
@@ -64,6 +66,8 @@ public class AiRuntimeConfigurationMapperTests
         overrides.Should().Contain("AIService:Chat:Provider", "Anthropic");
         overrides.Should().Contain("AIService:Chat:Endpoint", "https://api.anthropic.com");
         overrides.Should().Contain("AIService:Chat:ModelId", "claude-sonnet-4-6");
+        overrides.Should().Contain("AIService:Agents:Provider", "Anthropic");
+        overrides.Should().Contain("AIService:Agents:ModelId", "claude-sonnet-4-6");
     }
 
     [Fact]
@@ -101,6 +105,8 @@ public class AiRuntimeConfigurationMapperTests
         overrides.Should().Contain("AIService:Chat:Endpoint", "https://api.example.com/v1");
         overrides.Should().Contain("AIService:Chat:ApiKey", "sk-chat");
         overrides.Should().Contain("AIService:Chat:ModelId", "custom/chat-model");
+        overrides.Should().Contain("AIService:Agents:Provider", "OpenAICompatible");
+        overrides.Should().Contain("AIService:Agents:ModelId", "custom/chat-model");
         overrides.Should().Contain("AIService:ModelId", "openai/gpt-4.1-mini");
     }
 
