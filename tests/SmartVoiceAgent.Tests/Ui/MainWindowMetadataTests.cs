@@ -48,6 +48,7 @@ public sealed class MainWindowMetadataTests
         mainWindowText.Should().Contain("ItemsSource=\"{Binding ActivityLogEntries}\"");
         mainWindowText.Should().Contain("Classes=\"ActivityLogItem\"");
         mainWindowText.Should().Contain("Text=\"{Binding CategoryText}\"");
+        mainWindowText.Should().Contain("Text=\"{Binding SourceText}\"");
         mainWindowText.Should().Contain("Text=\"{Binding MessageText}\"");
         mainWindowText.Should().Contain("Text=\"{Binding TimeText}\"");
     }
@@ -96,22 +97,24 @@ public sealed class MainWindowMetadataTests
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "Border"
-                && AttributeValue(element, "BorderBrush")?.Contains("IsSelected", StringComparison.Ordinal) == true);
+                && AttributeValue(element, "Background")?.Contains("IsSelected", StringComparison.Ordinal) == true);
 
         AttributeValue(suggestionButton, "Command")
             .Should()
             .Be("{Binding $parent[Window].DataContext.SelectSlashCommandCommand}");
         AttributeValue(suggestionChrome, "Background")
             .Should()
-            .Be("{DynamicResource CardBgBrush}");
+            .Contain("ConverterParameter='CardBgHoverBrush|TransparentBrush'");
         AttributeValue(suggestionChrome, "BorderBrush")
             .Should()
-            .Contain("ConverterParameter='AccentCyanDimBrush|BorderSubtleBrush'");
+            .Be("Transparent");
+        AttributeValue(suggestionChrome, "HorizontalAlignment").Should().Be("Stretch");
 
         mainWindowText.Should().Contain("<Style Selector=\"Button.SlashCommandItem\">");
         mainWindowText.Should().Contain("<Style Selector=\"Button.SlashCommandItem /template/ ContentPresenter#PART_ContentPresenter\">");
         mainWindowText.Should().Contain("<Style Selector=\"Button.SlashCommandItem:pointerover /template/ ContentPresenter#PART_ContentPresenter\">");
         mainWindowText.Should().Contain("Opacity=\"{Binding IsSelected, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter='1|0'}\"");
+        mainWindowText.Should().Contain("HorizontalAlignment=\"Stretch\"");
     }
 
     [Fact]
@@ -156,7 +159,8 @@ public sealed class MainWindowMetadataTests
             .ToArray();
 
         brushKeys.Should().Contain("AccentCyanBrush");
-        brushKeys.Should().Contain("AccentCyanDimBrush");
+        brushKeys.Should().Contain("TransparentBrush");
+        brushKeys.Should().Contain("CardBgHoverBrush");
         brushKeys.Should().Contain("CardBgBrush");
         brushKeys.Should().Contain("BorderSubtleBrush");
     }

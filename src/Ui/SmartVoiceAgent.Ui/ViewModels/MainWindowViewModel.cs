@@ -17,6 +17,7 @@ using SmartVoiceAgent.Ui.ViewModels.PageModels;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -1699,11 +1700,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private ActivityLogEntryViewModel(
             string timeText,
             string categoryText,
+            string sourceText,
             string messageText,
             IBrush accentBrush)
         {
             TimeText = timeText;
             CategoryText = categoryText;
+            SourceText = sourceText;
             MessageText = messageText;
             AccentBrush = accentBrush;
         }
@@ -1711,6 +1714,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public string TimeText { get; }
 
         public string CategoryText { get; }
+
+        public string SourceText { get; }
+
+        public bool HasSourceText => !string.IsNullOrWhiteSpace(SourceText);
 
         public string MessageText { get; }
 
@@ -1726,36 +1733,40 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 return new ActivityLogEntryViewModel(
                     timeText,
                     "Command",
+                    string.Empty,
                     trimmed[2..].Trim(),
                     CommandBrush);
             }
+
+            var (sourceText, messageText) = SplitSource(CleanMessage(trimmed));
+            var displayMessage = FormatMessage(messageText);
 
             if (ContainsAny(upper, "ERROR", "FAILED", "FAILURE", "BLOCKED")
                 || trimmed.StartsWith("X ", StringComparison.Ordinal)
                 || trimmed.StartsWith("❌", StringComparison.Ordinal))
             {
-                return new ActivityLogEntryViewModel(timeText, "Error", CleanMessage(trimmed), ErrorBrush);
+                return new ActivityLogEntryViewModel(timeText, "Error", sourceText, displayMessage, ErrorBrush);
             }
 
             if (ContainsAny(upper, "WARN", "UNAVAILABLE", "NOT AVAILABLE")
                 || trimmed.StartsWith("⚠", StringComparison.Ordinal))
             {
-                return new ActivityLogEntryViewModel(timeText, "Warning", CleanMessage(trimmed), WarningBrush);
+                return new ActivityLogEntryViewModel(timeText, "Warning", sourceText, displayMessage, WarningBrush);
             }
 
             if (ContainsAny(upper, "READY", "SUCCESS", "OK", "ONLINE", "STARTED", "ENABLED")
                 || trimmed.StartsWith("✅", StringComparison.Ordinal)
                 || trimmed.StartsWith("🟢", StringComparison.Ordinal))
             {
-                return new ActivityLogEntryViewModel(timeText, "Ready", CleanMessage(trimmed), SuccessBrush);
+                return new ActivityLogEntryViewModel(timeText, "Ready", sourceText, displayMessage, SuccessBrush);
             }
 
             if (ContainsAny(upper, "NAVIGATED", "THEME", "VOICE", "WORKSPACE", "AGENT_RUNTIME", "COPIED", "INPUT_CLEARED"))
             {
-                return new ActivityLogEntryViewModel(timeText, "System", CleanMessage(trimmed), SystemBrush);
+                return new ActivityLogEntryViewModel(timeText, "System", sourceText, displayMessage, SystemBrush);
             }
 
-            return new ActivityLogEntryViewModel(timeText, "Event", CleanMessage(trimmed), InfoBrush);
+            return new ActivityLogEntryViewModel(timeText, "Event", sourceText, displayMessage, InfoBrush);
         }
 
         private static string CleanMessage(string value)
@@ -1769,6 +1780,50 @@ namespace SmartVoiceAgent.Ui.ViewModels
             }
 
             return value;
+        }
+
+        private static (string SourceText, string MessageText) SplitSource(string value)
+        {
+            if (!value.StartsWith("[", StringComparison.Ordinal))
+            {
+                return (string.Empty, value);
+            }
+
+            var closingBracket = value.IndexOf("]", StringComparison.Ordinal);
+            if (closingBracket <= 1 || closingBracket >= value.Length - 1)
+            {
+                return (string.Empty, value);
+            }
+
+            var source = value[1..closingBracket].Trim();
+            var message = value[(closingBracket + 1)..].Trim();
+
+            return string.IsNullOrWhiteSpace(message)
+                ? (string.Empty, value)
+                : (source, message);
+        }
+
+        private static string FormatMessage(string value)
+        {
+            var trimmed = value.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed))
+            {
+                return trimmed;
+            }
+
+            if (!trimmed.Contains("_", StringComparison.Ordinal)
+                || trimmed.Any(char.IsLower))
+            {
+                return trimmed;
+            }
+
+            var spaced = trimmed.Replace('_', ' ');
+            var title = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(spaced.ToLowerInvariant());
+
+            return title
+                .Replace("Ai", "AI", StringComparison.Ordinal)
+                .Replace("Sms", "SMS", StringComparison.Ordinal)
+                .Replace("Api", "API", StringComparison.Ordinal);
         }
 
         private static bool ContainsAny(string value, params string[] needles)

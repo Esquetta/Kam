@@ -7,8 +7,8 @@ public sealed class ActivityLogEntryViewModelTests
 {
     [Theory]
     [InlineData("> /status", "Command", "/status")]
-    [InlineData("AGENT_RUNTIME_READY", "Ready", "AGENT_RUNTIME_READY")]
-    [InlineData("NAVIGATED_TO: SETTINGS", "System", "NAVIGATED_TO: SETTINGS")]
+    [InlineData("AGENT_RUNTIME_READY", "Ready", "Agent Runtime Ready")]
+    [InlineData("NAVIGATED_TO: SETTINGS", "System", "Navigated To: Settings")]
     [InlineData("COPY_FAILED: clipboard unavailable", "Error", "COPY_FAILED: clipboard unavailable")]
     [InlineData("Voice service not available", "Warning", "Voice service not available")]
     public void Create_ClassifiesActivityMessages(string message, string expectedCategory, string expectedMessage)
@@ -19,6 +19,19 @@ public sealed class ActivityLogEntryViewModelTests
         entry.CategoryText.Should().Be(expectedCategory);
         entry.MessageText.Should().Be(expectedMessage);
         entry.AccentBrush.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Create_SplitsLeadingLogSourceFromMessage()
+    {
+        var entry = ActivityLogEntryViewModel.Create(
+            "12:34:56",
+            "[VoiceAgentHostedService] Ready for commands...");
+
+        entry.CategoryText.Should().Be("Ready");
+        entry.SourceText.Should().Be("VoiceAgentHostedService");
+        entry.HasSourceText.Should().BeTrue();
+        entry.MessageText.Should().Be("Ready for commands...");
     }
 
     [Fact]
