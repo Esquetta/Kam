@@ -58,6 +58,7 @@ public sealed class CodingAgentCommand
     private static readonly TimeSpan ReviewStepTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan StatusStepTimeout = TimeSpan.FromSeconds(30);
     private const string WorktreeExecuteFlag = "--execute";
+    private const string WorktreeNewBranchFlag = "--new";
 
     private readonly ICommandRuntimeService _runtime;
     private readonly ICodingAgentProcessRunner _processRunner;
@@ -1017,8 +1018,10 @@ public sealed class CodingAgentCommand
                 "Kam worktree plan:",
                 $"  branch: {branchName}",
                 "  create: git worktree add <sibling-path> " + branchName,
+                "  create new branch: /worktree add --execute --new <sibling-path> " + branchName,
                 "  remove: git worktree remove <sibling-path>",
-                "  prune: git worktree prune"
+                "  prune: git worktree prune",
+                "  safety: sibling path must stay under workspace parent; branch names are validated before git runs"
             ]));
         }
 
@@ -1043,16 +1046,18 @@ public sealed class CodingAgentCommand
                 false);
         }
 
+        var createNewBranch = arguments.Any(argument => argument.Equals(WorktreeNewBranchFlag, StringComparison.OrdinalIgnoreCase));
         var values = arguments
             .Skip(1)
-            .Where(argument => !argument.Equals(WorktreeExecuteFlag, StringComparison.OrdinalIgnoreCase))
+            .Where(argument => !argument.Equals(WorktreeExecuteFlag, StringComparison.OrdinalIgnoreCase)
+                && !argument.Equals(WorktreeNewBranchFlag, StringComparison.OrdinalIgnoreCase))
             .ToArray();
 
         if (values.Length < 2)
         {
             return new CodingAgentCommandResult(
                 2,
-                "Usage: /worktree add --execute <sibling-path> <branch>",
+                "Usage: /worktree add --execute [--new] <sibling-path> <branch>",
                 false);
         }
 
@@ -1073,10 +1078,14 @@ public sealed class CodingAgentCommand
                 false);
         }
 
+        var gitArguments = createNewBranch
+            ? new[] { "worktree", "add", "-b", branchName, worktreePath }
+            : ["worktree", "add", worktreePath, branchName];
+
         return await RunProcessStepAsync(
-            "git worktree add",
+            createNewBranch ? "git worktree add -b" : "git worktree add",
             "git",
-            ["worktree", "add", worktreePath, branchName],
+            gitArguments,
             options,
             cancellationToken,
             timeout: ReviewStepTimeout);
@@ -1359,16 +1368,30 @@ public sealed class CodingAgentCommand
     {
         if (string.IsNullOrWhiteSpace(branchName)
             || branchName.StartsWith("-", StringComparison.Ordinal)
+            || branchName.StartsWith("/", StringComparison.Ordinal)
+            || branchName.EndsWith("/", StringComparison.Ordinal)
+            || branchName.EndsWith(".", StringComparison.Ordinal)
             || branchName.Contains("..", StringComparison.Ordinal)
+            || branchName.Contains("//", StringComparison.Ordinal)
+            || branchName.Contains("@{", StringComparison.Ordinal)
             || branchName.Contains('\\', StringComparison.Ordinal)
+            || branchName.Equals("@", StringComparison.Ordinal)
             || branchName.Any(char.IsWhiteSpace))
         {
             return false;
         }
 
+        var segments = branchName.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Any(segment => segment.StartsWith(".", StringComparison.Ordinal)
+            || segment.EndsWith(".lock", StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
         return branchName.All(character =>
-            char.IsLetterOrDigit(character)
-            || character is '/' or '-' or '_' or '.');
+            !char.IsControl(character)
+            && (char.IsLetterOrDigit(character)
+                || character is '/' or '-' or '_' or '.'));
     }
 
     private static string FormatHookList(IReadOnlyList<string> hooks)

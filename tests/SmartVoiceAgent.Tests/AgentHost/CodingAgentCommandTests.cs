@@ -1001,6 +1001,72 @@ public sealed class CodingAgentCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task RunAsync_WorktreeAddWithNewBranchFlag_RunsStructuredGitWorktreeBranchCreation()
+    {
+        var processRunner = new RecordingProcessRunner(
+            new CodingAgentProcessResult(0, "Preparing worktree", string.Empty, false));
+        var command = new CodingAgentCommand(
+            new RecordingCommandRuntime(CommandRuntimeResult.Failed("Should not run.", SkillExecutionStatus.Failed, "unexpected")),
+            processRunner);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var expectedWorktreePath = Path.GetFullPath(Path.Combine(_workspace, "..", "kam-feature"));
+
+        var exitCode = await command.RunAsync(
+            new CodingAgentCommandOptions
+            {
+                CommandText = "/worktree add --execute --new ../kam-feature feature/test",
+                WorkspaceRoot = _workspace
+            },
+            output,
+            error);
+
+        exitCode.Should().Be(0);
+        processRunner.Requests.Should().ContainSingle();
+        var request = processRunner.Requests.Single();
+        request.FileName.Should().Be("git");
+        request.Arguments.Should().Equal("worktree", "add", "-b", "feature/test", expectedWorktreePath);
+        request.WorkingDirectory.Should().Be(_workspace);
+        output.ToString().Should().Contain("[PASS] git worktree add -b");
+        error.ToString().Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("-feature/test")]
+    [InlineData("/feature/test")]
+    [InlineData("feature/test/")]
+    [InlineData("feature/test.")]
+    [InlineData("feature..test")]
+    [InlineData("feature//test")]
+    [InlineData("feature/@{test}")]
+    [InlineData("feature/test.lock")]
+    [InlineData(".feature/test")]
+    public async Task RunAsync_WorktreeAddWithExecuteFlag_RejectsUnsafeBranchNames(string branchName)
+    {
+        var processRunner = new RecordingProcessRunner(
+            new CodingAgentProcessResult(0, "should not run", string.Empty, false));
+        var command = new CodingAgentCommand(
+            new RecordingCommandRuntime(CommandRuntimeResult.Failed("Should not run.", SkillExecutionStatus.Failed, "unexpected")),
+            processRunner);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await command.RunAsync(
+            new CodingAgentCommandOptions
+            {
+                CommandText = $"/worktree add --execute ../kam-feature {branchName}",
+                WorkspaceRoot = _workspace
+            },
+            output,
+            error);
+
+        exitCode.Should().Be(2);
+        processRunner.Requests.Should().BeEmpty();
+        output.ToString().Should().Contain("Worktree branch name contains unsupported characters");
+        error.ToString().Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task RunAsync_WorktreeAddWithExecuteFlag_RejectsPathOutsideWorkspaceParent()
     {
         var processRunner = new RecordingProcessRunner(
