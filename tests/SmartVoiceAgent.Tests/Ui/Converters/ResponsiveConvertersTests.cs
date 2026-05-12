@@ -65,6 +65,21 @@ public class ResponsiveConvertersTests
     }
 
     [Theory]
+    [InlineData(900, 1)]
+    [InlineData(1024, 2)]
+    [InlineData(1199, 2)]
+    [InlineData(1200, 3)]
+    [InlineData(1280, 3)]
+    [InlineData(1366, 3)]
+    [InlineData(1440, 3)]
+    public void WindowStateManager_GridColumns_KeepsDesktopCommandCenterCompact(double windowWidth, int expectedColumns)
+    {
+        SetWindowWidth(windowWidth);
+
+        WindowStateManager.Instance.GridColumns.Should().Be(expectedColumns);
+    }
+
+    [Theory]
     [InlineData(true)]
     [InlineData(false)]
     public void BoolToStatusBrushConverter_Convert_WhenResourceIsMissing_UsesTransparentFallback(bool value)

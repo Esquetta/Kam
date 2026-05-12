@@ -39,6 +39,21 @@ public sealed class CoordinatorViewMetadataTests
             || value.Contains("COORDINATOR", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public void CoordinatorView_DoesNotUsePageLevelScrollViewer()
+    {
+        var view = XDocument.Load(FindCoordinatorViewXamlPath()).Root;
+
+        view.Should().NotBeNull();
+        view!
+            .Elements()
+            .Should()
+            .NotContain(element => element.Name.LocalName == "ScrollViewer");
+        view.Descendants()
+            .Should()
+            .NotContain(element => element.Name.LocalName == "ScrollViewer");
+    }
+
     private static string FindCoordinatorViewXamlPath()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

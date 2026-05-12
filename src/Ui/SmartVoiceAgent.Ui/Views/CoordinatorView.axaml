@@ -13,11 +13,10 @@
         <converters:ResponsiveScaleConverter x:Key="ResponsiveScaleConverter" />
     </UserControl.Resources>
 
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <Grid RowDefinitions="Auto, Auto, Auto" Margin="0,20">
+    <Grid RowDefinitions="Auto, *, Auto" Margin="0,12,0,18" ClipToBounds="True">
 
-            <!-- Title Section -->
-            <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,20,0,40">
+        <!-- Title Section -->
+        <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,16,0,28">
                 <TextBlock Text="{DynamicResource Lang.Coordinator.Title}"
                            FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=56}"
                            LetterSpacing="12"
@@ -51,10 +50,10 @@
                 </StackPanel>
             </StackPanel>
 
-            <!-- Assistant Orb -->
-            <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,20,0,60">
-                <Viewbox Width="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveScaleConverter}, ConverterParameter=260}" 
-                         Height="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveScaleConverter}, ConverterParameter=260}">
+        <!-- Assistant Orb -->
+        <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,8,0,32">
+                <Viewbox Width="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveScaleConverter}, ConverterParameter=230}"
+                         Height="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveScaleConverter}, ConverterParameter=230}">
                     <local:NeuralOrb 
                         IsActive="{Binding IsOnline, Mode=OneWay}"
                         ToggleCommand="{Binding ToggleOnlineStateCommand}"
@@ -65,8 +64,8 @@
                 </Viewbox>
             </Grid>
 
-            <!-- Bottom Cards - Responsive Grid -->
-            <ItemsControl Grid.Row="2" Margin="0,0,0,20">
+        <!-- Bottom Cards - Responsive Grid -->
+        <ItemsControl Grid.Row="2" Margin="0,0,0,8">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <UniformGrid Columns="{Binding Source={StaticResource WindowStateManager}, Path=GridColumns}"/>
@@ -169,6 +168,5 @@
                     </StackPanel>
                 </Border>
             </ItemsControl>
-        </Grid>
-    </ScrollViewer>
+    </Grid>
 </UserControl>

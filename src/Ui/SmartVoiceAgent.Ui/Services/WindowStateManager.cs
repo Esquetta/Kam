@@ -128,7 +128,7 @@ public class WindowStateManager : ReactiveObject
     {
         // Breakpoints:
         // Compact: < 1024px (hide log panel, single column)
-        // Medium: 1024px - 1440px (show log panel, 2 columns)
+        // Medium: 1024px - 1440px (show log panel, 2-3 columns)
         // Expanded: > 1440px (show log panel, 3 columns)
 
         IsCompact = WindowWidth < 1024;
@@ -143,7 +143,7 @@ public class WindowStateManager : ReactiveObject
         }
         else if (IsMedium)
         {
-            GridColumns = 2;
+            GridColumns = WindowWidth >= 1200 ? 3 : 2;
             IsLogPanelVisible = true;
         }
         else

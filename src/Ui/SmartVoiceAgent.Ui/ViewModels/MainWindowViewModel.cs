@@ -1396,18 +1396,15 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public void AddLog(string message)
         {
-            Console.WriteLine($"[AddLog] Called with message: {message}");
-            
             string timestamp = DateTime.Now.ToString("HH:mm:ss");
-            string logEntry = $"[{timestamp}] {message}";
             var activityEntry = ActivityLogEntryViewModel.Create(timestamp, message);
+            var logEntry = string.IsNullOrWhiteSpace(activityEntry.SourceText)
+                ? $"[{timestamp}] {activityEntry.MessageText}"
+                : $"[{timestamp}] [{activityEntry.SourceText}] {activityEntry.MessageText}";
 
             // Always use dispatcher to ensure UI updates properly
             Dispatcher.UIThread.Post(() =>
             {
-                Console.WriteLine($"[AddLog] Adding to LogEntries on UI thread: {logEntry}");
-                Console.WriteLine($"[AddLog] Current LogEntries count: {LogEntries.Count}");
-                
                 // Add to end (chat style - new messages at bottom)
                 LogEntries.Add(logEntry);
                 ActivityLogEntries.Add(activityEntry);
@@ -1423,12 +1420,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     ActivityLogEntries.RemoveAt(0);
                 }
 
-                _trayIconService?.UpdateToolTip($"Kam - {message}");
+                _trayIconService?.UpdateToolTip($"Kam - {activityEntry.MessageText}");
                 
                 // Notify that log was updated (for auto-scroll)
                 LogUpdated?.Invoke(this, EventArgs.Empty);
-                
-                Console.WriteLine($"[AddLog] LogEntries count after add: {LogEntries.Count}");
             });
         }
 
@@ -1739,34 +1734,37 @@ namespace SmartVoiceAgent.Ui.ViewModels
             }
 
             var (sourceText, messageText) = SplitSource(CleanMessage(trimmed));
+            var displaySource = string.IsNullOrWhiteSpace(sourceText)
+                ? InferSource(messageText)
+                : sourceText;
             var displayMessage = FormatMessage(messageText);
 
             if (ContainsAny(upper, "ERROR", "FAILED", "FAILURE", "BLOCKED")
                 || trimmed.StartsWith("X ", StringComparison.Ordinal)
                 || trimmed.StartsWith("❌", StringComparison.Ordinal))
             {
-                return new ActivityLogEntryViewModel(timeText, "Error", sourceText, displayMessage, ErrorBrush);
+                return new ActivityLogEntryViewModel(timeText, "Error", displaySource, displayMessage, ErrorBrush);
             }
 
-            if (ContainsAny(upper, "WARN", "UNAVAILABLE", "NOT AVAILABLE")
+            if (ContainsAny(upper, "WARN", "UNAVAILABLE", "NOT AVAILABLE", "RATE_LIMIT", "QUOTA", "BALANCE", "AI_PROVIDER_AUTH")
                 || trimmed.StartsWith("⚠", StringComparison.Ordinal))
             {
-                return new ActivityLogEntryViewModel(timeText, "Warning", sourceText, displayMessage, WarningBrush);
+                return new ActivityLogEntryViewModel(timeText, "Warning", displaySource, displayMessage, WarningBrush);
             }
 
             if (ContainsAny(upper, "READY", "SUCCESS", "OK", "ONLINE", "STARTED", "ENABLED")
                 || trimmed.StartsWith("✅", StringComparison.Ordinal)
                 || trimmed.StartsWith("🟢", StringComparison.Ordinal))
             {
-                return new ActivityLogEntryViewModel(timeText, "Ready", sourceText, displayMessage, SuccessBrush);
+                return new ActivityLogEntryViewModel(timeText, "Ready", displaySource, displayMessage, SuccessBrush);
             }
 
             if (ContainsAny(upper, "NAVIGATED", "THEME", "VOICE", "WORKSPACE", "AGENT_RUNTIME", "COPIED", "INPUT_CLEARED"))
             {
-                return new ActivityLogEntryViewModel(timeText, "System", sourceText, displayMessage, SystemBrush);
+                return new ActivityLogEntryViewModel(timeText, "System", displaySource, displayMessage, SystemBrush);
             }
 
-            return new ActivityLogEntryViewModel(timeText, "Event", sourceText, displayMessage, InfoBrush);
+            return new ActivityLogEntryViewModel(timeText, "Event", displaySource, displayMessage, InfoBrush);
         }
 
         private static string CleanMessage(string value)
@@ -1800,7 +1798,391 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             return string.IsNullOrWhiteSpace(message)
                 ? (string.Empty, value)
-                : (source, message);
+                : (FormatSource(source), FormatTechnicalMessage(message));
+        }
+
+        private static string FormatSource(string value)
+        {
+            var source = value.Trim();
+            if (string.IsNullOrWhiteSpace(source))
+            {
+                return string.Empty;
+            }
+
+            if (ContainsAny(source, "Lifetime"))
+            {
+                return "App";
+            }
+
+            if (ContainsAny(source, "VoiceAgentHostedService"))
+            {
+                return "Runtime";
+            }
+
+            if (ContainsAny(source, "AgentRegistry", "AgentFactory", "AgentBuilder", "AgentOrchestrator"))
+            {
+                return "Agents";
+            }
+
+            if (ContainsAny(source, "CommunicationAgentTools", "TaskAgentTools", "Todoist", "Mcp"))
+            {
+                return "Integrations";
+            }
+
+            if (ContainsAny(source, "MultiSTT", "WakeWord", "Whisper", "Speech", "Voice"))
+            {
+                return "Voice";
+            }
+
+            if (ContainsAny(source, "Email", "Mail", "Sms"))
+            {
+                return "Mail";
+            }
+
+            if (ContainsAny(source, "GitHub"))
+            {
+                return "GitHub";
+            }
+
+            if (ContainsAny(source, "SlashCommand", "CommandInput"))
+            {
+                return "Commands";
+            }
+
+            if (ContainsAny(source, "Settings", "Configuration"))
+            {
+                return "Settings";
+            }
+
+            return "System";
+        }
+
+        private static string InferSource(string value)
+        {
+            if (!ContainsAny(value, "AI_PROVIDER_", "RATE_LIMIT", "BALANCE", "QUOTA"))
+            {
+                return string.Empty;
+            }
+
+            if (ContainsAny(value, "claude", "anthropic"))
+            {
+                return "Claude";
+            }
+
+            if (ContainsAny(value, "gemini", "google"))
+            {
+                return "Gemini";
+            }
+
+            if (ContainsAny(value, "ollama"))
+            {
+                return "Ollama";
+            }
+
+            if (ContainsAny(value, "gpt", "openai", "codex"))
+            {
+                return "Codex";
+            }
+
+            return "AI";
+        }
+
+        private static string FormatTechnicalMessage(string value)
+        {
+            var trimmed = value.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed))
+            {
+                return trimmed;
+            }
+
+            if (ContainsAny(trimmed, "ISmsService not registered", "SMS functionality will be unavailable"))
+            {
+                return "SMS integration is not configured.";
+            }
+
+            if (ContainsAny(trimmed, "Todoist MCP is not configured"))
+            {
+                return "Todoist integration is not configured.";
+            }
+
+            if (ContainsAny(trimmed, "HuggingFace API key not configured"))
+            {
+                return "Speech provider is not configured.";
+            }
+
+            if (ContainsAny(trimmed, "Whisper model not found"))
+            {
+                return "Local speech model is not installed.";
+            }
+
+            if (ContainsAny(trimmed, "MultiSTTService initialized with 0 providers"))
+            {
+                return "No speech providers are available.";
+            }
+
+            if (ContainsAny(trimmed, "WakeWordDetectionService initialized", "wake word:"))
+            {
+                return "Wake word listener ready.";
+            }
+
+            if (ContainsAny(trimmed, "EmailService configured"))
+            {
+                return "Mail provider configured.";
+            }
+
+            if (ContainsAny(trimmed, "Created new template", "predefined templates"))
+            {
+                return "Mail templates ready.";
+            }
+
+            if (TryFormatAgentRegistration(trimmed, out var agentRegistration))
+            {
+                return agentRegistration;
+            }
+
+            if (TryFormatAgentPreparation(trimmed, out var agentPreparation))
+            {
+                return agentPreparation;
+            }
+
+            if (ContainsAny(trimmed, "legacy agents ready"))
+            {
+                return trimmed.Replace("legacy agents", "agents", StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (trimmed.StartsWith("Application started.", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Application started.";
+            }
+
+            if (trimmed.StartsWith("Hosting environment:", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Runtime environment ready.";
+            }
+
+            if (trimmed.StartsWith("Content root path:", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Workspace loaded.";
+            }
+
+            if (ContainsAny(trimmed, "Loaded 0 tools asynchronously"))
+            {
+                return "No tools loaded.";
+            }
+
+            if (TryFormatStatusMessage(trimmed, out var statusMessage))
+            {
+                return statusMessage;
+            }
+
+            return RedactTechnicalNames(trimmed);
+        }
+
+        private static bool TryFormatStatusMessage(string value, out string message)
+        {
+            if (value.Equals("AGENT_RUNTIME_READY", StringComparison.OrdinalIgnoreCase))
+            {
+                message = "Agent runtime ready.";
+                return true;
+            }
+
+            if (value.Equals("WORKSPACE_READY", StringComparison.OrdinalIgnoreCase))
+            {
+                message = "Workspace ready.";
+                return true;
+            }
+
+            if (value.StartsWith("NAVIGATED_TO:", StringComparison.OrdinalIgnoreCase))
+            {
+                message = $"Opened {FormatTokenValue(value["NAVIGATED_TO:".Length..])}.";
+                return true;
+            }
+
+            if (value.StartsWith("THEME_CHANGED:", StringComparison.OrdinalIgnoreCase)
+                || value.StartsWith("THEME_SET:", StringComparison.OrdinalIgnoreCase))
+            {
+                var theme = value[(value.IndexOf(':', StringComparison.Ordinal) + 1)..];
+                message = $"Switched to {FormatTokenValue(theme).ToLowerInvariant()} theme.";
+                return true;
+            }
+
+            if (value.Equals("INPUT_CLEARED", StringComparison.OrdinalIgnoreCase))
+            {
+                message = "Input cleared.";
+                return true;
+            }
+
+            if (value.Equals("COMMAND_INPUT_UNAVAILABLE", StringComparison.OrdinalIgnoreCase))
+            {
+                message = "Command input is not connected yet.";
+                return true;
+            }
+
+            if (value.Equals("COPIED_STDOUT", StringComparison.OrdinalIgnoreCase))
+            {
+                message = "Copied output.";
+                return true;
+            }
+
+            if (value.StartsWith("COPY_FAILED:", StringComparison.OrdinalIgnoreCase))
+            {
+                message = "Clipboard is not available.";
+                return true;
+            }
+
+            if (value.StartsWith("RERUN_SKILL:", StringComparison.OrdinalIgnoreCase))
+            {
+                message = $"Rerunning {FormatTokenValue(value["RERUN_SKILL:".Length..])}.";
+                return true;
+            }
+
+            if (value.StartsWith("RERUN_FAILED:", StringComparison.OrdinalIgnoreCase))
+            {
+                message = "Could not rerun the skill.";
+                return true;
+            }
+
+            if (value.StartsWith("AI_PROVIDER_RATE_LIMIT", StringComparison.OrdinalIgnoreCase))
+            {
+                message = $"{ProviderDisplayName(value)} is rate limited. Wait for the reset or switch models.";
+                return true;
+            }
+
+            if (value.StartsWith("AI_PROVIDER_BALANCE", StringComparison.OrdinalIgnoreCase)
+                || value.StartsWith("AI_PROVIDER_QUOTA", StringComparison.OrdinalIgnoreCase))
+            {
+                message = $"{ProviderDisplayName(value)} quota or balance needs attention.";
+                return true;
+            }
+
+            if (value.StartsWith("AI_PROVIDER_AUTH", StringComparison.OrdinalIgnoreCase))
+            {
+                message = $"{ProviderDisplayName(value)} credentials need attention.";
+                return true;
+            }
+
+            message = string.Empty;
+            return false;
+        }
+
+        private static bool TryFormatAgentRegistration(string value, out string message)
+        {
+            const string prefix = "Agent registered:";
+            if (!value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                message = string.Empty;
+                return false;
+            }
+
+            var agentName = value[prefix.Length..].Trim();
+            message = $"{ToSentenceStart(FormatAgentName(agentName))} registered.";
+            return true;
+        }
+
+        private static bool TryFormatAgentPreparation(string value, out string message)
+        {
+            const string creatingPrefix = "Creating ";
+            if (value.StartsWith(creatingPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                var tail = value[creatingPrefix.Length..];
+                var agentName = tail.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
+                message = $"Preparing {FormatAgentName(agentName)}.";
+                return true;
+            }
+
+            const string buildingPrefix = "Building agent";
+            if (value.StartsWith(buildingPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                var firstQuote = value.IndexOf('\'', StringComparison.Ordinal);
+                var lastQuote = value.LastIndexOf('\'');
+                if (firstQuote >= 0 && lastQuote > firstQuote)
+                {
+                    var agentName = value[(firstQuote + 1)..lastQuote];
+                    message = $"Preparing {FormatAgentName(agentName)}.";
+                    return true;
+                }
+            }
+
+            message = string.Empty;
+            return false;
+        }
+
+        private static string FormatAgentName(string value)
+        {
+            var cleaned = value.Trim().Trim('\'', '"');
+            if (cleaned.EndsWith("Agent", StringComparison.OrdinalIgnoreCase))
+            {
+                cleaned = cleaned[..^"Agent".Length];
+            }
+
+            var words = SplitCodeName(cleaned);
+            return string.IsNullOrWhiteSpace(words)
+                ? "agent"
+                : $"{words.ToLowerInvariant()} agent";
+        }
+
+        private static string RedactTechnicalNames(string value)
+        {
+            return value
+                .Replace("VoiceAgentHostedService", "runtime", StringComparison.Ordinal)
+                .Replace("CommunicationAgentTools", "integrations", StringComparison.Ordinal)
+                .Replace("TaskAgentTools", "integrations", StringComparison.Ordinal)
+                .Replace("AgentRegistry", "agent manager", StringComparison.Ordinal)
+                .Replace("AgentFactory", "agent manager", StringComparison.Ordinal)
+                .Replace("AgentBuilder", "agent builder", StringComparison.Ordinal)
+                .Replace("MultiSTTService", "speech provider", StringComparison.Ordinal)
+                .Replace("WakeWordDetectionService", "wake word listener", StringComparison.Ordinal)
+                .Replace("EmailService", "mail provider", StringComparison.Ordinal)
+                .Replace("ISmsService", "SMS integration", StringComparison.Ordinal);
+        }
+
+        private static string ProviderDisplayName(string value)
+        {
+            var inferred = InferSource(value);
+            return string.IsNullOrWhiteSpace(inferred) ? "AI provider" : inferred;
+        }
+
+        private static string FormatTokenValue(string value)
+        {
+            var token = value.Trim().Trim('\'', '"');
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return "item";
+            }
+
+            token = token.Replace('.', ' ').Replace('-', ' ').Replace('_', ' ');
+            var title = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(token.ToLowerInvariant());
+            return title
+                .Replace("Ai", "AI", StringComparison.Ordinal)
+                .Replace("Api", "API", StringComparison.Ordinal)
+                .Replace("Sms", "SMS", StringComparison.Ordinal);
+        }
+
+        private static string SplitCodeName(string value)
+        {
+            var characters = new List<char>(value.Length + 8);
+            for (var index = 0; index < value.Length; index++)
+            {
+                var current = value[index];
+                if (index > 0
+                    && char.IsUpper(current)
+                    && !char.IsWhiteSpace(value[index - 1])
+                    && !char.IsUpper(value[index - 1]))
+                {
+                    characters.Add(' ');
+                }
+
+                characters.Add(current);
+            }
+
+            return new string(characters.ToArray()).Trim();
+        }
+
+        private static string ToSentenceStart(string value)
+        {
+            return string.IsNullOrWhiteSpace(value)
+                ? value
+                : char.ToUpperInvariant(value[0]) + value[1..];
         }
 
         private static string FormatMessage(string value)
@@ -1810,6 +2192,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 return trimmed;
             }
+
+            trimmed = FormatTechnicalMessage(trimmed);
 
             if (!trimmed.Contains("_", StringComparison.Ordinal)
                 || trimmed.Any(char.IsLower))
