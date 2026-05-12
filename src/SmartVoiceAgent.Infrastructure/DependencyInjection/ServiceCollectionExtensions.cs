@@ -87,10 +87,12 @@ public static class ServiceCollectionExtensions
                 () => chatClient.Value,
                 sp.GetRequiredService<ILogger<RuntimeAgentFactory>>(),
                 sp.GetRequiredService<IRuntimeAgentRunStore>(),
+                sp.GetService<IRuntimeAgentReadOnlyToolService>(),
                 sp.GetService<IUiLogService>(),
                 agentConfig?.ModelId ?? string.Empty);
         });
         services.AddSingleton<IRuntimeAgentRunStore, InMemoryRuntimeAgentRunStore>();
+        services.AddSingleton<IRuntimeAgentReadOnlyToolService, FileRuntimeAgentReadOnlyToolService>();
         services.AddSingleton<IAgentRegistry, AgentRegistry>();
 
         services.AddSingleton<IAgentOrchestrator>(sp =>

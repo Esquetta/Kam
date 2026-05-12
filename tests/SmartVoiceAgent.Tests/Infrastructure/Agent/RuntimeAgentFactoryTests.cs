@@ -20,6 +20,7 @@ public sealed class RuntimeAgentFactoryTests
             () => chatClient,
             NullLogger<RuntimeAgentFactory>.Instance,
             runStore,
+            null,
             uiLogService,
             "gpt-test");
 
@@ -59,6 +60,7 @@ public sealed class RuntimeAgentFactoryTests
             () => new ThrowingChatClient(new InvalidOperationException("provider failed")),
             NullLogger<RuntimeAgentFactory>.Instance,
             runStore,
+            null,
             new RecordingUiLogService(),
             "gpt-test");
 
@@ -85,6 +87,7 @@ public sealed class RuntimeAgentFactoryTests
             () => chatClient,
             NullLogger<RuntimeAgentFactory>.Instance,
             runStore,
+            null,
             new RecordingUiLogService(),
             "gpt-test");
 
@@ -104,6 +107,62 @@ public sealed class RuntimeAgentFactoryTests
         systemPrompt.Should().Contain("tool.5");
         systemPrompt.Should().NotContain("tool.6");
         runStore.List().Should().ContainSingle().Subject.ToolObservations.Should().HaveCount(6);
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenModelRequestsReadOnlyTools_RunsOneToolRoundAndReturnsFinalResponse()
+    {
+        var chatClient = new QueueingChatClient(
+            """
+            {"toolRequests":[{"tool":"workspace.search_text","query":"Needle"},{"tool":"shell.run","query":"rm"}]}
+            """,
+            "final answer");
+        var runStore = new InMemoryRuntimeAgentRunStore();
+        var toolService = new RecordingReadOnlyToolService([
+            new RuntimeAgentToolObservation("workspace.search_text", "Needle found", true)
+        ]);
+        var factory = new RuntimeAgentFactory(
+            () => chatClient,
+            NullLogger<RuntimeAgentFactory>.Instance,
+            runStore,
+            toolService,
+            new RecordingUiLogService(),
+            "gpt-test");
+
+        var result = await factory.RunAsync(new RuntimeAgentRequest(
+            "LoopAgent",
+            "coding",
+            "Find Needle."));
+
+        result.Response.Should().Be("final answer");
+        chatClient.Calls.Should().Be(2);
+        toolService.LastRequests.Should().ContainSingle();
+        toolService.LastRequests![0].Tool.Should().Be("workspace.search_text");
+        chatClient.SystemPrompts.Last().Should().Contain("Needle found");
+        runStore.List().Should().ContainSingle().Subject.Response.Should().Be("final answer");
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenToolRequestJsonIsInvalid_TreatsResponseAsFinalAnswer()
+    {
+        var chatClient = new QueueingChatClient("{ not valid json");
+        var toolService = new RecordingReadOnlyToolService([]);
+        var factory = new RuntimeAgentFactory(
+            () => chatClient,
+            NullLogger<RuntimeAgentFactory>.Instance,
+            new InMemoryRuntimeAgentRunStore(),
+            toolService,
+            new RecordingUiLogService(),
+            "gpt-test");
+
+        var result = await factory.RunAsync(new RuntimeAgentRequest(
+            "LoopAgent",
+            "coding",
+            "Inspect."));
+
+        result.Response.Should().Be("{ not valid json");
+        chatClient.Calls.Should().Be(1);
+        toolService.LastRequests.Should().BeNull();
     }
 
     private sealed class RecordingChatClient : IChatClient
@@ -138,6 +197,66 @@ public sealed class RuntimeAgentFactoryTests
 
         public void Dispose()
         {
+        }
+    }
+
+    private sealed class QueueingChatClient : IChatClient
+    {
+        private readonly Queue<string> _responses;
+
+        public QueueingChatClient(params string[] responses)
+        {
+            _responses = new Queue<string>(responses);
+        }
+
+        public int Calls { get; private set; }
+
+        public List<string> SystemPrompts { get; } = [];
+
+        public Task<ChatResponse> GetResponseAsync(
+            IEnumerable<ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            var messageList = messages.ToArray();
+            SystemPrompts.Add(messageList.First(message => message.Role == ChatRole.System).Text ?? string.Empty);
+            var response = _responses.Count > 0 ? _responses.Dequeue() : "fallback final";
+            return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, response)));
+        }
+
+        public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            return EmptyAsync(cancellationToken);
+        }
+
+        public object? GetService(Type serviceType, object? serviceKey = null) => null;
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed class RecordingReadOnlyToolService : IRuntimeAgentReadOnlyToolService
+    {
+        private readonly IReadOnlyList<RuntimeAgentToolObservation> _observations;
+
+        public RecordingReadOnlyToolService(IReadOnlyList<RuntimeAgentToolObservation> observations)
+        {
+            _observations = observations;
+        }
+
+        public IReadOnlyList<RuntimeAgentReadOnlyToolRequest>? LastRequests { get; private set; }
+
+        public Task<IReadOnlyList<RuntimeAgentToolObservation>> ExecuteAsync(
+            IReadOnlyList<RuntimeAgentReadOnlyToolRequest> requests,
+            CancellationToken cancellationToken = default)
+        {
+            LastRequests = requests;
+            return Task.FromResult(_observations);
         }
     }
 
