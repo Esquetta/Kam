@@ -29,6 +29,7 @@ public sealed class MainWindowMetadataTests
 
         visibleText.Should().Contain("Activity");
         visibleText.Should().Contain("Live session events");
+        visibleText.Should().Contain("Agents");
         visibleText.Should().Contain("Plan trace");
         visibleText.Should().Contain("Skill results");
         visibleText.Should().NotContain(value =>
@@ -46,11 +47,16 @@ public sealed class MainWindowMetadataTests
         var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
 
         mainWindowText.Should().Contain("ItemsSource=\"{Binding ActivityLogEntries}\"");
+        mainWindowText.Should().Contain("ItemsSource=\"{Binding RuntimeAgentActivities}\"");
+        mainWindowText.Should().Contain("IsVisible=\"{Binding HasRuntimeAgentActivities}\"");
         mainWindowText.Should().Contain("Classes=\"ActivityLogItem\"");
         mainWindowText.Should().Contain("Text=\"{Binding CategoryText}\"");
         mainWindowText.Should().Contain("Text=\"{Binding SourceText}\"");
         mainWindowText.Should().Contain("Text=\"{Binding MessageText}\"");
         mainWindowText.Should().Contain("Text=\"{Binding TimeText}\"");
+        mainWindowText.Should().Contain("Text=\"{Binding DisplayName}\"");
+        mainWindowText.Should().Contain("Text=\"{Binding StatusText}\"");
+        mainWindowText.Should().Contain("Text=\"{Binding LastMessage}\"");
     }
 
     [Fact]

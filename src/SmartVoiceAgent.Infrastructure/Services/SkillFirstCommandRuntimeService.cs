@@ -5,13 +5,17 @@ using SmartVoiceAgent.Core.Models.Commands;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Infrastructure.Skills.Execution;
 using System.Text.Json;
+using System.Threading;
 
 namespace SmartVoiceAgent.Infrastructure.Services;
 
 public sealed class SkillFirstCommandRuntimeService : ICommandRuntimeService
 {
+    private const string RuntimeAgentSkillId = "agents.run";
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<SkillFirstCommandRuntimeService> _logger;
+    private int _automaticAgentSequence;
 
     public SkillFirstCommandRuntimeService(
         IServiceScopeFactory scopeFactory,
@@ -37,10 +41,22 @@ public sealed class SkillFirstCommandRuntimeService : ICommandRuntimeService
         var planner = scope.ServiceProvider.GetRequiredService<ISkillPlannerService>();
         var confirmationService = scope.ServiceProvider.GetRequiredService<ISkillConfirmationService>();
         var skillRegistry = scope.ServiceProvider.GetRequiredService<ISkillRegistry>();
+        var pipeline = scope.ServiceProvider.GetRequiredService<ISkillExecutionPipeline>();
 
         var planResult = await CreatePlanAsync(planner, command, cancellationToken);
         if (!planResult.IsValid || planResult.Plan is null)
         {
+            var automaticAgentResult = await TryRunAutomaticAgentAsync(
+                command,
+                pipeline,
+                skillRegistry,
+                "planner_invalid",
+                cancellationToken);
+            if (automaticAgentResult is not null)
+            {
+                return automaticAgentResult;
+            }
+
             return CommandRuntimeResult.Failed(
                 $"Could not create skill plan: {planResult.ErrorMessage}",
                 SkillExecutionStatus.ValidationFailed,
@@ -51,6 +67,17 @@ public sealed class SkillFirstCommandRuntimeService : ICommandRuntimeService
         var planValidationError = ValidatePlan(plan, skillRegistry);
         if (!string.IsNullOrWhiteSpace(planValidationError))
         {
+            var automaticAgentResult = await TryRunAutomaticAgentAsync(
+                command,
+                pipeline,
+                skillRegistry,
+                "plan_validation_failed",
+                cancellationToken);
+            if (automaticAgentResult is not null)
+            {
+                return automaticAgentResult;
+            }
+
             return CommandRuntimeResult.Failed(
                 $"Could not create skill plan: {planValidationError}",
                 SkillExecutionStatus.ValidationFailed,
@@ -60,8 +87,6 @@ public sealed class SkillFirstCommandRuntimeService : ICommandRuntimeService
 
         try
         {
-            var pipeline = scope.ServiceProvider.GetRequiredService<ISkillExecutionPipeline>();
-
             if (RequiresPreviewBeforeConfirmation(plan, skillRegistry))
             {
                 return await PreviewAndQueueFileEditAsync(
@@ -116,6 +141,103 @@ public sealed class SkillFirstCommandRuntimeService : ICommandRuntimeService
                 "runtime_exception",
                 plan.SkillId);
         }
+    }
+
+    private async Task<CommandRuntimeResult?> TryRunAutomaticAgentAsync(
+        string command,
+        ISkillExecutionPipeline pipeline,
+        ISkillRegistry skillRegistry,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        if (!CanRunAutomaticAgent(skillRegistry))
+        {
+            return null;
+        }
+
+        var role = InferAutomaticAgentRole(command);
+        var plan = SkillPlan.FromObject(
+            RuntimeAgentSkillId,
+            new
+            {
+                task = command,
+                role = $"{role} agent created automatically by the system. Reason: {reason}.",
+                agentName = CreateAutomaticAgentName(role)
+            });
+
+        _logger.LogInformation(
+            "Planner fallback created automatic runtime agent {AgentName} for reason {Reason}.",
+            plan.Arguments["agentName"].GetString(),
+            reason);
+
+        var result = await pipeline.ExecuteAsync(plan, cancellationToken);
+        return result.Success
+            ? CommandRuntimeResult.Succeeded(result.Message, RuntimeAgentSkillId, result)
+            : CommandRuntimeResult.Failed(
+                result.ErrorMessage,
+                result.Status,
+                string.IsNullOrWhiteSpace(result.ErrorCode) ? "automatic_agent_failed" : result.ErrorCode,
+                RuntimeAgentSkillId,
+                result.DurationMilliseconds);
+    }
+
+    private static bool CanRunAutomaticAgent(ISkillRegistry registry)
+    {
+        return registry.TryGet(RuntimeAgentSkillId, out var manifest)
+            && manifest is not null
+            && manifest.Enabled;
+    }
+
+    private string CreateAutomaticAgentName(string role)
+    {
+        var sequence = Interlocked.Increment(ref _automaticAgentSequence);
+        var prefix = role switch
+        {
+            "coding" => "CodingAgent",
+            "github" => "GitHubAgent",
+            "research" => "ResearchAgent",
+            "design" => "DesignAgent",
+            "settings" => "SettingsAgent",
+            _ => "TaskAgent"
+        };
+
+        return $"{prefix}-{sequence:000}";
+    }
+
+    private static string InferAutomaticAgentRole(string command)
+    {
+        var value = command.ToLowerInvariant();
+        if (ContainsAny(value, "github", "pull request", "pr ", "repo", "workflow", "action"))
+        {
+            return "github";
+        }
+
+        if (ContainsAny(value, "code", "coding", "test", "build", "fix", "bug", "compile", "refactor"))
+        {
+            return "coding";
+        }
+
+        if (ContainsAny(value, "ui", "ux", "design", "screen", "ekran", "tasar"))
+        {
+            return "design";
+        }
+
+        if (ContainsAny(value, "search", "research", "find", "ara", "incele", "lookup"))
+        {
+            return "research";
+        }
+
+        if (ContainsAny(value, "setting", "settings", "model", "provider", "ayar"))
+        {
+            return "settings";
+        }
+
+        return "general";
+    }
+
+    private static bool ContainsAny(string value, params string[] needles)
+    {
+        return needles.Any(needle => value.Contains(needle, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string? ValidatePlan(SkillPlan plan, ISkillRegistry registry)

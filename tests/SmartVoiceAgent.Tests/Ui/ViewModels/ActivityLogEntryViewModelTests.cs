@@ -34,6 +34,37 @@ public sealed class ActivityLogEntryViewModelTests
         entry.MessageText.Should().Be("Ready for commands...");
     }
 
+    [Fact]
+    public void Create_DisplaysRuntimeAgentUpdatesWithFriendlyAgentSource()
+    {
+        var entry = ActivityLogEntryViewModel.Create(
+            "12:34:56",
+            "[CodingAgent-001] Completed.");
+
+        entry.CategoryText.Should().Be("Ready");
+        entry.SourceText.Should().Be("Coding agent 1");
+        entry.HasSourceText.Should().BeTrue();
+        entry.MessageText.Should().Be("Completed.");
+    }
+
+    [Fact]
+    public void RuntimeAgentActivityViewModel_Create_FormatsDisplayNameAndStatus()
+    {
+        var running = RuntimeAgentActivityViewModel.Create(
+            "DesignAgent-007",
+            "Created automatically for this request.",
+            isComplete: false);
+        var completed = RuntimeAgentActivityViewModel.Create(
+            "DesignAgent-007",
+            "Completed.",
+            isComplete: true);
+
+        running.DisplayName.Should().Be("Design agent 7");
+        running.StatusText.Should().Be("Running");
+        running.LastMessage.Should().Be("Created automatically for this request.");
+        completed.StatusText.Should().Be("Done");
+    }
+
     [Theory]
     [InlineData("[AgentRegistry] Agent registered: ResearchAgent", "Agents", "Research agent registered.")]
     [InlineData("[AgentFactory] Creating CommunicationAgent with optimized instructions...", "Agents", "Preparing communication agent.")]

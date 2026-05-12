@@ -38,7 +38,10 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
             "Creating runtime task agent {AgentName} for role {Role}",
             normalizedRequest.AgentName,
             normalizedRequest.Role);
-        _uiLogService?.LogAgentUpdate(normalizedRequest.AgentName, "Task agent started", false);
+        _uiLogService?.LogAgentUpdate(
+            normalizedRequest.AgentName,
+            "Created automatically for this request.",
+            false);
 
         var messages = new[]
         {
@@ -63,7 +66,7 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
                 text = "Task agent completed without a text response.";
             }
 
-            _uiLogService?.LogAgentUpdate(normalizedRequest.AgentName, "Task agent completed", true);
+            _uiLogService?.LogAgentUpdate(normalizedRequest.AgentName, "Completed.", true);
             return new RuntimeAgentResult(
                 normalizedRequest.AgentName,
                 normalizedRequest.Role,
@@ -72,7 +75,7 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
         }
         catch
         {
-            _uiLogService?.LogAgentUpdate(normalizedRequest.AgentName, "Task agent failed", true);
+            _uiLogService?.LogAgentUpdate(normalizedRequest.AgentName, "Failed.", true);
             throw;
         }
     }

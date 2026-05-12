@@ -420,7 +420,7 @@
 					BorderBrush="{DynamicResource BorderSubtleBrush}"
 					BorderThickness="1,0,0,0"
 					IsVisible="{Binding Source={StaticResource WindowStateManager}, Path=IsLogPanelVisible}">
-				<Grid RowDefinitions="64, Auto, Auto, Auto, *, Auto">
+				<Grid RowDefinitions="64, Auto, Auto, Auto, Auto, *, Auto">
 
 					<!-- Activity Header -->
 					<Border Grid.Row="0"
@@ -568,8 +568,82 @@
 						</StackPanel>
 					</Border>
 
-					<!-- Planner Trace -->
+					<!-- Runtime Agents -->
 					<Border Grid.Row="2"
+							Background="{DynamicResource CardBgBrush}"
+							BorderBrush="{DynamicResource BorderSubtleBrush}"
+							BorderThickness="0,0,0,1"
+							Padding="16,12"
+							IsVisible="{Binding HasRuntimeAgentActivities}">
+						<StackPanel Spacing="8">
+							<StackPanel Orientation="Horizontal"
+										Spacing="8">
+								<Path Data="M12,2A7,7 0 0,1 19,9C19,11.38 17.81,13.47 16,14.74V17A1,1 0 0,1 15,18H9A1,1 0 0,1 8,17V14.74C6.19,13.47 5,11.38 5,9A7,7 0 0,1 12,2M9,20H15V22H9V20Z"
+									  Fill="{DynamicResource AccentCyanBrush}"
+									  Width="14" Height="14"
+									  Stretch="Uniform"
+									  VerticalAlignment="Center"/>
+								<TextBlock Text="Agents"
+										   FontSize="12"
+										   FontWeight="SemiBold"
+										   Foreground="{DynamicResource TextMutedBrush}"
+										   VerticalAlignment="Center"/>
+							</StackPanel>
+							<ItemsControl ItemsSource="{Binding RuntimeAgentActivities}">
+								<ItemsControl.ItemTemplate>
+									<DataTemplate DataType="vm:RuntimeAgentActivityViewModel">
+										<Border Background="{DynamicResource CardBgHoverBrush}"
+												BorderBrush="{DynamicResource BorderSubtleBrush}"
+												BorderThickness="1"
+												CornerRadius="8"
+												Padding="10"
+												Margin="0,0,0,6">
+											<Grid ColumnDefinitions="Auto, *, Auto"
+												  RowDefinitions="Auto, Auto"
+												  ColumnSpacing="8">
+												<Border Grid.Row="0"
+														Grid.RowSpan="2"
+														Width="2"
+														Background="{Binding StatusBrush}"
+														CornerRadius="2"/>
+												<TextBlock Grid.Row="0"
+														   Grid.Column="1"
+														   Text="{Binding DisplayName}"
+														   FontSize="12"
+														   FontWeight="SemiBold"
+														   Foreground="{DynamicResource TextPrimaryBrush}"
+														   TextTrimming="CharacterEllipsis"/>
+												<TextBlock Grid.Row="0"
+														   Grid.Column="2"
+														   Text="{Binding StatusText}"
+														   FontSize="10"
+														   FontWeight="SemiBold"
+														   Foreground="{Binding StatusBrush}"/>
+												<TextBlock Grid.Row="1"
+														   Grid.Column="1"
+														   Text="{Binding LastMessage}"
+														   FontSize="11"
+														   Foreground="{DynamicResource TextSecondaryBrush}"
+														   TextTrimming="CharacterEllipsis"
+														   MaxLines="1"
+														   Margin="0,4,8,0"/>
+												<TextBlock Grid.Row="1"
+														   Grid.Column="2"
+														   Text="{Binding UpdatedText}"
+														   FontSize="10"
+														   FontFamily="Consolas, Cascadia Code, monospace"
+														   Foreground="{DynamicResource TextMutedBrush}"
+														   Margin="0,4,0,0"/>
+											</Grid>
+										</Border>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+						</StackPanel>
+					</Border>
+
+					<!-- Planner Trace -->
+					<Border Grid.Row="3"
 							Background="{DynamicResource CardBgBrush}"
 							BorderBrush="{DynamicResource BorderSubtleBrush}"
 							BorderThickness="0,0,0,1"
@@ -684,7 +758,7 @@
 					</Border>
 
 					<!-- Skill Execution History -->
-					<Border Grid.Row="3"
+					<Border Grid.Row="4"
 							Background="{DynamicResource CardBgBrush}"
 							BorderBrush="{DynamicResource BorderSubtleBrush}"
 							BorderThickness="0,0,0,1"
@@ -956,7 +1030,7 @@
 					</Border>
 
 					<!-- Log Content -->
-					<ScrollViewer x:Name="LogScrollViewer" Grid.Row="4"
+					<ScrollViewer x:Name="LogScrollViewer" Grid.Row="5"
 								  VerticalScrollBarVisibility="Auto"
 								  Margin="18,10,18,0">
 						<ItemsControl ItemsSource="{Binding ActivityLogEntries}">
@@ -1003,7 +1077,7 @@
 					</ScrollViewer>
 
 					<!-- Input Prompt with Voice Controls -->
-					<Border Grid.Row="5"
+					<Border Grid.Row="6"
 							Background="{DynamicResource CardBgBrush}"
 							BorderBrush="{DynamicResource BorderSubtleBrush}"
 							BorderThickness="0,1,0,0"

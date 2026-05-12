@@ -57,8 +57,8 @@ public class UiLogService : IUiLogService
     {
         if (entry.IsAgentUpdate && !string.IsNullOrEmpty(entry.AgentName))
         {
-            var prefix = entry.IsComplete ? "✓" : "►";
-            return $"{prefix} [{entry.AgentName.ToUpper()}] {entry.Message}";
+            _mainViewModel?.TrackRuntimeAgentUpdate(entry.AgentName, entry.Message, entry.IsComplete);
+            return $"[{entry.AgentName}] {entry.Message}";
         }
 
         if (!string.IsNullOrEmpty(entry.Source))

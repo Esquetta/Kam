@@ -55,6 +55,33 @@ public class SkillFirstCommandRuntimeServiceTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_InvalidPlan_WhenRuntimeAgentIsAvailable_RunsAutomaticTaskAgent()
+    {
+        var planner = new StubSkillPlannerService(SkillPlanParseResult.Failure("No direct skill matched."));
+        var pipeline = new RecordingSkillExecutionPipeline(
+            _ => SkillResult.Succeeded("Automatic agent response."));
+        var confirmation = new RecordingSkillConfirmationService();
+        var runtime = CreateRuntime(
+            planner,
+            pipeline,
+            confirmation,
+            CreateRegistryWithRuntimeAgent());
+
+        var result = await runtime.ExecuteAsync("review the current UI behavior");
+
+        result.Success.Should().BeTrue();
+        result.SkillId.Should().Be("agents.run");
+        result.Message.Should().Be("Automatic agent response.");
+        pipeline.CallCount.Should().Be(1);
+        pipeline.LastPlan.Should().NotBeNull();
+        pipeline.LastPlan!.SkillId.Should().Be("agents.run");
+        pipeline.LastPlan.Arguments["task"].GetString().Should().Be("review the current UI behavior");
+        pipeline.LastPlan.Arguments["agentName"].GetString().Should().MatchRegex(@"DesignAgent-\d{3}");
+        pipeline.LastPlan.Arguments["role"].GetString().Should().Contain("design agent");
+        confirmation.QueueCount.Should().Be(0);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_UnknownSkillPlan_ReturnsFailureWithoutRunningPipeline()
     {
         var plan = SkillPlan.FromObject("unknown.skill", new { });
@@ -72,6 +99,29 @@ public class SkillFirstCommandRuntimeServiceTests
         result.Message.Should().Contain("unknown skill");
         pipeline.CallCount.Should().Be(0);
         confirmation.QueueCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_UnknownSkillPlan_WhenRuntimeAgentIsAvailable_RunsAutomaticTaskAgent()
+    {
+        var plan = SkillPlan.FromObject("unknown.skill", new { });
+        var planner = new StubSkillPlannerService(SkillPlanParseResult.Success(plan));
+        var pipeline = new RecordingSkillExecutionPipeline(
+            _ => SkillResult.Succeeded("Fallback handled."));
+        var confirmation = new RecordingSkillConfirmationService();
+        var runtime = CreateRuntime(
+            planner,
+            pipeline,
+            confirmation,
+            CreateRegistryWithRuntimeAgent());
+
+        var result = await runtime.ExecuteAsync("debug this coding issue");
+
+        result.Success.Should().BeTrue();
+        result.SkillId.Should().Be("agents.run");
+        pipeline.CallCount.Should().Be(1);
+        pipeline.LastPlan!.Arguments["agentName"].GetString().Should().MatchRegex(@"CodingAgent-\d{3}");
+        pipeline.LastPlan.Arguments["role"].GetString().Should().Contain("coding agent");
     }
 
     [Fact]
@@ -430,6 +480,41 @@ public class SkillFirstCommandRuntimeServiceTests
                 DisplayName = "Desktop Navigation",
                 Enabled = true
             });
+    }
+
+    private static StubSkillRegistry CreateRegistryWithRuntimeAgent()
+    {
+        var registry = CreateDefaultRegistry();
+        registry.Register(new KamSkillManifest
+        {
+            Id = "agents.run",
+            DisplayName = "Run Task Agent",
+            Enabled = true,
+            RiskLevel = SkillRiskLevel.Low,
+            Arguments =
+            [
+                new SkillArgumentDefinition
+                {
+                    Name = "task",
+                    Type = SkillArgumentType.String,
+                    Required = true
+                },
+                new SkillArgumentDefinition
+                {
+                    Name = "role",
+                    Type = SkillArgumentType.String,
+                    Required = false
+                },
+                new SkillArgumentDefinition
+                {
+                    Name = "agentName",
+                    Type = SkillArgumentType.String,
+                    Required = false
+                }
+            ]
+        });
+
+        return registry;
     }
 
     private sealed class StubSkillPlannerService : ISkillPlannerService

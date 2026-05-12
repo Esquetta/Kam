@@ -57,6 +57,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private const int MaxSkillExecutionHistoryScanCount = 50;
         private const int MaxSkillExecutionHistoryDisplayCount = 8;
         private const int MaxSkillPlannerTraceDisplayCount = 5;
+        private const int MaxRuntimeAgentActivityDisplayCount = 6;
         private const string SkillExecutionHistoryAllStatusFilter = "All";
 
         private static readonly JsonSerializerOptions SkillPlanJsonOptions = new(JsonSerializerDefaults.Web);
@@ -179,6 +180,15 @@ namespace SmartVoiceAgent.Ui.ViewModels
             get => _activityLogEntries;
             set => this.RaiseAndSetIfChanged(ref _activityLogEntries, value);
         }
+
+        private ObservableCollection<RuntimeAgentActivityViewModel> _runtimeAgentActivities = new();
+        public ObservableCollection<RuntimeAgentActivityViewModel> RuntimeAgentActivities
+        {
+            get => _runtimeAgentActivities;
+            set => this.RaiseAndSetIfChanged(ref _runtimeAgentActivities, value);
+        }
+
+        public bool HasRuntimeAgentActivities => RuntimeAgentActivities.Count > 0;
 
         /* ========================= */
         /* THEME */
@@ -1427,6 +1437,44 @@ namespace SmartVoiceAgent.Ui.ViewModels
             });
         }
 
+        public void TrackRuntimeAgentUpdate(
+            string? agentName,
+            string? message,
+            bool isComplete)
+        {
+            if (string.IsNullOrWhiteSpace(agentName))
+            {
+                return;
+            }
+
+            var update = RuntimeAgentActivityViewModel.Create(agentName, message, isComplete);
+            Dispatcher.UIThread.Post(() =>
+            {
+                var existing = RuntimeAgentActivities
+                    .Select((activity, index) => new { Activity = activity, Index = index })
+                    .FirstOrDefault(item => item.Activity.AgentName.Equals(
+                        update.AgentName,
+                        StringComparison.OrdinalIgnoreCase));
+
+                if (existing is null)
+                {
+                    RuntimeAgentActivities.Insert(0, update);
+                }
+                else
+                {
+                    RuntimeAgentActivities.RemoveAt(existing.Index);
+                    RuntimeAgentActivities.Insert(0, update);
+                }
+
+                while (RuntimeAgentActivities.Count > MaxRuntimeAgentActivityDisplayCount)
+                {
+                    RuntimeAgentActivities.RemoveAt(RuntimeAgentActivities.Count - 1);
+                }
+
+                this.RaisePropertyChanged(nameof(HasRuntimeAgentActivities));
+            });
+        }
+
         /// <summary>
         /// Event raised when a new log entry is added (for auto-scroll)
         /// </summary>
@@ -1683,6 +1731,126 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
     }
 
+    public sealed class RuntimeAgentActivityViewModel
+    {
+        private static readonly IBrush RunningBrush = new SolidColorBrush(Color.Parse("#38BDF8"));
+        private static readonly IBrush CompletedBrush = new SolidColorBrush(Color.Parse("#10B981"));
+        private static readonly IBrush FailedBrush = new SolidColorBrush(Color.Parse("#EF4444"));
+
+        private RuntimeAgentActivityViewModel(
+            string agentName,
+            string displayName,
+            string statusText,
+            string lastMessage,
+            string updatedText,
+            IBrush statusBrush)
+        {
+            AgentName = agentName;
+            DisplayName = displayName;
+            StatusText = statusText;
+            LastMessage = lastMessage;
+            UpdatedText = updatedText;
+            StatusBrush = statusBrush;
+        }
+
+        public string AgentName { get; }
+
+        public string DisplayName { get; }
+
+        public string StatusText { get; }
+
+        public string LastMessage { get; }
+
+        public string UpdatedText { get; }
+
+        public IBrush StatusBrush { get; }
+
+        public static RuntimeAgentActivityViewModel Create(
+            string agentName,
+            string? message,
+            bool isComplete)
+        {
+            var normalizedMessage = string.IsNullOrWhiteSpace(message)
+                ? "Working on the request."
+                : message.Trim();
+            var failed = normalizedMessage.Contains("failed", StringComparison.OrdinalIgnoreCase);
+            var statusText = failed
+                ? "Failed"
+                : isComplete
+                    ? "Done"
+                    : "Running";
+            var statusBrush = failed
+                ? FailedBrush
+                : isComplete
+                    ? CompletedBrush
+                    : RunningBrush;
+
+            return new RuntimeAgentActivityViewModel(
+                agentName.Trim(),
+                FormatAgentDisplayName(agentName),
+                statusText,
+                normalizedMessage,
+                DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture),
+                statusBrush);
+        }
+
+        private static string FormatAgentDisplayName(string value)
+        {
+            var cleaned = value.Trim().Trim('\'', '"');
+            var sequence = string.Empty;
+            var dashIndex = cleaned.LastIndexOf('-');
+            if (dashIndex > 0
+                && dashIndex < cleaned.Length - 1
+                && cleaned[(dashIndex + 1)..].All(char.IsDigit))
+            {
+                sequence = cleaned[(dashIndex + 1)..].TrimStart('0');
+                cleaned = cleaned[..dashIndex];
+            }
+
+            if (cleaned.EndsWith("Agent", StringComparison.OrdinalIgnoreCase))
+            {
+                cleaned = cleaned[..^"Agent".Length];
+            }
+
+            var words = SplitCodeName(cleaned).ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(words))
+            {
+                words = "task";
+            }
+
+            return string.IsNullOrWhiteSpace(sequence)
+                ? $"{ToSentenceStart(words)} agent"
+                : $"{ToSentenceStart(words)} agent {sequence}";
+        }
+
+        private static string SplitCodeName(string value)
+        {
+            var characters = new List<char>(value.Length + 8);
+            for (var index = 0; index < value.Length; index++)
+            {
+                var current = value[index];
+                if (index > 0
+                    && char.IsUpper(current)
+                    && !char.IsWhiteSpace(value[index - 1])
+                    && !char.IsUpper(value[index - 1]))
+                {
+                    characters.Add(' ');
+                }
+
+                characters.Add(current);
+            }
+
+            return new string(characters.ToArray()).Trim();
+        }
+
+        private static string ToSentenceStart(string value)
+        {
+            return string.IsNullOrWhiteSpace(value)
+                ? value
+                : char.ToUpperInvariant(value[0]) + value[1..];
+        }
+    }
+
     public sealed class ActivityLogEntryViewModel
     {
         private static readonly IBrush InfoBrush = new SolidColorBrush(Color.Parse("#38BDF8"));
@@ -1752,7 +1920,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 return new ActivityLogEntryViewModel(timeText, "Warning", displaySource, displayMessage, WarningBrush);
             }
 
-            if (ContainsAny(upper, "READY", "SUCCESS", "OK", "ONLINE", "STARTED", "ENABLED")
+            if (ContainsAny(upper, "READY", "SUCCESS", "OK", "ONLINE", "STARTED", "ENABLED", "COMPLETED")
                 || trimmed.StartsWith("✅", StringComparison.Ordinal)
                 || trimmed.StartsWith("🟢", StringComparison.Ordinal))
             {
@@ -1822,6 +1990,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
             if (ContainsAny(source, "AgentRegistry", "AgentFactory", "AgentBuilder", "AgentOrchestrator"))
             {
                 return "Agents";
+            }
+
+            if (IsRuntimeAgentSource(source))
+            {
+                return ToSentenceStart(FormatAgentName(source));
             }
 
             if (ContainsAny(source, "CommunicationAgentTools", "TaskAgentTools", "Todoist", "Mcp"))
@@ -2110,15 +2283,47 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private static string FormatAgentName(string value)
         {
             var cleaned = value.Trim().Trim('\'', '"');
+            var sequence = string.Empty;
+            var dashIndex = cleaned.LastIndexOf('-');
+            if (dashIndex > 0
+                && dashIndex < cleaned.Length - 1
+                && cleaned[(dashIndex + 1)..].All(char.IsDigit))
+            {
+                sequence = cleaned[(dashIndex + 1)..].TrimStart('0');
+                cleaned = cleaned[..dashIndex];
+            }
+
             if (cleaned.EndsWith("Agent", StringComparison.OrdinalIgnoreCase))
             {
                 cleaned = cleaned[..^"Agent".Length];
             }
 
             var words = SplitCodeName(cleaned);
-            return string.IsNullOrWhiteSpace(words)
+            var displayName = string.IsNullOrWhiteSpace(words)
                 ? "agent"
                 : $"{words.ToLowerInvariant()} agent";
+
+            return string.IsNullOrWhiteSpace(sequence)
+                ? displayName
+                : $"{displayName} {sequence}";
+        }
+
+        private static bool IsRuntimeAgentSource(string source)
+        {
+            if (ContainsAny(source, "AgentRegistry", "AgentFactory", "AgentBuilder", "AgentOrchestrator"))
+            {
+                return false;
+            }
+
+            if (source.EndsWith("Agent", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            var dashIndex = source.LastIndexOf('-');
+            return dashIndex > 0
+                && source[..dashIndex].EndsWith("Agent", StringComparison.OrdinalIgnoreCase)
+                && source[(dashIndex + 1)..].All(char.IsDigit);
         }
 
         private static string RedactTechnicalNames(string value)
