@@ -2,6 +2,7 @@ using FluentAssertions;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Agents;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Infrastructure.Agent.Tools;
 using SmartVoiceAgent.Infrastructure.Skills.BuiltIn.AgentTools;
 
 namespace SmartVoiceAgent.Tests.Infrastructure.Skills.BuiltIn;
@@ -45,6 +46,38 @@ public sealed class RuntimeAgentSkillExecutorTests
 
         result.Success.Should().BeFalse();
         result.Status.Should().Be(SkillExecutionStatus.ValidationFailed);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenCodingRoleIsRequested_AttachesReadOnlyWorkspaceContext()
+    {
+        var workspace = Path.Combine(Path.GetTempPath(), $"kam-agent-tools-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspace);
+        try
+        {
+            await File.WriteAllTextAsync(Path.Combine(workspace, "Program.cs"), "Console.WriteLine(\"hi\");");
+            var factory = new CapturingRuntimeAgentFactory("done");
+            var executor = new RuntimeAgentSkillExecutor(factory, new FileAgentTools(workspace));
+
+            var result = await executor.ExecuteAsync(
+                SkillPlan.FromObject(
+                    RuntimeAgentSkillExecutor.SkillId,
+                    new
+                    {
+                        task = "Inspect this repository.",
+                        role = "coding"
+                    }));
+
+            result.Success.Should().BeTrue();
+            factory.LastRequest.Should().NotBeNull();
+            factory.LastRequest!.ToolObservations.Should().ContainSingle();
+            factory.LastRequest.ToolObservations![0].SkillId.Should().Be("workspace.map");
+            factory.LastRequest.ToolObservations[0].Summary.Should().Contain("Workspace Map:");
+        }
+        finally
+        {
+            Directory.Delete(workspace, recursive: true);
+        }
     }
 
     private sealed class CapturingRuntimeAgentFactory : IRuntimeAgentFactory

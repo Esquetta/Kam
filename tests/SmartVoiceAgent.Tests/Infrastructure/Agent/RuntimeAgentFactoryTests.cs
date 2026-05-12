@@ -26,7 +26,10 @@ public sealed class RuntimeAgentFactoryTests
         var result = await factory.RunAsync(new RuntimeAgentRequest(
             "Repo Agent!",
             "coding",
-            "Inspect the workspace."));
+            "Inspect the workspace.",
+            [
+                new RuntimeAgentToolObservation("workspace.map", "Workspace Map: D:\\repo", true)
+            ]));
 
         result.RunId.Should().NotBeNullOrWhiteSpace();
         result.AgentName.Should().Be("RepoAgent");
@@ -38,9 +41,12 @@ public sealed class RuntimeAgentFactoryTests
         run.Response.Should().Be("agent response");
         run.ModelId.Should().Be("gpt-test");
         run.CompletedAt.Should().NotBeNull();
+        run.ToolObservations.Should().ContainSingle(observation => observation.SkillId == "workspace.map");
 
         chatClient.Messages.Should().HaveCount(2);
         chatClient.Messages[0].Role.Should().Be(ChatRole.System);
+        chatClient.Messages[0].Text.Should().Contain("Read-only tool context");
+        chatClient.Messages[0].Text.Should().Contain("workspace.map");
         chatClient.Messages[1].Text.Should().Be("Inspect the workspace.");
         uiLogService.Entries.Should().Contain(entry => entry.AgentName == "RepoAgent" && entry.Message == "Completed.");
     }

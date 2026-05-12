@@ -21,6 +21,8 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         private readonly HashSet<string> _executableExtensions;
         private readonly long _maxFileSizeBytes;
 
+        public string DefaultWorkingDirectory => _defaultWorkingDirectory;
+
         public FileAgentTools(
             string? defaultWorkingDirectory = null,
             long maxFileSizeBytes = 10 * 1024 * 1024) // 10MB default

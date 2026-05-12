@@ -20,7 +20,8 @@ public sealed class InMemoryRuntimeAgentRunStore : IRuntimeAgentRunStore
             modelId,
             RuntimeAgentRunStatus.Running,
             DateTimeOffset.UtcNow,
-            LastMessage: "Created automatically for this request.");
+            LastMessage: "Created automatically for this request.",
+            ToolObservations: request.ToolObservations?.ToArray());
 
         lock (_gate)
         {

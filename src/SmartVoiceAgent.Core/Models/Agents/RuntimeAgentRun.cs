@@ -11,4 +11,5 @@ public sealed record RuntimeAgentRun(
     DateTimeOffset? CompletedAt = null,
     string? LastMessage = null,
     string? Response = null,
-    string? ErrorMessage = null);
+    string? ErrorMessage = null,
+    IReadOnlyList<RuntimeAgentToolObservation>? ToolObservations = null);

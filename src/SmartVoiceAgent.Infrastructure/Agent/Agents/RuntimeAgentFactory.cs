@@ -92,8 +92,17 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
         var agentName = NormalizeToken(request.AgentName, "TaskAgent", MaxAgentNameLength);
         var role = NormalizeText(request.Role, "general", MaxRoleLength);
         var userRequest = NormalizeText(request.UserRequest, string.Empty, MaxRequestLength);
+        var observations = request.ToolObservations?
+            .Where(observation => !string.IsNullOrWhiteSpace(observation.SkillId)
+                && !string.IsNullOrWhiteSpace(observation.Summary))
+            .Select(observation => observation with
+            {
+                SkillId = NormalizeObservationSkillId(observation.SkillId),
+                Summary = NormalizeText(observation.Summary, string.Empty, 4000)
+            })
+            .ToArray();
 
-        return new RuntimeAgentRequest(agentName, role, userRequest);
+        return new RuntimeAgentRequest(agentName, role, userRequest, observations);
     }
 
     private static string NormalizeToken(string value, string fallback, int maxLength)
@@ -133,9 +142,20 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
         return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
     }
 
+    private static string NormalizeObservationSkillId(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "tool";
+        }
+
+        var trimmed = value.Trim();
+        return trimmed.Length <= MaxRoleLength ? trimmed : trimmed[..MaxRoleLength];
+    }
+
     private static string BuildSystemPrompt(RuntimeAgentRequest request)
     {
-        return $"""
+        var prompt = $"""
 You are {request.AgentName}, a short-lived Kam task agent created for one request.
 
 Role:
@@ -149,5 +169,22 @@ Operating rules:
 - If the task requires a tool or permissioned action, describe the exact next skill/action Kam should run and any missing setup.
 - Do not expose internal class names, stack traces, service names, secrets, or raw configuration values.
 """;
+
+        if (request.ToolObservations is not { Count: > 0 })
+        {
+            return prompt;
+        }
+
+        var builder = new StringBuilder(prompt)
+            .AppendLine()
+            .AppendLine("Read-only tool context already gathered for this request:");
+        foreach (var observation in request.ToolObservations.Take(5))
+        {
+            builder
+                .AppendLine($"- {observation.SkillId} ({(observation.Success ? "ok" : "failed")}):")
+                .AppendLine(observation.Summary);
+        }
+
+        return builder.ToString();
     }
 }
