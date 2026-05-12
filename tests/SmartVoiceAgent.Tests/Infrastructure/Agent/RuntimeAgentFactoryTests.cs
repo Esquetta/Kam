@@ -76,6 +76,36 @@ public sealed class RuntimeAgentFactoryTests
         run.CompletedAt.Should().NotBeNull();
     }
 
+    [Fact]
+    public async Task RunAsync_IncludesOnlyFirstFiveToolObservationsInSystemPrompt()
+    {
+        var chatClient = new RecordingChatClient("agent response");
+        var runStore = new InMemoryRuntimeAgentRunStore();
+        var factory = new RuntimeAgentFactory(
+            () => chatClient,
+            NullLogger<RuntimeAgentFactory>.Instance,
+            runStore,
+            new RecordingUiLogService(),
+            "gpt-test");
+
+        var observations = Enumerable.Range(1, 6)
+            .Select(index => new RuntimeAgentToolObservation($"tool.{index}", $"summary {index}", true))
+            .ToArray();
+
+        await factory.RunAsync(new RuntimeAgentRequest(
+            "ContextAgent",
+            "coding",
+            "Inspect the workspace.",
+            observations));
+
+        chatClient.Messages.Should().NotBeEmpty();
+        var systemPrompt = chatClient.Messages[0].Text;
+        systemPrompt.Should().Contain("tool.1");
+        systemPrompt.Should().Contain("tool.5");
+        systemPrompt.Should().NotContain("tool.6");
+        runStore.List().Should().ContainSingle().Subject.ToolObservations.Should().HaveCount(6);
+    }
+
     private sealed class RecordingChatClient : IChatClient
     {
         private readonly string _response;

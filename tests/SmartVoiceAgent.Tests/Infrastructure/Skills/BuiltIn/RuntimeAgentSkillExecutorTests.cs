@@ -80,6 +80,112 @@ public sealed class RuntimeAgentSkillExecutorTests
         }
     }
 
+    [Fact]
+    public async Task ExecuteAsync_WhenTaskMentionsFileAndSearch_AttachesReadAndSearchObservations()
+    {
+        var workspace = Path.Combine(Path.GetTempPath(), $"kam-agent-tools-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspace);
+        try
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(workspace, "Program.cs"),
+                """
+                public static class Program
+                {
+                    public static void Main() => Console.WriteLine("NeedleValue");
+                }
+                """);
+            var factory = new CapturingRuntimeAgentFactory("done");
+            var executor = new RuntimeAgentSkillExecutor(factory, new FileAgentTools(workspace));
+
+            var result = await executor.ExecuteAsync(
+                SkillPlan.FromObject(
+                    RuntimeAgentSkillExecutor.SkillId,
+                    new
+                    {
+                        task = "Review Program.cs and search \"NeedleValue\"",
+                        role = "coding"
+                    }));
+
+            result.Success.Should().BeTrue();
+            factory.LastRequest.Should().NotBeNull();
+            factory.LastRequest!.ToolObservations.Should().NotBeNull();
+            factory.LastRequest.ToolObservations!.Select(observation => observation.SkillId)
+                .Should()
+                .Contain(["workspace.map", "file.read_lines", "workspace.search_text"]);
+            factory.LastRequest.ToolObservations!
+                .Single(observation => observation.SkillId == "file.read_lines")
+                .Summary.Should().Contain("Program.cs");
+            factory.LastRequest.ToolObservations!
+                .Single(observation => observation.SkillId == "workspace.search_text")
+                .Summary.Should().Contain("NeedleValue");
+        }
+        finally
+        {
+            Directory.Delete(workspace, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTaskMentionsDiff_AttachesGitDiffSummaryObservation()
+    {
+        var workspace = Path.Combine(Path.GetTempPath(), $"kam-agent-tools-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspace);
+        try
+        {
+            var factory = new CapturingRuntimeAgentFactory("done");
+            var executor = new RuntimeAgentSkillExecutor(factory, new FileAgentTools(workspace));
+
+            var result = await executor.ExecuteAsync(
+                SkillPlan.FromObject(
+                    RuntimeAgentSkillExecutor.SkillId,
+                    new
+                    {
+                        task = "Review current diff before commit.",
+                        role = "coding"
+                    }));
+
+            result.Success.Should().BeTrue();
+            factory.LastRequest.Should().NotBeNull();
+            factory.LastRequest!.ToolObservations.Should().Contain(observation =>
+                observation.SkillId == "git.diff_summary"
+                && observation.Summary.Contains("Git Snapshot:", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            Directory.Delete(workspace, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTaskIsNotWorkspaceRelated_DoesNotAttachReadOnlyContext()
+    {
+        var workspace = Path.Combine(Path.GetTempPath(), $"kam-agent-tools-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspace);
+        try
+        {
+            var factory = new CapturingRuntimeAgentFactory("done");
+            var executor = new RuntimeAgentSkillExecutor(factory, new FileAgentTools(workspace));
+
+            var result = await executor.ExecuteAsync(
+                SkillPlan.FromObject(
+                    RuntimeAgentSkillExecutor.SkillId,
+                    new
+                    {
+                        task = "Write a short greeting.",
+                        role = "general"
+                    }));
+
+            result.Success.Should().BeTrue();
+            factory.LastRequest.Should().NotBeNull();
+            factory.LastRequest!.ToolObservations.Should().BeNull();
+        }
+        finally
+        {
+            Directory.Delete(workspace, recursive: true);
+        }
+    }
+
     private sealed class CapturingRuntimeAgentFactory : IRuntimeAgentFactory
     {
         private readonly string _response;

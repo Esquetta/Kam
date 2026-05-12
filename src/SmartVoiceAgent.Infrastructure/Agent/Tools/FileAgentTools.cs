@@ -1074,6 +1074,33 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
+        [AITool("git_diff_summary", "Returns read-only git status and diff statistics for the workspace.")]
+        public async Task<string> GetGitDiffSummaryAsync()
+        {
+            var status = await RunReadOnlyGitAsync(["status", "--short", "--branch"]);
+            var unstaged = await RunReadOnlyGitAsync(["diff", "--stat", "--"]);
+            var staged = await RunReadOnlyGitAsync(["diff", "--cached", "--stat", "--"]);
+
+            var sb = new StringBuilder()
+                .AppendLine($"Git Snapshot: {_defaultWorkingDirectory}")
+                .AppendLine("Status:")
+                .AppendLine(string.IsNullOrWhiteSpace(status.Output) ? "  (clean or unavailable)" : Indent(status.Output))
+                .AppendLine("Unstaged diff:")
+                .AppendLine(string.IsNullOrWhiteSpace(unstaged.Output) ? "  (none)" : Indent(unstaged.Output))
+                .AppendLine("Staged diff:")
+                .AppendLine(string.IsNullOrWhiteSpace(staged.Output) ? "  (none)" : Indent(staged.Output));
+
+            if (!status.Success || !unstaged.Success || !staged.Success)
+            {
+                sb.AppendLine("Warnings:");
+                AppendGitWarning(sb, status);
+                AppendGitWarning(sb, unstaged);
+                AppendGitWarning(sb, staged);
+            }
+
+            return sb.ToString().TrimEnd();
+        }
+
         [AITool("create_directory", "Creates a new directory.")]
         public async Task<string> CreateDirectoryAsync(
             [Description("Full path of the directory to create")]
@@ -1187,6 +1214,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 AIFunctionFactory.Create(ReplaceRangeAsync),
                 AIFunctionFactory.Create(PatchFileAsync),
                 AIFunctionFactory.Create(PreviewDiffAsync),
+                AIFunctionFactory.Create(GetGitDiffSummaryAsync),
                 AIFunctionFactory.Create(CreateDirectoryAsync),
                 AIFunctionFactory.Create(ReadLinesAsync),
                 
@@ -1457,6 +1485,95 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
             return sb.ToString();
         }
+
+        private async Task<GitCommandResult> RunReadOnlyGitAsync(IReadOnlyList<string> arguments)
+        {
+            try
+            {
+                if (!Directory.Exists(_defaultWorkingDirectory))
+                {
+                    return new GitCommandResult(false, string.Empty, "Workspace directory does not exist.");
+                }
+
+                using var process = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "git",
+                        WorkingDirectory = _defaultWorkingDirectory,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    }
+                };
+
+                foreach (var argument in arguments)
+                {
+                    process.StartInfo.ArgumentList.Add(argument);
+                }
+
+                if (!process.Start())
+                {
+                    return new GitCommandResult(false, string.Empty, "Git process could not be started.");
+                }
+
+                var stdoutTask = process.StandardOutput.ReadToEndAsync();
+                var stderrTask = process.StandardError.ReadToEndAsync();
+                var waitTask = process.WaitForExitAsync();
+                var completed = await Task.WhenAny(waitTask, Task.Delay(TimeSpan.FromSeconds(8)));
+                if (completed != waitTask)
+                {
+                    try
+                    {
+                        process.Kill(entireProcessTree: true);
+                    }
+                    catch (InvalidOperationException)
+                    {
+                    }
+
+                    return new GitCommandResult(false, string.Empty, "Git command timed out.");
+                }
+
+                var stdout = await stdoutTask;
+                var stderr = await stderrTask;
+                return new GitCommandResult(process.ExitCode == 0, stdout.Trim(), stderr.Trim());
+            }
+            catch (Exception ex) when (ex is Win32Exception
+                or InvalidOperationException
+                or IOException
+                or UnauthorizedAccessException)
+            {
+                return new GitCommandResult(false, string.Empty, ex.Message);
+            }
+        }
+
+        private static void AppendGitWarning(StringBuilder builder, GitCommandResult result)
+        {
+            if (result.Success || string.IsNullOrWhiteSpace(result.Error))
+            {
+                return;
+            }
+
+            builder.AppendLine($"  - {result.Error}");
+        }
+
+        private static string Indent(string value)
+        {
+            return string.Join(
+                Environment.NewLine,
+                value
+                    .Replace("\r\n", "\n", StringComparison.Ordinal)
+                    .Replace('\r', '\n')
+                    .Split('\n')
+                    .Where(line => !string.IsNullOrWhiteSpace(line))
+                    .Select(line => $"  {line.TrimEnd()}"));
+        }
+
+        private readonly record struct GitCommandResult(
+            bool Success,
+            string Output,
+            string Error);
 
         private static void AppendDirectoryTree(
             DirectoryInfo directory,
