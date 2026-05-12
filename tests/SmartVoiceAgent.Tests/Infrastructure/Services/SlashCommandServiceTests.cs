@@ -1,10 +1,12 @@
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Core.Models.Agents;
 using SmartVoiceAgent.Core.Models.CodingAgent;
 using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Core.Models.Updates;
+using SmartVoiceAgent.Infrastructure.Agent.Agents;
 using SmartVoiceAgent.Infrastructure.Agent.Conf;
 using SmartVoiceAgent.Infrastructure.Mcp;
 using SmartVoiceAgent.Infrastructure.Services;
@@ -47,6 +49,7 @@ public sealed class SlashCommandServiceTests
                 "/github-app prs",
                 "/github-app run",
                 "/agent",
+                "/agents",
                 "/hooks",
                 "/integrations",
                 "/limits",
@@ -73,6 +76,47 @@ public sealed class SlashCommandServiceTests
         pipeline.LastPlan.Should().NotBeNull();
         pipeline.LastPlan!.SkillId.Should().Be("agents.run");
         pipeline.LastPlan.Arguments["task"].GetString().Should().Be("inspect the current workspace");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenAgentCommandHasNoTask_ReturnsUsage()
+    {
+        var service = new SlashCommandService(
+            skillExecutionPipeline: new CapturingSkillExecutionPipeline(SkillResult.Succeeded("unused")));
+
+        var result = await service.ExecuteAsync("/agent");
+
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Usage: /agent <task>");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenAgentCommandRuntimeIsUnavailable_ReturnsClearError()
+    {
+        var service = new SlashCommandService();
+
+        var result = await service.ExecuteAsync("/agent inspect the workspace");
+
+        result.Success.Should().BeFalse();
+        result.Message.Should().Contain("Task agent runtime is unavailable.");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenAgentsRequested_ReturnsRuntimeRuns()
+    {
+        var runStore = new InMemoryRuntimeAgentRunStore();
+        var run = runStore.Start(
+            new RuntimeAgentRequest("CodingAgent-001", "coding", "Inspect the workspace."),
+            "gpt-test");
+        runStore.Complete(run.RunId, "done");
+        var service = new SlashCommandService(runtimeAgentRunStore: runStore);
+
+        var result = await service.ExecuteAsync("/agents");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("task runs:");
+        result.Message.Should().Contain("CodingAgent-001 [Succeeded]");
+        result.Message.Should().Contain("Completed.");
     }
 
     [Fact]

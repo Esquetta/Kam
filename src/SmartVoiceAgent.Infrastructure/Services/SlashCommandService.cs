@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.CodingAgent;
 using SmartVoiceAgent.Core.Models.GitHub;
+using SmartVoiceAgent.Core.Models.Agents;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Core.Models.SlashCommands;
 using SmartVoiceAgent.Core.Security;
@@ -79,6 +80,7 @@ public sealed class SlashCommandService : ISlashCommandService
     private readonly IGitHubAppClient? _githubAppClient;
     private readonly AIServiceConfiguration _aiServiceConfiguration;
     private readonly ISkillExecutionPipeline? _skillExecutionPipeline;
+    private readonly IRuntimeAgentRunStore? _runtimeAgentRunStore;
 
     public SlashCommandService(
         IVoiceAgentHostControl? hostControl = null,
@@ -94,7 +96,8 @@ public sealed class SlashCommandService : ISlashCommandService
         IApplicationRestartPlanner? applicationRestartPlanner = null,
         IGitHubAppClient? githubAppClient = null,
         IOptions<AIServiceConfiguration>? aiServiceOptions = null,
-        ISkillExecutionPipeline? skillExecutionPipeline = null)
+        ISkillExecutionPipeline? skillExecutionPipeline = null,
+        IRuntimeAgentRunStore? runtimeAgentRunStore = null)
     {
         _hostControl = hostControl;
         _skillHealthService = skillHealthService;
@@ -110,6 +113,7 @@ public sealed class SlashCommandService : ISlashCommandService
         _githubAppClient = githubAppClient;
         _aiServiceConfiguration = aiServiceOptions?.Value ?? new AIServiceConfiguration();
         _skillExecutionPipeline = skillExecutionPipeline;
+        _runtimeAgentRunStore = runtimeAgentRunStore;
     }
 
     public IReadOnlyList<SlashCommandDefinition> GetCommands()
@@ -507,23 +511,48 @@ public sealed class SlashCommandService : ISlashCommandService
 
     private string FormatAgents()
     {
+        var runs = _runtimeAgentRunStore?.List(12) ?? [];
         var names = _agentRegistry?.GetAllAgentNames()
             .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
             .ToArray() ?? [];
 
-        if (names.Length == 0)
+        if (names.Length == 0 && runs.Count == 0)
         {
             return "Kam agents: no runtime agents are registered yet.";
         }
 
         var builder = new StringBuilder()
             .AppendLine("Kam agents:");
-        foreach (var name in names)
+
+        if (runs.Count > 0)
         {
-            builder.AppendLine($"  {name}");
+            builder.AppendLine("  task runs:");
+            foreach (var run in runs)
+            {
+                builder.AppendLine(
+                    $"    {run.AgentName} [{run.Status}] {FormatRuntimeAgentRunAge(run)} - {NormalizeMessage(run.LastMessage ?? run.Role)}");
+            }
+        }
+
+        if (names.Length > 0)
+        {
+            builder.AppendLine("  registered agents:");
+            foreach (var name in names)
+            {
+                builder.AppendLine($"    {name}");
+            }
         }
 
         return builder.ToString().TrimEnd();
+    }
+
+    private static string FormatRuntimeAgentRunAge(RuntimeAgentRun run)
+    {
+        var reference = run.CompletedAt ?? DateTimeOffset.UtcNow;
+        var elapsed = reference - run.StartedAt;
+        return elapsed.TotalSeconds < 1
+            ? "just now"
+            : $"{Math.Max(1, (int)Math.Round(elapsed.TotalSeconds))}s";
     }
 
     private string FormatCodingAgentWorkflow(string commandName)

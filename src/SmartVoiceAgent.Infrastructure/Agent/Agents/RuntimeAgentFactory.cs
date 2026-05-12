@@ -14,17 +14,20 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
 
     private readonly Func<IChatClient> _chatClientFactory;
     private readonly ILogger<RuntimeAgentFactory> _logger;
+    private readonly IRuntimeAgentRunStore _runStore;
     private readonly IUiLogService? _uiLogService;
     private readonly string _modelId;
 
     public RuntimeAgentFactory(
         Func<IChatClient> chatClientFactory,
         ILogger<RuntimeAgentFactory> logger,
+        IRuntimeAgentRunStore runStore,
         IUiLogService? uiLogService,
         string modelId)
     {
         _chatClientFactory = chatClientFactory;
         _logger = logger;
+        _runStore = runStore;
         _uiLogService = uiLogService;
         _modelId = modelId;
     }
@@ -38,6 +41,7 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
             "Creating runtime task agent {AgentName} for role {Role}",
             normalizedRequest.AgentName,
             normalizedRequest.Role);
+        var run = _runStore.Start(normalizedRequest, _modelId);
         _uiLogService?.LogAgentUpdate(
             normalizedRequest.AgentName,
             "Created automatically for this request.",
@@ -67,15 +71,18 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
             }
 
             _uiLogService?.LogAgentUpdate(normalizedRequest.AgentName, "Completed.", true);
+            _runStore.Complete(run.RunId, text);
             return new RuntimeAgentResult(
                 normalizedRequest.AgentName,
                 normalizedRequest.Role,
                 text,
-                _modelId);
+                _modelId,
+                run.RunId);
         }
-        catch
+        catch (Exception ex)
         {
             _uiLogService?.LogAgentUpdate(normalizedRequest.AgentName, "Failed.", true);
+            _runStore.Fail(run.RunId, ex.Message);
             throw;
         }
     }

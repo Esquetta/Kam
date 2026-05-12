@@ -8,6 +8,7 @@ using SmartVoiceAgent.Core.Models.CodingAgent;
 using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Core.Models.Updates;
+using SmartVoiceAgent.Infrastructure.Agent.Agents;
 using SmartVoiceAgent.Infrastructure.Factories;
 using SmartVoiceAgent.Infrastructure.Helpers;
 using SmartVoiceAgent.Infrastructure.Skills;
@@ -167,6 +168,7 @@ public static class ServiceRegistration
         services.AddSingleton<ISkillAdapter, McpSkillAdapter>();
         services.AddSingleton<ISkillAdapterRegistry, SkillAdapterRegistry>();
         services.AddSingleton<ISkillImportService, SkillImportService>();
+        services.AddSingleton<IRuntimeAgentRunStore, InMemoryRuntimeAgentRunStore>();
         services.AddSingleton<IApplicationVersionProvider, AssemblyApplicationVersionProvider>();
         services.AddSingleton<IApplicationRestartPlanner, ApplicationRestartPlanner>();
         services.AddScoped<IApplicationUpdateSession, ApplicationUpdateSession>();

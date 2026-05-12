@@ -86,9 +86,11 @@ public static class ServiceCollectionExtensions
             return new RuntimeAgentFactory(
                 () => chatClient.Value,
                 sp.GetRequiredService<ILogger<RuntimeAgentFactory>>(),
+                sp.GetRequiredService<IRuntimeAgentRunStore>(),
                 sp.GetService<IUiLogService>(),
                 agentConfig?.ModelId ?? string.Empty);
         });
+        services.AddSingleton<IRuntimeAgentRunStore, InMemoryRuntimeAgentRunStore>();
         services.AddSingleton<IAgentRegistry, AgentRegistry>();
 
         services.AddSingleton<IAgentOrchestrator>(sp =>
