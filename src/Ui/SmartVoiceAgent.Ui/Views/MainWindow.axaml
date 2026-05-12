@@ -125,23 +125,72 @@
 			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
 		</Style>
 
-		<!-- Log Entry Style -->
-		<Style Selector="TextBlock.LogEntry">
-			<Setter Property="FontSize" Value="13"/>
-			<Setter Property="FontFamily" Value="Consolas, Cascadia Code, monospace"/>
-			<Setter Property="Foreground" Value="{DynamicResource LogTextBrush}"/>
-			<Setter Property="Opacity" Value="0.7"/>
-			<Setter Property="Margin" Value="0,2"/>
+		<Style Selector="Border.ActivityLogItem">
+			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding" Value="10"/>
+			<Setter Property="Margin" Value="0,0,0,8"/>
 			<Setter Property="Transitions">
 				<Transitions>
-					<DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+					<BrushTransition Property="Background" Duration="0:0:0.2"/>
+					<BrushTransition Property="BorderBrush" Duration="0:0:0.2"/>
 				</Transitions>
 			</Setter>
 		</Style>
 
-		<Style Selector="TextBlock.LogEntry:pointerover">
-			<Setter Property="Opacity" Value="1"/>
-			<Setter Property="Foreground" Value="{DynamicResource LogTextHighlightBrush}"/>
+		<Style Selector="Border.ActivityLogItem:pointerover">
+			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+		</Style>
+
+		<Style Selector="TextBlock.ActivityMeta">
+			<Setter Property="FontSize" Value="10"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+			<Setter Property="FontWeight" Value="Medium"/>
+		</Style>
+
+		<Style Selector="TextBlock.ActivityMessage">
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+			<Setter Property="LineHeight" Value="18"/>
+			<Setter Property="TextWrapping" Value="Wrap"/>
+		</Style>
+
+		<Style Selector="Button.SlashCommandItem">
+			<Setter Property="MinHeight" Value="34"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderBrush" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="CornerRadius" Value="7"/>
+			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Margin" Value="0,0,0,2"/>
+			<Setter Property="Cursor" Value="Hand"/>
+		</Style>
+
+		<Style Selector="Button.SlashCommandItem /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderBrush" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="CornerRadius" Value="7"/>
+			<Setter Property="Padding" Value="0"/>
+		</Style>
+
+		<Style Selector="Button.SlashCommandItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderBrush" Value="Transparent"/>
+		</Style>
+
+		<Style Selector="Button.SlashCommandItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderBrush" Value="Transparent"/>
+		</Style>
+
+		<Style Selector="Button.SlashCommandItem:focus /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderBrush" Value="Transparent"/>
 		</Style>
 
 		<!-- Prompt Input Style -->
@@ -366,47 +415,51 @@
 
 			<!-- Right Panel - Activity Log -->
 			<Border Grid.Row="1" Grid.Column="2"
-					Background="{DynamicResource CardBgBrush}"
+					Background="{DynamicResource SurfaceBgBrush}"
 					BorderBrush="{DynamicResource BorderSubtleBrush}"
 					BorderThickness="1,0,0,0"
 					IsVisible="{Binding Source={StaticResource WindowStateManager}, Path=IsLogPanelVisible}">
-				<Grid RowDefinitions="48, Auto, Auto, Auto, *, Auto">
+				<Grid RowDefinitions="64, Auto, Auto, Auto, *, Auto">
 
-					<!-- Window Controls -->
+					<!-- Activity Header -->
 					<Border Grid.Row="0"
+							Background="{DynamicResource CardBgBrush}"
 							BorderBrush="{DynamicResource BorderSubtleBrush}"
 							BorderThickness="0,0,0,1">
-						<StackPanel Orientation="Horizontal"
-									HorizontalAlignment="Right"
-									VerticalAlignment="Center"
-									Margin="0,0,16,0"
-									Spacing="8">
-							<Ellipse Width="12" Height="12" Fill="{DynamicResource BorderMutedBrush}"/>
-							<Ellipse Width="12" Height="12" Fill="{DynamicResource BorderMutedBrush}"/>
-							<Ellipse Width="12" Height="12" Fill="{DynamicResource AccentErrorGlowBrush}"
-								 Stroke="{DynamicResource AccentErrorBrush}"
-								 StrokeThickness="0"/>
-						</StackPanel>
+						<Grid ColumnDefinitions="*, Auto"
+							  Margin="18,0"
+							  VerticalAlignment="Center">
+							<StackPanel Grid.Column="0"
+										Spacing="2"
+										VerticalAlignment="Center">
+								<TextBlock Text="Activity"
+										   FontSize="15"
+										   FontWeight="SemiBold"
+										   Foreground="{DynamicResource TextPrimaryBrush}"/>
+								<TextBlock Text="Live session events"
+										   FontSize="11"
+										   Foreground="{DynamicResource TextMutedBrush}"/>
+							</StackPanel>
+							<Border Grid.Column="1"
+									Background="{DynamicResource AccentGreenGlowBrush}"
+									BorderBrush="{DynamicResource AccentGreenDimBrush}"
+									BorderThickness="1"
+									CornerRadius="999"
+									Padding="8,4"
+									VerticalAlignment="Center">
+								<StackPanel Orientation="Horizontal" Spacing="6">
+									<Ellipse Width="6"
+											 Height="6"
+											 Fill="{DynamicResource AccentGreenBrush}"
+											 VerticalAlignment="Center"/>
+									<TextBlock Text="Live"
+											   FontSize="11"
+											   FontWeight="Medium"
+											   Foreground="{DynamicResource AccentGreenBrush}"/>
+								</StackPanel>
+							</Border>
+						</Grid>
 					</Border>
-
-					<!-- Log Header -->
-					<StackPanel Grid.Row="0"
-								Orientation="Horizontal"
-								HorizontalAlignment="Left"
-								VerticalAlignment="Center"
-								Margin="24,0">
-						<TextBlock Text="ACTIVITY_LOG"
-								   FontSize="11"
-								   FontWeight="SemiBold"
-								   Foreground="{DynamicResource TextMutedBrush}"
-								   LetterSpacing="2"/>
-						<Path Data="M22 12h-4l-3 9L9 3l-3 9H2"
-							  Fill="{DynamicResource AccentCyanBrush}"
-							  Width="12" Height="12"
-							  Stretch="Uniform"
-							  Margin="12,0,0,0"
-							  VerticalAlignment="Center"/>
-					</StackPanel>
 
 					<!-- Pending Skill Confirmations -->
 					<Border Grid.Row="1"
@@ -422,12 +475,10 @@
 									  Width="14" Height="14"
 									  Stretch="Uniform"
 									  VerticalAlignment="Center"/>
-								<TextBlock Text="PENDING_CONFIRMATION"
-										   FontSize="10"
-										   FontFamily="Consolas"
+								<TextBlock Text="Approval needed"
+										   FontSize="12"
 										   FontWeight="SemiBold"
 										   Foreground="{DynamicResource AccentCyanBrush}"
-										   LetterSpacing="1"
 										   VerticalAlignment="Center"/>
 							</StackPanel>
 
@@ -538,12 +589,10 @@
 										  Width="14" Height="14"
 										  Stretch="Uniform"
 										  VerticalAlignment="Center"/>
-									<TextBlock Text="PLAN_TRACE"
-											   FontSize="10"
-											   FontFamily="Consolas"
+									<TextBlock Text="Plan trace"
+											   FontSize="12"
 											   FontWeight="SemiBold"
 											   Foreground="{DynamicResource TextMutedBrush}"
-											   LetterSpacing="1"
 											   VerticalAlignment="Center"/>
 								</StackPanel>
 								<Button Grid.Column="1"
@@ -655,12 +704,10 @@
 										  Width="14" Height="14"
 										  Stretch="Uniform"
 										  VerticalAlignment="Center"/>
-									<TextBlock Text="SKILL_RESULTS"
-											   FontSize="10"
-											   FontFamily="Consolas"
+									<TextBlock Text="Skill results"
+											   FontSize="12"
 											   FontWeight="SemiBold"
 											   Foreground="{DynamicResource TextMutedBrush}"
-											   LetterSpacing="1"
 											   VerticalAlignment="Center"/>
 								</StackPanel>
 								<Button Grid.Column="1"
@@ -915,11 +962,39 @@
 					<!-- Log Content -->
 					<ScrollViewer x:Name="LogScrollViewer" Grid.Row="4"
 								  VerticalScrollBarVisibility="Auto"
-								  Margin="24,16,24,0">
-						<ItemsControl ItemsSource="{Binding LogEntries}">
+								  Margin="16,14,16,0">
+						<ItemsControl ItemsSource="{Binding ActivityLogEntries}">
 							<ItemsControl.ItemTemplate>
-								<DataTemplate>
-									<TextBlock Text="{Binding}" Classes="LogEntry" TextWrapping="Wrap" Margin="0,2"/>
+								<DataTemplate DataType="vm:ActivityLogEntryViewModel">
+									<Border Classes="ActivityLogItem">
+										<Grid ColumnDefinitions="Auto, *"
+											  RowDefinitions="Auto, Auto"
+											  ColumnSpacing="10">
+											<Border Grid.Row="0"
+													Grid.RowSpan="2"
+													Width="3"
+													Background="{Binding AccentBrush}"
+													CornerRadius="2"/>
+											<Grid Grid.Row="0"
+												  Grid.Column="1"
+												  ColumnDefinitions="*, Auto">
+												<TextBlock Grid.Column="0"
+														   Text="{Binding CategoryText}"
+														   Classes="ActivityMeta"
+														   Foreground="{Binding AccentBrush}"/>
+												<TextBlock Grid.Column="1"
+														   Text="{Binding TimeText}"
+														   Classes="ActivityMeta"
+														   FontFamily="Consolas, Cascadia Code, monospace"/>
+											</Grid>
+											<TextBlock Grid.Row="1"
+													   Grid.Column="1"
+													   Text="{Binding MessageText}"
+													   Classes="ActivityMessage"
+													   MaxLines="4"
+													   Margin="0,4,0,0"/>
+										</Grid>
+									</Border>
 								</DataTemplate>
 							</ItemsControl.ItemTemplate>
 						</ItemsControl>
@@ -927,13 +1002,14 @@
 
 					<!-- Input Prompt with Voice Controls -->
 					<Border Grid.Row="5"
+							Background="{DynamicResource CardBgBrush}"
 							BorderBrush="{DynamicResource BorderSubtleBrush}"
 							BorderThickness="0,1,0,0"
-							Padding="16,8">
+							Padding="16,10">
 						<Grid RowDefinitions="Auto, Auto">
 							<Border Grid.Row="0"
-									Background="{DynamicResource CardBgHoverBrush}"
-									BorderBrush="{DynamicResource AccentCyanDimBrush}"
+									Background="{DynamicResource CardBgBrush}"
+									BorderBrush="{DynamicResource BorderSubtleBrush}"
 									BorderThickness="1"
 									CornerRadius="10"
 									Padding="6"
@@ -944,54 +1020,68 @@
 										<DataTemplate DataType="vm:SlashCommandSuggestionViewModel">
 											<Button Command="{Binding $parent[Window].DataContext.SelectSlashCommandCommand}"
 													CommandParameter="{Binding}"
-													Background="{Binding IsSelected, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentCyanGlowBrush|CardBgHoverBrush'}"
-													BorderBrush="{Binding IsSelected, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentCyanDimBrush|BorderSubtleBrush'}"
-													BorderThickness="1"
-													CornerRadius="7"
-													HorizontalContentAlignment="Stretch"
-													Padding="8,6"
-													Cursor="Hand">
-												<Grid ColumnDefinitions="96, *, Auto">
-													<TextBlock Grid.Column="0"
-															   Text="{Binding Name}"
-															   FontSize="12"
-															   FontFamily="Consolas"
-															   FontWeight="SemiBold"
-															   Foreground="{DynamicResource AccentCyanBrush}"/>
-													<TextBlock Grid.Column="1"
-															   Text="{Binding Summary}"
-															   FontSize="11"
-															   Foreground="{DynamicResource TextSecondaryBrush}"
-															   TextTrimming="CharacterEllipsis"/>
-													<TextBlock Grid.Column="2"
-															   Text="{Binding Category}"
-															   FontSize="10"
-															   FontFamily="Consolas"
-															   Foreground="{DynamicResource TextMutedBrush}"
-															   Margin="12,0,0,0"/>
-												</Grid>
+													Classes="SlashCommandItem">
+												<Border Background="{DynamicResource CardBgBrush}"
+														BorderBrush="{Binding IsSelected, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentCyanDimBrush|BorderSubtleBrush'}"
+														BorderThickness="1"
+														CornerRadius="7"
+														Padding="8,6">
+													<Grid ColumnDefinitions="Auto, 96, *, Auto">
+														<Border Grid.Column="0"
+																Width="2"
+																Height="18"
+																Background="{DynamicResource AccentCyanBrush}"
+																CornerRadius="2"
+																Opacity="{Binding IsSelected, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter='1|0'}"
+																VerticalAlignment="Center"
+																Margin="0,0,8,0"/>
+														<TextBlock Grid.Column="1"
+																   Text="{Binding Name}"
+																   FontSize="12"
+																   FontFamily="Consolas"
+																   FontWeight="SemiBold"
+																   Foreground="{DynamicResource AccentCyanBrush}"/>
+														<TextBlock Grid.Column="2"
+																   Text="{Binding Summary}"
+																   FontSize="11"
+																   Foreground="{DynamicResource TextSecondaryBrush}"
+																   TextTrimming="CharacterEllipsis"/>
+														<TextBlock Grid.Column="3"
+																   Text="{Binding Category}"
+																   FontSize="10"
+																   FontFamily="Consolas"
+																   Foreground="{DynamicResource TextMutedBrush}"
+																   Margin="12,0,0,0"/>
+													</Grid>
+												</Border>
 											</Button>
 										</DataTemplate>
 									</ItemsControl.ItemTemplate>
 								</ItemsControl>
 							</Border>
 
-							<Grid Grid.Row="1" ColumnDefinitions="Auto, *, Auto, Auto">
+							<Border Grid.Row="1"
+									Background="{DynamicResource CardBgHoverBrush}"
+									BorderBrush="{DynamicResource BorderSubtleBrush}"
+									BorderThickness="1"
+									CornerRadius="10"
+									Padding="10,7">
+								<Grid ColumnDefinitions="Auto, *, Auto, Auto">
 								<!-- Prompt character -->
 								<TextBlock Grid.Column="0"
 										   Text=">"
 										   FontSize="12"
 										   FontFamily="Consolas"
-										   Foreground="{DynamicResource AccentGreenBrush}"
+										   Foreground="{DynamicResource TextMutedBrush}"
 										   VerticalAlignment="Center"
 										   Margin="0,0,8,0"/>
 
 								<!-- Text Input -->
 								<TextBox Grid.Column="1"
 										 x:Name="PromptInput"
-										 PlaceholderText="Enter command or type / for commands..."
+										 PlaceholderText="Type / for commands..."
 										 FontSize="12"
-										 FontFamily="Consolas"
+										 FontFamily="Segoe UI, Arial, sans-serif"
 										 Background="Transparent"
 										 BorderThickness="0"
 										 Foreground="{DynamicResource TextSecondaryBrush}"
@@ -1031,7 +1121,7 @@
 										Cursor="Hand"
 										ToolTip.Tip="Toggle Voice Control (Say 'Hey Kam')"
 										Command="{Binding ToggleVoiceCommand}">
-									<Path Data="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"
+										<Path Data="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"
 										  Fill="{Binding VoiceStatusColor}"
 										  Width="16" Height="16"
 										  Stretch="Uniform"
@@ -1039,6 +1129,7 @@
 										  VerticalAlignment="Center"/>
 								</Button>
 							</Grid>
+							</Border>
 						</Grid>
 					</Border>
 				</Grid>

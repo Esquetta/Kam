@@ -35,8 +35,4 @@
     <SolidColorBrush x:Key="AccentErrorDimBrush" Color="{DynamicResource AccentErrorDim}" />
     <SolidColorBrush x:Key="AccentErrorGlowBrush" Color="{DynamicResource AccentErrorGlow}" />
     <SolidColorBrush x:Key="AccentErrorOnBrush" Color="{DynamicResource AccentErrorOn}" />
-
-    <!-- Log brushes -->
-    <SolidColorBrush x:Key="LogTextBrush" Color="{DynamicResource LogText}" />
-    <SolidColorBrush x:Key="LogTextHighlightBrush" Color="{DynamicResource LogTextHighlight}" />
 </ResourceDictionary>

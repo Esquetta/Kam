@@ -41,23 +41,46 @@ public class BoolToStatusBrushConverter : IValueConverter
         
         if (parameter is string param && param.Contains('|'))
         {
-            var parts = param.Split('|');
+            var parts = param.Split('|', 2);
             var resourceKey = isTrue ? parts[0] : parts[1];
-            
-            // Try to get brush from application resources
-            if (global::Avalonia.Application.Current?.Resources.TryGetValue(resourceKey, out var resource) == true 
-                && resource is IBrush brush)
+
+            if (TryGetBrushResource(resourceKey, out var brush))
             {
                 return brush;
             }
         }
-        
-        return isTrue ? Brushes.Green : Brushes.Red;
+
+        return Brushes.Transparent;
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         return OneWayConverter.ConvertBackNoOp();
+    }
+
+    private static bool TryGetBrushResource(string resourceKey, out IBrush brush)
+    {
+        brush = Brushes.Transparent;
+        var application = global::Avalonia.Application.Current;
+
+        if (application?.TryGetResource(resourceKey, application.ActualThemeVariant, out var resource) != true)
+        {
+            return false;
+        }
+
+        if (resource is IBrush resourceBrush)
+        {
+            brush = resourceBrush;
+            return true;
+        }
+
+        if (resource is Color color)
+        {
+            brush = new SolidColorBrush(color);
+            return true;
+        }
+
+        return false;
     }
 }
 
@@ -154,9 +177,9 @@ public class LogPanelWidthConverter : IValueConverter
             return new GridLength(0);
         
         if (manager.IsMedium)
-            return new GridLength(420);
+            return new GridLength(400);
         
-        return new GridLength(600);
+        return new GridLength(520);
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

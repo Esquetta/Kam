@@ -16,7 +16,7 @@ public sealed class MainWindowMetadataTests
     }
 
     [Fact]
-    public void MainWindow_LogPanelUsesProductCopy()
+    public void MainWindow_LogPanelUsesCalmerActivityCopy()
     {
         var mainWindow = XDocument.Load(FindMainWindowXamlPath()).Root;
 
@@ -27,14 +27,29 @@ public sealed class MainWindowMetadataTests
             .Select(attribute => attribute.Value)
             .ToArray();
 
-        visibleText.Should().Contain("ACTIVITY_LOG");
-        visibleText.Should().Contain("PLAN_TRACE");
-        visibleText.Should().Contain("SKILL_RESULTS");
+        visibleText.Should().Contain("Activity");
+        visibleText.Should().Contain("Live session events");
+        visibleText.Should().Contain("Plan trace");
+        visibleText.Should().Contain("Skill results");
         visibleText.Should().NotContain(value =>
-            value.Contains("KERNEL_LOG", StringComparison.Ordinal)
+            value.Contains("ACTIVITY_LOG", StringComparison.Ordinal)
+            || value.Contains("KERNEL_LOG", StringComparison.Ordinal)
+            || value.Contains("PENDING_CONFIRMATION", StringComparison.Ordinal)
             || value.Contains("PLANNER_TRACE", StringComparison.Ordinal)
             || value.Contains("RESULT_VIEWER", StringComparison.Ordinal)
             || value.Contains("Coordinator AI", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void MainWindow_ActivityPanelUsesStructuredFeedBindings()
+    {
+        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+
+        mainWindowText.Should().Contain("ItemsSource=\"{Binding ActivityLogEntries}\"");
+        mainWindowText.Should().Contain("Classes=\"ActivityLogItem\"");
+        mainWindowText.Should().Contain("Text=\"{Binding CategoryText}\"");
+        mainWindowText.Should().Contain("Text=\"{Binding MessageText}\"");
+        mainWindowText.Should().Contain("Text=\"{Binding TimeText}\"");
     }
 
     [Fact]
@@ -56,7 +71,94 @@ public sealed class MainWindowMetadataTests
         mainWindowText.Should().Contain("IsSlashCommandPaletteVisible");
         mainWindowText.Should().Contain("SlashCommandSuggestions");
         mainWindowText.Should().Contain("SelectSlashCommandCommand");
-        mainWindowText.Should().Contain("type / for commands");
+        mainWindowText.Should().Contain("Type / for commands");
+    }
+
+    [Fact]
+    public void MainWindow_SlashCommandPaletteUsesCalmSuggestionChrome()
+    {
+        var mainWindow = XDocument.Load(FindMainWindowXamlPath()).Root;
+        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+
+        var template = mainWindow!
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "DataTemplate"
+                && AttributeValue(element, "DataType") == "vm:SlashCommandSuggestionViewModel");
+
+        var suggestionButton = template
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && AttributeValue(element, "Classes") == "SlashCommandItem");
+
+        var suggestionChrome = suggestionButton
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && AttributeValue(element, "BorderBrush")?.Contains("IsSelected", StringComparison.Ordinal) == true);
+
+        AttributeValue(suggestionButton, "Command")
+            .Should()
+            .Be("{Binding $parent[Window].DataContext.SelectSlashCommandCommand}");
+        AttributeValue(suggestionChrome, "Background")
+            .Should()
+            .Be("{DynamicResource CardBgBrush}");
+        AttributeValue(suggestionChrome, "BorderBrush")
+            .Should()
+            .Contain("ConverterParameter='AccentCyanDimBrush|BorderSubtleBrush'");
+
+        mainWindowText.Should().Contain("<Style Selector=\"Button.SlashCommandItem\">");
+        mainWindowText.Should().Contain("<Style Selector=\"Button.SlashCommandItem /template/ ContentPresenter#PART_ContentPresenter\">");
+        mainWindowText.Should().Contain("<Style Selector=\"Button.SlashCommandItem:pointerover /template/ ContentPresenter#PART_ContentPresenter\">");
+        mainWindowText.Should().Contain("Opacity=\"{Binding IsSelected, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter='1|0'}\"");
+    }
+
+    [Fact]
+    public void MainWindow_SlashCommandPaletteAvoidsAlertColorsAndShadowEffects()
+    {
+        var mainWindow = XDocument.Load(FindMainWindowXamlPath()).Root;
+
+        var template = mainWindow!
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "DataTemplate"
+                && AttributeValue(element, "DataType") == "vm:SlashCommandSuggestionViewModel");
+
+        var templateText = string.Join(
+            " ",
+            template
+                .DescendantsAndSelf()
+                .SelectMany(element => element.Attributes())
+                .Select(attribute => attribute.Value));
+
+        templateText.Should().NotContain("AccentGreen");
+        templateText.Should().NotContain("AccentError");
+        templateText.Should().NotContain("Red");
+        templateText.Should().NotContain("Green");
+        templateText.Should().NotContain("BoxShadow");
+        template
+            .Descendants()
+            .Should()
+            .NotContain(element =>
+                element.Name.LocalName.Contains("Shadow", StringComparison.OrdinalIgnoreCase)
+                || element.Name.LocalName.Contains("BlurEffect", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void MainWindow_SlashCommandPaletteBrushKeysExist()
+    {
+        var brushes = XDocument.Load(FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Themes", "Brushes.axaml")).Root;
+        var brushKeys = brushes!
+            .Descendants()
+            .Select(element => AttributeValue(element, "Key"))
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .ToArray();
+
+        brushKeys.Should().Contain("AccentCyanBrush");
+        brushKeys.Should().Contain("AccentCyanDimBrush");
+        brushKeys.Should().Contain("CardBgBrush");
+        brushKeys.Should().Contain("BorderSubtleBrush");
     }
 
     [Fact]
@@ -96,16 +198,18 @@ public sealed class MainWindowMetadataTests
 
     private static string FindMainWindowXamlPath()
     {
+        return FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Views", "MainWindow.axaml");
+    }
+
+    private static string FindProjectFilePath(params string[] segments)
+    {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            var candidate = Path.Combine(
-                directory.FullName,
-                "src",
-                "Ui",
-                "SmartVoiceAgent.Ui",
-                "Views",
-                "MainWindow.axaml");
+            var candidateSegments = new[] { directory.FullName }
+                .Concat(segments)
+                .ToArray();
+            var candidate = Path.Combine(candidateSegments);
 
             if (File.Exists(candidate))
             {
@@ -115,6 +219,6 @@ public sealed class MainWindowMetadataTests
             directory = directory.Parent;
         }
 
-        throw new FileNotFoundException("Could not locate MainWindow.axaml from the test output directory.");
+        throw new FileNotFoundException($"Could not locate {Path.Combine(segments)} from the test output directory.");
     }
 }

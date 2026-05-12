@@ -172,6 +172,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
             set => this.RaiseAndSetIfChanged(ref _logEntries, value);
         }
 
+        private ObservableCollection<ActivityLogEntryViewModel> _activityLogEntries = new();
+        public ObservableCollection<ActivityLogEntryViewModel> ActivityLogEntries
+        {
+            get => _activityLogEntries;
+            set => this.RaiseAndSetIfChanged(ref _activityLogEntries, value);
+        }
+
         /* ========================= */
         /* THEME */
         /* ========================= */
@@ -1392,6 +1399,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             
             string timestamp = DateTime.Now.ToString("HH:mm:ss");
             string logEntry = $"[{timestamp}] {message}";
+            var activityEntry = ActivityLogEntryViewModel.Create(timestamp, message);
 
             // Always use dispatcher to ensure UI updates properly
             Dispatcher.UIThread.Post(() =>
@@ -1401,10 +1409,18 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 
                 // Add to end (chat style - new messages at bottom)
                 LogEntries.Add(logEntry);
+                ActivityLogEntries.Add(activityEntry);
 
                 // Keep only last 100 messages
                 if (LogEntries.Count > 100)
+                {
                     LogEntries.RemoveAt(0);
+                }
+
+                if (ActivityLogEntries.Count > 100)
+                {
+                    ActivityLogEntries.RemoveAt(0);
+                }
 
                 _trayIconService?.UpdateToolTip($"Kam - {message}");
                 
@@ -1668,6 +1684,96 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             get => _isSelected;
             set => this.RaiseAndSetIfChanged(ref _isSelected, value);
+        }
+    }
+
+    public sealed class ActivityLogEntryViewModel
+    {
+        private static readonly IBrush InfoBrush = new SolidColorBrush(Color.Parse("#38BDF8"));
+        private static readonly IBrush SystemBrush = new SolidColorBrush(Color.Parse("#A1A1AA"));
+        private static readonly IBrush SuccessBrush = new SolidColorBrush(Color.Parse("#10B981"));
+        private static readonly IBrush WarningBrush = new SolidColorBrush(Color.Parse("#F59E0B"));
+        private static readonly IBrush ErrorBrush = new SolidColorBrush(Color.Parse("#EF4444"));
+        private static readonly IBrush CommandBrush = new SolidColorBrush(Color.Parse("#22D3EE"));
+
+        private ActivityLogEntryViewModel(
+            string timeText,
+            string categoryText,
+            string messageText,
+            IBrush accentBrush)
+        {
+            TimeText = timeText;
+            CategoryText = categoryText;
+            MessageText = messageText;
+            AccentBrush = accentBrush;
+        }
+
+        public string TimeText { get; }
+
+        public string CategoryText { get; }
+
+        public string MessageText { get; }
+
+        public IBrush AccentBrush { get; }
+
+        public static ActivityLogEntryViewModel Create(string timeText, string message)
+        {
+            var trimmed = (message ?? string.Empty).Trim();
+            var upper = trimmed.ToUpperInvariant();
+
+            if (trimmed.StartsWith("> ", StringComparison.Ordinal))
+            {
+                return new ActivityLogEntryViewModel(
+                    timeText,
+                    "Command",
+                    trimmed[2..].Trim(),
+                    CommandBrush);
+            }
+
+            if (ContainsAny(upper, "ERROR", "FAILED", "FAILURE", "BLOCKED")
+                || trimmed.StartsWith("X ", StringComparison.Ordinal)
+                || trimmed.StartsWith("❌", StringComparison.Ordinal))
+            {
+                return new ActivityLogEntryViewModel(timeText, "Error", CleanMessage(trimmed), ErrorBrush);
+            }
+
+            if (ContainsAny(upper, "WARN", "UNAVAILABLE", "NOT AVAILABLE")
+                || trimmed.StartsWith("⚠", StringComparison.Ordinal))
+            {
+                return new ActivityLogEntryViewModel(timeText, "Warning", CleanMessage(trimmed), WarningBrush);
+            }
+
+            if (ContainsAny(upper, "READY", "SUCCESS", "OK", "ONLINE", "STARTED", "ENABLED")
+                || trimmed.StartsWith("✅", StringComparison.Ordinal)
+                || trimmed.StartsWith("🟢", StringComparison.Ordinal))
+            {
+                return new ActivityLogEntryViewModel(timeText, "Ready", CleanMessage(trimmed), SuccessBrush);
+            }
+
+            if (ContainsAny(upper, "NAVIGATED", "THEME", "VOICE", "WORKSPACE", "AGENT_RUNTIME", "COPIED", "INPUT_CLEARED"))
+            {
+                return new ActivityLogEntryViewModel(timeText, "System", CleanMessage(trimmed), SystemBrush);
+            }
+
+            return new ActivityLogEntryViewModel(timeText, "Event", CleanMessage(trimmed), InfoBrush);
+        }
+
+        private static string CleanMessage(string value)
+        {
+            foreach (var prefix in new[] { "✅", "❌", "⚠️", "⚠", "🟢", "🔴", "🎤", "🛑" })
+            {
+                if (value.StartsWith(prefix, StringComparison.Ordinal))
+                {
+                    return value[prefix.Length..].Trim();
+                }
+            }
+
+            return value;
+        }
+
+        private static bool ContainsAny(string value, params string[] needles)
+        {
+            return needles.Any(needle => value.Contains(needle, StringComparison.OrdinalIgnoreCase));
         }
     }
 

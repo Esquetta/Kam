@@ -31,8 +31,4 @@
     <Color x:Key="AccentErrorDim">#DC2626</Color>
     <Color x:Key="AccentErrorGlow">#16EF4444</Color>
     <Color x:Key="AccentErrorOn">#000000</Color>
-
-    <!-- Log colors -->
-    <Color x:Key="LogText">#0EA5E9</Color>
-    <Color x:Key="LogTextHighlight">#38BDF8</Color>
 </ResourceDictionary>
