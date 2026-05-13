@@ -37,6 +37,7 @@ public sealed class SlashCommandService : ISlashCommandService
         new("/github", "Show how to inspect GitHub PR and workflow status.", "/github", "Workflow"),
         new("/github app", "Show GitHub App connection status.", "/github app", "Workflow", ["/github-app"]),
         new("/github app actions", "List GitHub Actions workflow runs visible through the configured GitHub App.", "/github app actions", "Workflow"),
+        new("/github app context", "Show the active GitHub repository, PR, and workflow run context.", "/github app context", "Workflow"),
         new("/github app diagnose", "Diagnose a GitHub Actions workflow run from jobs and failed steps.", "/github app diagnose <owner/repo> [runId]", "Workflow"),
         new("/github app fix", "Open a runtime auto-fix loop for a failing workflow run.", "/github app fix <owner/repo> [runId]", "Workflow"),
         new("/github app logs", "Get a temporary download URL or preview for one GitHub Actions job log.", "/github app logs <owner/repo> <jobId>", "Workflow"),
@@ -44,6 +45,7 @@ public sealed class SlashCommandService : ISlashCommandService
         new("/github app repos", "List repositories visible through the configured GitHub App.", "/github app repos", "Workflow"),
         new("/github app run", "List jobs for one GitHub Actions workflow run.", "/github app run <owner/repo> <runId>", "Workflow"),
         new("/github actions", "List GitHub Actions workflow runs visible through the configured GitHub App.", "/github actions", "Workflow"),
+        new("/github context", "Show the active GitHub repository, PR, and workflow run context.", "/github context", "Workflow"),
         new("/github diagnose", "Diagnose a GitHub Actions workflow run from jobs and failed steps.", "/github diagnose <owner/repo> [runId]", "Workflow", ["/github doctor", "/github ci"]),
         new("/github fix", "Open a runtime auto-fix loop for a failing workflow run.", "/github fix <owner/repo> [runId]", "Workflow", ["/github autofix", "/github auto-fix"]),
         new("/github logs", "Get a temporary download URL or preview for one GitHub Actions job log.", "/github logs <owner/repo> <jobId>", "Workflow", ["/github log"]),
@@ -52,6 +54,7 @@ public sealed class SlashCommandService : ISlashCommandService
         new("/github run", "List jobs for one GitHub Actions workflow run.", "/github run <owner/repo> <runId>", "Workflow", ["/github jobs"]),
         new("/github-app", "Show GitHub App setup and repository permission guidance.", "/github-app", "Workflow"),
         new("/github-app actions", "List GitHub Actions workflow runs visible through the configured GitHub App.", "/github-app actions", "Workflow"),
+        new("/github-app context", "Show the active GitHub repository, PR, and workflow run context.", "/github-app context", "Workflow"),
         new("/github-app diagnose", "Diagnose a GitHub Actions workflow run from jobs and failed steps.", "/github-app diagnose <owner/repo> [runId]", "Workflow", ["/github-app doctor", "/github-app ci"]),
         new("/github-app fix", "Open a runtime auto-fix loop for a failing workflow run.", "/github-app fix <owner/repo> [runId]", "Workflow", ["/github-app autofix", "/github-app auto-fix"]),
         new("/github-app logs", "Get a temporary download URL or preview for one GitHub Actions job log.", "/github-app logs <owner/repo> <jobId>", "Workflow", ["/github-app log"]),
@@ -84,6 +87,9 @@ public sealed class SlashCommandService : ISlashCommandService
     private readonly AIServiceConfiguration _aiServiceConfiguration;
     private readonly ISkillExecutionPipeline? _skillExecutionPipeline;
     private readonly IRuntimeAgentRunStore? _runtimeAgentRunStore;
+    private string? _activeGitHubRepositoryFullName;
+    private GitHubWorkflowRunSummary? _activeGitHubWorkflowRun;
+    private GitHubPullRequestSummary? _activeGitHubPullRequest;
 
     public SlashCommandService(
         IVoiceAgentHostControl? hostControl = null,
@@ -571,6 +577,39 @@ public sealed class SlashCommandService : ISlashCommandService
         ]);
     }
 
+    private string FormatGitHubContext()
+    {
+        var builder = new StringBuilder()
+            .AppendLine("Kam GitHub context:")
+            .AppendLine($"  repository: {NormalizeMessage(_activeGitHubRepositoryFullName)}");
+
+        if (_activeGitHubWorkflowRun is null)
+        {
+            builder.AppendLine("  workflow run: (none)");
+        }
+        else
+        {
+            builder.AppendLine(
+                $"  workflow run: {NormalizeMessage(_activeGitHubWorkflowRun.RepositoryFullName)}#{_activeGitHubWorkflowRun.Id} {NormalizeMessage(_activeGitHubWorkflowRun.Name)} ({FormatWorkflowRunState(_activeGitHubWorkflowRun)})");
+        }
+
+        if (_activeGitHubPullRequest is null)
+        {
+            builder.AppendLine("  pull request: (none)");
+        }
+        else
+        {
+            builder
+                .AppendLine(
+                    $"  pull request: {NormalizeMessage(_activeGitHubPullRequest.RepositoryFullName)}#{_activeGitHubPullRequest.Number} {NormalizeMessage(_activeGitHubPullRequest.Title)}")
+                .AppendLine(
+                    $"  branch: {NormalizeMessage(_activeGitHubPullRequest.HeadRefName)} -> {NormalizeMessage(_activeGitHubPullRequest.BaseRefName)}");
+        }
+
+        builder.AppendLine("  follow-up: /github fix can use the active workflow run without repeated arguments");
+        return builder.ToString().TrimEnd();
+    }
+
     private async Task<SlashCommandResult> RunGitHubCommandAsync(
         IReadOnlyList<string> arguments,
         CancellationToken cancellationToken)
@@ -590,6 +629,11 @@ public sealed class SlashCommandService : ISlashCommandService
             if (arguments.Count > 1 && IsCommand(arguments[1], "actions", "runs", "workflows", "workflow-runs"))
             {
                 return await RunGitHubAppWorkflowRunsAsync("/github", cancellationToken);
+            }
+
+            if (arguments.Count > 1 && IsCommand(arguments[1], "context", "ctx", "selected"))
+            {
+                return SlashCommandResult.Succeeded("/github", FormatGitHubContext());
             }
 
             if (arguments.Count > 1 && IsCommand(arguments[1], "diagnose", "doctor", "ci"))
@@ -646,6 +690,11 @@ public sealed class SlashCommandService : ISlashCommandService
             return await RunGitHubAppWorkflowRunsAsync("/github", cancellationToken);
         }
 
+        if (arguments.Count > 0 && IsCommand(arguments[0], "context", "ctx", "selected"))
+        {
+            return SlashCommandResult.Succeeded("/github", FormatGitHubContext());
+        }
+
         if (arguments.Count > 0 && IsCommand(arguments[0], "diagnose", "doctor", "ci"))
         {
             return await RunGitHubAppWorkflowDiagnosisAsync(
@@ -688,6 +737,7 @@ public sealed class SlashCommandService : ISlashCommandService
                 FormatCodingAgentWorkflow("/github"),
                 "  app status: /github app",
                 "  workflow runs: /github actions",
+                "  active context: /github context",
                 "  diagnose workflow run: /github diagnose <owner/repo> [runId]",
                 "  auto-fix workflow run: /github fix <owner/repo> [runId]",
                 "  workflow job logs: /github logs <owner/repo> <jobId>",
@@ -714,6 +764,11 @@ public sealed class SlashCommandService : ISlashCommandService
         if (arguments.Count > 0 && IsCommand(arguments[0], "actions", "runs", "workflows", "workflow-runs"))
         {
             return await RunGitHubAppWorkflowRunsAsync("/github-app", cancellationToken);
+        }
+
+        if (arguments.Count > 0 && IsCommand(arguments[0], "context", "ctx", "selected"))
+        {
+            return SlashCommandResult.Succeeded("/github-app", FormatGitHubContext());
         }
 
         if (arguments.Count > 0 && IsCommand(arguments[0], "diagnose", "doctor", "ci"))
@@ -826,6 +881,13 @@ public sealed class SlashCommandService : ISlashCommandService
             .AppendLine("Kam GitHub App workflow runs:")
             .AppendLine($"  status: {NormalizeMessage(result.Message)}");
 
+        var activeRun = SelectWorkflowRunForContext(result.WorkflowRuns);
+        if (activeRun is not null)
+        {
+            SetActiveGitHubWorkflowRun(activeRun);
+            builder.AppendLine($"  active run: {NormalizeMessage(activeRun.RepositoryFullName)}#{activeRun.Id}");
+        }
+
         foreach (var workflowRun in result.WorkflowRuns
             .OrderByDescending(workflowRun => workflowRun.UpdatedAt ?? workflowRun.CreatedAt ?? DateTimeOffset.MinValue)
             .ThenBy(workflowRun => workflowRun.RepositoryFullName, StringComparer.OrdinalIgnoreCase)
@@ -932,13 +994,9 @@ public sealed class SlashCommandService : ISlashCommandService
         int firstArgumentIndex,
         CancellationToken cancellationToken)
     {
-        if (arguments.Count <= firstArgumentIndex)
-        {
-            return SlashCommandResult.Failed(
-                commandName,
-                "Usage: /github fix <owner/repo> [runId]");
-        }
-
+        var repositoryFullName = arguments.Count > firstArgumentIndex
+            ? arguments[firstArgumentIndex]
+            : _activeGitHubWorkflowRun?.RepositoryFullName;
         long? requestedRunId = null;
         if (arguments.Count > firstArgumentIndex + 1)
         {
@@ -951,6 +1009,17 @@ public sealed class SlashCommandService : ISlashCommandService
 
             requestedRunId = runId;
         }
+        else if (arguments.Count <= firstArgumentIndex && _activeGitHubWorkflowRun is not null)
+        {
+            requestedRunId = _activeGitHubWorkflowRun.Id;
+        }
+
+        if (string.IsNullOrWhiteSpace(repositoryFullName))
+        {
+            return SlashCommandResult.Failed(
+                commandName,
+                "Usage: /github fix <owner/repo> [runId]. Run /github actions first to set active workflow context.");
+        }
 
         if (_githubAppClient is null)
         {
@@ -962,10 +1031,18 @@ public sealed class SlashCommandService : ISlashCommandService
             return SlashCommandResult.Failed(commandName, "Task agent runtime is unavailable.");
         }
 
-        var repositoryFullName = arguments[firstArgumentIndex];
         GitHubWorkflowRunSummary? selectedRun = null;
         string? selectionMessage = null;
         var runIdToDiagnose = requestedRunId;
+        var activeWorkflowRun = _activeGitHubWorkflowRun;
+        if (activeWorkflowRun is not null
+            && runIdToDiagnose == activeWorkflowRun.Id
+            && repositoryFullName.Equals(activeWorkflowRun.RepositoryFullName, StringComparison.OrdinalIgnoreCase))
+        {
+            selectedRun = activeWorkflowRun;
+            selectionMessage = "active workflow context";
+        }
+
         if (runIdToDiagnose is null)
         {
             var workflowRuns = await _githubAppClient.ListWorkflowRunsAsync(cancellationToken);
@@ -1182,6 +1259,14 @@ public sealed class SlashCommandService : ISlashCommandService
         var builder = new StringBuilder()
             .AppendLine("Kam GitHub App pull requests:")
             .AppendLine($"  status: {NormalizeMessage(result.Message)}");
+
+        var activePullRequest = SelectPullRequestForContext(result.PullRequests);
+        if (activePullRequest is not null)
+        {
+            SetActiveGitHubPullRequest(activePullRequest);
+            builder.AppendLine(
+                $"  active pull request: {NormalizeMessage(activePullRequest.RepositoryFullName)}#{activePullRequest.Number}");
+        }
 
         foreach (var pullRequest in result.PullRequests
             .OrderByDescending(pullRequest => pullRequest.UpdatedAt ?? pullRequest.CreatedAt ?? DateTimeOffset.MinValue)
@@ -1559,6 +1644,40 @@ public sealed class SlashCommandService : ISlashCommandService
             .ThenBy(job => job.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(job => job.Id)
             .FirstOrDefault();
+    }
+
+    private static GitHubWorkflowRunSummary? SelectWorkflowRunForContext(
+        IReadOnlyList<GitHubWorkflowRunSummary> workflowRuns)
+    {
+        var orderedRuns = workflowRuns
+            .OrderByDescending(run => run.UpdatedAt ?? run.CreatedAt ?? DateTimeOffset.MinValue)
+            .ThenByDescending(run => run.Id)
+            .ToArray();
+
+        return orderedRuns.FirstOrDefault(IsUnhealthyWorkflowRun)
+            ?? orderedRuns.FirstOrDefault();
+    }
+
+    private static GitHubPullRequestSummary? SelectPullRequestForContext(
+        IReadOnlyList<GitHubPullRequestSummary> pullRequests)
+    {
+        return pullRequests
+            .OrderByDescending(pullRequest => pullRequest.UpdatedAt ?? pullRequest.CreatedAt ?? DateTimeOffset.MinValue)
+            .ThenBy(pullRequest => pullRequest.RepositoryFullName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(pullRequest => pullRequest.Number)
+            .FirstOrDefault();
+    }
+
+    private void SetActiveGitHubWorkflowRun(GitHubWorkflowRunSummary workflowRun)
+    {
+        _activeGitHubWorkflowRun = workflowRun;
+        _activeGitHubRepositoryFullName = workflowRun.RepositoryFullName;
+    }
+
+    private void SetActiveGitHubPullRequest(GitHubPullRequestSummary pullRequest)
+    {
+        _activeGitHubPullRequest = pullRequest;
+        _activeGitHubRepositoryFullName = pullRequest.RepositoryFullName;
     }
 
     private static string BuildGitHubAutoFixRuntimeTask(

@@ -31,6 +31,7 @@ public sealed class SlashCommandServiceTests
                 "/github",
                 "/github app",
                 "/github app actions",
+                "/github app context",
                 "/github app prs",
                 "/github app repos",
                 "/github app diagnose",
@@ -38,6 +39,7 @@ public sealed class SlashCommandServiceTests
                 "/github app logs",
                 "/github app run",
                 "/github actions",
+                "/github context",
                 "/github diagnose",
                 "/github fix",
                 "/github logs",
@@ -46,6 +48,7 @@ public sealed class SlashCommandServiceTests
                 "/github run",
                 "/github-app",
                 "/github-app actions",
+                "/github-app context",
                 "/github-app diagnose",
                 "/github-app fix",
                 "/github-app logs",
@@ -421,6 +424,58 @@ public sealed class SlashCommandServiceTests
         result.Message.Should().Contain("https://github.com/Esquetta/Kam/pull/42");
     }
 
+    [Fact]
+    public async Task ExecuteAsync_WhenGithubPrsIsRequested_UpdatesActivePullRequestContext()
+    {
+        var service = new SlashCommandService(
+            githubAppClient: new StaticGitHubAppClient(
+                GitHubAppConnectionStatus.Connected(
+                    "12345",
+                    "98765",
+                    "https://api.github.com",
+                    "Kam Coding",
+                    "kam-coding",
+                    1),
+                GitHubRepositoryListResult.Failed("not used"),
+                GitHubPullRequestListResult.Succeeded(
+                    "2 open pull requests across 1 repository.",
+                    [
+                        new GitHubPullRequestSummary(
+                            "Esquetta/Kam",
+                            42,
+                            "Fix CI",
+                            "open",
+                            "alice",
+                            "https://github.com/Esquetta/Kam/pull/42",
+                            "feature/fix-ci",
+                            "master",
+                            false,
+                            new DateTimeOffset(2026, 5, 10, 12, 0, 0, TimeSpan.Zero),
+                            new DateTimeOffset(2026, 5, 11, 12, 0, 0, TimeSpan.Zero)),
+                        new GitHubPullRequestSummary(
+                            "Esquetta/Kam",
+                            43,
+                            "Draft release notes",
+                            "open",
+                            "bob",
+                            "https://github.com/Esquetta/Kam/pull/43",
+                            "docs/release",
+                            "master",
+                            true,
+                            new DateTimeOffset(2026, 5, 9, 12, 0, 0, TimeSpan.Zero),
+                            new DateTimeOffset(2026, 5, 10, 12, 0, 0, TimeSpan.Zero))
+                    ])));
+
+        await service.ExecuteAsync("/github prs");
+        var result = await service.ExecuteAsync("/github context");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Kam GitHub context:");
+        result.Message.Should().Contain("repository: Esquetta/Kam");
+        result.Message.Should().Contain("pull request: Esquetta/Kam#42 Fix CI");
+        result.Message.Should().Contain("branch: feature/fix-ci -> master");
+    }
+
     [Theory]
     [InlineData("/github actions")]
     [InlineData("/github-app actions")]
@@ -480,6 +535,87 @@ public sealed class SlashCommandServiceTests
         result.Message.Should().Contain("Security Scan");
         result.Message.Should().Contain("in_progress");
         result.Message.Should().Contain("https://github.com/Esquetta/Kam/actions/runs/1001");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenGithubActionsIsRequested_UpdatesActiveWorkflowRunContextForFollowUpFix()
+    {
+        var pipeline = new CapturingSkillExecutionPipeline(
+            SkillResult.Succeeded("Runtime agent queued a patch approval."));
+        var service = new SlashCommandService(
+            githubAppClient: new StaticGitHubAppClient(
+                GitHubAppConnectionStatus.Connected(
+                    "12345",
+                    "98765",
+                    "https://api.github.com",
+                    "Kam Coding",
+                    "kam-coding",
+                    1),
+                GitHubRepositoryListResult.Failed("not used"),
+                GitHubPullRequestListResult.Failed("not used"),
+                GitHubWorkflowRunListResult.Succeeded(
+                    "2 workflow runs across 1 repository.",
+                    [
+                        new GitHubWorkflowRunSummary(
+                            "Esquetta/Kam",
+                            1001,
+                            ".NET CI",
+                            "Previous success",
+                            "completed",
+                            "success",
+                            "push",
+                            "master",
+                            "https://github.com/Esquetta/Kam/actions/runs/1001",
+                            new DateTimeOffset(2026, 5, 11, 9, 0, 0, TimeSpan.Zero),
+                            new DateTimeOffset(2026, 5, 11, 9, 5, 0, TimeSpan.Zero)),
+                        new GitHubWorkflowRunSummary(
+                            "Esquetta/Kam",
+                            1002,
+                            ".NET CI",
+                            "Broken push",
+                            "completed",
+                            "failure",
+                            "push",
+                            "master",
+                            "https://github.com/Esquetta/Kam/actions/runs/1002",
+                            new DateTimeOffset(2026, 5, 11, 10, 0, 0, TimeSpan.Zero),
+                            new DateTimeOffset(2026, 5, 11, 10, 5, 0, TimeSpan.Zero))
+                    ]),
+                GitHubWorkflowJobListResult.Succeeded(
+                    "1 job for workflow run 1002 in Esquetta/Kam.",
+                    "Esquetta/Kam",
+                    1002,
+                    [
+                        new GitHubWorkflowJobSummary(
+                            "Esquetta/Kam",
+                            1002,
+                            2002,
+                            "build",
+                            "completed",
+                            "failure",
+                            "https://github.com/Esquetta/Kam/actions/runs/1002/job/2002",
+                            new DateTimeOffset(2026, 5, 11, 10, 0, 0, TimeSpan.Zero),
+                            new DateTimeOffset(2026, 5, 11, 10, 4, 0, TimeSpan.Zero))
+                    ]),
+                workflowJobLog: GitHubWorkflowJobLogResult.Succeeded(
+                    "GitHub returned a workflow job log preview.",
+                    "Esquetta/Kam",
+                    2002,
+                    string.Empty,
+                    "Build failed in dotnet test")),
+            skillExecutionPipeline: pipeline);
+
+        var actions = await service.ExecuteAsync("/github actions");
+        var context = await service.ExecuteAsync("/github context");
+        var fix = await service.ExecuteAsync("/github fix");
+
+        actions.Success.Should().BeTrue();
+        actions.Message.Should().Contain("active run: Esquetta/Kam#1002");
+        context.Message.Should().Contain("workflow run: Esquetta/Kam#1002 .NET CI");
+        fix.Success.Should().BeTrue();
+        fix.Message.Should().Contain("run: Esquetta/Kam#1002");
+        pipeline.LastPlan.Should().NotBeNull();
+        pipeline.LastPlan!.Arguments["task"].GetString().Should().Contain("Esquetta/Kam#1002");
     }
 
     [Theory]
