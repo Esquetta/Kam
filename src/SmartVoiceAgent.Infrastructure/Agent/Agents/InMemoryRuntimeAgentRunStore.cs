@@ -46,6 +46,18 @@ public sealed class InMemoryRuntimeAgentRunStore : IRuntimeAgentRunStore
             });
     }
 
+    public RuntimeAgentRun RecordToolObservations(string runId, IReadOnlyList<RuntimeAgentToolObservation> observations)
+    {
+        return Update(
+            runId,
+            run => run with
+            {
+                ToolObservations = observations
+                    .Where(observation => !string.IsNullOrWhiteSpace(observation.SkillId))
+                    .ToArray()
+            });
+    }
+
     public RuntimeAgentRun Fail(string runId, string errorMessage)
     {
         return Update(

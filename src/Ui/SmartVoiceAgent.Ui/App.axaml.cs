@@ -95,6 +95,9 @@ namespace SmartVoiceAgent.Ui
                 var slashCommandService = services.GetRequiredService<ISlashCommandService>();
                 _mainViewModel.SetSlashCommandService(slashCommandService);
 
+                var runtimeAgentRunStore = services.GetRequiredService<IRuntimeAgentRunStore>();
+                _mainViewModel.SetRuntimeAgentRunStore(runtimeAgentRunStore);
+
                 var applicationUpdateService = services.GetRequiredService<IApplicationUpdateService>();
                 var applicationRestartPlanner = services.GetRequiredService<IApplicationRestartPlanner>();
                 var applicationVersionProvider = services.GetRequiredService<IApplicationVersionProvider>();

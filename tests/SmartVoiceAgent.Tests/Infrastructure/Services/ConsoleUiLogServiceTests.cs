@@ -29,10 +29,11 @@ public sealed class ConsoleUiLogServiceTests
         UiLogEntry? entry = null;
         service.OnLogEntry += (_, received) => entry = received;
 
-        service.LogAgentUpdate("planner", "done", isComplete: true);
+        service.LogAgentUpdate("planner", "done", isComplete: true, runId: "run_123");
 
         entry.Should().NotBeNull();
         entry!.AgentName.Should().Be("planner");
+        entry.RunId.Should().Be("run_123");
         entry.Message.Should().Be("done");
         entry.IsAgentUpdate.Should().BeTrue();
         entry.IsComplete.Should().BeTrue();

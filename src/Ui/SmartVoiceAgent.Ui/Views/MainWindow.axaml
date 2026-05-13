@@ -592,53 +592,164 @@
 							<ItemsControl ItemsSource="{Binding RuntimeAgentActivities}">
 								<ItemsControl.ItemTemplate>
 									<DataTemplate DataType="vm:RuntimeAgentActivityViewModel">
-										<Border Background="{DynamicResource CardBgHoverBrush}"
-												BorderBrush="{DynamicResource BorderSubtleBrush}"
-												BorderThickness="1"
-												CornerRadius="8"
-												Padding="10"
-												Margin="0,0,0,6">
-											<Grid ColumnDefinitions="Auto, *, Auto"
-												  RowDefinitions="Auto, Auto"
-												  ColumnSpacing="8">
-												<Border Grid.Row="0"
-														Grid.RowSpan="2"
-														Width="2"
-														Background="{Binding StatusBrush}"
-														CornerRadius="2"/>
-												<TextBlock Grid.Row="0"
-														   Grid.Column="1"
-														   Text="{Binding DisplayName}"
-														   FontSize="12"
-														   FontWeight="SemiBold"
-														   Foreground="{DynamicResource TextPrimaryBrush}"
-														   TextTrimming="CharacterEllipsis"/>
-												<TextBlock Grid.Row="0"
-														   Grid.Column="2"
-														   Text="{Binding StatusText}"
-														   FontSize="10"
-														   FontWeight="SemiBold"
-														   Foreground="{Binding StatusBrush}"/>
-												<TextBlock Grid.Row="1"
-														   Grid.Column="1"
-														   Text="{Binding LastMessage}"
-														   FontSize="11"
-														   Foreground="{DynamicResource TextSecondaryBrush}"
-														   TextTrimming="CharacterEllipsis"
-														   MaxLines="1"
-														   Margin="0,4,8,0"/>
-												<TextBlock Grid.Row="1"
-														   Grid.Column="2"
-														   Text="{Binding UpdatedText}"
-														   FontSize="10"
-														   FontFamily="Consolas, Cascadia Code, monospace"
-														   Foreground="{DynamicResource TextMutedBrush}"
-														   Margin="0,4,0,0"/>
-											</Grid>
-										</Border>
+										<Button Command="{Binding $parent[Window].DataContext.ShowRuntimeAgentRunDetailCommand}"
+												CommandParameter="{Binding}"
+												Background="Transparent"
+												BorderThickness="0"
+												Padding="0"
+												HorizontalContentAlignment="Stretch">
+											<Border Background="{DynamicResource CardBgHoverBrush}"
+													BorderBrush="{DynamicResource BorderSubtleBrush}"
+													BorderThickness="1"
+													CornerRadius="8"
+													Padding="10"
+													Margin="0,0,0,6">
+												<Grid ColumnDefinitions="Auto, *, Auto"
+													  RowDefinitions="Auto, Auto"
+													  ColumnSpacing="8">
+													<Border Grid.Row="0"
+															Grid.RowSpan="2"
+															Width="2"
+															Background="{Binding StatusBrush}"
+															CornerRadius="2"/>
+													<TextBlock Grid.Row="0"
+															   Grid.Column="1"
+															   Text="{Binding DisplayName}"
+															   FontSize="12"
+															   FontWeight="SemiBold"
+															   Foreground="{DynamicResource TextPrimaryBrush}"
+															   TextTrimming="CharacterEllipsis"/>
+													<TextBlock Grid.Row="0"
+															   Grid.Column="2"
+															   Text="{Binding StatusText}"
+															   FontSize="10"
+															   FontWeight="SemiBold"
+															   Foreground="{Binding StatusBrush}"/>
+													<TextBlock Grid.Row="1"
+															   Grid.Column="1"
+															   Text="{Binding LastMessage}"
+															   FontSize="11"
+															   Foreground="{DynamicResource TextSecondaryBrush}"
+															   TextTrimming="CharacterEllipsis"
+															   MaxLines="1"
+															   Margin="0,4,8,0"/>
+													<TextBlock Grid.Row="1"
+															   Grid.Column="2"
+															   Text="{Binding UpdatedText}"
+															   FontSize="10"
+															   FontFamily="Consolas, Cascadia Code, monospace"
+															   Foreground="{DynamicResource TextMutedBrush}"
+															   Margin="0,4,0,0"/>
+												</Grid>
+											</Border>
+										</Button>
 									</DataTemplate>
 								</ItemsControl.ItemTemplate>
 							</ItemsControl>
+							<Border Background="{DynamicResource CardBgHoverBrush}"
+									BorderBrush="{DynamicResource AccentCyanBrush}"
+									BorderThickness="1"
+									CornerRadius="8"
+									Padding="12"
+									IsVisible="{Binding HasSelectedRuntimeAgentRun}">
+								<StackPanel Spacing="8">
+									<Grid ColumnDefinitions="*, Auto">
+										<TextBlock Grid.Column="0"
+												   Text="Run detail"
+												   FontSize="12"
+												   FontWeight="SemiBold"
+												   Foreground="{DynamicResource TextPrimaryBrush}"/>
+										<TextBlock Grid.Column="1"
+												   Text="{Binding SelectedRuntimeAgentRun.StatusText}"
+												   FontSize="10"
+												   FontWeight="SemiBold"
+												   Foreground="{DynamicResource AccentCyanBrush}"/>
+									</Grid>
+									<TextBlock Text="{Binding SelectedRuntimeAgentRun.DisplayName}"
+											   FontSize="12"
+											   Foreground="{DynamicResource TextPrimaryBrush}"
+											   TextTrimming="CharacterEllipsis"/>
+									<Grid ColumnDefinitions="Auto, *"
+										  RowDefinitions="Auto, Auto"
+										  ColumnSpacing="10"
+										  RowSpacing="4">
+										<TextBlock Grid.Row="0"
+												   Grid.Column="0"
+												   Text="Model"
+												   FontSize="10"
+												   Foreground="{DynamicResource TextMutedBrush}"/>
+										<TextBlock Grid.Row="0"
+												   Grid.Column="1"
+												   Text="{Binding SelectedRuntimeAgentRun.ModelIdText}"
+												   FontSize="10"
+												   Foreground="{DynamicResource TextSecondaryBrush}"
+												   TextTrimming="CharacterEllipsis"/>
+										<TextBlock Grid.Row="1"
+												   Grid.Column="0"
+												   Text="Duration"
+												   FontSize="10"
+												   Foreground="{DynamicResource TextMutedBrush}"/>
+										<TextBlock Grid.Row="1"
+												   Grid.Column="1"
+												   Text="{Binding SelectedRuntimeAgentRun.DurationText}"
+												   FontSize="10"
+												   Foreground="{DynamicResource TextSecondaryBrush}"/>
+									</Grid>
+									<TextBlock Text="{Binding SelectedRuntimeAgentRun.TaskText}"
+											   FontSize="11"
+											   Foreground="{DynamicResource TextSecondaryBrush}"
+											   TextWrapping="Wrap"
+											   MaxLines="3"/>
+									<ItemsControl ItemsSource="{Binding SelectedRuntimeAgentRun.Observations}"
+												  IsVisible="{Binding SelectedRuntimeAgentRun.HasObservations}">
+										<ItemsControl.ItemTemplate>
+											<DataTemplate DataType="vm:RuntimeAgentObservationDetailViewModel">
+												<Grid ColumnDefinitions="Auto, *, Auto"
+													  RowDefinitions="Auto, Auto"
+													  ColumnSpacing="8"
+													  Margin="0,2">
+													<TextBlock Grid.Row="0"
+															   Grid.Column="0"
+															   Text="Context"
+															   FontSize="10"
+															   Foreground="{DynamicResource TextMutedBrush}"/>
+													<TextBlock Grid.Row="0"
+															   Grid.Column="1"
+															   Text="{Binding DisplayName}"
+															   FontSize="10"
+															   Foreground="{DynamicResource TextSecondaryBrush}"
+															   TextTrimming="CharacterEllipsis"/>
+													<TextBlock Grid.Row="0"
+															   Grid.Column="2"
+															   Text="{Binding StatusText}"
+															   FontSize="10"
+															   Foreground="{DynamicResource TextMutedBrush}"/>
+													<TextBlock Grid.Row="1"
+															   Grid.Column="1"
+															   Grid.ColumnSpan="2"
+															   Text="{Binding SummaryText}"
+															   FontSize="10"
+															   Foreground="{DynamicResource TextMutedBrush}"
+															   TextTrimming="CharacterEllipsis"
+															   MaxLines="1"/>
+												</Grid>
+											</DataTemplate>
+										</ItemsControl.ItemTemplate>
+									</ItemsControl>
+									<TextBlock Text="{Binding SelectedRuntimeAgentRun.ResponseText}"
+											   FontSize="11"
+											   Foreground="{DynamicResource TextSecondaryBrush}"
+											   TextWrapping="Wrap"
+											   MaxLines="4"
+											   IsVisible="{Binding SelectedRuntimeAgentRun.HasResponse}"/>
+									<TextBlock Text="{Binding SelectedRuntimeAgentRun.ErrorText}"
+											   FontSize="11"
+											   Foreground="{DynamicResource AccentErrorBrush}"
+											   TextWrapping="Wrap"
+											   MaxLines="3"
+											   IsVisible="{Binding SelectedRuntimeAgentRun.HasError}"/>
+								</StackPanel>
+							</Border>
 						</StackPanel>
 					</Border>
 

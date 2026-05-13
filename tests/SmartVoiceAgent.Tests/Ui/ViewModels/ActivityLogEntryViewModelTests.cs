@@ -1,4 +1,5 @@
 using FluentAssertions;
+using SmartVoiceAgent.Core.Models.Agents;
 using SmartVoiceAgent.Ui.ViewModels;
 
 namespace SmartVoiceAgent.Tests.Ui.ViewModels;
@@ -60,9 +61,56 @@ public sealed class ActivityLogEntryViewModelTests
             isComplete: true);
 
         running.DisplayName.Should().Be("Design agent 7");
+        running.RunId.Should().BeNull();
         running.StatusText.Should().Be("Running");
         running.LastMessage.Should().Be("Created automatically for this request.");
         completed.StatusText.Should().Be("Done");
+    }
+
+    [Fact]
+    public void RuntimeAgentActivityViewModel_Create_PreservesRunId()
+    {
+        var activity = RuntimeAgentActivityViewModel.Create(
+            "CodingAgent-001",
+            "Created automatically for this request.",
+            isComplete: false,
+            runId: "run_123");
+
+        activity.RunId.Should().Be("run_123");
+    }
+
+    [Fact]
+    public void RuntimeAgentRunDetailViewModel_Create_ProjectsFriendlyRunMetadata()
+    {
+        var run = new RuntimeAgentRun(
+            "run_123",
+            "CodingAgent-001",
+            "frontend",
+            "Improve the activity panel.",
+            "gpt-5.5",
+            RuntimeAgentRunStatus.Succeeded,
+            new DateTimeOffset(2026, 5, 13, 10, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(2026, 5, 13, 10, 1, 5, TimeSpan.Zero),
+            LastMessage: "Completed.",
+            Response: "Done",
+            ToolObservations:
+            [
+                new RuntimeAgentToolObservation("tool.1", "internal", true),
+                new RuntimeAgentToolObservation("workspace.search_text", "matches", true)
+            ]);
+
+        var detail = RuntimeAgentRunDetailViewModel.Create(run);
+
+        detail.DisplayName.Should().Be("Coding agent 1");
+        detail.StatusText.Should().Be("Completed");
+        detail.ModelIdText.Should().Be("gpt-5.5");
+        detail.DurationText.Should().Be("1m 05s");
+        detail.TaskText.Should().Be("Improve the activity panel.");
+        detail.ResponseText.Should().Be("Done");
+        detail.HasObservations.Should().BeTrue();
+        detail.Observations[0].DisplayName.Should().Be("Context");
+        detail.Observations[0].DisplayName.Should().NotContain("tool.1");
+        detail.Observations[1].DisplayName.Should().Be("Search text");
     }
 
     [Theory]

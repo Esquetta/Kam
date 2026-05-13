@@ -8,6 +8,8 @@ public interface IRuntimeAgentRunStore
 
     RuntimeAgentRun Complete(string runId, string response);
 
+    RuntimeAgentRun RecordToolObservations(string runId, IReadOnlyList<RuntimeAgentToolObservation> observations);
+
     RuntimeAgentRun Fail(string runId, string errorMessage);
 
     RuntimeAgentRun Cancel(string runId, string reason);

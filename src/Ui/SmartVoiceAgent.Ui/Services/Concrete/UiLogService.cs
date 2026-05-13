@@ -37,7 +37,7 @@ public class UiLogService : IUiLogService
         _mainViewModel?.AddLog(FormatLogEntry(entry));
     }
 
-    public void LogAgentUpdate(string agentName, string message, bool isComplete = false)
+    public void LogAgentUpdate(string agentName, string message, bool isComplete = false, string? runId = null)
     {
         var entry = new UiLogEntry
         {
@@ -45,6 +45,7 @@ public class UiLogService : IUiLogService
             Message = SecretRedactor.Redact(message),
             Level = LogLevel.Information,
             AgentName = SecretRedactor.Redact(agentName),
+            RunId = SecretRedactor.Redact(runId),
             IsAgentUpdate = true,
             IsComplete = isComplete
         };
@@ -57,7 +58,7 @@ public class UiLogService : IUiLogService
     {
         if (entry.IsAgentUpdate && !string.IsNullOrEmpty(entry.AgentName))
         {
-            _mainViewModel?.TrackRuntimeAgentUpdate(entry.AgentName, entry.Message, entry.IsComplete);
+            _mainViewModel?.TrackRuntimeAgentUpdate(entry.AgentName, entry.Message, entry.IsComplete, entry.RunId);
             return $"[{entry.AgentName}] {entry.Message}";
         }
 

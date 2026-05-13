@@ -7,6 +7,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using ReactiveUI;
 using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Core.Models.Agents;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Core.Models.SlashCommands;
 using SmartVoiceAgent.Infrastructure.Skills.Importing;
@@ -44,6 +45,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private ISkillExecutionPipeline? _skillExecutionPipeline;
         private ISkillPlannerTraceStore? _skillPlannerTraceStore;
         private ISlashCommandService? _slashCommandService;
+        private IRuntimeAgentRunStore? _runtimeAgentRunStore;
         private IApplicationUpdateService? _applicationUpdateService;
         private IApplicationRestartPlanner? _applicationRestartPlanner;
         private IApplicationVersionProvider? _applicationVersionProvider;
@@ -162,6 +164,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public ICommand ClearSkillExecutionHistoryCommand { get; }
         public ICommand ClearSkillExecutionHistoryFiltersCommand { get; }
         public ICommand ClearSkillPlannerTraceCommand { get; }
+        public ICommand ShowRuntimeAgentRunDetailCommand { get; }
 
         /* ========================= */
         /* LOGGING */
@@ -189,6 +192,26 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         public bool HasRuntimeAgentActivities => RuntimeAgentActivities.Count > 0;
+
+        private RuntimeAgentActivityViewModel? _selectedRuntimeAgentActivity;
+        public RuntimeAgentActivityViewModel? SelectedRuntimeAgentActivity
+        {
+            get => _selectedRuntimeAgentActivity;
+            private set => this.RaiseAndSetIfChanged(ref _selectedRuntimeAgentActivity, value);
+        }
+
+        private RuntimeAgentRunDetailViewModel? _selectedRuntimeAgentRun;
+        public RuntimeAgentRunDetailViewModel? SelectedRuntimeAgentRun
+        {
+            get => _selectedRuntimeAgentRun;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _selectedRuntimeAgentRun, value);
+                this.RaisePropertyChanged(nameof(HasSelectedRuntimeAgentRun));
+            }
+        }
+
+        public bool HasSelectedRuntimeAgentRun => SelectedRuntimeAgentRun is not null;
 
         /* ========================= */
         /* THEME */
@@ -497,6 +520,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ClearSkillExecutionHistoryCommand = ReactiveCommand.Create(ClearSkillExecutionHistory);
             ClearSkillExecutionHistoryFiltersCommand = ReactiveCommand.Create(ClearSkillExecutionHistoryFilters);
             ClearSkillPlannerTraceCommand = ReactiveCommand.Create(ClearSkillPlannerTrace);
+            ShowRuntimeAgentRunDetailCommand = ReactiveCommand.Create<RuntimeAgentActivityViewModel?>(ShowRuntimeAgentRunDetail);
             SubmitCommand = ReactiveCommand.CreateFromTask(SubmitCommandInputAsync);
             SelectSlashCommandCommand = ReactiveCommand.Create<SlashCommandSuggestionViewModel>(SelectSlashCommand);
             ToggleVoiceCommand = ReactiveCommand.Create(ToggleVoiceEnabled);
@@ -622,6 +646,12 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             _slashCommandService = slashCommandService;
             RefreshSlashCommandSuggestions();
+        }
+
+        public void SetRuntimeAgentRunStore(IRuntimeAgentRunStore runtimeAgentRunStore)
+        {
+            _runtimeAgentRunStore = runtimeAgentRunStore;
+            RefreshSelectedRuntimeAgentRun();
         }
 
         public void SetApplicationUpdateServices(
@@ -1440,21 +1470,20 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public void TrackRuntimeAgentUpdate(
             string? agentName,
             string? message,
-            bool isComplete)
+            bool isComplete,
+            string? runId = null)
         {
             if (string.IsNullOrWhiteSpace(agentName))
             {
                 return;
             }
 
-            var update = RuntimeAgentActivityViewModel.Create(agentName, message, isComplete);
+            var update = RuntimeAgentActivityViewModel.Create(agentName, message, isComplete, runId);
             Dispatcher.UIThread.Post(() =>
             {
                 var existing = RuntimeAgentActivities
                     .Select((activity, index) => new { Activity = activity, Index = index })
-                    .FirstOrDefault(item => item.Activity.AgentName.Equals(
-                        update.AgentName,
-                        StringComparison.OrdinalIgnoreCase));
+                    .FirstOrDefault(item => MatchesRuntimeAgentActivity(item.Activity, update));
 
                 if (existing is null)
                 {
@@ -1472,7 +1501,73 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 }
 
                 this.RaisePropertyChanged(nameof(HasRuntimeAgentActivities));
+
+                if (SelectedRuntimeAgentActivity is null || MatchesRuntimeAgentActivity(SelectedRuntimeAgentActivity, update))
+                {
+                    SelectRuntimeAgentRun(update);
+                }
             });
+        }
+
+        private static bool MatchesRuntimeAgentActivity(
+            RuntimeAgentActivityViewModel existing,
+            RuntimeAgentActivityViewModel update)
+        {
+            if (!string.IsNullOrWhiteSpace(existing.RunId)
+                && !string.IsNullOrWhiteSpace(update.RunId))
+            {
+                return existing.RunId.Equals(update.RunId, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return existing.AgentName.Equals(update.AgentName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void ShowRuntimeAgentRunDetail(RuntimeAgentActivityViewModel? activity)
+        {
+            if (activity is null)
+            {
+                return;
+            }
+
+            SelectRuntimeAgentRun(activity);
+        }
+
+        private void RefreshSelectedRuntimeAgentRun()
+        {
+            if (SelectedRuntimeAgentActivity is not null)
+            {
+                SelectRuntimeAgentRun(SelectedRuntimeAgentActivity);
+            }
+        }
+
+        private void SelectRuntimeAgentRun(RuntimeAgentActivityViewModel activity)
+        {
+            SelectedRuntimeAgentActivity = activity;
+            var run = FindRuntimeAgentRun(activity);
+            SelectedRuntimeAgentRun = run is null
+                ? null
+                : RuntimeAgentRunDetailViewModel.Create(run);
+        }
+
+        private RuntimeAgentRun? FindRuntimeAgentRun(RuntimeAgentActivityViewModel activity)
+        {
+            if (_runtimeAgentRunStore is null)
+            {
+                return null;
+            }
+
+            if (!string.IsNullOrWhiteSpace(activity.RunId))
+            {
+                var run = _runtimeAgentRunStore.Get(activity.RunId);
+                if (run is not null)
+                {
+                    return run;
+                }
+            }
+
+            return _runtimeAgentRunStore
+                .List()
+                .FirstOrDefault(run => run.AgentName.Equals(activity.AgentName, StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>
@@ -1738,6 +1833,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private static readonly IBrush FailedBrush = new SolidColorBrush(Color.Parse("#EF4444"));
 
         private RuntimeAgentActivityViewModel(
+            string? runId,
             string agentName,
             string displayName,
             string statusText,
@@ -1745,6 +1841,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             string updatedText,
             IBrush statusBrush)
         {
+            RunId = runId;
             AgentName = agentName;
             DisplayName = displayName;
             StatusText = statusText;
@@ -1752,6 +1849,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
             UpdatedText = updatedText;
             StatusBrush = statusBrush;
         }
+
+        public string? RunId { get; }
 
         public string AgentName { get; }
 
@@ -1768,7 +1867,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public static RuntimeAgentActivityViewModel Create(
             string agentName,
             string? message,
-            bool isComplete)
+            bool isComplete,
+            string? runId = null)
         {
             var normalizedMessage = string.IsNullOrWhiteSpace(message)
                 ? "Working on the request."
@@ -1786,6 +1886,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     : RunningBrush;
 
             return new RuntimeAgentActivityViewModel(
+                string.IsNullOrWhiteSpace(runId) ? null : runId.Trim(),
                 agentName.Trim(),
                 FormatAgentDisplayName(agentName),
                 statusText,
@@ -1848,6 +1949,179 @@ namespace SmartVoiceAgent.Ui.ViewModels
             return string.IsNullOrWhiteSpace(value)
                 ? value
                 : char.ToUpperInvariant(value[0]) + value[1..];
+        }
+    }
+
+    public sealed class RuntimeAgentRunDetailViewModel
+    {
+        private RuntimeAgentRunDetailViewModel(
+            string runId,
+            string displayName,
+            string statusText,
+            string modelIdText,
+            string roleText,
+            string taskText,
+            string durationText,
+            string lastMessageText,
+            string responseText,
+            string errorText,
+            IReadOnlyList<RuntimeAgentObservationDetailViewModel> observations)
+        {
+            RunId = runId;
+            DisplayName = displayName;
+            StatusText = statusText;
+            ModelIdText = modelIdText;
+            RoleText = roleText;
+            TaskText = taskText;
+            DurationText = durationText;
+            LastMessageText = lastMessageText;
+            ResponseText = responseText;
+            ErrorText = errorText;
+            Observations = observations;
+        }
+
+        public string RunId { get; }
+
+        public string DisplayName { get; }
+
+        public string StatusText { get; }
+
+        public string ModelIdText { get; }
+
+        public string RoleText { get; }
+
+        public string TaskText { get; }
+
+        public string DurationText { get; }
+
+        public string LastMessageText { get; }
+
+        public string ResponseText { get; }
+
+        public string ErrorText { get; }
+
+        public bool HasResponse => !string.IsNullOrWhiteSpace(ResponseText);
+
+        public bool HasError => !string.IsNullOrWhiteSpace(ErrorText);
+
+        public IReadOnlyList<RuntimeAgentObservationDetailViewModel> Observations { get; }
+
+        public bool HasObservations => Observations.Count > 0;
+
+        public static RuntimeAgentRunDetailViewModel Create(RuntimeAgentRun run)
+        {
+            var observations = (run.ToolObservations ?? [])
+                .Take(6)
+                .Select(RuntimeAgentObservationDetailViewModel.Create)
+                .ToArray();
+
+            return new RuntimeAgentRunDetailViewModel(
+                run.RunId,
+                RuntimeAgentActivityViewModel.Create(run.AgentName, run.LastMessage, run.Status is not RuntimeAgentRunStatus.Running, run.RunId).DisplayName,
+                FormatStatus(run.Status),
+                string.IsNullOrWhiteSpace(run.ModelId) ? "Default model" : run.ModelId.Trim(),
+                string.IsNullOrWhiteSpace(run.Role) ? "General task" : run.Role.Trim(),
+                TrimForDisplay(run.Task, 260),
+                FormatDuration(run.StartedAt, run.CompletedAt),
+                string.IsNullOrWhiteSpace(run.LastMessage) ? "Working on the request." : run.LastMessage.Trim(),
+                TrimForDisplay(run.Response, 360),
+                TrimForDisplay(run.ErrorMessage, 260),
+                observations);
+        }
+
+        private static string FormatStatus(RuntimeAgentRunStatus status)
+        {
+            return status switch
+            {
+                RuntimeAgentRunStatus.Running => "Running",
+                RuntimeAgentRunStatus.Succeeded => "Completed",
+                RuntimeAgentRunStatus.Failed => "Failed",
+                RuntimeAgentRunStatus.Canceled => "Canceled",
+                _ => "Unknown"
+            };
+        }
+
+        private static string FormatDuration(DateTimeOffset startedAt, DateTimeOffset? completedAt)
+        {
+            var end = completedAt ?? DateTimeOffset.UtcNow;
+            var duration = end - startedAt;
+            if (duration < TimeSpan.Zero)
+            {
+                duration = TimeSpan.Zero;
+            }
+
+            if (duration.TotalMinutes >= 1)
+            {
+                return $"{Math.Floor(duration.TotalMinutes):0}m {duration.Seconds:00}s";
+            }
+
+            var seconds = Math.Max(1, (int)Math.Round(duration.TotalSeconds, MidpointRounding.AwayFromZero));
+            return $"{seconds}s";
+        }
+
+        private static string TrimForDisplay(string? value, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            var trimmed = value.Trim();
+            return trimmed.Length <= maxLength
+                ? trimmed
+                : trimmed[..Math.Max(0, maxLength - 1)] + "...";
+        }
+    }
+
+    public sealed class RuntimeAgentObservationDetailViewModel
+    {
+        private RuntimeAgentObservationDetailViewModel(
+            string displayName,
+            string statusText,
+            string summaryText)
+        {
+            DisplayName = displayName;
+            StatusText = statusText;
+            SummaryText = summaryText;
+        }
+
+        public string DisplayName { get; }
+
+        public string StatusText { get; }
+
+        public string SummaryText { get; }
+
+        public static RuntimeAgentObservationDetailViewModel Create(RuntimeAgentToolObservation observation)
+        {
+            return new RuntimeAgentObservationDetailViewModel(
+                FormatToolName(observation.SkillId),
+                observation.Success ? "Ready" : "Unavailable",
+                TrimForDisplay(observation.Summary, 220));
+        }
+
+        private static string FormatToolName(string? tool)
+        {
+            return (tool ?? string.Empty).Trim().ToLowerInvariant() switch
+            {
+                "file.read_lines" => "Read file",
+                "workspace.search_text" => "Search text",
+                "git.diff_summary" => "Diff summary",
+                "workspace.map" => "Workspace map",
+                _ => "Context"
+            };
+        }
+
+        private static string TrimForDisplay(string? value, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            var trimmed = value.Trim();
+            return trimmed.Length <= maxLength
+                ? trimmed
+                : trimmed[..Math.Max(0, maxLength - 1)] + "...";
         }
     }
 

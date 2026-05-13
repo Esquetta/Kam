@@ -57,6 +57,14 @@ public sealed class MainWindowMetadataTests
         mainWindowText.Should().Contain("Text=\"{Binding DisplayName}\"");
         mainWindowText.Should().Contain("Text=\"{Binding StatusText}\"");
         mainWindowText.Should().Contain("Text=\"{Binding LastMessage}\"");
+        mainWindowText.Should().Contain("ShowRuntimeAgentRunDetailCommand");
+        mainWindowText.Should().Contain("CommandParameter=\"{Binding}\"");
+        mainWindowText.Should().Contain("IsVisible=\"{Binding HasSelectedRuntimeAgentRun}\"");
+        mainWindowText.Should().Contain("SelectedRuntimeAgentRun.ModelIdText");
+        mainWindowText.Should().Contain("SelectedRuntimeAgentRun.Observations");
+        mainWindowText.Should().Contain("Text=\"{Binding SummaryText}\"");
+        mainWindowText.Should().Contain("Run detail");
+        mainWindowText.Should().Contain("Context");
     }
 
     [Fact]

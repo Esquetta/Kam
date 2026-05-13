@@ -49,7 +49,10 @@ public sealed class RuntimeAgentFactoryTests
         chatClient.Messages[0].Text.Should().Contain("Read-only tool context");
         chatClient.Messages[0].Text.Should().Contain("workspace.map");
         chatClient.Messages[1].Text.Should().Be("Inspect the workspace.");
-        uiLogService.Entries.Should().Contain(entry => entry.AgentName == "RepoAgent" && entry.Message == "Completed.");
+        uiLogService.Entries.Should().Contain(entry =>
+            entry.AgentName == "RepoAgent"
+            && entry.Message == "Completed."
+            && entry.RunId == result.RunId);
     }
 
     [Fact]
@@ -140,7 +143,9 @@ public sealed class RuntimeAgentFactoryTests
         toolService.LastRequests.Should().ContainSingle();
         toolService.LastRequests![0].Tool.Should().Be("workspace.search_text");
         chatClient.SystemPrompts.Last().Should().Contain("Needle found");
-        runStore.List().Should().ContainSingle().Subject.Response.Should().Be("final answer");
+        var run = runStore.List().Should().ContainSingle().Subject;
+        run.Response.Should().Be("final answer");
+        run.ToolObservations.Should().ContainSingle(observation => observation.SkillId == "workspace.search_text");
         uiLogService.Entries
             .Where(entry => entry.IsAgentUpdate)
             .Select(entry => entry.Message)
@@ -365,11 +370,12 @@ public sealed class RuntimeAgentFactoryTests
             OnLogEntry?.Invoke(this, entry);
         }
 
-        public void LogAgentUpdate(string agentName, string message, bool isComplete = false)
+        public void LogAgentUpdate(string agentName, string message, bool isComplete = false, string? runId = null)
         {
             var entry = new UiLogEntry
             {
                 AgentName = agentName,
+                RunId = runId,
                 Message = message,
                 IsAgentUpdate = true,
                 IsComplete = isComplete

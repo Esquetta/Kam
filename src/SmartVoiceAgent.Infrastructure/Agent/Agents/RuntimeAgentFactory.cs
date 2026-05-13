@@ -50,7 +50,8 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
         _uiLogService?.LogAgentUpdate(
             normalizedRequest.AgentName,
             "Created automatically for this request.",
-            false);
+            false,
+            run.RunId);
 
         var messages = new[]
         {
@@ -71,7 +72,8 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
                 _uiLogService?.LogAgentUpdate(
                     normalizedRequest.AgentName,
                     $"Requested context: {FormatToolRequestList(toolRequests)}.",
-                    false);
+                    false,
+                    run.RunId);
                 var newObservations = await _readOnlyToolService
                     .ExecuteAsync(toolRequests, cancellationToken)
                     .ConfigureAwait(false);
@@ -80,7 +82,8 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
                     _uiLogService?.LogAgentUpdate(
                         normalizedRequest.AgentName,
                         $"Context {FormatObservationStatus(observation)}: {FormatToolName(observation.SkillId)}.",
-                        false);
+                        false,
+                        run.RunId);
                 }
 
                 normalizedRequest = normalizedRequest with
@@ -89,6 +92,7 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
                         .Concat(newObservations)
                         .ToArray()
                 };
+                _runStore.RecordToolObservations(run.RunId, normalizedRequest.ToolObservations);
                 messages =
                 [
                     new ChatMessage(ChatRole.System, BuildSystemPrompt(normalizedRequest)),
@@ -107,7 +111,7 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
                 text = "Task agent completed without a text response.";
             }
 
-            _uiLogService?.LogAgentUpdate(normalizedRequest.AgentName, "Completed.", true);
+            _uiLogService?.LogAgentUpdate(normalizedRequest.AgentName, "Completed.", true, run.RunId);
             _runStore.Complete(run.RunId, text);
             return new RuntimeAgentResult(
                 normalizedRequest.AgentName,
@@ -118,7 +122,7 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
         }
         catch (Exception ex)
         {
-            _uiLogService?.LogAgentUpdate(normalizedRequest.AgentName, "Failed.", true);
+            _uiLogService?.LogAgentUpdate(normalizedRequest.AgentName, "Failed.", true, run.RunId);
             _runStore.Fail(run.RunId, ex.Message);
             throw;
         }

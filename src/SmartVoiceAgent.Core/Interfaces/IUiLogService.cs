@@ -18,7 +18,7 @@ public interface IUiLogService
     /// <summary>
     /// Sends an agent execution update to the UI
     /// </summary>
-    void LogAgentUpdate(string agentName, string message, bool isComplete = false);
+    void LogAgentUpdate(string agentName, string message, bool isComplete = false, string? runId = null);
 }
 
 /// <summary>
@@ -31,6 +31,7 @@ public class UiLogEntry : System.EventArgs
     public LogLevel Level { get; set; } = LogLevel.Information;
     public string? Source { get; set; }
     public string? AgentName { get; set; }
+    public string? RunId { get; set; }
     public bool IsAgentUpdate { get; set; }
     public bool IsComplete { get; set; }
 }

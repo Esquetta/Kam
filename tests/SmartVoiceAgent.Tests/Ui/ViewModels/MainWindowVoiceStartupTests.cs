@@ -239,7 +239,7 @@ public sealed class MainWindowVoiceStartupTests
             });
         }
 
-        public void LogAgentUpdate(string agentName, string message, bool isComplete = false)
+        public void LogAgentUpdate(string agentName, string message, bool isComplete = false, string? runId = null)
         {
         }
     }

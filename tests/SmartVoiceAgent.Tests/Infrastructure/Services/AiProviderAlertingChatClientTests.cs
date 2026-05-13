@@ -123,11 +123,12 @@ public sealed class AiProviderAlertingChatClientTests
             OnLogEntry?.Invoke(this, entry);
         }
 
-        public void LogAgentUpdate(string agentName, string message, bool isComplete = false)
+        public void LogAgentUpdate(string agentName, string message, bool isComplete = false, string? runId = null)
         {
             var entry = new UiLogEntry
             {
                 AgentName = agentName,
+                RunId = runId,
                 Message = message,
                 IsAgentUpdate = true,
                 IsComplete = isComplete

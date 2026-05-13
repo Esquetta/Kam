@@ -31,7 +31,7 @@ public class ConsoleUiLogService : IUiLogService
         });
     }
 
-    public void LogAgentUpdate(string agentName, string message, bool isComplete = false)
+    public void LogAgentUpdate(string agentName, string message, bool isComplete = false, string? runId = null)
     {
         var prefix = isComplete ? "OK" : ">";
         Console.WriteLine($"{prefix} [{agentName.ToUpperInvariant()}] {message}");
@@ -40,6 +40,7 @@ public class ConsoleUiLogService : IUiLogService
             Message = message,
             Level = isComplete ? LogLevel.Information : LogLevel.Debug,
             AgentName = agentName,
+            RunId = runId,
             IsAgentUpdate = true,
             IsComplete = isComplete
         });
