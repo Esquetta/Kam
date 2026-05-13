@@ -32,6 +32,8 @@ public sealed class SlashCommandService : ISlashCommandService
         new("/readiness", "Show first-run setup readiness and next actions.", "/readiness", "Runtime", ["/setup", "/first-run"]),
         new("/status", "Show runtime and skill health status.", "/status", "Runtime"),
         new("/model", "Show the active runtime AI provider and selected model.", "/model", "Runtime", ["/models"]),
+        new("/model health", "Show model configuration health and secret status.", "/model health", "Runtime"),
+        new("/model fallback", "Show model fallback and provider-limit recovery guidance.", "/model fallback", "Runtime"),
         new("/limits", "Show rate-limit, quota, and balance warning behavior.", "/limits", "Runtime", ["/quota", "/balance", "/rate-limit"]),
         new("/permissions", "Show chat command permission boundaries.", "/permissions", "Runtime"),
         new("/diff", "Show how to inspect the workspace diff from coding-agent mode.", "/diff", "Workflow"),
@@ -187,7 +189,7 @@ public sealed class SlashCommandService : ISlashCommandService
             "/restart" => SlashCommandResult.Succeeded("/restart", FormatRestartPlan(argumentText)),
             "/readiness" => SlashCommandResult.Succeeded("/readiness", await FormatReadinessAsync(cancellationToken)),
             "/status" => SlashCommandResult.Succeeded("/status", await FormatStatusAsync(cancellationToken)),
-            "/model" => SlashCommandResult.Succeeded("/model", FormatModelStatus()),
+            "/model" => SlashCommandResult.Succeeded("/model", FormatModelCommand(arguments)),
             "/limits" => SlashCommandResult.Succeeded("/limits", FormatLimitWarnings()),
             "/permissions" => SlashCommandResult.Succeeded("/permissions", FormatPermissions()),
             "/settings" => SlashCommandResult.Succeeded("/settings", "Opening Settings."),
@@ -344,6 +346,59 @@ public sealed class SlashCommandService : ISlashCommandService
             $"  model: {FormatConfiguredValue(_aiServiceConfiguration.ModelId)}",
             "  scope: selected runtime profile is mapped into planner, chat, skills, and agents at startup",
             "  changes: validate settings, then restart Kam to rebuild active AI clients"
+        ]);
+    }
+
+    private string FormatModelCommand(IReadOnlyList<string> arguments)
+    {
+        var action = arguments.FirstOrDefault()?.ToLowerInvariant();
+        return action switch
+        {
+            null or "" => FormatModelStatus(),
+            "health" or "check" => FormatModelHealth(),
+            "fallback" or "failover" => FormatModelFallback(),
+            _ => "Usage: /model [health|fallback]"
+        };
+    }
+
+    private string FormatModelHealth()
+    {
+        var providerConfigured = !string.IsNullOrWhiteSpace(_aiServiceConfiguration.Provider);
+        var modelConfigured = !string.IsNullOrWhiteSpace(_aiServiceConfiguration.ModelId);
+        var endpointConfigured = !string.IsNullOrWhiteSpace(_aiServiceConfiguration.Endpoint);
+        var apiKeyRequired = providerConfigured && RequiresApiKey(_aiServiceConfiguration.Provider);
+        var apiKeyReady = !apiKeyRequired || !string.IsNullOrWhiteSpace(_aiServiceConfiguration.ApiKey);
+        var ready = providerConfigured && modelConfigured && endpointConfigured && apiKeyReady;
+
+        return string.Join(Environment.NewLine, [
+            "Kam model health:",
+            $"  status: {(ready ? "ready" : "needs action")}",
+            $"  provider: {FormatConfiguredValue(_aiServiceConfiguration.Provider)}",
+            $"  endpoint: {FormatConfiguredValue(_aiServiceConfiguration.Endpoint)}",
+            $"  model: {FormatConfiguredValue(_aiServiceConfiguration.ModelId)}",
+            $"  apiKey: {FormatSecretStatus(_aiServiceConfiguration.ApiKey)}",
+            $"  apiKeyRequired: {(apiKeyRequired ? "yes" : "no")}",
+            "  fallback: provider-limit errors are surfaced in Activity, then the user can switch provider/model or wait for reset",
+            ready
+                ? "  next: run a command that uses the active runtime model."
+                : "  next: configure provider, endpoint, model, and required API key in Settings > AI Runtime."
+        ]);
+    }
+
+    private string FormatModelFallback()
+    {
+        var hasPrimaryModel = !string.IsNullOrWhiteSpace(_aiServiceConfiguration.Provider)
+            && !string.IsNullOrWhiteSpace(_aiServiceConfiguration.ModelId);
+
+        return string.Join(Environment.NewLine, [
+            "Kam model fallback:",
+            $"  primary: {(hasPrimaryModel ? $"{NormalizeMessage(_aiServiceConfiguration.Provider)} / {NormalizeMessage(_aiServiceConfiguration.ModelId)}" : "(not configured)")}",
+            "  rate limit: Activity warns on 429/rate-limit responses and keeps the failed provider message redacted.",
+            "  quota/balance: Activity warns on quota, billing, balance, and credit failures.",
+            "  recovery: switch provider/model, lower request volume, wait for provider reset, or update billing/API key.",
+            hasPrimaryModel
+                ? "  next: keep a second provider profile configured for manual failover."
+                : "  next: Configure a primary model before relying on fallback handling."
         ]);
     }
 

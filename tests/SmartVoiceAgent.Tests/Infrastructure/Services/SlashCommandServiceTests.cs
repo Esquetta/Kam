@@ -63,6 +63,8 @@ public sealed class SlashCommandServiceTests
                 "/integrations",
                 "/limits",
                 "/model",
+                "/model fallback",
+                "/model health",
                 "/readiness",
                 "/settings",
                 "/theme",
@@ -187,6 +189,42 @@ public sealed class SlashCommandServiceTests
         result.Message.Should().Contain("provider: Anthropic");
         result.Message.Should().Contain("model: claude-sonnet-4-6");
         result.Message.Should().Contain("planner, chat, skills, and agents");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenModelHealthIsRequested_ReturnsConfiguredRuntimeHealthWithoutLeakingSecrets()
+    {
+        var service = new SlashCommandService(
+            aiServiceOptions: Options.Create(new AIServiceConfiguration
+            {
+                Provider = "OpenAI",
+                Endpoint = "https://api.openai.com/v1",
+                ApiKey = "sk-test-key",
+                ModelId = "gpt-5.5"
+            }));
+
+        var result = await service.ExecuteAsync("/model health");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Kam model health:");
+        result.Message.Should().Contain("provider: OpenAI");
+        result.Message.Should().Contain("model: gpt-5.5");
+        result.Message.Should().Contain("apiKey: (configured)");
+        result.Message.Should().Contain("fallback:");
+        result.Message.Should().NotContain("sk-test-key");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenModelFallbackIsRequestedWithoutConfiguredModel_ReturnsNextActions()
+    {
+        var service = new SlashCommandService();
+
+        var result = await service.ExecuteAsync("/model fallback");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Kam model fallback:");
+        result.Message.Should().Contain("Configure a primary model");
+        result.Message.Should().Contain("rate limit");
     }
 
     [Theory]
