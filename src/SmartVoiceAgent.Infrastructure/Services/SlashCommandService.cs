@@ -78,6 +78,9 @@ public sealed class SlashCommandService : ISlashCommandService
         new("/test", "Run a registered smoke test for one skill.", "/test <skillId>", "Skills"),
         new("/review", "Review current skill health state.", "/review", "Skills"),
         new("/worktree", "Show worktree command availability.", "/worktree", "Workflow"),
+        new("/workspace", "Show configured workspace root and local repository signals.", "/workspace", "Workflow"),
+        new("/workspace status", "Show configured workspace root and local repository signals.", "/workspace status", "Workflow"),
+        new("/workspace commands", "Show coding-agent workspace command entry points.", "/workspace commands", "Workflow"),
         new("/hooks", "Show coding-agent hook availability.", "/hooks", "Workflow"),
         new("/clear", "Clear the command input.", "/clear", "General")
     ];
@@ -215,6 +218,7 @@ public sealed class SlashCommandService : ISlashCommandService
             "/test" => await RunSkillTestAsync(arguments, cancellationToken),
             "/review" => SlashCommandResult.Succeeded("/review", await FormatReviewAsync(cancellationToken)),
             "/worktree" => SlashCommandResult.Succeeded("/worktree", FormatCodingAgentWorkflow("/worktree")),
+            "/workspace" => SlashCommandResult.Succeeded("/workspace", FormatWorkspace(arguments)),
             "/hooks" => SlashCommandResult.Succeeded("/hooks", FormatCodingAgentWorkflow("/hooks")),
             "/clear" => SlashCommandResult.Succeeded("/clear", "Input cleared."),
             _ => SlashCommandResult.Failed(commandName, $"Unknown slash command: {commandName}")
@@ -896,6 +900,55 @@ public sealed class SlashCommandService : ISlashCommandService
             "  chat slash commands do not run shell, git, or gh workflows directly",
             $"  run from CLI: kam coding-agent {commandName}"
         ]);
+    }
+
+    private string FormatWorkspace(IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count > 0 && IsCommand(arguments[0], "commands", "help"))
+        {
+            return string.Join(Environment.NewLine, [
+                "Kam workspace commands:",
+                "  kam coding-agent /status",
+                "  kam coding-agent /diff",
+                "  kam coding-agent /review",
+                "  kam coding-agent /worktree",
+                "  kam coding-agent /github",
+                "  chat: /workspace is read-only and does not execute shell or git"
+            ]);
+        }
+
+        if (arguments.Count > 0 && !IsCommand(arguments[0], "status", "info"))
+        {
+            return "Usage: /workspace [status|commands]";
+        }
+
+        var workspace = _codingAgentOptions.GetWorkspaceRootOrDefault();
+        var exists = !string.IsNullOrWhiteSpace(workspace) && Directory.Exists(workspace);
+        var gitDetected = exists && HasGitMarker(workspace!);
+
+        return string.Join(Environment.NewLine, [
+            "Kam workspace:",
+            $"  root: {FormatConfiguredValue(workspace)}",
+            $"  exists: {(exists ? "yes" : "no")}",
+            $"  git: {(gitDetected ? "detected" : "not detected")}",
+            $"  approvalMode: {FormatConfiguredValue(_codingAgentOptions.ApprovalMode)}",
+            "  shell: not run from chat",
+            "  diff: use kam coding-agent /diff for live git evidence",
+            "  status: use kam coding-agent /status for branch and dirty-state details"
+        ]);
+    }
+
+    private static bool HasGitMarker(string workspace)
+    {
+        try
+        {
+            return Directory.Exists(Path.Combine(workspace, ".git"))
+                || File.Exists(Path.Combine(workspace, ".git"));
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException or IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     private string FormatGitHubContext()

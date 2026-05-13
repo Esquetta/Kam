@@ -74,6 +74,9 @@ public sealed class SlashCommandServiceTests
                 "/tools",
                 "/voice",
                 "/worktree",
+                "/workspace",
+                "/workspace commands",
+                "/workspace status",
                 "/update",
                 "/version"
             ]);
@@ -440,6 +443,50 @@ public sealed class SlashCommandServiceTests
         result.Message.Should().Contain(Path.GetFullPath(workspace));
         result.Message.Should().Contain("kam coding-agent /dependabot");
         result.Message.Should().Contain("do not run shell, git, or gh workflows directly");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenWorkspaceIsRequested_ReturnsWorkspaceSignalsWithoutRunningShell()
+    {
+        var workspace = Path.Combine(Path.GetTempPath(), $"kam-workspace-intel-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(workspace, ".git"));
+        try
+        {
+            var service = new SlashCommandService(
+                codingAgentOptions: Options.Create(new CodingAgentOptions
+                {
+                    WorkspaceRoot = workspace,
+                    ApprovalMode = "workspace-write"
+                }));
+
+            var result = await service.ExecuteAsync("/workspace");
+
+            result.Success.Should().BeTrue();
+            result.Message.Should().Contain("Kam workspace:");
+            result.Message.Should().Contain($"root: {Path.GetFullPath(workspace)}");
+            result.Message.Should().Contain("exists: yes");
+            result.Message.Should().Contain("git: detected");
+            result.Message.Should().Contain("approvalMode: workspace-write");
+            result.Message.Should().Contain("shell: not run from chat");
+        }
+        finally
+        {
+            Directory.Delete(workspace, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenWorkspaceCommandsAreRequested_ReturnsCodingAgentEntrypoints()
+    {
+        var service = new SlashCommandService();
+
+        var result = await service.ExecuteAsync("/workspace commands");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Kam workspace commands:");
+        result.Message.Should().Contain("kam coding-agent /status");
+        result.Message.Should().Contain("kam coding-agent /diff");
+        result.Message.Should().Contain("kam coding-agent /worktree");
     }
 
     [Fact]
