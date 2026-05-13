@@ -34,10 +34,12 @@ public sealed class SlashCommandServiceTests
                 "/github app prs",
                 "/github app repos",
                 "/github app diagnose",
+                "/github app fix",
                 "/github app logs",
                 "/github app run",
                 "/github actions",
                 "/github diagnose",
+                "/github fix",
                 "/github logs",
                 "/github prs",
                 "/github repos",
@@ -45,6 +47,7 @@ public sealed class SlashCommandServiceTests
                 "/github-app",
                 "/github-app actions",
                 "/github-app diagnose",
+                "/github-app fix",
                 "/github-app logs",
                 "/github-app prs",
                 "/github-app run",
@@ -681,6 +684,83 @@ public sealed class SlashCommandServiceTests
         result.Message.Should().Contain("run: Esquetta/Kam#1002");
         result.Message.Should().Contain("selected: latest failing or in-progress workflow run");
         result.Message.Should().Contain("build (completed/failure)");
+    }
+
+    [Theory]
+    [InlineData("/github fix Esquetta/Kam 1001")]
+    [InlineData("/github-app fix Esquetta/Kam 1001")]
+    [InlineData("/github app fix Esquetta/Kam 1001")]
+    public async Task ExecuteAsync_WhenGithubFixRunIsRequested_OpensRuntimeFixLoopWithFailingJobLog(string command)
+    {
+        var pipeline = new CapturingSkillExecutionPipeline(
+            SkillResult.Succeeded("Runtime agent queued a patch approval."));
+        var service = new SlashCommandService(
+            githubAppClient: new StaticGitHubAppClient(
+                GitHubAppConnectionStatus.Connected(
+                    "12345",
+                    "98765",
+                    "https://api.github.com",
+                    "Kam Coding",
+                    "kam-coding",
+                    1),
+                GitHubRepositoryListResult.Failed("not used"),
+                GitHubPullRequestListResult.Failed("not used"),
+                GitHubWorkflowRunListResult.Failed("not used"),
+                GitHubWorkflowJobListResult.Succeeded(
+                    "1 job for workflow run 1001 in Esquetta/Kam.",
+                    "Esquetta/Kam",
+                    1001,
+                    [
+                        new GitHubWorkflowJobSummary(
+                            "Esquetta/Kam",
+                            1001,
+                            2001,
+                            "build",
+                            "completed",
+                            "failure",
+                            "https://github.com/Esquetta/Kam/actions/runs/1001/job/2001",
+                            new DateTimeOffset(2026, 5, 11, 10, 0, 0, TimeSpan.Zero),
+                            new DateTimeOffset(2026, 5, 11, 10, 4, 0, TimeSpan.Zero))
+                        {
+                            Steps =
+                            [
+                                new GitHubWorkflowJobStepSummary(
+                                    1,
+                                    "dotnet test",
+                                    "completed",
+                                    "failure",
+                                    new DateTimeOffset(2026, 5, 11, 10, 1, 0, TimeSpan.Zero),
+                                    new DateTimeOffset(2026, 5, 11, 10, 3, 0, TimeSpan.Zero))
+                            ]
+                        }
+                    ]),
+                workflowJobLog: GitHubWorkflowJobLogResult.Succeeded(
+                    "GitHub returned a workflow job log preview.",
+                    "Esquetta/Kam",
+                    2001,
+                    string.Empty,
+                    "Test Failed: RuntimeAgentFactoryTests.RunAsync_WhenModelRequestsApprovalGatedActions")),
+            skillExecutionPipeline: pipeline);
+
+        var result = await service.ExecuteAsync(command);
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Kam GitHub CI auto-fix:");
+        result.Message.Should().Contain("run: Esquetta/Kam#1001");
+        result.Message.Should().Contain("job: build");
+        result.Message.Should().Contain("Runtime agent queued a patch approval.");
+        pipeline.LastPlan.Should().NotBeNull();
+        pipeline.LastPlan!.SkillId.Should().Be("agents.run");
+        pipeline.LastPlan.Arguments["role"].GetString().Should().Be("coding");
+        pipeline.LastPlan.Arguments["agentName"].GetString().Should().Be("GitHubFixAgent");
+        var task = pipeline.LastPlan.Arguments["task"].GetString();
+        task.Should().Contain("GitHub CI auto-fix request");
+        task.Should().Contain("Esquetta/Kam#1001");
+        task.Should().Contain("build");
+        task.Should().Contain("dotnet test");
+        task.Should().Contain("RuntimeAgentFactoryTests.RunAsync_WhenModelRequestsApprovalGatedActions");
+        task.Should().NotContain("installation-token");
+        task.Should().NotContain("PRIVATE KEY");
     }
 
     [Theory]

@@ -38,12 +38,14 @@ public sealed class SlashCommandService : ISlashCommandService
         new("/github app", "Show GitHub App connection status.", "/github app", "Workflow", ["/github-app"]),
         new("/github app actions", "List GitHub Actions workflow runs visible through the configured GitHub App.", "/github app actions", "Workflow"),
         new("/github app diagnose", "Diagnose a GitHub Actions workflow run from jobs and failed steps.", "/github app diagnose <owner/repo> [runId]", "Workflow"),
+        new("/github app fix", "Open a runtime auto-fix loop for a failing workflow run.", "/github app fix <owner/repo> [runId]", "Workflow"),
         new("/github app logs", "Get a temporary download URL or preview for one GitHub Actions job log.", "/github app logs <owner/repo> <jobId>", "Workflow"),
         new("/github app prs", "List open pull requests visible through the configured GitHub App.", "/github app prs", "Workflow"),
         new("/github app repos", "List repositories visible through the configured GitHub App.", "/github app repos", "Workflow"),
         new("/github app run", "List jobs for one GitHub Actions workflow run.", "/github app run <owner/repo> <runId>", "Workflow"),
         new("/github actions", "List GitHub Actions workflow runs visible through the configured GitHub App.", "/github actions", "Workflow"),
         new("/github diagnose", "Diagnose a GitHub Actions workflow run from jobs and failed steps.", "/github diagnose <owner/repo> [runId]", "Workflow", ["/github doctor", "/github ci"]),
+        new("/github fix", "Open a runtime auto-fix loop for a failing workflow run.", "/github fix <owner/repo> [runId]", "Workflow", ["/github autofix", "/github auto-fix"]),
         new("/github logs", "Get a temporary download URL or preview for one GitHub Actions job log.", "/github logs <owner/repo> <jobId>", "Workflow", ["/github log"]),
         new("/github prs", "List open pull requests visible through the configured GitHub App.", "/github prs", "Workflow", ["/github pr", "/github pull-requests"]),
         new("/github repos", "List repositories visible through the configured GitHub App.", "/github repos", "Workflow"),
@@ -51,6 +53,7 @@ public sealed class SlashCommandService : ISlashCommandService
         new("/github-app", "Show GitHub App setup and repository permission guidance.", "/github-app", "Workflow"),
         new("/github-app actions", "List GitHub Actions workflow runs visible through the configured GitHub App.", "/github-app actions", "Workflow"),
         new("/github-app diagnose", "Diagnose a GitHub Actions workflow run from jobs and failed steps.", "/github-app diagnose <owner/repo> [runId]", "Workflow", ["/github-app doctor", "/github-app ci"]),
+        new("/github-app fix", "Open a runtime auto-fix loop for a failing workflow run.", "/github-app fix <owner/repo> [runId]", "Workflow", ["/github-app autofix", "/github-app auto-fix"]),
         new("/github-app logs", "Get a temporary download URL or preview for one GitHub Actions job log.", "/github-app logs <owner/repo> <jobId>", "Workflow", ["/github-app log"]),
         new("/github-app prs", "List open pull requests visible through the configured GitHub App.", "/github-app prs", "Workflow", ["/github-app pr", "/github-app pull-requests"]),
         new("/github-app repos", "List repositories visible through the configured GitHub App.", "/github-app repos", "Workflow"),
@@ -598,6 +601,15 @@ public sealed class SlashCommandService : ISlashCommandService
                     cancellationToken);
             }
 
+            if (arguments.Count > 1 && IsCommand(arguments[1], "fix", "autofix", "auto-fix"))
+            {
+                return await RunGitHubAppWorkflowAutoFixAsync(
+                    "/github",
+                    arguments,
+                    2,
+                    cancellationToken);
+            }
+
             if (arguments.Count > 1 && IsCommand(arguments[1], "logs", "log"))
             {
                 return await RunGitHubAppWorkflowJobLogsAsync(
@@ -643,6 +655,15 @@ public sealed class SlashCommandService : ISlashCommandService
                 cancellationToken);
         }
 
+        if (arguments.Count > 0 && IsCommand(arguments[0], "fix", "autofix", "auto-fix"))
+        {
+            return await RunGitHubAppWorkflowAutoFixAsync(
+                "/github",
+                arguments,
+                1,
+                cancellationToken);
+        }
+
         if (arguments.Count > 0 && IsCommand(arguments[0], "logs", "log"))
         {
             return await RunGitHubAppWorkflowJobLogsAsync(
@@ -668,6 +689,7 @@ public sealed class SlashCommandService : ISlashCommandService
                 "  app status: /github app",
                 "  workflow runs: /github actions",
                 "  diagnose workflow run: /github diagnose <owner/repo> [runId]",
+                "  auto-fix workflow run: /github fix <owner/repo> [runId]",
                 "  workflow job logs: /github logs <owner/repo> <jobId>",
                 "  workflow run jobs: /github run <owner/repo> <runId>",
                 "  pull requests: /github prs",
@@ -697,6 +719,15 @@ public sealed class SlashCommandService : ISlashCommandService
         if (arguments.Count > 0 && IsCommand(arguments[0], "diagnose", "doctor", "ci"))
         {
             return await RunGitHubAppWorkflowDiagnosisAsync(
+                "/github-app",
+                arguments,
+                1,
+                cancellationToken);
+        }
+
+        if (arguments.Count > 0 && IsCommand(arguments[0], "fix", "autofix", "auto-fix"))
+        {
+            return await RunGitHubAppWorkflowAutoFixAsync(
                 "/github-app",
                 arguments,
                 1,
@@ -893,6 +924,136 @@ public sealed class SlashCommandService : ISlashCommandService
         return SlashCommandResult.Succeeded(
             commandName,
             FormatWorkflowDiagnosis(jobs, selectedRun, selectionMessage));
+    }
+
+    private async Task<SlashCommandResult> RunGitHubAppWorkflowAutoFixAsync(
+        string commandName,
+        IReadOnlyList<string> arguments,
+        int firstArgumentIndex,
+        CancellationToken cancellationToken)
+    {
+        if (arguments.Count <= firstArgumentIndex)
+        {
+            return SlashCommandResult.Failed(
+                commandName,
+                "Usage: /github fix <owner/repo> [runId]");
+        }
+
+        long? requestedRunId = null;
+        if (arguments.Count > firstArgumentIndex + 1)
+        {
+            if (!long.TryParse(arguments[firstArgumentIndex + 1], out var runId) || runId <= 0)
+            {
+                return SlashCommandResult.Failed(
+                    commandName,
+                    "Usage: /github fix <owner/repo> [runId]");
+            }
+
+            requestedRunId = runId;
+        }
+
+        if (_githubAppClient is null)
+        {
+            return SlashCommandResult.Succeeded(commandName, FormatGitHubAppUnavailable());
+        }
+
+        if (_skillExecutionPipeline is null)
+        {
+            return SlashCommandResult.Failed(commandName, "Task agent runtime is unavailable.");
+        }
+
+        var repositoryFullName = arguments[firstArgumentIndex];
+        GitHubWorkflowRunSummary? selectedRun = null;
+        string? selectionMessage = null;
+        var runIdToDiagnose = requestedRunId;
+        if (runIdToDiagnose is null)
+        {
+            var workflowRuns = await _githubAppClient.ListWorkflowRunsAsync(cancellationToken);
+            if (!workflowRuns.Success)
+            {
+                return SlashCommandResult.Succeeded(
+                    commandName,
+                    FormatGitHubAppSetup(workflowRuns.Message, workflowRuns.MissingSettings));
+            }
+
+            selectedRun = SelectWorkflowRunForDiagnosis(workflowRuns.WorkflowRuns, repositoryFullName);
+            if (selectedRun is null)
+            {
+                return SlashCommandResult.Succeeded(
+                    commandName,
+                    $"Kam GitHub CI auto-fix:{Environment.NewLine}  repository: {NormalizeMessage(repositoryFullName)}{Environment.NewLine}  no workflow runs found for this repository");
+            }
+
+            runIdToDiagnose = selectedRun.Id;
+            selectionMessage = IsUnhealthyWorkflowRun(selectedRun)
+                ? "latest failing or in-progress workflow run"
+                : "latest workflow run";
+        }
+
+        var jobs = await _githubAppClient.ListWorkflowRunJobsAsync(
+            repositoryFullName,
+            runIdToDiagnose.Value,
+            cancellationToken);
+        if (!jobs.Success)
+        {
+            return SlashCommandResult.Succeeded(
+                commandName,
+                FormatGitHubAppSetup(jobs.Message, jobs.MissingSettings));
+        }
+
+        var selectedJob = SelectWorkflowJobForAutoFix(jobs.Jobs);
+        if (selectedJob is null)
+        {
+            return SlashCommandResult.Succeeded(
+                commandName,
+                $"Kam GitHub CI auto-fix:{Environment.NewLine}  run: {NormalizeMessage(jobs.RepositoryFullName)}#{jobs.RunId}{Environment.NewLine}  no failing or active jobs found for this workflow run");
+        }
+
+        var log = await _githubAppClient.GetWorkflowJobLogAsync(
+            repositoryFullName,
+            selectedJob.Id,
+            cancellationToken);
+        if (!log.Success)
+        {
+            return SlashCommandResult.Succeeded(
+                commandName,
+                FormatGitHubAppSetup(log.Message, log.MissingSettings));
+        }
+
+        var runtimeTask = BuildGitHubAutoFixRuntimeTask(
+            jobs,
+            selectedRun,
+            selectionMessage,
+            selectedJob,
+            log);
+        var runtimeResult = await _skillExecutionPipeline.ExecuteAsync(
+            SkillPlan.FromObject(
+                "agents.run",
+                new
+                {
+                    task = runtimeTask,
+                    role = "coding",
+                    agentName = "GitHubFixAgent"
+                }),
+            cancellationToken);
+
+        var builder = new StringBuilder()
+            .AppendLine("Kam GitHub CI auto-fix:")
+            .AppendLine($"  run: {NormalizeMessage(jobs.RepositoryFullName)}#{jobs.RunId}");
+
+        if (!string.IsNullOrWhiteSpace(selectionMessage))
+        {
+            builder.AppendLine($"  selected: {NormalizeMessage(selectionMessage)}");
+        }
+
+        builder
+            .AppendLine($"  job: {NormalizeMessage(selectedJob.Name)} ({FormatWorkflowJobState(selectedJob)})")
+            .AppendLine($"  result: {NormalizeMessage(runtimeResult.Success ? runtimeResult.Message : runtimeResult.ErrorMessage)}")
+            .AppendLine("  approval: patch and test actions remain approval-gated");
+
+        return runtimeResult.Success
+            ? SlashCommandResult.Succeeded(commandName, builder.ToString().TrimEnd())
+            : SlashCommandResult.Failed(commandName, builder.ToString().TrimEnd());
     }
 
     private async Task<SlashCommandResult> RunGitHubAppWorkflowJobLogsAsync(
@@ -1389,6 +1550,78 @@ public sealed class SlashCommandService : ISlashCommandService
         return builder.ToString().TrimEnd();
     }
 
+    private static GitHubWorkflowJobSummary? SelectWorkflowJobForAutoFix(
+        IReadOnlyList<GitHubWorkflowJobSummary> jobs)
+    {
+        return jobs
+            .Where(IsUnhealthyWorkflowJob)
+            .OrderBy(job => job.StartedAt ?? DateTimeOffset.MaxValue)
+            .ThenBy(job => job.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(job => job.Id)
+            .FirstOrDefault();
+    }
+
+    private static string BuildGitHubAutoFixRuntimeTask(
+        GitHubWorkflowJobListResult jobs,
+        GitHubWorkflowRunSummary? selectedRun,
+        string? selectionMessage,
+        GitHubWorkflowJobSummary selectedJob,
+        GitHubWorkflowJobLogResult log)
+    {
+        var builder = new StringBuilder()
+            .AppendLine("GitHub CI auto-fix request.")
+            .AppendLine($"Repository/run: {NormalizeMessage(jobs.RepositoryFullName)}#{jobs.RunId}");
+
+        if (!string.IsNullOrWhiteSpace(selectionMessage))
+        {
+            builder.AppendLine($"Selection: {NormalizeMessage(selectionMessage)}");
+        }
+
+        if (selectedRun is not null)
+        {
+            builder
+                .AppendLine($"Workflow: {NormalizeMessage(selectedRun.Name)} ({FormatWorkflowRunState(selectedRun)})")
+                .AppendLine($"Title: {NormalizeMessage(selectedRun.DisplayTitle)}")
+                .AppendLine($"Branch: {NormalizeMessage(selectedRun.HeadBranch)}")
+                .AppendLine($"Event: {NormalizeMessage(selectedRun.Event)}");
+        }
+
+        builder
+            .AppendLine($"Failing job: {NormalizeMessage(selectedJob.Name)} ({FormatWorkflowJobState(selectedJob)})")
+            .AppendLine($"Job URL: {NormalizeMessage(selectedJob.HtmlUrl)}");
+
+        var failingSteps = selectedJob.Steps
+            .Where(IsUnhealthyWorkflowStep)
+            .OrderBy(step => step.Number)
+            .ThenBy(step => step.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (failingSteps.Length > 0)
+        {
+            builder.AppendLine("Failing steps:");
+            foreach (var step in failingSteps.Take(8))
+            {
+                builder.AppendLine($"- {NormalizeMessage(step.Name)} ({FormatWorkflowStepState(step)})");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(log.LogPreview))
+        {
+            builder
+                .AppendLine("Job log preview:")
+                .AppendLine(TrimForRuntimePrompt(log.LogPreview, 4000));
+        }
+        else if (!string.IsNullOrWhiteSpace(log.DownloadUrl))
+        {
+            builder.AppendLine($"Job log download URL: {NormalizeMessage(log.DownloadUrl)}");
+        }
+
+        builder
+            .AppendLine("Task:")
+            .AppendLine("Diagnose the likely source change needed in this workspace. If a file change or test run is needed, propose approval-gated actions only; do not claim changes or tests were executed.");
+
+        return builder.ToString().TrimEnd();
+    }
+
     private static GitHubWorkflowRunSummary? SelectWorkflowRunForDiagnosis(
         IReadOnlyList<GitHubWorkflowRunSummary> workflowRuns,
         string repositoryFullName)
@@ -1432,6 +1665,23 @@ public sealed class SlashCommandService : ISlashCommandService
     private static string Pluralize(int count, string singular, string plural)
     {
         return count == 1 ? singular : plural;
+    }
+
+    private static string TrimForRuntimePrompt(string value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = SecretRedactor.Redact(value)
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .Trim();
+
+        return normalized.Length <= maxLength
+            ? normalized
+            : normalized[..maxLength] + "...";
     }
 
     private static string NormalizeAlias(string commandName)
