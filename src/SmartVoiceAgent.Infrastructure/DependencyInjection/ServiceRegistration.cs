@@ -169,6 +169,7 @@ public static class ServiceRegistration
         services.AddSingleton<ISkillAdapterRegistry, SkillAdapterRegistry>();
         services.AddSingleton<ISkillImportService, SkillImportService>();
         services.AddSingleton<IRuntimeAgentRunStore, InMemoryRuntimeAgentRunStore>();
+        services.AddSingleton<IApplicationSessionContextStore, JsonApplicationSessionContextStore>();
         services.AddSingleton<IApplicationVersionProvider, AssemblyApplicationVersionProvider>();
         services.AddSingleton<IApplicationRestartPlanner, ApplicationRestartPlanner>();
         services.AddScoped<IApplicationUpdateSession, ApplicationUpdateSession>();

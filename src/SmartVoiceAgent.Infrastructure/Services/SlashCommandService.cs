@@ -4,6 +4,7 @@ using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.CodingAgent;
 using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Core.Models.Agents;
+using SmartVoiceAgent.Core.Models.Session;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Core.Models.SlashCommands;
 using SmartVoiceAgent.Core.Security;
@@ -28,6 +29,7 @@ public sealed class SlashCommandService : ISlashCommandService
         new("/update", "Check for a newer Kam release.", "/update [check|download|restart]", "Updates"),
         new("/download", "Download the latest Kam release package.", "/download", "Updates"),
         new("/restart", "Show the Kam restart handoff plan.", "/restart [packagePath]", "Updates"),
+        new("/readiness", "Show first-run setup readiness and next actions.", "/readiness", "Runtime", ["/setup", "/first-run"]),
         new("/status", "Show runtime and skill health status.", "/status", "Runtime"),
         new("/model", "Show the active runtime AI provider and selected model.", "/model", "Runtime", ["/models"]),
         new("/limits", "Show rate-limit, quota, and balance warning behavior.", "/limits", "Runtime", ["/quota", "/balance", "/rate-limit"]),
@@ -87,6 +89,7 @@ public sealed class SlashCommandService : ISlashCommandService
     private readonly AIServiceConfiguration _aiServiceConfiguration;
     private readonly ISkillExecutionPipeline? _skillExecutionPipeline;
     private readonly IRuntimeAgentRunStore? _runtimeAgentRunStore;
+    private readonly IApplicationSessionContextStore? _applicationSessionContextStore;
     private string? _activeGitHubRepositoryFullName;
     private GitHubWorkflowRunSummary? _activeGitHubWorkflowRun;
     private GitHubPullRequestSummary? _activeGitHubPullRequest;
@@ -106,7 +109,8 @@ public sealed class SlashCommandService : ISlashCommandService
         IGitHubAppClient? githubAppClient = null,
         IOptions<AIServiceConfiguration>? aiServiceOptions = null,
         ISkillExecutionPipeline? skillExecutionPipeline = null,
-        IRuntimeAgentRunStore? runtimeAgentRunStore = null)
+        IRuntimeAgentRunStore? runtimeAgentRunStore = null,
+        IApplicationSessionContextStore? applicationSessionContextStore = null)
     {
         _hostControl = hostControl;
         _skillHealthService = skillHealthService;
@@ -123,6 +127,8 @@ public sealed class SlashCommandService : ISlashCommandService
         _aiServiceConfiguration = aiServiceOptions?.Value ?? new AIServiceConfiguration();
         _skillExecutionPipeline = skillExecutionPipeline;
         _runtimeAgentRunStore = runtimeAgentRunStore;
+        _applicationSessionContextStore = applicationSessionContextStore;
+        RestoreApplicationSessionContext();
     }
 
     public IReadOnlyList<SlashCommandDefinition> GetCommands()
@@ -177,6 +183,7 @@ public sealed class SlashCommandService : ISlashCommandService
             "/update" => await RunUpdateCommandAsync(arguments, argumentText, cancellationToken),
             "/download" => await DownloadUpdateAsync(cancellationToken),
             "/restart" => SlashCommandResult.Succeeded("/restart", FormatRestartPlan(argumentText)),
+            "/readiness" => SlashCommandResult.Succeeded("/readiness", await FormatReadinessAsync(cancellationToken)),
             "/status" => SlashCommandResult.Succeeded("/status", await FormatStatusAsync(cancellationToken)),
             "/model" => SlashCommandResult.Succeeded("/model", FormatModelStatus()),
             "/limits" => SlashCommandResult.Succeeded("/limits", FormatLimitWarnings()),
@@ -226,6 +233,92 @@ public sealed class SlashCommandService : ISlashCommandService
         }
 
         return builder.ToString().TrimEnd();
+    }
+
+    private async Task<string> FormatReadinessAsync(CancellationToken cancellationToken)
+    {
+        var checks = new List<(string Name, bool Ready, string Detail, string NextAction)>();
+
+        var modelReady = !string.IsNullOrWhiteSpace(_aiServiceConfiguration.Provider)
+            && !string.IsNullOrWhiteSpace(_aiServiceConfiguration.ModelId)
+            && (!RequiresApiKey(_aiServiceConfiguration.Provider) || !string.IsNullOrWhiteSpace(_aiServiceConfiguration.ApiKey));
+        checks.Add((
+            "model",
+            modelReady,
+            modelReady
+                ? $"ready ({NormalizeMessage(_aiServiceConfiguration.Provider)} / {NormalizeMessage(_aiServiceConfiguration.ModelId)})"
+                : "missing provider, model, or required API key",
+            "Configure an AI runtime provider and model."));
+
+        IReadOnlyCollection<SkillHealthReport>? healthReports = null;
+        if (_skillHealthService is not null)
+        {
+            healthReports = await _skillHealthService.GetHealthAsync(cancellationToken);
+        }
+
+        var skillReady = healthReports is { Count: > 0 }
+            && healthReports.All(report => report.Status == SkillHealthStatus.Healthy);
+        checks.Add((
+            "skills",
+            skillReady,
+            healthReports is null
+                ? "health service is not registered"
+                : $"{healthReports.Count} checked, {healthReports.Count(report => report.Status != SkillHealthStatus.Healthy)} need attention",
+            "Open Skills and resolve unhealthy or permission-blocked tools."));
+
+        var agentRuntimeReady = _skillExecutionPipeline is not null && _runtimeAgentRunStore is not null;
+        checks.Add((
+            "agent runtime",
+            agentRuntimeReady,
+            agentRuntimeReady ? "ready" : "Task agent runtime is not registered.",
+            "Restart Kam or review runtime service registration."));
+
+        var voiceReady = _hostControl?.IsRunning != false;
+        checks.Add((
+            "voice host",
+            voiceReady,
+            voiceReady ? "running or ready to start" : "stopped",
+            "Start voice capture from the command center."));
+
+        var requiredChecksReady = checks
+            .Where(check => check.Name is "model" or "skills" or "agent runtime")
+            .All(check => check.Ready);
+
+        var builder = new StringBuilder()
+            .AppendLine($"Kam readiness: {(requiredChecksReady ? "READY" : "NEEDS_ACTION")}");
+
+        foreach (var check in checks)
+        {
+            builder.AppendLine($"  {check.Name}: {(check.Ready ? "ready" : "needs action")} - {check.Detail}");
+        }
+
+        var nextActions = checks
+            .Where(check => !check.Ready)
+            .Select(check => check.NextAction)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (nextActions.Length > 0)
+        {
+            builder.AppendLine("  next actions:");
+            foreach (var action in nextActions)
+            {
+                builder.AppendLine($"    - {action}");
+            }
+
+            builder.AppendLine("    - Open Settings > AI Runtime when model configuration is missing.");
+        }
+        else
+        {
+            builder.AppendLine("  next action: run a real command or open Runtime Diagnostics for live evidence.");
+        }
+
+        return builder.ToString().TrimEnd();
+    }
+
+    private static bool RequiresApiKey(string provider)
+    {
+        return !provider.Equals("Ollama", StringComparison.OrdinalIgnoreCase)
+            && !provider.Equals("Local", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FormatPermissions()
@@ -579,6 +672,11 @@ public sealed class SlashCommandService : ISlashCommandService
 
     private string FormatGitHubContext()
     {
+        if (_activeGitHubWorkflowRun is null && _activeGitHubPullRequest is null)
+        {
+            RestoreApplicationSessionContext();
+        }
+
         var builder = new StringBuilder()
             .AppendLine("Kam GitHub context:")
             .AppendLine($"  repository: {NormalizeMessage(_activeGitHubRepositoryFullName)}");
@@ -608,6 +706,32 @@ public sealed class SlashCommandService : ISlashCommandService
 
         builder.AppendLine("  follow-up: /github fix can use the active workflow run without repeated arguments");
         return builder.ToString().TrimEnd();
+    }
+
+    private void RestoreApplicationSessionContext()
+    {
+        var gitHub = _applicationSessionContextStore?.Load().GitHub;
+        if (gitHub is null)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(gitHub.RepositoryFullName))
+        {
+            _activeGitHubRepositoryFullName = gitHub.RepositoryFullName;
+        }
+
+        if (gitHub.ActiveWorkflowRun is not null)
+        {
+            _activeGitHubWorkflowRun = MapWorkflowRun(gitHub.ActiveWorkflowRun);
+            _activeGitHubRepositoryFullName = _activeGitHubWorkflowRun.RepositoryFullName;
+        }
+
+        if (gitHub.ActivePullRequest is not null)
+        {
+            _activeGitHubPullRequest = MapPullRequest(gitHub.ActivePullRequest);
+            _activeGitHubRepositoryFullName = _activeGitHubPullRequest.RepositoryFullName;
+        }
     }
 
     private async Task<SlashCommandResult> RunGitHubCommandAsync(
@@ -1672,12 +1796,100 @@ public sealed class SlashCommandService : ISlashCommandService
     {
         _activeGitHubWorkflowRun = workflowRun;
         _activeGitHubRepositoryFullName = workflowRun.RepositoryFullName;
+        SaveApplicationSessionContext();
     }
 
     private void SetActiveGitHubPullRequest(GitHubPullRequestSummary pullRequest)
     {
         _activeGitHubPullRequest = pullRequest;
         _activeGitHubRepositoryFullName = pullRequest.RepositoryFullName;
+        SaveApplicationSessionContext();
+    }
+
+    private void SaveApplicationSessionContext()
+    {
+        if (_applicationSessionContextStore is null)
+        {
+            return;
+        }
+
+        var context = _applicationSessionContextStore.Load();
+        context.GitHub.RepositoryFullName = _activeGitHubRepositoryFullName ?? string.Empty;
+        context.GitHub.ActiveWorkflowRun = _activeGitHubWorkflowRun is null
+            ? context.GitHub.ActiveWorkflowRun
+            : MapWorkflowRun(_activeGitHubWorkflowRun);
+        context.GitHub.ActivePullRequest = _activeGitHubPullRequest is null
+            ? context.GitHub.ActivePullRequest
+            : MapPullRequest(_activeGitHubPullRequest);
+        _applicationSessionContextStore.Save(context);
+    }
+
+    private static GitHubWorkflowRunSummary MapWorkflowRun(GitHubWorkflowRunSessionContext workflowRun)
+    {
+        return new GitHubWorkflowRunSummary(
+            workflowRun.RepositoryFullName,
+            workflowRun.RunId,
+            workflowRun.Name,
+            workflowRun.DisplayTitle,
+            workflowRun.Status,
+            workflowRun.Conclusion,
+            workflowRun.Event,
+            workflowRun.HeadBranch,
+            workflowRun.HtmlUrl,
+            workflowRun.CreatedAt,
+            workflowRun.UpdatedAt);
+    }
+
+    private static GitHubWorkflowRunSessionContext MapWorkflowRun(GitHubWorkflowRunSummary workflowRun)
+    {
+        return new GitHubWorkflowRunSessionContext
+        {
+            RepositoryFullName = workflowRun.RepositoryFullName,
+            RunId = workflowRun.Id,
+            Name = workflowRun.Name,
+            DisplayTitle = workflowRun.DisplayTitle,
+            Status = workflowRun.Status,
+            Conclusion = workflowRun.Conclusion,
+            Event = workflowRun.Event,
+            HeadBranch = workflowRun.HeadBranch,
+            HtmlUrl = workflowRun.HtmlUrl,
+            CreatedAt = workflowRun.CreatedAt,
+            UpdatedAt = workflowRun.UpdatedAt
+        };
+    }
+
+    private static GitHubPullRequestSummary MapPullRequest(GitHubPullRequestSessionContext pullRequest)
+    {
+        return new GitHubPullRequestSummary(
+            pullRequest.RepositoryFullName,
+            pullRequest.Number,
+            pullRequest.Title,
+            pullRequest.State,
+            pullRequest.AuthorLogin,
+            pullRequest.HtmlUrl,
+            pullRequest.HeadRefName,
+            pullRequest.BaseRefName,
+            pullRequest.IsDraft,
+            pullRequest.CreatedAt,
+            pullRequest.UpdatedAt);
+    }
+
+    private static GitHubPullRequestSessionContext MapPullRequest(GitHubPullRequestSummary pullRequest)
+    {
+        return new GitHubPullRequestSessionContext
+        {
+            RepositoryFullName = pullRequest.RepositoryFullName,
+            Number = pullRequest.Number,
+            Title = pullRequest.Title,
+            State = pullRequest.State,
+            AuthorLogin = pullRequest.AuthorLogin,
+            HtmlUrl = pullRequest.HtmlUrl,
+            HeadRefName = pullRequest.HeadRefName,
+            BaseRefName = pullRequest.BaseRefName,
+            IsDraft = pullRequest.IsDraft,
+            CreatedAt = pullRequest.CreatedAt,
+            UpdatedAt = pullRequest.UpdatedAt
+        };
     }
 
     private static string BuildGitHubAutoFixRuntimeTask(

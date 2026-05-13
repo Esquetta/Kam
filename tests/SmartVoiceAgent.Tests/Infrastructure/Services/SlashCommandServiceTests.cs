@@ -4,6 +4,7 @@ using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Agents;
 using SmartVoiceAgent.Core.Models.CodingAgent;
 using SmartVoiceAgent.Core.Models.GitHub;
+using SmartVoiceAgent.Core.Models.Session;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Core.Models.Updates;
 using SmartVoiceAgent.Infrastructure.Agent.Agents;
@@ -60,6 +61,7 @@ public sealed class SlashCommandServiceTests
                 "/integrations",
                 "/limits",
                 "/model",
+                "/readiness",
                 "/settings",
                 "/theme",
                 "/voice",
@@ -157,6 +159,48 @@ public sealed class SlashCommandServiceTests
 
         result.Success.Should().BeTrue();
         result.Message.Should().Contain(command == "/models" ? "Kam AI runtime model:" : "Kam provider-limit warnings:");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenReadinessIsRequestedAndRequiredRuntimeIsConfigured_ReturnsReady()
+    {
+        var service = new SlashCommandService(
+            hostControl: new StaticHostControl(true),
+            skillHealthService: new StaticSkillHealthService([
+                new SkillHealthReport { SkillId = "apps.open", Status = SkillHealthStatus.Healthy }
+            ]),
+            aiServiceOptions: Options.Create(new AIServiceConfiguration
+            {
+                Provider = "OpenAI",
+                Endpoint = "https://api.openai.com/v1",
+                ApiKey = "sk-test-key",
+                ModelId = "gpt-5.5"
+            }),
+            skillExecutionPipeline: new CapturingSkillExecutionPipeline(SkillResult.Succeeded("ready")),
+            runtimeAgentRunStore: new InMemoryRuntimeAgentRunStore());
+
+        var result = await service.ExecuteAsync("/readiness");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Kam readiness: READY");
+        result.Message.Should().Contain("model: ready");
+        result.Message.Should().Contain("skills: ready");
+        result.Message.Should().Contain("agent runtime: ready");
+        result.Message.Should().NotContain("sk-test-key");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenReadinessIsRequestedAndRequiredRuntimeIsMissing_ReturnsNextActions()
+    {
+        var service = new SlashCommandService();
+
+        var result = await service.ExecuteAsync("/readiness");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Kam readiness: NEEDS_ACTION");
+        result.Message.Should().Contain("Configure an AI runtime provider and model.");
+        result.Message.Should().Contain("Open Settings > AI Runtime");
+        result.Message.Should().Contain("Task agent runtime is not registered.");
     }
 
     [Fact]
@@ -616,6 +660,80 @@ public sealed class SlashCommandServiceTests
         fix.Message.Should().Contain("run: Esquetta/Kam#1002");
         pipeline.LastPlan.Should().NotBeNull();
         pipeline.LastPlan!.Arguments["task"].GetString().Should().Contain("Esquetta/Kam#1002");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenGithubContextStoreHasWorkflowRun_RestoresFollowUpFixAfterServiceRecreation()
+    {
+        var sessionContextStore = new InMemoryApplicationSessionContextStore();
+        var client = new StaticGitHubAppClient(
+            GitHubAppConnectionStatus.Connected(
+                "12345",
+                "98765",
+                "https://api.github.com",
+                "Kam Coding",
+                "kam-coding",
+                1),
+            GitHubRepositoryListResult.Failed("not used"),
+            GitHubPullRequestListResult.Failed("not used"),
+            GitHubWorkflowRunListResult.Succeeded(
+                "1 workflow run across 1 repository.",
+                [
+                    new GitHubWorkflowRunSummary(
+                        "Esquetta/Kam",
+                        1002,
+                        ".NET CI",
+                        "Broken push",
+                        "completed",
+                        "failure",
+                        "push",
+                        "master",
+                        "https://github.com/Esquetta/Kam/actions/runs/1002",
+                        new DateTimeOffset(2026, 5, 11, 10, 0, 0, TimeSpan.Zero),
+                        new DateTimeOffset(2026, 5, 11, 10, 5, 0, TimeSpan.Zero))
+                ]),
+            GitHubWorkflowJobListResult.Succeeded(
+                "1 job for workflow run 1002 in Esquetta/Kam.",
+                "Esquetta/Kam",
+                1002,
+                [
+                    new GitHubWorkflowJobSummary(
+                        "Esquetta/Kam",
+                        1002,
+                        2002,
+                        "build",
+                        "completed",
+                        "failure",
+                        "https://github.com/Esquetta/Kam/actions/runs/1002/job/2002",
+                        new DateTimeOffset(2026, 5, 11, 10, 0, 0, TimeSpan.Zero),
+                        new DateTimeOffset(2026, 5, 11, 10, 4, 0, TimeSpan.Zero))
+                ]),
+            workflowJobLog: GitHubWorkflowJobLogResult.Succeeded(
+                "GitHub returned a workflow job log preview.",
+                "Esquetta/Kam",
+                2002,
+                string.Empty,
+                "Build failed in dotnet test"));
+
+        var firstService = new SlashCommandService(
+            githubAppClient: client,
+            applicationSessionContextStore: sessionContextStore);
+        await firstService.ExecuteAsync("/github actions");
+
+        var pipeline = new CapturingSkillExecutionPipeline(
+            SkillResult.Succeeded("Runtime agent queued a patch approval."));
+        var restartedService = new SlashCommandService(
+            githubAppClient: client,
+            skillExecutionPipeline: pipeline,
+            applicationSessionContextStore: sessionContextStore);
+
+        var context = await restartedService.ExecuteAsync("/github context");
+        var fix = await restartedService.ExecuteAsync("/github fix");
+
+        context.Message.Should().Contain("workflow run: Esquetta/Kam#1002 .NET CI");
+        fix.Success.Should().BeTrue();
+        fix.Message.Should().Contain("run: Esquetta/Kam#1002");
+        pipeline.LastPlan.Should().NotBeNull();
     }
 
     [Theory]
@@ -1303,6 +1421,49 @@ public sealed class SlashCommandServiceTests
                 @"C:\Kam\Kam.exe",
                 updatePackagePath,
                 ["Start installer", "Close Kam"]);
+        }
+    }
+
+    private sealed class StaticHostControl(bool isRunning) : IVoiceAgentHostControl
+    {
+        public bool IsRunning { get; } = isRunning;
+
+        public event EventHandler<bool>? StateChanged;
+
+        public Task StartAsync()
+        {
+            StateChanged?.Invoke(this, true);
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync()
+        {
+            StateChanged?.Invoke(this, false);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class StaticSkillHealthService(IReadOnlyCollection<SkillHealthReport> reports) : ISkillHealthService
+    {
+        public Task<IReadOnlyCollection<SkillHealthReport>> GetHealthAsync(
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(reports);
+        }
+    }
+
+    private sealed class InMemoryApplicationSessionContextStore : IApplicationSessionContextStore
+    {
+        private ApplicationSessionContext _context = new();
+
+        public ApplicationSessionContext Load()
+        {
+            return _context;
+        }
+
+        public void Save(ApplicationSessionContext context)
+        {
+            _context = context;
         }
     }
 

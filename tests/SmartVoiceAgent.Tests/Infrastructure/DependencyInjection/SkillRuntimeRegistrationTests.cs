@@ -49,6 +49,7 @@ public class SkillRuntimeRegistrationTests
         provider.GetService<ISkillImportService>().Should().NotBeNull();
         provider.GetService<ISkillPolicyManager>().Should().NotBeNull();
         provider.GetService<IRuntimeAgentRunStore>().Should().NotBeNull();
+        provider.GetService<IApplicationSessionContextStore>().Should().NotBeNull();
     }
 
     [Fact]
