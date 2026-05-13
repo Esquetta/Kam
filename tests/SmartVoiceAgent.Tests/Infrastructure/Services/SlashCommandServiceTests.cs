@@ -67,7 +67,11 @@ public sealed class SlashCommandServiceTests
                 "/model health",
                 "/readiness",
                 "/settings",
+                "/skills",
+                "/skills test",
+                "/skills tests",
                 "/theme",
+                "/tools",
                 "/voice",
                 "/worktree",
                 "/update",
@@ -282,6 +286,63 @@ public sealed class SlashCommandServiceTests
         result.Message.Should().Contain("Configure an AI runtime provider and model.");
         result.Message.Should().Contain("Open Settings > AI Runtime");
         result.Message.Should().Contain("Task agent runtime is not registered.");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenSkillsAreRequested_ReturnsHealthSummaryAndSmokeTests()
+    {
+        var service = new SlashCommandService(
+            skillHealthService: new StaticSkillHealthService([
+                new SkillHealthReport { SkillId = "files.read", Status = SkillHealthStatus.Healthy },
+                new SkillHealthReport { SkillId = "shell.run", Status = SkillHealthStatus.ReviewRequired, Details = "Requires approval" }
+            ]),
+            evalCaseCatalog: new StaticSkillEvalCaseCatalog([
+                new SkillEvalCase { Plan = new SkillPlan { SkillId = "files.read" } },
+                new SkillEvalCase { Plan = new SkillPlan { SkillId = "github.actions" } }
+            ]));
+
+        var result = await service.ExecuteAsync("/skills");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Kam skills:");
+        result.Message.Should().Contain("Healthy: 1");
+        result.Message.Should().Contain("ReviewRequired: 1");
+        result.Message.Should().Contain("shell.run: ReviewRequired");
+        result.Message.Should().Contain("smoke tests: files.read, github.actions");
+        result.Message.Should().Contain("next: /skills test <skillId>");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenSkillsTestIsRequested_RunsSkillSmokeTest()
+    {
+        var testService = new StaticSkillTestService(SkillResult.Succeeded("ok"));
+        var service = new SlashCommandService(skillTestService: testService);
+
+        var result = await service.ExecuteAsync("/skills test files.read");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Skill test passed for files.read: ok");
+        testService.LastSkillId.Should().Be("files.read");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenToolsAreRequested_ReturnsToolManagementSummary()
+    {
+        var service = new SlashCommandService(
+            mcpOptions: Options.Create(new McpOptions
+            {
+                TodoistServerLink = "https://todoist.example/mcp",
+                TodoistApiKey = "secret-token"
+            }));
+
+        var result = await service.ExecuteAsync("/tools");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Kam tools:");
+        result.Message.Should().Contain("skills: /skills");
+        result.Message.Should().Contain("MCP: /mcp");
+        result.Message.Should().Contain("Todoist API key: (configured)");
+        result.Message.Should().NotContain("secret-token");
     }
 
     [Fact]
@@ -1530,6 +1591,27 @@ public sealed class SlashCommandServiceTests
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(reports);
+        }
+    }
+
+    private sealed class StaticSkillEvalCaseCatalog(IReadOnlyCollection<SkillEvalCase> cases) : ISkillEvalCaseCatalog
+    {
+        public IReadOnlyCollection<SkillEvalCase> CreateSmokeCases()
+        {
+            return cases;
+        }
+    }
+
+    private sealed class StaticSkillTestService(SkillResult result) : ISkillTestService
+    {
+        public string? LastSkillId { get; private set; }
+
+        public Task<SkillResult> TestAsync(
+            string skillId,
+            CancellationToken cancellationToken = default)
+        {
+            LastSkillId = skillId;
+            return Task.FromResult(result);
         }
     }
 

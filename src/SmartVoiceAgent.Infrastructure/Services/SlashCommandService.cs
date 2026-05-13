@@ -66,6 +66,10 @@ public sealed class SlashCommandService : ISlashCommandService
         new("/github-app repos", "List repositories visible through the configured GitHub App.", "/github-app repos", "Workflow"),
         new("/github-app run", "List jobs for one GitHub Actions workflow run.", "/github-app run <owner/repo> <runId>", "Workflow", ["/github-app jobs"]),
         new("/plugins", "Show skill/plugin health summary.", "/plugins", "Skills"),
+        new("/skills", "Show skill health, smoke tests, and management commands.", "/skills", "Skills", ["/plugins"]),
+        new("/skills test", "Run a registered skill smoke test.", "/skills test <skillId>", "Skills"),
+        new("/skills tests", "List registered skill smoke tests.", "/skills tests", "Skills"),
+        new("/tools", "Show tool, MCP, and skill management entry points.", "/tools", "Skills"),
         new("/mcp", "Show configured MCP endpoint status.", "/mcp", "Integrations"),
         new("/agent", "Create a short-lived task agent for one request.", "/agent <task>", "Runtime", ["/task-agent"]),
         new("/agents", "Show registered runtime agents.", "/agents", "Runtime"),
@@ -203,6 +207,8 @@ public sealed class SlashCommandService : ISlashCommandService
             "/github" => await RunGitHubCommandAsync(arguments, cancellationToken),
             "/github-app" => await RunGitHubAppCommandAsync(arguments, cancellationToken),
             "/plugins" => SlashCommandResult.Succeeded("/plugins", await FormatPluginsAsync(cancellationToken)),
+            "/skills" => await RunSkillsCommandAsync(arguments, cancellationToken),
+            "/tools" => SlashCommandResult.Succeeded("/tools", FormatTools()),
             "/mcp" => SlashCommandResult.Succeeded("/mcp", FormatMcp()),
             "/agent" => await RunAgentCommandAsync(argumentText, cancellationToken),
             "/agents" => RunAgentsCommand(arguments),
@@ -626,6 +632,96 @@ public sealed class SlashCommandService : ISlashCommandService
         }
 
         return builder.ToString().TrimEnd();
+    }
+
+    private async Task<SlashCommandResult> RunSkillsCommandAsync(
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken)
+    {
+        if (arguments.Count == 0 || IsCommand(arguments[0], "health", "status", "list"))
+        {
+            return SlashCommandResult.Succeeded("/skills", await FormatSkillsAsync(cancellationToken));
+        }
+
+        if (IsCommand(arguments[0], "tests", "smoke"))
+        {
+            return SlashCommandResult.Succeeded("/skills", FormatSkillSmokeTests());
+        }
+
+        if (IsCommand(arguments[0], "test", "run"))
+        {
+            return await RunSkillTestAsync(arguments.Skip(1).ToArray(), cancellationToken);
+        }
+
+        return SlashCommandResult.Failed("/skills", "Usage: /skills [health|tests|test <skillId>]");
+    }
+
+    private async Task<string> FormatSkillsAsync(CancellationToken cancellationToken)
+    {
+        var builder = new StringBuilder()
+            .AppendLine("Kam skills:");
+
+        if (_skillHealthService is null)
+        {
+            builder.AppendLine("  health: skill health service unavailable");
+        }
+        else
+        {
+            var reports = await _skillHealthService.GetHealthAsync(cancellationToken);
+            foreach (var group in reports.GroupBy(report => report.Status).OrderBy(group => group.Key.ToString()))
+            {
+                builder.AppendLine($"  {group.Key}: {group.Count()}");
+            }
+
+            var attention = reports
+                .Where(report => report.Status != SkillHealthStatus.Healthy)
+                .OrderBy(report => report.SkillId, StringComparer.OrdinalIgnoreCase)
+                .Take(8)
+                .ToArray();
+            if (attention.Length == 0)
+            {
+                builder.AppendLine("  attention: none");
+            }
+            else
+            {
+                builder.AppendLine("  attention:");
+                foreach (var report in attention)
+                {
+                    builder.AppendLine($"    {NormalizeMessage(report.SkillId)}: {report.Status}");
+                }
+            }
+        }
+
+        var smokeTests = GetSmokeTestSkillIds();
+        builder.AppendLine(smokeTests.Length == 0
+            ? "  smoke tests: none registered"
+            : $"  smoke tests: {string.Join(", ", smokeTests)}");
+        builder.AppendLine("  next: /skills test <skillId>");
+        builder.AppendLine("  review: /review");
+
+        return builder.ToString().TrimEnd();
+    }
+
+    private string FormatSkillSmokeTests()
+    {
+        var smokeTests = GetSmokeTestSkillIds();
+        return smokeTests.Length == 0
+            ? "Kam skill smoke tests: none registered."
+            : $"Kam skill smoke tests: {string.Join(", ", smokeTests)}";
+    }
+
+    private string FormatTools()
+    {
+        return string.Join(Environment.NewLine, [
+            "Kam tools:",
+            "  skills: /skills",
+            "  skill tests: /skills test <skillId>",
+            "  MCP: /mcp",
+            $"  Todoist endpoint: {FormatConfiguredValue(_mcpOptions.TodoistServerLink)}",
+            $"  Todoist API key: {FormatSecretStatus(_mcpOptions.TodoistApiKey)}",
+            "  chat commands: status and registered smoke-test execution only",
+            "  review: /review"
+        ]);
     }
 
     private string FormatMcp()
@@ -1708,17 +1804,22 @@ public sealed class SlashCommandService : ISlashCommandService
 
     private string FormatSmokeCaseHint()
     {
-        var cases = _evalCaseCatalog?.CreateSmokeCases()
+        var cases = GetSmokeTestSkillIds();
+
+        return cases.Length == 0
+            ? string.Empty
+            : $"{Environment.NewLine}Available smoke tests: {string.Join(", ", cases)}";
+    }
+
+    private string[] GetSmokeTestSkillIds()
+    {
+        return _evalCaseCatalog?.CreateSmokeCases()
             .Select(testCase => testCase.Plan.SkillId)
             .Where(skillId => !string.IsNullOrWhiteSpace(skillId))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(skillId => skillId, StringComparer.OrdinalIgnoreCase)
             .Take(8)
             .ToArray() ?? [];
-
-        return cases.Length == 0
-            ? string.Empty
-            : $"{Environment.NewLine}Available smoke tests: {string.Join(", ", cases)}";
     }
 
     private static void AppendGitHubAppPermissions(StringBuilder builder)
