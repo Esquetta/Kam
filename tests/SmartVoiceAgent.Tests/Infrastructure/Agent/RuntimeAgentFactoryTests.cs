@@ -118,6 +118,7 @@ public sealed class RuntimeAgentFactoryTests
             """,
             "final answer");
         var runStore = new InMemoryRuntimeAgentRunStore();
+        var uiLogService = new RecordingUiLogService();
         var toolService = new RecordingReadOnlyToolService([
             new RuntimeAgentToolObservation("workspace.search_text", "Needle found", true)
         ]);
@@ -126,7 +127,7 @@ public sealed class RuntimeAgentFactoryTests
             NullLogger<RuntimeAgentFactory>.Instance,
             runStore,
             toolService,
-            new RecordingUiLogService(),
+            uiLogService,
             "gpt-test");
 
         var result = await factory.RunAsync(new RuntimeAgentRequest(
@@ -140,6 +141,49 @@ public sealed class RuntimeAgentFactoryTests
         toolService.LastRequests![0].Tool.Should().Be("workspace.search_text");
         chatClient.SystemPrompts.Last().Should().Contain("Needle found");
         runStore.List().Should().ContainSingle().Subject.Response.Should().Be("final answer");
+        uiLogService.Entries
+            .Where(entry => entry.IsAgentUpdate)
+            .Select(entry => entry.Message)
+            .Should()
+            .Contain([
+                "Requested context: search text.",
+                "Context ready: search text."
+            ]);
+        uiLogService.Entries.Select(entry => entry.Message)
+            .Should()
+            .NotContain(message => message.Contains("workspace.search_text", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenReadOnlyObservationFails_LogsUnavailableContextStep()
+    {
+        var chatClient = new QueueingChatClient(
+            """
+            {"toolRequests":[{"tool":"file.read_lines","path":"missing.cs"}]}
+            """,
+            "final answer");
+        var uiLogService = new RecordingUiLogService();
+        var toolService = new RecordingReadOnlyToolService([
+            new RuntimeAgentToolObservation("file.read_lines", "File path is missing.", false)
+        ]);
+        var factory = new RuntimeAgentFactory(
+            () => chatClient,
+            NullLogger<RuntimeAgentFactory>.Instance,
+            new InMemoryRuntimeAgentRunStore(),
+            toolService,
+            uiLogService,
+            "gpt-test");
+
+        await factory.RunAsync(new RuntimeAgentRequest(
+            "LoopAgent",
+            "coding",
+            "Read missing.cs."));
+
+        uiLogService.Entries
+            .Where(entry => entry.IsAgentUpdate)
+            .Select(entry => entry.Message)
+            .Should()
+            .Contain("Context unavailable: read file.");
     }
 
     [Fact]

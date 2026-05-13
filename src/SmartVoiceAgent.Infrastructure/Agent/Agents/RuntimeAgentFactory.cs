@@ -70,11 +70,19 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
             {
                 _uiLogService?.LogAgentUpdate(
                     normalizedRequest.AgentName,
-                    $"Requested {toolRequests.Count} read-only context item(s).",
+                    $"Requested context: {FormatToolRequestList(toolRequests)}.",
                     false);
                 var newObservations = await _readOnlyToolService
                     .ExecuteAsync(toolRequests, cancellationToken)
                     .ConfigureAwait(false);
+                foreach (var observation in newObservations)
+                {
+                    _uiLogService?.LogAgentUpdate(
+                        normalizedRequest.AgentName,
+                        $"Context {FormatObservationStatus(observation)}: {FormatToolName(observation.SkillId)}.",
+                        false);
+                }
+
                 normalizedRequest = normalizedRequest with
                 {
                     ToolObservations = (normalizedRequest.ToolObservations ?? [])
@@ -301,5 +309,27 @@ Operating rules:
             && property.ValueKind == JsonValueKind.String
             ? property.GetString()
             : null;
+    }
+
+    private static string FormatToolRequestList(IReadOnlyList<RuntimeAgentReadOnlyToolRequest> requests)
+    {
+        return string.Join(", ", requests.Select(request => FormatToolName(request.Tool)));
+    }
+
+    private static string FormatObservationStatus(RuntimeAgentToolObservation observation)
+    {
+        return observation.Success ? "ready" : "unavailable";
+    }
+
+    private static string FormatToolName(string tool)
+    {
+        return tool.Trim().ToLowerInvariant() switch
+        {
+            "file.read_lines" => "read file",
+            "workspace.search_text" => "search text",
+            "git.diff_summary" => "diff summary",
+            "workspace.map" => "workspace map",
+            _ => "context"
+        };
     }
 }
