@@ -57,6 +57,8 @@ public sealed class SlashCommandServiceTests
                 "/github-app run",
                 "/agent",
                 "/agents",
+                "/agents cancel",
+                "/agents retry",
                 "/hooks",
                 "/integrations",
                 "/limits",
@@ -125,6 +127,47 @@ public sealed class SlashCommandServiceTests
         result.Message.Should().Contain("task runs:");
         result.Message.Should().Contain("CodingAgent-001 [Succeeded]");
         result.Message.Should().Contain("Completed.");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenAgentRunCancelIsRequested_CancelsRuntimeRun()
+    {
+        var runStore = new InMemoryRuntimeAgentRunStore();
+        var run = runStore.Start(
+            new RuntimeAgentRequest("CodingAgent-001", "coding", "Inspect the workspace."),
+            "gpt-test");
+        var service = new SlashCommandService(runtimeAgentRunStore: runStore);
+
+        var result = await service.ExecuteAsync($"/agents cancel {run.RunId}");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Kam agent run canceled:");
+        result.Message.Should().Contain(run.RunId);
+        runStore.Get(run.RunId)!.Status.Should().Be(RuntimeAgentRunStatus.Canceled);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenAgentRunRetryIsRequested_QueuesNewRuntimeRunFromPreviousTask()
+    {
+        var runStore = new InMemoryRuntimeAgentRunStore();
+        var failedRun = runStore.Start(
+            new RuntimeAgentRequest("CodingAgent-001", "coding", "Inspect the workspace."),
+            "gpt-test");
+        runStore.Fail(failedRun.RunId, "failed");
+        var service = new SlashCommandService(runtimeAgentRunStore: runStore);
+
+        var result = await service.ExecuteAsync($"/agents retry {failedRun.RunId}");
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("Kam agent retry queued:");
+        result.Message.Should().Contain("from:");
+        result.Message.Should().Contain(failedRun.RunId);
+        var runs = runStore.List();
+        runs[0].RunId.Should().NotBe(failedRun.RunId);
+        runs[0].AgentName.Should().Be("CodingAgent-001");
+        runs[0].Role.Should().Be("coding");
+        runs[0].Task.Should().Be("Inspect the workspace.");
+        runs[0].Status.Should().Be(RuntimeAgentRunStatus.Running);
     }
 
     [Fact]

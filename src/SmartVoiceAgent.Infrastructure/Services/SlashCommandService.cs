@@ -67,6 +67,8 @@ public sealed class SlashCommandService : ISlashCommandService
         new("/mcp", "Show configured MCP endpoint status.", "/mcp", "Integrations"),
         new("/agent", "Create a short-lived task agent for one request.", "/agent <task>", "Runtime", ["/task-agent"]),
         new("/agents", "Show registered runtime agents.", "/agents", "Runtime"),
+        new("/agents cancel", "Cancel a running runtime agent task.", "/agents cancel <runId>", "Runtime"),
+        new("/agents retry", "Queue a retry from a previous runtime agent task.", "/agents retry <runId>", "Runtime"),
         new("/test", "Run a registered smoke test for one skill.", "/test <skillId>", "Skills"),
         new("/review", "Review current skill health state.", "/review", "Skills"),
         new("/worktree", "Show worktree command availability.", "/worktree", "Workflow"),
@@ -201,7 +203,7 @@ public sealed class SlashCommandService : ISlashCommandService
             "/plugins" => SlashCommandResult.Succeeded("/plugins", await FormatPluginsAsync(cancellationToken)),
             "/mcp" => SlashCommandResult.Succeeded("/mcp", FormatMcp()),
             "/agent" => await RunAgentCommandAsync(argumentText, cancellationToken),
-            "/agents" => SlashCommandResult.Succeeded("/agents", FormatAgents()),
+            "/agents" => RunAgentsCommand(arguments),
             "/test" => await RunSkillTestAsync(arguments, cancellationToken),
             "/review" => SlashCommandResult.Succeeded("/review", await FormatReviewAsync(cancellationToken)),
             "/worktree" => SlashCommandResult.Succeeded("/worktree", FormatCodingAgentWorkflow("/worktree")),
@@ -609,6 +611,81 @@ public sealed class SlashCommandService : ISlashCommandService
         return result.Success
             ? SlashCommandResult.Succeeded("/agent", result.Message)
             : SlashCommandResult.Failed("/agent", result.ErrorMessage);
+    }
+
+    private SlashCommandResult RunAgentsCommand(IReadOnlyList<string> arguments)
+    {
+        if (arguments.Count == 0)
+        {
+            return SlashCommandResult.Succeeded("/agents", FormatAgents());
+        }
+
+        if (_runtimeAgentRunStore is null)
+        {
+            return SlashCommandResult.Failed("/agents", "Runtime agent run store is unavailable.");
+        }
+
+        if (IsCommand(arguments[0], "cancel", "stop"))
+        {
+            if (arguments.Count < 2)
+            {
+                return SlashCommandResult.Failed("/agents", "Usage: /agents cancel <runId>");
+            }
+
+            var run = _runtimeAgentRunStore.Get(arguments[1]);
+            if (run is null)
+            {
+                return SlashCommandResult.Failed("/agents", $"Runtime agent run '{NormalizeMessage(arguments[1])}' was not found.");
+            }
+
+            var canceled = _runtimeAgentRunStore.Cancel(run.RunId, "Canceled by user from slash command.");
+            return SlashCommandResult.Succeeded(
+                "/agents",
+                string.Join(Environment.NewLine, [
+                    "Kam agent run canceled:",
+                    $"  run: {NormalizeMessage(canceled.RunId)}",
+                    $"  agent: {NormalizeMessage(canceled.AgentName)}",
+                    $"  status: {canceled.Status}"
+                ]));
+        }
+
+        if (IsCommand(arguments[0], "retry", "rerun"))
+        {
+            if (arguments.Count < 2)
+            {
+                return SlashCommandResult.Failed("/agents", "Usage: /agents retry <runId>");
+            }
+
+            var run = _runtimeAgentRunStore.Get(arguments[1]);
+            if (run is null)
+            {
+                return SlashCommandResult.Failed("/agents", $"Runtime agent run '{NormalizeMessage(arguments[1])}' was not found.");
+            }
+
+            if (run.Status == RuntimeAgentRunStatus.Running)
+            {
+                return SlashCommandResult.Failed("/agents", "Runtime agent run is still running; cancel it before retrying.");
+            }
+
+            var retry = _runtimeAgentRunStore.Start(
+                new RuntimeAgentRequest(
+                    run.AgentName,
+                    run.Role,
+                    run.Task,
+                    run.ToolObservations),
+                run.ModelId);
+            return SlashCommandResult.Succeeded(
+                "/agents",
+                string.Join(Environment.NewLine, [
+                    "Kam agent retry queued:",
+                    $"  run: {NormalizeMessage(retry.RunId)}",
+                    $"  from: {NormalizeMessage(run.RunId)}",
+                    $"  agent: {NormalizeMessage(retry.AgentName)}",
+                    $"  model: {NormalizeMessage(retry.ModelId)}"
+                ]));
+        }
+
+        return SlashCommandResult.Failed("/agents", "Usage: /agents [cancel|retry] <runId>");
     }
 
     private string FormatAgents()
