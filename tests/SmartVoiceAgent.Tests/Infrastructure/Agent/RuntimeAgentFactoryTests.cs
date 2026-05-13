@@ -214,6 +214,38 @@ public sealed class RuntimeAgentFactoryTests
         toolService.LastRequests.Should().BeNull();
     }
 
+    [Fact]
+    public async Task RunAsync_WhenModelRequestsApprovalGatedActions_ReturnsActionRequests()
+    {
+        var chatClient = new QueueingChatClient(
+            """
+            {"message":"Patch is ready for review.","actionRequests":[{"action":"file.patch","filePath":"Program.cs","oldText":"old","newText":"new","expectedOccurrences":1},{"action":"tests.run","command":"dotnet test"}]}
+            """);
+        var uiLogService = new RecordingUiLogService();
+        var factory = new RuntimeAgentFactory(
+            () => chatClient,
+            NullLogger<RuntimeAgentFactory>.Instance,
+            new InMemoryRuntimeAgentRunStore(),
+            null,
+            uiLogService,
+            "gpt-test");
+
+        var result = await factory.RunAsync(new RuntimeAgentRequest(
+            "LoopAgent",
+            "coding",
+            "Patch Program.cs."));
+
+        result.Response.Should().Be("Patch is ready for review.");
+        result.ActionRequests.Should().HaveCount(2);
+        result.ActionRequests![0].Action.Should().Be("file.patch");
+        result.ActionRequests[0].FilePath.Should().Be("Program.cs");
+        result.ActionRequests[0].OldText.Should().Be("old");
+        result.ActionRequests[0].NewText.Should().Be("new");
+        result.ActionRequests[1].Action.Should().Be("tests.run");
+        result.ActionRequests[1].Command.Should().Be("dotnet test");
+        uiLogService.Entries.Should().Contain(entry => entry.Message == "Requested approval for 2 action(s).");
+    }
+
     private sealed class RecordingChatClient : IChatClient
     {
         private readonly string _response;

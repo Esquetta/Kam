@@ -13,6 +13,7 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
     private const int MaxRoleLength = 120;
     private const int MaxRequestLength = 20000;
     private const int MaxModelToolRequests = 3;
+    private const int MaxModelActionRequests = 3;
 
     private readonly Func<IChatClient> _chatClientFactory;
     private readonly ILogger<RuntimeAgentFactory> _logger;
@@ -111,14 +112,25 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
                 text = "Task agent completed without a text response.";
             }
 
+            var final = ExtractFinalResponse(text);
+            if (final.ActionRequests.Count > 0)
+            {
+                _uiLogService?.LogAgentUpdate(
+                    normalizedRequest.AgentName,
+                    $"Requested approval for {final.ActionRequests.Count} action(s).",
+                    false,
+                    run.RunId);
+            }
+
             _uiLogService?.LogAgentUpdate(normalizedRequest.AgentName, "Completed.", true, run.RunId);
-            _runStore.Complete(run.RunId, text);
+            _runStore.Complete(run.RunId, final.Response);
             return new RuntimeAgentResult(
                 normalizedRequest.AgentName,
                 normalizedRequest.Role,
-                text,
+                final.Response,
                 _modelId,
-                run.RunId);
+                run.RunId,
+                final.ActionRequests);
         }
         catch (Exception ex)
         {
@@ -220,7 +232,10 @@ Operating rules:
 - You may request one extra round of read-only context by replying with only JSON in this shape:
   {"toolRequests":[{"tool":"file.read_lines","path":"relative/path.cs"},{"tool":"workspace.search_text","query":"term"},{"tool":"git.diff_summary"}]}
 - Available read-only tools are exactly: file.read_lines, workspace.search_text, git.diff_summary.
-- Do not request shell, write, network, browser, email, GitHub, or mutation tools.
+- If you need file changes or tests, do not claim they were executed. Return only JSON in this shape:
+  {"message":"Brief user-facing summary.","actionRequests":[{"action":"file.patch","filePath":"relative/path.cs","oldText":"exact text","newText":"replacement text","expectedOccurrences":1},{"action":"tests.run","command":"dotnet test tests/SmartVoiceAgent.Tests/SmartVoiceAgent.Tests.csproj"}]}
+- Available approval-gated actions are exactly: file.patch and tests.run.
+- Do not request network, browser, email, GitHub, or any action outside the listed approval-gated actions.
 - If the task requires any unavailable or permissioned action, describe the exact next skill/action Kam should run and any missing setup.
 - Do not expose internal class names, stack traces, service names, secrets, or raw configuration values.
 """;
@@ -299,6 +314,99 @@ Operating rules:
         }
     }
 
+    private static RuntimeAgentFinalResponse ExtractFinalResponse(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return new RuntimeAgentFinalResponse("Task agent completed without a text response.", []);
+        }
+
+        var trimmed = value.Trim();
+        if (!trimmed.StartsWith("{", StringComparison.Ordinal))
+        {
+            return new RuntimeAgentFinalResponse(trimmed, []);
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(trimmed);
+            if (!document.RootElement.TryGetProperty("actionRequests", out var requests)
+                || requests.ValueKind != JsonValueKind.Array)
+            {
+                return new RuntimeAgentFinalResponse(trimmed, []);
+            }
+
+            var parsed = new List<RuntimeAgentActionRequest>();
+            foreach (var request in requests.EnumerateArray())
+            {
+                if (request.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
+
+                var action = ReadOptionalString(request, "action");
+                if (string.IsNullOrWhiteSpace(action))
+                {
+                    action = ReadOptionalString(request, "skillId");
+                }
+
+                if (action is null)
+                {
+                    continue;
+                }
+
+                if (action.Equals("file.patch", StringComparison.OrdinalIgnoreCase))
+                {
+                    var filePath = ReadOptionalString(request, "filePath") ?? ReadOptionalString(request, "path");
+                    var oldText = ReadOptionalString(request, "oldText");
+                    var newText = ReadOptionalString(request, "newText");
+                    if (string.IsNullOrWhiteSpace(filePath)
+                        || oldText is null
+                        || newText is null)
+                    {
+                        continue;
+                    }
+
+                    parsed.Add(new RuntimeAgentActionRequest(
+                        "file.patch",
+                        filePath,
+                        oldText,
+                        newText,
+                        ReadOptionalInt(request, "expectedOccurrences", 1)));
+                }
+                else if (action.Equals("tests.run", StringComparison.OrdinalIgnoreCase))
+                {
+                    var command = ReadOptionalString(request, "command");
+                    if (string.IsNullOrWhiteSpace(command))
+                    {
+                        continue;
+                    }
+
+                    parsed.Add(new RuntimeAgentActionRequest("tests.run", Command: command));
+                }
+
+                if (parsed.Count >= MaxModelActionRequests)
+                {
+                    break;
+                }
+            }
+
+            var message = ReadOptionalString(document.RootElement, "message");
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                message = parsed.Count == 0
+                    ? trimmed
+                    : "Task agent proposed approval-gated actions.";
+            }
+
+            return new RuntimeAgentFinalResponse(message.Trim(), parsed);
+        }
+        catch (JsonException)
+        {
+            return new RuntimeAgentFinalResponse(trimmed, []);
+        }
+    }
+
     private static bool IsAllowedReadOnlyTool(string? tool)
     {
         return tool is not null
@@ -313,6 +421,18 @@ Operating rules:
             && property.ValueKind == JsonValueKind.String
             ? property.GetString()
             : null;
+    }
+
+    private static int ReadOptionalInt(JsonElement element, string propertyName, int defaultValue)
+    {
+        if (!element.TryGetProperty(propertyName, out var property))
+        {
+            return defaultValue;
+        }
+
+        return property.ValueKind == JsonValueKind.Number && property.TryGetInt32(out var number)
+            ? Math.Max(1, number)
+            : defaultValue;
     }
 
     private static string FormatToolRequestList(IReadOnlyList<RuntimeAgentReadOnlyToolRequest> requests)
@@ -336,4 +456,8 @@ Operating rules:
             _ => "context"
         };
     }
+
+    private sealed record RuntimeAgentFinalResponse(
+        string Response,
+        IReadOnlyList<RuntimeAgentActionRequest> ActionRequests);
 }

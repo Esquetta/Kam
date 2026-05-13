@@ -5,4 +5,5 @@ public sealed record RuntimeAgentResult(
     string Role,
     string Response,
     string ModelId,
-    string RunId = "");
+    string RunId = "",
+    IReadOnlyList<RuntimeAgentActionRequest>? ActionRequests = null);

@@ -186,13 +186,173 @@ public sealed class RuntimeAgentSkillExecutorTests
         }
     }
 
+    [Fact]
+    public async Task ExecuteAsync_WhenAgentProposesFilePatch_QueuesPreviewForApprovalWithoutWriting()
+    {
+        var workspace = Path.Combine(Path.GetTempPath(), $"kam-agent-tools-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspace);
+        try
+        {
+            var filePath = Path.Combine(workspace, "Program.cs");
+            await File.WriteAllTextAsync(filePath, "Console.WriteLine(\"old\");");
+            var confirmation = new RecordingSkillConfirmationService();
+            var factory = new CapturingRuntimeAgentFactory(
+                new RuntimeAgentResult(
+                    "CodingAgent",
+                    "coding",
+                    "Patch proposed.",
+                    "test-model",
+                    ActionRequests:
+                    [
+                        new RuntimeAgentActionRequest(
+                            "file.patch",
+                            FilePath: "Program.cs",
+                            OldText: "old",
+                            NewText: "new",
+                            ExpectedOccurrences: 1)
+                    ]));
+            var executor = new RuntimeAgentSkillExecutor(
+                factory,
+                new FileAgentTools(workspace),
+                confirmation);
+
+            var result = await executor.ExecuteAsync(
+                SkillPlan.FromObject(
+                    RuntimeAgentSkillExecutor.SkillId,
+                    new
+                    {
+                        task = "Patch Program.cs",
+                        role = "coding"
+                    }));
+
+            result.Success.Should().BeTrue();
+            result.Message.Should().Contain("Approval required: 1 action");
+            confirmation.QueueCount.Should().Be(1);
+            confirmation.LastRequest.Should().NotBeNull();
+            confirmation.LastRequest!.SkillId.Should().Be("file.patch");
+            confirmation.LastRequest.Plan.RequiresConfirmation.Should().BeTrue();
+            confirmation.LastRequest.Preview.Should().Contain("Preview only:");
+            confirmation.LastRequest.Preview.Should().Contain("-Console.WriteLine(\"old\");");
+            confirmation.LastRequest.Preview.Should().Contain("+Console.WriteLine(\"new\");");
+            (await File.ReadAllTextAsync(filePath)).Should().Be("Console.WriteLine(\"old\");");
+        }
+        finally
+        {
+            Directory.Delete(workspace, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenAgentProposesTestRun_QueuesShellCommandForApproval()
+    {
+        var workspace = Path.Combine(Path.GetTempPath(), $"kam-agent-tools-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspace);
+        try
+        {
+            var confirmation = new RecordingSkillConfirmationService();
+            var factory = new CapturingRuntimeAgentFactory(
+                new RuntimeAgentResult(
+                    "CodingAgent",
+                    "coding",
+                    "Tests proposed.",
+                    "test-model",
+                    ActionRequests:
+                    [
+                        new RuntimeAgentActionRequest(
+                            "tests.run",
+                            Command: "dotnet test tests/SmartVoiceAgent.Tests/SmartVoiceAgent.Tests.csproj")
+                    ]));
+            var executor = new RuntimeAgentSkillExecutor(
+                factory,
+                new FileAgentTools(workspace),
+                confirmation);
+
+            var result = await executor.ExecuteAsync(
+                SkillPlan.FromObject(
+                    RuntimeAgentSkillExecutor.SkillId,
+                    new
+                    {
+                        task = "Run tests",
+                        role = "coding"
+                    }));
+
+            result.Success.Should().BeTrue();
+            confirmation.QueueCount.Should().Be(1);
+            confirmation.LastRequest.Should().NotBeNull();
+            confirmation.LastRequest!.SkillId.Should().Be("shell.run");
+            confirmation.LastRequest.Plan.RequiresConfirmation.Should().BeTrue();
+            confirmation.LastRequest.Preview.Should().Contain("Test command preview:");
+            confirmation.LastRequest.Preview.Should().Contain("dotnet test tests/SmartVoiceAgent.Tests/SmartVoiceAgent.Tests.csproj");
+            confirmation.LastRequest.Plan.Arguments["workingDirectory"].GetString().Should().Be(workspace);
+        }
+        finally
+        {
+            Directory.Delete(workspace, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenAgentPatchPreviewFails_DoesNotQueueApproval()
+    {
+        var workspace = Path.Combine(Path.GetTempPath(), $"kam-agent-tools-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspace);
+        try
+        {
+            await File.WriteAllTextAsync(Path.Combine(workspace, "Program.cs"), "Console.WriteLine(\"old\");");
+            var confirmation = new RecordingSkillConfirmationService();
+            var factory = new CapturingRuntimeAgentFactory(
+                new RuntimeAgentResult(
+                    "CodingAgent",
+                    "coding",
+                    "Patch proposed.",
+                    "test-model",
+                    ActionRequests:
+                    [
+                        new RuntimeAgentActionRequest(
+                            "file.patch",
+                            FilePath: "Program.cs",
+                            OldText: "missing",
+                            NewText: "new",
+                            ExpectedOccurrences: 1)
+                    ]));
+            var executor = new RuntimeAgentSkillExecutor(
+                factory,
+                new FileAgentTools(workspace),
+                confirmation);
+
+            var result = await executor.ExecuteAsync(
+                SkillPlan.FromObject(
+                    RuntimeAgentSkillExecutor.SkillId,
+                    new
+                    {
+                        task = "Patch Program.cs",
+                        role = "coding"
+                    }));
+
+            result.Success.Should().BeFalse();
+            result.ErrorCode.Should().Be("agent_action_request_invalid");
+            confirmation.QueueCount.Should().Be(0);
+        }
+        finally
+        {
+            Directory.Delete(workspace, recursive: true);
+        }
+    }
+
     private sealed class CapturingRuntimeAgentFactory : IRuntimeAgentFactory
     {
+        private readonly RuntimeAgentResult? _result;
         private readonly string _response;
 
         public CapturingRuntimeAgentFactory(string response)
         {
             _response = response;
+        }
+
+        public CapturingRuntimeAgentFactory(RuntimeAgentResult result)
+        {
+            _result = result;
+            _response = result.Response;
         }
 
         public RuntimeAgentRequest? LastRequest { get; private set; }
@@ -202,11 +362,60 @@ public sealed class RuntimeAgentSkillExecutorTests
             CancellationToken cancellationToken = default)
         {
             LastRequest = request;
+            if (_result is not null)
+            {
+                return Task.FromResult(_result);
+            }
+
             return Task.FromResult(new RuntimeAgentResult(
                 request.AgentName,
                 request.Role,
                 _response,
                 "test-model"));
         }
+    }
+
+    private sealed class RecordingSkillConfirmationService : ISkillConfirmationService
+    {
+        public event EventHandler? PendingChanged;
+
+        public int QueueCount { get; private set; }
+
+        public SkillConfirmationRequest? LastRequest { get; private set; }
+
+        public IReadOnlyCollection<SkillConfirmationRequest> GetPending() =>
+            LastRequest is null ? [] : [LastRequest];
+
+        public SkillConfirmationRequest Queue(
+            string userCommand,
+            SkillPlan plan,
+            string? reason = null,
+            string? preview = null)
+        {
+            QueueCount++;
+            LastRequest = new SkillConfirmationRequest
+            {
+                Id = Guid.NewGuid(),
+                UserCommand = userCommand,
+                Plan = plan,
+                CreatedAt = DateTimeOffset.UtcNow,
+                Reason = reason ?? string.Empty,
+                Preview = preview ?? string.Empty
+            };
+            PendingChanged?.Invoke(this, EventArgs.Empty);
+            return LastRequest;
+        }
+
+        public Task<SkillResult> ApproveAsync(
+            Guid requestId,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(SkillResult.Failed(
+                "Not implemented by test stub.",
+                SkillExecutionStatus.Failed,
+                "test_stub"));
+        }
+
+        public bool Reject(Guid requestId) => false;
     }
 }

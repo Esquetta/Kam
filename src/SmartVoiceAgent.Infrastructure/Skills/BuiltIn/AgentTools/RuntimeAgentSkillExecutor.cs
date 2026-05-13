@@ -2,6 +2,7 @@ using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Agents;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Infrastructure.Agent.Tools;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace SmartVoiceAgent.Infrastructure.Skills.BuiltIn.AgentTools;
@@ -23,13 +24,16 @@ public sealed class RuntimeAgentSkillExecutor : ISkillExecutor
 
     private readonly IRuntimeAgentFactory _runtimeAgentFactory;
     private readonly FileAgentTools? _fileTools;
+    private readonly ISkillConfirmationService? _confirmationService;
 
     public RuntimeAgentSkillExecutor(
         IRuntimeAgentFactory runtimeAgentFactory,
-        FileAgentTools? fileTools = null)
+        FileAgentTools? fileTools = null,
+        ISkillConfirmationService? confirmationService = null)
     {
         _runtimeAgentFactory = runtimeAgentFactory;
         _fileTools = fileTools;
+        _confirmationService = confirmationService;
     }
 
     public bool CanExecute(string skillId)
@@ -69,7 +73,178 @@ public sealed class RuntimeAgentSkillExecutor : ISkillExecutor
             .RunAsync(new RuntimeAgentRequest(agentName, role, task, observations), cancellationToken)
             .ConfigureAwait(false);
 
-        return SkillResult.Succeeded(result.Response, result);
+        var queuedActions = await QueueApprovalGatedActionsAsync(result, cancellationToken)
+            .ConfigureAwait(false);
+        if (!string.IsNullOrWhiteSpace(queuedActions.ErrorMessage))
+        {
+            return SkillResult.Failed(
+                queuedActions.ErrorMessage,
+                SkillExecutionStatus.ValidationFailed,
+                "agent_action_request_invalid");
+        }
+
+        var message = queuedActions.QueuedCount == 0
+            ? result.Response
+            : $"{result.Response}{Environment.NewLine}{queuedActions.Message}";
+
+        return SkillResult.Succeeded(message.Trim(), result);
+    }
+
+    private async Task<QueuedActionResult> QueueApprovalGatedActionsAsync(
+        RuntimeAgentResult result,
+        CancellationToken cancellationToken)
+    {
+        if (result.ActionRequests is not { Count: > 0 })
+        {
+            return QueuedActionResult.None;
+        }
+
+        if (_confirmationService is null)
+        {
+            return new QueuedActionResult(
+                0,
+                string.Empty,
+                "Runtime agent proposed actions, but approval handling is not available.");
+        }
+
+        var queued = 0;
+        var messages = new List<string>();
+        foreach (var request in result.ActionRequests)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var queueResult = await QueueApprovalGatedActionAsync(result, request)
+                .ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(queueResult.ErrorMessage))
+            {
+                return queueResult;
+            }
+
+            queued += queueResult.QueuedCount;
+            if (!string.IsNullOrWhiteSpace(queueResult.Message))
+            {
+                messages.Add(queueResult.Message);
+            }
+        }
+
+        return new QueuedActionResult(
+            queued,
+            queued == 0
+                ? string.Empty
+                : $"Approval required: {queued} action(s) were added to the review queue. {string.Join(" ", messages)}",
+            string.Empty);
+    }
+
+    private async Task<QueuedActionResult> QueueApprovalGatedActionAsync(
+        RuntimeAgentResult result,
+        RuntimeAgentActionRequest request)
+    {
+        if (request.Action.Equals("file.patch", StringComparison.OrdinalIgnoreCase))
+        {
+            return await QueueFilePatchActionAsync(result, request).ConfigureAwait(false);
+        }
+
+        if (request.Action.Equals("tests.run", StringComparison.OrdinalIgnoreCase))
+        {
+            return QueueTestRunAction(result, request);
+        }
+
+        return new QueuedActionResult(
+            0,
+            string.Empty,
+            $"Runtime agent requested unsupported action '{request.Action}'.");
+    }
+
+    private async Task<QueuedActionResult> QueueFilePatchActionAsync(
+        RuntimeAgentResult result,
+        RuntimeAgentActionRequest request)
+    {
+        if (_fileTools is null)
+        {
+            return new QueuedActionResult(0, string.Empty, "Runtime agent requested a file patch, but workspace file tools are not available.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.FilePath)
+            || request.OldText is null
+            || request.NewText is null)
+        {
+            return new QueuedActionResult(0, string.Empty, "Runtime agent requested an incomplete file patch.");
+        }
+
+        var filePath = ResolveWorkspacePath(_fileTools.DefaultWorkingDirectory, request.FilePath);
+        if (filePath is null)
+        {
+            return new QueuedActionResult(0, string.Empty, "Runtime agent requested a file patch outside the workspace or for a missing file.");
+        }
+
+        var expectedOccurrences = Math.Max(1, request.ExpectedOccurrences);
+        var preview = await _fileTools
+            .PatchFileAsync(filePath, request.OldText, request.NewText, expectedOccurrences, previewOnly: true)
+            .ConfigureAwait(false);
+        if (LooksLikeToolError(preview))
+        {
+            return new QueuedActionResult(0, string.Empty, $"Runtime agent file patch preview failed: {preview}");
+        }
+
+        var plan = SkillPlan.FromObject(
+            "file.patch",
+            new
+            {
+                filePath,
+                oldText = request.OldText,
+                newText = request.NewText,
+                expectedOccurrences
+            });
+        plan.RequiresConfirmation = true;
+        plan.Reasoning = "Runtime agent proposed a file patch. Review the diff before applying changes.";
+
+        var confirmation = _confirmationService!.Queue(
+            $"Approve runtime agent patch from {result.AgentName}",
+            plan,
+            plan.Reasoning,
+            preview);
+
+        return new QueuedActionResult(
+            1,
+            $"Patch approval queued ({confirmation.Id}).",
+            string.Empty);
+    }
+
+    private QueuedActionResult QueueTestRunAction(
+        RuntimeAgentResult result,
+        RuntimeAgentActionRequest request)
+    {
+        if (_fileTools is null)
+        {
+            return new QueuedActionResult(0, string.Empty, "Runtime agent requested a test run, but workspace context is not available.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Command))
+        {
+            return new QueuedActionResult(0, string.Empty, "Runtime agent requested an empty test command.");
+        }
+
+        var plan = SkillPlan.FromObject(
+            "shell.run",
+            new
+            {
+                command = request.Command,
+                workingDirectory = _fileTools.DefaultWorkingDirectory,
+                timeoutMilliseconds = 15000,
+                maxOutputLength = 12000
+            });
+        plan.RequiresConfirmation = true;
+        plan.Reasoning = "Runtime agent proposed a test command. Approve it before launching a process.";
+
+        var confirmation = _confirmationService!.Queue(
+            $"Approve runtime agent test from {result.AgentName}",
+            plan,
+            plan.Reasoning,
+            FormatTestPreview(request.Command, _fileTools.DefaultWorkingDirectory));
+
+        return new QueuedActionResult(
+            1,
+            $"Test approval queued ({confirmation.Id}).",
+            string.Empty);
     }
 
     private async Task<IReadOnlyList<RuntimeAgentToolObservation>?> CreateReadOnlyToolContextAsync(
@@ -227,6 +402,16 @@ public sealed class RuntimeAgentSkillExecutor : ISkillExecutor
         }
     }
 
+    private static string FormatTestPreview(string command, string workingDirectory)
+    {
+        var builder = new StringBuilder()
+            .AppendLine("Test command preview:")
+            .AppendLine($"Working directory: {workingDirectory}")
+            .AppendLine($"Command: {command.Trim()}");
+
+        return builder.ToString().TrimEnd();
+    }
+
     private static bool IsSameOrChildPath(string root, string candidate)
     {
         var normalizedRoot = Path.GetFullPath(root).TrimEnd(
@@ -273,5 +458,13 @@ public sealed class RuntimeAgentSkillExecutor : ISkillExecutor
         return string.IsNullOrWhiteSpace(normalized)
             ? "TaskAgent"
             : $"{normalized}Agent";
+    }
+
+    private sealed record QueuedActionResult(
+        int QueuedCount,
+        string Message,
+        string ErrorMessage)
+    {
+        public static QueuedActionResult None { get; } = new(0, string.Empty, string.Empty);
     }
 }
