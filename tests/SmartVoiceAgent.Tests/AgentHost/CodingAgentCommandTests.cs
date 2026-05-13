@@ -733,6 +733,88 @@ public sealed class CodingAgentCommandTests : IDisposable
     }
 
     [Theory]
+    [InlineData("/github fix Esquetta/Kam 1001")]
+    [InlineData("/github app fix Esquetta/Kam 1001")]
+    [InlineData("/github-app fix Esquetta/Kam 1001")]
+    public async Task RunAsync_GithubFixSlashCommand_OpensRuntimeFixLoopWithFailingJobLog(string commandText)
+    {
+        var runtime = new RecordingCommandRuntime(CommandRuntimeResult.Succeeded(
+            "Runtime agent queued a patch approval.",
+            "agents.run",
+            SkillResult.Succeeded("Runtime agent queued a patch approval.")));
+        var githubApp = new StaticGitHubAppClient(
+            GitHubAppConnectionStatus.Connected(
+                "12345",
+                "98765",
+                "https://api.github.com",
+                "Kam Coding",
+                "kam-coding",
+                1),
+            GitHubRepositoryListResult.Failed("not used"),
+            workflowJobs: GitHubWorkflowJobListResult.Succeeded(
+                "1 job for workflow run 1001 in Esquetta/Kam.",
+                "Esquetta/Kam",
+                1001,
+                [
+                    new GitHubWorkflowJobSummary(
+                        "Esquetta/Kam",
+                        1001,
+                        2001,
+                        "build",
+                        "completed",
+                        "failure",
+                        "https://github.com/Esquetta/Kam/actions/runs/1001/job/2001",
+                        new DateTimeOffset(2026, 5, 11, 10, 0, 0, TimeSpan.Zero),
+                        new DateTimeOffset(2026, 5, 11, 10, 5, 0, TimeSpan.Zero))
+                    {
+                        Steps =
+                        [
+                            new GitHubWorkflowJobStepSummary(
+                                1,
+                                "dotnet test",
+                                "completed",
+                                "failure",
+                                new DateTimeOffset(2026, 5, 11, 10, 2, 0, TimeSpan.Zero),
+                                new DateTimeOffset(2026, 5, 11, 10, 4, 0, TimeSpan.Zero))
+                        ]
+                    }
+                ]),
+            workflowJobLog: GitHubWorkflowJobLogResult.Succeeded(
+                "GitHub returned a workflow job log preview.",
+                "Esquetta/Kam",
+                2001,
+                string.Empty,
+                "Test Failed: RuntimeAgentFactoryTests.RunAsync_WhenModelRequestsApprovalGatedActions"));
+        var command = new CodingAgentCommand(runtime, githubAppClient: githubApp);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await command.RunAsync(
+            new CodingAgentCommandOptions
+            {
+                CommandText = commandText,
+                WorkspaceRoot = _workspace
+            },
+            output,
+            error);
+
+        exitCode.Should().Be(0);
+        output.ToString().Should().Contain("Kam GitHub CI auto-fix:");
+        output.ToString().Should().Contain("run: Esquetta/Kam#1001");
+        output.ToString().Should().Contain("job: build");
+        output.ToString().Should().Contain("Runtime agent queued a patch approval.");
+        runtime.ReceivedCommand.Should().NotBeNull();
+        runtime.ReceivedCommand.Should().Contain("GitHub CI auto-fix request");
+        runtime.ReceivedCommand.Should().Contain("Esquetta/Kam#1001");
+        runtime.ReceivedCommand.Should().Contain("build");
+        runtime.ReceivedCommand.Should().Contain("dotnet test");
+        runtime.ReceivedCommand.Should().Contain("RuntimeAgentFactoryTests.RunAsync_WhenModelRequestsApprovalGatedActions");
+        runtime.ReceivedCommand.Should().NotContain("installation-token");
+        runtime.ReceivedCommand.Should().NotContain("PRIVATE KEY");
+        error.ToString().Should().BeEmpty();
+    }
+
+    [Theory]
     [InlineData("/github diagnose")]
     [InlineData("/github diagnose Esquetta/Kam abc")]
     [InlineData("/github-app diagnose Esquetta/Kam 0")]

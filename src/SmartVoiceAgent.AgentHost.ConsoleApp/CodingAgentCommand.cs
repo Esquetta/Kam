@@ -310,6 +310,7 @@ public sealed class CodingAgentCommand
             "  /github repos  List repositories visible through the configured GitHub App.",
             "  /github actions  List GitHub Actions workflow runs visible through the configured GitHub App.",
             "  /github diagnose  Diagnose one GitHub Actions workflow run.",
+            "  /github fix    Open a runtime auto-fix loop for a failing workflow run.",
             "  /github logs   Get a temporary download URL or preview for one GitHub Actions job log.",
             "  /github run    List jobs for one GitHub Actions workflow run.",
             "  /github-app    Alias for GitHub App repository, PR, workflow, and run commands.",
@@ -510,6 +511,11 @@ public sealed class CodingAgentCommand
                 return await RunGitHubAppWorkflowDiagnosisAsync(arguments, 2, cancellationToken);
             }
 
+            if (arguments.Count > 1 && IsCommand(arguments[1], "fix", "autofix", "auto-fix"))
+            {
+                return await RunGitHubAppWorkflowAutoFixAsync(arguments, 2, cancellationToken);
+            }
+
             if (arguments.Count > 1 && IsCommand(arguments[1], "logs", "log"))
             {
                 return await RunGitHubAppWorkflowJobLogsAsync(arguments, 2, cancellationToken);
@@ -536,6 +542,11 @@ public sealed class CodingAgentCommand
         if (arguments.Count > 0 && IsCommand(arguments[0], "diagnose", "doctor", "ci"))
         {
             return await RunGitHubAppWorkflowDiagnosisAsync(arguments, 1, cancellationToken);
+        }
+
+        if (arguments.Count > 0 && IsCommand(arguments[0], "fix", "autofix", "auto-fix"))
+        {
+            return await RunGitHubAppWorkflowAutoFixAsync(arguments, 1, cancellationToken);
         }
 
         if (arguments.Count > 0 && IsCommand(arguments[0], "logs", "log"))
@@ -735,6 +746,114 @@ public sealed class CodingAgentCommand
         }
 
         return CodingAgentCommandResult.Success(FormatWorkflowDiagnosis(jobs, selectedRun, selectionMessage));
+    }
+
+    private async Task<CodingAgentCommandResult> RunGitHubAppWorkflowAutoFixAsync(
+        IReadOnlyList<string> arguments,
+        int firstArgumentIndex,
+        CancellationToken cancellationToken)
+    {
+        if (arguments.Count <= firstArgumentIndex)
+        {
+            return new CodingAgentCommandResult(2, "Usage: /github fix <owner/repo> [runId]", false);
+        }
+
+        long? requestedRunId = null;
+        if (arguments.Count > firstArgumentIndex + 1)
+        {
+            if (!long.TryParse(arguments[firstArgumentIndex + 1], out var runId) || runId <= 0)
+            {
+                return new CodingAgentCommandResult(2, "Usage: /github fix <owner/repo> [runId]", false);
+            }
+
+            requestedRunId = runId;
+        }
+
+        if (_githubAppClient is null)
+        {
+            return CodingAgentCommandResult.Success(FormatGitHubAppUnavailable());
+        }
+
+        var repositoryFullName = arguments[firstArgumentIndex];
+        GitHubWorkflowRunSummary? selectedRun = null;
+        string? selectionMessage = null;
+        var runIdToDiagnose = requestedRunId;
+        if (runIdToDiagnose is null)
+        {
+            var workflowRuns = await _githubAppClient.ListWorkflowRunsAsync(cancellationToken);
+            if (!workflowRuns.Success)
+            {
+                return CodingAgentCommandResult.Success(
+                    FormatGitHubAppSetup(workflowRuns.Message, workflowRuns.MissingSettings));
+            }
+
+            selectedRun = SelectWorkflowRunForDiagnosis(workflowRuns.WorkflowRuns, repositoryFullName);
+            if (selectedRun is null)
+            {
+                return CodingAgentCommandResult.Success(
+                    $"Kam GitHub CI auto-fix:{Environment.NewLine}  repository: {NormalizeMessage(repositoryFullName)}{Environment.NewLine}  no workflow runs found for this repository");
+            }
+
+            runIdToDiagnose = selectedRun.Id;
+            selectionMessage = IsUnhealthyWorkflowRun(selectedRun)
+                ? "latest failing or in-progress workflow run"
+                : "latest workflow run";
+        }
+
+        var jobs = await _githubAppClient.ListWorkflowRunJobsAsync(
+            repositoryFullName,
+            runIdToDiagnose.Value,
+            cancellationToken);
+        if (!jobs.Success)
+        {
+            return CodingAgentCommandResult.Success(FormatGitHubAppSetup(jobs.Message, jobs.MissingSettings));
+        }
+
+        var selectedJob = SelectWorkflowJobForAutoFix(jobs.Jobs);
+        if (selectedJob is null)
+        {
+            return CodingAgentCommandResult.Success(
+                $"Kam GitHub CI auto-fix:{Environment.NewLine}  run: {NormalizeMessage(jobs.RepositoryFullName)}#{jobs.RunId}{Environment.NewLine}  no failing or active jobs found for this workflow run");
+        }
+
+        var log = await _githubAppClient.GetWorkflowJobLogAsync(
+            repositoryFullName,
+            selectedJob.Id,
+            cancellationToken);
+        if (!log.Success)
+        {
+            return CodingAgentCommandResult.Success(FormatGitHubAppSetup(log.Message, log.MissingSettings));
+        }
+
+        var runtimeCommand = BuildGitHubAutoFixRuntimeCommand(
+            jobs,
+            selectedRun,
+            selectionMessage,
+            selectedJob,
+            log);
+        var runtimeResult = await _runtime.ExecuteAsync(runtimeCommand, cancellationToken);
+
+        var builder = new StringBuilder()
+            .AppendLine("Kam GitHub CI auto-fix:")
+            .AppendLine($"  run: {NormalizeMessage(jobs.RepositoryFullName)}#{jobs.RunId}");
+
+        if (!string.IsNullOrWhiteSpace(selectionMessage))
+        {
+            builder.AppendLine($"  selected: {NormalizeMessage(selectionMessage)}");
+        }
+
+        builder
+            .AppendLine($"  job: {NormalizeMessage(selectedJob.Name)} ({FormatWorkflowJobState(selectedJob)})")
+            .AppendLine($"  runtime: {NormalizeMessage(runtimeResult.SkillId)}")
+            .AppendLine($"  result: {NormalizeMessage(runtimeResult.Message)}");
+
+        if (runtimeResult.RequiresConfirmation)
+        {
+            builder.AppendLine("  approval: required before changes or tests run");
+        }
+
+        var exitCode = runtimeResult.Success || runtimeResult.RequiresConfirmation ? 0 : 1;
+        return new CodingAgentCommandResult(exitCode, builder.ToString().TrimEnd(), runtimeResult.RequiresConfirmation);
     }
 
     private async Task<CodingAgentCommandResult> RunGitHubAppWorkflowJobLogsAsync(
@@ -1542,6 +1661,78 @@ public sealed class CodingAgentCommand
         return builder.ToString().TrimEnd();
     }
 
+    private static GitHubWorkflowJobSummary? SelectWorkflowJobForAutoFix(
+        IReadOnlyList<GitHubWorkflowJobSummary> jobs)
+    {
+        return jobs
+            .Where(IsUnhealthyWorkflowJob)
+            .OrderBy(job => job.StartedAt ?? DateTimeOffset.MaxValue)
+            .ThenBy(job => job.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(job => job.Id)
+            .FirstOrDefault();
+    }
+
+    private static string BuildGitHubAutoFixRuntimeCommand(
+        GitHubWorkflowJobListResult jobs,
+        GitHubWorkflowRunSummary? selectedRun,
+        string? selectionMessage,
+        GitHubWorkflowJobSummary selectedJob,
+        GitHubWorkflowJobLogResult log)
+    {
+        var builder = new StringBuilder()
+            .AppendLine("GitHub CI auto-fix request.")
+            .AppendLine($"Repository/run: {NormalizeMessage(jobs.RepositoryFullName)}#{jobs.RunId}");
+
+        if (!string.IsNullOrWhiteSpace(selectionMessage))
+        {
+            builder.AppendLine($"Selection: {NormalizeMessage(selectionMessage)}");
+        }
+
+        if (selectedRun is not null)
+        {
+            builder
+                .AppendLine($"Workflow: {NormalizeMessage(selectedRun.Name)} ({FormatWorkflowRunState(selectedRun)})")
+                .AppendLine($"Title: {NormalizeMessage(selectedRun.DisplayTitle)}")
+                .AppendLine($"Branch: {NormalizeMessage(selectedRun.HeadBranch)}")
+                .AppendLine($"Event: {NormalizeMessage(selectedRun.Event)}");
+        }
+
+        builder
+            .AppendLine($"Failing job: {NormalizeMessage(selectedJob.Name)} ({FormatWorkflowJobState(selectedJob)})")
+            .AppendLine($"Job URL: {NormalizeMessage(selectedJob.HtmlUrl)}");
+
+        var failingSteps = selectedJob.Steps
+            .Where(IsUnhealthyWorkflowStep)
+            .OrderBy(step => step.Number)
+            .ThenBy(step => step.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (failingSteps.Length > 0)
+        {
+            builder.AppendLine("Failing steps:");
+            foreach (var step in failingSteps.Take(8))
+            {
+                builder.AppendLine($"- {NormalizeMessage(step.Name)} ({FormatWorkflowStepState(step)})");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(log.LogPreview))
+        {
+            builder
+                .AppendLine("Job log preview:")
+                .AppendLine(TrimForRuntimePrompt(log.LogPreview, 4000));
+        }
+        else if (!string.IsNullOrWhiteSpace(log.DownloadUrl))
+        {
+            builder.AppendLine($"Job log download URL: {NormalizeMessage(log.DownloadUrl)}");
+        }
+
+        builder
+            .AppendLine("Task:")
+            .AppendLine("Diagnose the likely source change needed in this workspace. If a file change or test run is needed, propose approval-gated actions only; do not claim changes or tests were executed.");
+
+        return builder.ToString().TrimEnd();
+    }
+
     private static GitHubWorkflowRunSummary? SelectWorkflowRunForDiagnosis(
         IReadOnlyList<GitHubWorkflowRunSummary> workflowRuns,
         string repositoryFullName)
@@ -1585,6 +1776,19 @@ public sealed class CodingAgentCommand
     private static string Pluralize(int count, string singular, string plural)
     {
         return count == 1 ? singular : plural;
+    }
+
+    private static string TrimForRuntimePrompt(string value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = NormalizeMessage(value);
+        return normalized.Length <= maxLength
+            ? normalized
+            : normalized[..maxLength] + "...";
     }
 
     private static string NormalizeWorkspaceRoot(string workspaceRoot)
