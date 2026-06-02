@@ -220,6 +220,105 @@ public sealed class MainWindowSlashCommandTests
         viewModel.CommandInputText.Should().Be("open spotify");
     }
 
+    [Fact]
+    public void ActivityPanelMode_DefaultsToAgentRunsAndCanSwitchTabs()
+    {
+        var viewModel = new MainWindowViewModel();
+
+        viewModel.SelectedActivityPanelMode.Should().Be(ActivityPanelMode.Runs);
+        viewModel.IsActivityRunsPanelVisible.Should().BeTrue();
+        viewModel.IsActivityContextPanelVisible.Should().BeFalse();
+        viewModel.IsActivityEventsPanelVisible.Should().BeFalse();
+
+        viewModel.ShowContextCommand.Execute(null);
+
+        viewModel.SelectedActivityPanelMode.Should().Be(ActivityPanelMode.Context);
+        viewModel.IsActivityContextPanelVisible.Should().BeTrue();
+
+        viewModel.ShowEventsCommand.Execute(null);
+
+        viewModel.SelectedActivityPanelMode.Should().Be(ActivityPanelMode.Events);
+        viewModel.IsActivityEventsPanelVisible.Should().BeTrue();
+
+        viewModel.ShowRunsCommand.Execute(null);
+
+        viewModel.SelectedActivityPanelMode.Should().Be(ActivityPanelMode.Runs);
+        viewModel.IsActivityRunsPanelVisible.Should().BeTrue();
+    }
+
+    [Fact]
+    public void AddComposerAttachmentPaths_AddsFileChipsAndAllowsRemoval()
+    {
+        var viewModel = new MainWindowViewModel();
+
+        viewModel.AddComposerAttachmentPaths([
+            @"D:\Workstation\Kam\Kam\src\Program.cs",
+            @"D:\Workstation\Kam\Kam\README.md"
+        ]);
+
+        viewModel.HasComposerAttachments.Should().BeTrue();
+        viewModel.ComposerAttachments.Select(file => file.FileName)
+            .Should()
+            .Equal("Program.cs", "README.md");
+        viewModel.ComposerAttachments[0].DisplayPath.Should().Be(@"...\src\Program.cs");
+
+        viewModel.RemoveComposerAttachmentCommand.Execute(viewModel.ComposerAttachments[0]);
+
+        viewModel.ComposerAttachments.Select(file => file.FileName).Should().Equal("README.md");
+
+        viewModel.ClearComposerAttachmentsCommand.Execute(null);
+
+        viewModel.HasComposerAttachments.Should().BeFalse();
+        viewModel.ComposerAttachments.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SubmitCommandInputAsync_WithPlainTextAndAttachments_AppendsContextFilesAndClearsComposer()
+    {
+        var commandInput = new RecordingCommandInputService();
+        var viewModel = new MainWindowViewModel();
+        viewModel.SetCommandInputService(commandInput);
+        viewModel.SetSlashCommandService(new FakeSlashCommandService());
+        viewModel.CommandInputText = "review this area";
+        viewModel.AddComposerAttachmentPaths([
+            @"D:\Workstation\Kam\Kam\src\Program.cs",
+            @"D:\Workstation\Kam\Kam\README.md"
+        ]);
+
+        await viewModel.SubmitCommandInputAsync();
+
+        commandInput.SubmittedCommands.Should().ContainSingle().Which.Should().Be(
+            "review this area"
+            + Environment.NewLine
+            + Environment.NewLine
+            + "Context files:"
+            + Environment.NewLine
+            + "- D:\\Workstation\\Kam\\Kam\\src\\Program.cs"
+            + Environment.NewLine
+            + "- D:\\Workstation\\Kam\\Kam\\README.md");
+        viewModel.CommandInputText.Should().BeEmpty();
+        viewModel.ComposerAttachments.Should().BeEmpty();
+        viewModel.HasComposerAttachments.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SubmitCommandInputAsync_WithSlashCommand_DoesNotAppendAttachmentContext()
+    {
+        var slashService = new FakeSlashCommandService();
+        var commandInput = new RecordingCommandInputService();
+        var viewModel = new MainWindowViewModel();
+        viewModel.SetCommandInputService(commandInput);
+        viewModel.SetSlashCommandService(slashService);
+        viewModel.CommandInputText = "/status";
+        viewModel.AddComposerAttachmentPath(@"D:\Workstation\Kam\Kam\src\Program.cs");
+
+        await viewModel.SubmitCommandInputAsync();
+
+        slashService.ExecutedInput.Should().Be("/status");
+        commandInput.SubmittedCommands.Should().BeEmpty();
+        viewModel.ComposerAttachments.Should().ContainSingle();
+    }
+
     private class FakeSlashCommandService : ISlashCommandService
     {
         private static readonly SlashCommandDefinition[] Commands =

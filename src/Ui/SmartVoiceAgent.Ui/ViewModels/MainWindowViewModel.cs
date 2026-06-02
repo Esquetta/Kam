@@ -19,6 +19,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -27,6 +28,13 @@ using System.Windows.Input;
 
 namespace SmartVoiceAgent.Ui.ViewModels
 {
+    public enum ActivityPanelMode
+    {
+        Runs,
+        Context,
+        Events
+    }
+
     public class MainWindowViewModel : ViewModelBase
     {
         private TrayIconService? _trayIconService;
@@ -282,6 +290,53 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public ICommand SelectSlashCommandCommand { get; }
 
+        public ICommand RemoveComposerAttachmentCommand { get; }
+
+        public ICommand ClearComposerAttachmentsCommand { get; }
+
+        public ICommand ShowRunsCommand { get; }
+
+        public ICommand ShowContextCommand { get; }
+
+        public ICommand ShowEventsCommand { get; }
+
+        private ObservableCollection<ComposerAttachmentViewModel> _composerAttachments = new();
+        public ObservableCollection<ComposerAttachmentViewModel> ComposerAttachments
+        {
+            get => _composerAttachments;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _composerAttachments, value);
+                this.RaisePropertyChanged(nameof(HasComposerAttachments));
+            }
+        }
+
+        public bool HasComposerAttachments => ComposerAttachments.Count > 0;
+
+        private ActivityPanelMode _selectedActivityPanelMode = ActivityPanelMode.Runs;
+        public ActivityPanelMode SelectedActivityPanelMode
+        {
+            get => _selectedActivityPanelMode;
+            private set
+            {
+                if (_selectedActivityPanelMode == value)
+                {
+                    return;
+                }
+
+                this.RaiseAndSetIfChanged(ref _selectedActivityPanelMode, value);
+                this.RaisePropertyChanged(nameof(IsActivityRunsPanelVisible));
+                this.RaisePropertyChanged(nameof(IsActivityContextPanelVisible));
+                this.RaisePropertyChanged(nameof(IsActivityEventsPanelVisible));
+            }
+        }
+
+        public bool IsActivityRunsPanelVisible => SelectedActivityPanelMode == ActivityPanelMode.Runs;
+
+        public bool IsActivityContextPanelVisible => SelectedActivityPanelMode == ActivityPanelMode.Context;
+
+        public bool IsActivityEventsPanelVisible => SelectedActivityPanelMode == ActivityPanelMode.Events;
+
         private ObservableCollection<SlashCommandSuggestionViewModel> _slashCommandSuggestions = new();
         public ObservableCollection<SlashCommandSuggestionViewModel> SlashCommandSuggestions
         {
@@ -523,6 +578,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ShowRuntimeAgentRunDetailCommand = ReactiveCommand.Create<RuntimeAgentActivityViewModel?>(ShowRuntimeAgentRunDetail);
             SubmitCommand = ReactiveCommand.CreateFromTask(SubmitCommandInputAsync);
             SelectSlashCommandCommand = ReactiveCommand.Create<SlashCommandSuggestionViewModel>(SelectSlashCommand);
+            RemoveComposerAttachmentCommand = ReactiveCommand.Create<ComposerAttachmentViewModel?>(RemoveComposerAttachment);
+            ClearComposerAttachmentsCommand = ReactiveCommand.Create(ClearComposerAttachments);
+            ShowRunsCommand = ReactiveCommand.Create(() => SelectedActivityPanelMode = ActivityPanelMode.Runs);
+            ShowContextCommand = ReactiveCommand.Create(() => SelectedActivityPanelMode = ActivityPanelMode.Context);
+            ShowEventsCommand = ReactiveCommand.Create(() => SelectedActivityPanelMode = ActivityPanelMode.Events);
             ToggleVoiceCommand = ReactiveCommand.Create(ToggleVoiceEnabled);
             StartVoiceRecordingCommand = ReactiveCommand.CreateFromTask(StartVoiceRecordingAsync);
 
@@ -976,8 +1036,76 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 return;
             }
 
-            _commandInput.SubmitCommand(input);
+            _commandInput.SubmitCommand(BuildCommandSubmission(input, ComposerAttachments));
             CommandInputText = string.Empty;
+            ClearComposerAttachments();
+        }
+
+        public void AddComposerAttachmentPath(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return;
+            }
+
+            var attachment = ComposerAttachmentViewModel.Create(path);
+            if (ComposerAttachments.Any(existing =>
+                existing.FullPath.Equals(attachment.FullPath, StringComparison.OrdinalIgnoreCase)))
+            {
+                return;
+            }
+
+            ComposerAttachments.Add(attachment);
+            this.RaisePropertyChanged(nameof(HasComposerAttachments));
+        }
+
+        public void AddComposerAttachmentPaths(IEnumerable<string?> paths)
+        {
+            foreach (var path in paths)
+            {
+                AddComposerAttachmentPath(path);
+            }
+        }
+
+        private void RemoveComposerAttachment(ComposerAttachmentViewModel? attachment)
+        {
+            if (attachment is null)
+            {
+                return;
+            }
+
+            ComposerAttachments.Remove(attachment);
+            this.RaisePropertyChanged(nameof(HasComposerAttachments));
+        }
+
+        private void ClearComposerAttachments()
+        {
+            if (ComposerAttachments.Count == 0)
+            {
+                return;
+            }
+
+            ComposerAttachments.Clear();
+            this.RaisePropertyChanged(nameof(HasComposerAttachments));
+        }
+
+        private static string BuildCommandSubmission(
+            string input,
+            IReadOnlyCollection<ComposerAttachmentViewModel> attachments)
+        {
+            if (attachments.Count == 0)
+            {
+                return input;
+            }
+
+            var lines = new List<string>
+            {
+                input,
+                string.Empty,
+                "Context files:"
+            };
+            lines.AddRange(attachments.Select(attachment => $"- {attachment.FullPath}"));
+            return string.Join(Environment.NewLine, lines);
         }
 
         private void RefreshSlashCommandSuggestions()
@@ -1823,6 +1951,42 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             get => _isSelected;
             set => this.RaiseAndSetIfChanged(ref _isSelected, value);
+        }
+    }
+
+    public sealed class ComposerAttachmentViewModel
+    {
+        private ComposerAttachmentViewModel(
+            string fileName,
+            string fullPath,
+            string displayPath)
+        {
+            FileName = fileName;
+            FullPath = fullPath;
+            DisplayPath = displayPath;
+        }
+
+        public string FileName { get; }
+
+        public string FullPath { get; }
+
+        public string DisplayPath { get; }
+
+        public static ComposerAttachmentViewModel Create(string path)
+        {
+            var fullPath = path.Trim();
+            var fileName = Path.GetFileName(fullPath);
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                fileName = fullPath;
+            }
+
+            var directoryName = Path.GetFileName(Path.GetDirectoryName(fullPath));
+            var displayPath = string.IsNullOrWhiteSpace(directoryName)
+                ? fileName
+                : $"...{Path.DirectorySeparatorChar}{directoryName}{Path.DirectorySeparatorChar}{fileName}";
+
+            return new ComposerAttachmentViewModel(fileName, fullPath, displayPath);
         }
     }
 

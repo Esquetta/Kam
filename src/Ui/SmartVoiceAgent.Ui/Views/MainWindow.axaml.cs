@@ -3,6 +3,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Controls.Shapes;
+using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.ViewModels;
@@ -169,6 +170,24 @@ namespace SmartVoiceAgent.Ui.Views
                 vm.SubmitCommand.Execute(null);
                 e.Handled = true;
             }
+        }
+
+        private async void OnAttachFilesClick(object? sender, RoutedEventArgs e)
+        {
+            if (DataContext is not MainWindowViewModel vm)
+            {
+                return;
+            }
+
+            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Attach files",
+                AllowMultiple = true
+            });
+
+            vm.AddComposerAttachmentPaths(files
+                .Select(file => file.TryGetLocalPath())
+                .Where(path => !string.IsNullOrWhiteSpace(path)));
         }
     }
 }

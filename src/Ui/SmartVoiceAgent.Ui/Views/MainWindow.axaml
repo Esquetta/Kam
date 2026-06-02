@@ -194,6 +194,30 @@
 			<Setter Property="BorderBrush" Value="Transparent"/>
 		</Style>
 
+		<Style Selector="Button.DrawerTab">
+			<Setter Property="MinHeight" Value="28"/>
+			<Setter Property="Padding" Value="10,0"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="6"/>
+			<Setter Property="HorizontalContentAlignment" Value="Center"/>
+			<Setter Property="Cursor" Value="Hand"/>
+		</Style>
+
+		<Style Selector="Button.DrawerTab:pointerover">
+			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+		</Style>
+
+		<Style Selector="Border.AttachmentChip">
+			<Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="6"/>
+			<Setter Property="Padding" Value="8,6"/>
+			<Setter Property="Margin" Value="0,0,6,6"/>
+		</Style>
+
 		<!-- Prompt Input Style -->
 		<Style Selector="TextBox#PromptInput">
 			<Setter Property="Padding" Value="0"/>
@@ -399,9 +423,62 @@
 			<Border Grid.Row="1" Grid.Column="1"
 					Background="{DynamicResource PanelBgBrush}"
 					ClipToBounds="True">
-				<Panel>
-					<!-- Content -->
-					<ContentControl Content="{Binding CurrentViewModel}" Margin="28">
+				<Grid RowDefinitions="Auto,*"
+					  Margin="24"
+					  RowSpacing="14">
+					<Border Grid.Row="0"
+							Background="{DynamicResource SurfaceBgElevatedBrush}"
+							BorderBrush="{DynamicResource BorderSubtleBrush}"
+							BorderThickness="1"
+							CornerRadius="8"
+							Padding="16,12">
+						<Grid ColumnDefinitions="*,Auto"
+							  ColumnSpacing="16">
+							<StackPanel Grid.Column="0"
+										Spacing="4">
+								<TextBlock Text="Chat Workspace"
+										   FontSize="18"
+										   FontWeight="SemiBold"
+										   Foreground="{DynamicResource TextPrimaryBrush}"/>
+								<TextBlock Text="Tasks, context, files, and agent progress stay in one focused work surface."
+										   FontSize="12"
+										   Foreground="{DynamicResource TextMutedBrush}"
+										   TextTrimming="CharacterEllipsis"/>
+							</StackPanel>
+							<StackPanel Grid.Column="1"
+										Orientation="Horizontal"
+										Spacing="8"
+										VerticalAlignment="Center">
+								<Border Background="{DynamicResource CardBgBrush}"
+										BorderBrush="{DynamicResource BorderSubtleBrush}"
+										BorderThickness="1"
+										CornerRadius="6"
+										Padding="8,4">
+									<TextBlock Text="Agent workspace"
+											   FontSize="11"
+											   Foreground="{DynamicResource TextSecondaryBrush}"/>
+								</Border>
+								<Border Background="{DynamicResource AccentGreenGlowBrush}"
+										BorderBrush="{DynamicResource AccentGreenDimBrush}"
+										BorderThickness="1"
+										CornerRadius="6"
+										Padding="8,4">
+									<TextBlock Text="{Binding StatusText}"
+											   FontSize="11"
+											   FontWeight="SemiBold"
+											   Foreground="{Binding StatusColor}"/>
+								</Border>
+							</StackPanel>
+						</Grid>
+					</Border>
+
+					<Border Grid.Row="1"
+							Background="{DynamicResource SurfaceBgBrush}"
+							BorderBrush="{DynamicResource BorderSubtleBrush}"
+							BorderThickness="1"
+							CornerRadius="8"
+							ClipToBounds="True">
+					<ContentControl Content="{Binding CurrentViewModel}" Margin="20">
 						<ContentControl.DataTemplates>
 							<DataTemplate DataType="pagevm:CoordinatorViewModel">
 								<local:CoordinatorView/>
@@ -424,7 +501,8 @@
 							</DataTemplate>
 						</ContentControl.DataTemplates>
 					</ContentControl>
-				</Panel>
+					</Border>
+				</Grid>
 			</Border>
 
 			<!-- Right Panel - Activity Log -->
@@ -433,40 +511,59 @@
 					BorderBrush="{DynamicResource BorderSubtleBrush}"
 					BorderThickness="1,0,0,0"
 					IsVisible="{Binding Source={StaticResource WindowStateManager}, Path=IsLogPanelVisible}">
-				<Grid RowDefinitions="64, Auto, Auto, Auto, Auto, *, Auto">
+				<Grid RowDefinitions="92, Auto, Auto, Auto, Auto, *, Auto">
 
 					<!-- Activity Header -->
 					<Border Grid.Row="0"
 							Background="{DynamicResource CardBgBrush}"
 							BorderBrush="{DynamicResource BorderSubtleBrush}"
 							BorderThickness="0,0,0,1">
-						<Grid ColumnDefinitions="*, Auto"
-							  Margin="18,0"
-							  VerticalAlignment="Center">
-							<StackPanel Grid.Column="0"
-										Spacing="2"
-										VerticalAlignment="Center">
-								<TextBlock Text="Activity"
-										   FontSize="15"
-										   FontWeight="SemiBold"
-										   Foreground="{DynamicResource TextPrimaryBrush}"/>
-								<TextBlock Text="Session"
-										   FontSize="11"
-										   Foreground="{DynamicResource TextMutedBrush}"/>
-							</StackPanel>
-							<Border Grid.Column="1"
-									VerticalAlignment="Center">
-								<StackPanel Orientation="Horizontal" Spacing="6">
-									<Ellipse Width="6"
-											 Height="6"
-											 Fill="{DynamicResource AccentGreenBrush}"
-											 VerticalAlignment="Center"/>
-									<TextBlock Text="Event stream"
+						<Grid RowDefinitions="Auto,Auto"
+							  RowSpacing="10"
+							  Margin="18,12">
+							<Grid Grid.Row="0"
+								  ColumnDefinitions="*, Auto">
+								<StackPanel Grid.Column="0"
+											Spacing="2"
+											VerticalAlignment="Center">
+									<TextBlock Text="Activity"
+											   FontSize="15"
+											   FontWeight="SemiBold"
+											   Foreground="{DynamicResource TextPrimaryBrush}"/>
+									<TextBlock Text="Session"
 											   FontSize="11"
-											   FontWeight="Medium"
-											   Foreground="{DynamicResource AccentGreenBrush}"/>
+											   Foreground="{DynamicResource TextMutedBrush}"/>
 								</StackPanel>
-							</Border>
+								<Border Grid.Column="1"
+										VerticalAlignment="Center">
+									<StackPanel Orientation="Horizontal" Spacing="6">
+										<Ellipse Width="6"
+												 Height="6"
+												 Fill="{DynamicResource AccentGreenBrush}"
+												 VerticalAlignment="Center"/>
+										<TextBlock Text="Live"
+												   FontSize="11"
+												   FontWeight="Medium"
+												   Foreground="{DynamicResource AccentGreenBrush}"/>
+									</StackPanel>
+								</Border>
+							</Grid>
+							<Grid Grid.Row="1"
+								  ColumnDefinitions="*,*,*"
+								  ColumnSpacing="6">
+								<Button Grid.Column="0"
+										Classes="DrawerTab"
+										Content="Agent runs"
+										Command="{Binding ShowRunsCommand}"/>
+								<Button Grid.Column="1"
+										Classes="DrawerTab"
+										Content="Context"
+										Command="{Binding ShowContextCommand}"/>
+								<Button Grid.Column="2"
+										Classes="DrawerTab"
+										Content="Event stream"
+										Command="{Binding ShowEventsCommand}"/>
+							</Grid>
 						</Grid>
 					</Border>
 
@@ -587,7 +684,7 @@
 							BorderBrush="{DynamicResource BorderSubtleBrush}"
 							BorderThickness="0,0,0,1"
 							Padding="16,12"
-							IsVisible="{Binding HasRuntimeAgentActivities}">
+							IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Runs}}">
 						<StackPanel Spacing="8">
 							<StackPanel Orientation="Horizontal"
 										Spacing="8">
@@ -659,6 +756,11 @@
 									</DataTemplate>
 								</ItemsControl.ItemTemplate>
 							</ItemsControl>
+							<TextBlock Text="No agent runs yet."
+									   FontSize="12"
+									   Foreground="{DynamicResource TextMutedBrush}"
+									   Margin="2,2,0,0"
+									   IsVisible="{Binding !HasRuntimeAgentActivities}"/>
 							<Border Background="{DynamicResource CardBgHoverBrush}"
 									BorderBrush="{DynamicResource AccentCyanBrush}"
 									BorderThickness="1"
@@ -772,7 +874,7 @@
 							BorderBrush="{DynamicResource BorderSubtleBrush}"
 							BorderThickness="0,0,0,1"
 							Padding="16,12"
-							IsVisible="{Binding HasSkillPlannerTraces}">
+							IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Context}}">
 						<StackPanel Spacing="8">
 							<Grid ColumnDefinitions="*, Auto">
 								<StackPanel Grid.Column="0"
@@ -887,7 +989,7 @@
 							BorderBrush="{DynamicResource BorderSubtleBrush}"
 							BorderThickness="0,0,0,1"
 							Padding="16,12"
-							IsVisible="{Binding HasSkillExecutionHistory}">
+							IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Context}}">
 						<StackPanel Spacing="8">
 							<Grid ColumnDefinitions="*, Auto">
 								<StackPanel Grid.Column="0"
@@ -1156,7 +1258,8 @@
 					<!-- Log Content -->
 					<ScrollViewer x:Name="LogScrollViewer" Grid.Row="5"
 								  VerticalScrollBarVisibility="Auto"
-								  Margin="18,10,18,0">
+								  Margin="18,10,18,0"
+								  IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Events}}">
 						<ItemsControl ItemsSource="{Binding ActivityLogEntries}">
 							<ItemsControl.ItemTemplate>
 								<DataTemplate DataType="vm:ActivityLogEntryViewModel">
@@ -1206,7 +1309,7 @@
 							BorderBrush="{DynamicResource BorderSubtleBrush}"
 							BorderThickness="0,1,0,0"
 							Padding="16,10">
-						<Grid RowDefinitions="Auto, Auto, Auto">
+						<Grid RowDefinitions="Auto, Auto, Auto, Auto">
 							<TextBlock Grid.Row="0"
 									   Text="Command prompt"
 									   FontSize="11"
@@ -1284,20 +1387,122 @@
 									Background="{DynamicResource CardBgHoverBrush}"
 									BorderBrush="{DynamicResource BorderSubtleBrush}"
 									BorderThickness="1"
+									CornerRadius="8"
+									Padding="8"
+									Margin="0,0,0,8"
+									IsVisible="{Binding HasComposerAttachments}">
+								<Grid RowDefinitions="Auto,Auto"
+									  RowSpacing="8">
+									<Grid Grid.Row="0"
+										  ColumnDefinitions="*,Auto">
+										<TextBlock Grid.Column="0"
+												   Text="Context files"
+												   FontSize="11"
+												   FontWeight="SemiBold"
+												   Foreground="{DynamicResource TextSecondaryBrush}"/>
+										<Button Grid.Column="1"
+												Classes="IconButton"
+												MinWidth="24"
+												Height="24"
+												Background="Transparent"
+												BorderThickness="0"
+												ToolTip.Tip="Clear context files"
+												Command="{Binding ClearComposerAttachmentsCommand}">
+											<TextBlock Text="Clear context"
+													   FontSize="10"
+													   Foreground="{DynamicResource TextMutedBrush}"/>
+										</Button>
+									</Grid>
+									<ItemsControl Grid.Row="1"
+												  ItemsSource="{Binding ComposerAttachments}">
+										<ItemsControl.ItemsPanel>
+											<ItemsPanelTemplate>
+												<WrapPanel/>
+											</ItemsPanelTemplate>
+										</ItemsControl.ItemsPanel>
+										<ItemsControl.ItemTemplate>
+											<DataTemplate DataType="vm:ComposerAttachmentViewModel">
+												<Border Classes="AttachmentChip">
+													<Grid ColumnDefinitions="Auto,*,Auto"
+														  ColumnSpacing="8">
+														<Path Grid.Column="0"
+															  Data="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M13,9V3.5L18.5,9H13Z"
+															  Fill="{DynamicResource TextMutedBrush}"
+															  Width="14"
+															  Height="14"
+															  Stretch="Uniform"
+															  VerticalAlignment="Center"/>
+														<StackPanel Grid.Column="1"
+																	Spacing="1"
+																	MinWidth="0">
+															<TextBlock Text="{Binding FileName}"
+																	   FontSize="11"
+																	   FontWeight="SemiBold"
+																	   Foreground="{DynamicResource TextPrimaryBrush}"
+																	   TextTrimming="CharacterEllipsis"/>
+															<TextBlock Text="{Binding DisplayPath}"
+																	   FontSize="10"
+																	   Foreground="{DynamicResource TextMutedBrush}"
+																	   TextTrimming="CharacterEllipsis"/>
+														</StackPanel>
+														<Button Grid.Column="2"
+																Classes="IconButton"
+																Width="22"
+																Height="22"
+																Background="Transparent"
+																BorderThickness="0"
+																ToolTip.Tip="Remove file"
+																Command="{Binding $parent[Window].DataContext.RemoveComposerAttachmentCommand}"
+																CommandParameter="{Binding}">
+															<Path Data="M18.3,5.71L12,12L5.7,5.71L4.29,7.12L10.59,13.41L4.29,19.71L5.7,21.12L12,14.83L18.3,21.12L19.71,19.71L13.41,13.41L19.71,7.12Z"
+																  Fill="{DynamicResource TextMutedBrush}"
+																  Width="11"
+																  Height="11"
+																  Stretch="Uniform"/>
+														</Button>
+													</Grid>
+												</Border>
+											</DataTemplate>
+										</ItemsControl.ItemTemplate>
+									</ItemsControl>
+								</Grid>
+							</Border>
+
+							<Border Grid.Row="3"
+									Background="{DynamicResource CardBgHoverBrush}"
+									BorderBrush="{DynamicResource BorderSubtleBrush}"
+									BorderThickness="1"
 									CornerRadius="10"
 									Padding="10,7">
-								<Grid ColumnDefinitions="Auto, *, Auto, Auto">
+								<Grid ColumnDefinitions="Auto, Auto, *, Auto, Auto">
+								<Button Grid.Column="0"
+										Classes="IconButton"
+										Width="28" Height="28"
+										Background="Transparent"
+										BorderBrush="{DynamicResource BorderSubtleBrush}"
+										BorderThickness="1"
+										CornerRadius="6"
+										Padding="0"
+										Cursor="Hand"
+										ToolTip.Tip="Attach files"
+										Click="OnAttachFilesClick">
+									<Path Data="M16.5,6V17.5A4.5,4.5 0 0,1 12,22A4.5,4.5 0 0,1 7.5,17.5V5A3,3 0 0,1 10.5,2A3,3 0 0,1 13.5,5V16.5A1.5,1.5 0 0,1 12,18A1.5,1.5 0 0,1 10.5,16.5V6H12V16.5H12V5A1.5,1.5 0 0,0 10.5,3.5A1.5,1.5 0 0,0 9,5V17.5A3,3 0 0,0 12,20.5A3,3 0 0,0 15,17.5V6H16.5Z"
+										  Fill="{DynamicResource TextMutedBrush}"
+										  Width="15"
+										  Height="15"
+										  Stretch="Uniform"/>
+								</Button>
 								<!-- Prompt character -->
-								<TextBlock Grid.Column="0"
+								<TextBlock Grid.Column="1"
 										   Text=">"
 										   FontSize="12"
 										   FontFamily="Consolas"
 										   Foreground="{DynamicResource TextMutedBrush}"
 										   VerticalAlignment="Center"
-										   Margin="0,0,8,0"/>
+										   Margin="8,0,8,0"/>
 
 								<!-- Text Input -->
-								<TextBox Grid.Column="1"
+								<TextBox Grid.Column="2"
 										 x:Name="PromptInput"
 										 PlaceholderText="Type / for commands..."
 										 FontSize="12"
@@ -1312,7 +1517,7 @@
 										 KeyDown="OnPromptKeyDown"/>
 
 								<!-- Voice Status Indicator -->
-								<StackPanel Grid.Column="2"
+								<StackPanel Grid.Column="3"
 											Orientation="Horizontal"
 											VerticalAlignment="Center"
 											Margin="8,0"
@@ -1332,7 +1537,7 @@
 								</StackPanel>
 
 								<!-- Mic Button -->
-								<Button Grid.Column="3"
+								<Button Grid.Column="4"
 										Classes="IconButton"
 										Width="28" Height="28"
 										Margin="8,0,0,0"

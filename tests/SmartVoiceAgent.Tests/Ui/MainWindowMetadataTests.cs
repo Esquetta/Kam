@@ -47,11 +47,44 @@ public sealed class MainWindowMetadataTests
         var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
 
         mainWindowText.Should().Contain("Kam Workbench");
+        mainWindowText.Should().Contain("Chat Workspace");
         mainWindowText.Should().Contain("Model and agents follow Settings");
         mainWindowText.Should().Contain("SurfaceBgElevatedBrush");
-        mainWindowText.Should().Contain("ContentControl Content=\"{Binding CurrentViewModel}\" Margin=\"28\"");
+        mainWindowText.Should().Contain("ContentControl Content=\"{Binding CurrentViewModel}\"");
         mainWindowText.Should().NotContain("BlurEffect Radius=\"120\"");
         mainWindowText.Should().NotContain("AccentCyanGlowBrush}\"\r\n\t\t\t\t\t\t\t Opacity=\"0.3\"");
+    }
+
+    [Fact]
+    public void MainWindow_UsesAgentWorkbenchDrawerTabs()
+    {
+        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+
+        mainWindowText.Should().Contain("SelectedActivityPanelMode");
+        mainWindowText.Should().Contain("ShowRunsCommand");
+        mainWindowText.Should().Contain("ShowContextCommand");
+        mainWindowText.Should().Contain("ShowEventsCommand");
+        mainWindowText.Should().Contain("ActivityPanelMode.Runs");
+        mainWindowText.Should().Contain("ActivityPanelMode.Context");
+        mainWindowText.Should().Contain("ActivityPanelMode.Events");
+        mainWindowText.Should().Contain("Agent runs");
+        mainWindowText.Should().Contain("Context");
+        mainWindowText.Should().Contain("Event stream");
+    }
+
+    [Fact]
+    public void MainWindow_ComposerExposesFileAttachmentChips()
+    {
+        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+
+        mainWindowText.Should().Contain("Attach files");
+        mainWindowText.Should().Contain("OnAttachFilesClick");
+        mainWindowText.Should().Contain("ComposerAttachments");
+        mainWindowText.Should().Contain("HasComposerAttachments");
+        mainWindowText.Should().Contain("RemoveComposerAttachmentCommand");
+        mainWindowText.Should().Contain("ClearComposerAttachmentsCommand");
+        mainWindowText.Should().Contain("Text=\"{Binding FileName}\"");
+        mainWindowText.Should().Contain("Text=\"{Binding DisplayPath}\"");
     }
 
     [Fact]
@@ -61,8 +94,9 @@ public sealed class MainWindowMetadataTests
 
         mainWindowText.Should().Contain("ItemsSource=\"{Binding ActivityLogEntries}\"");
         mainWindowText.Should().Contain("ItemsSource=\"{Binding RuntimeAgentActivities}\"");
-        mainWindowText.Should().Contain("IsVisible=\"{Binding HasRuntimeAgentActivities}\"");
+        mainWindowText.Should().Contain("IsVisible=\"{Binding !HasRuntimeAgentActivities}\"");
         mainWindowText.Should().Contain("Classes=\"ActivityLogItem\"");
+        mainWindowText.Should().Contain("ConverterParameter={x:Static vm:ActivityPanelMode.Events}");
         mainWindowText.Should().Contain("Text=\"{Binding CategoryText}\"");
         mainWindowText.Should().Contain("Text=\"{Binding SourceText}\"");
         mainWindowText.Should().Contain("Text=\"{Binding MessageText}\"");
