@@ -88,6 +88,26 @@ public sealed class MainWindowMetadataTests
     }
 
     [Fact]
+    public void MainWindow_ExposesMultiSessionAgentWorkbench()
+    {
+        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+
+        mainWindowText.Should().Contain("AgentChatSessions");
+        mainWindowText.Should().Contain("SelectedAgentChatSession.Messages");
+        mainWindowText.Should().Contain("NewAgentChatCommand");
+        mainWindowText.Should().Contain("SelectAgentChatCommand");
+        mainWindowText.Should().Contain("IsChatWorkbenchVisible");
+        mainWindowText.Should().Contain("IsPageHostVisible");
+        mainWindowText.Should().Contain("Chats");
+        mainWindowText.Should().Contain("Agent threads");
+        mainWindowText.Should().Contain("Conversation timeline");
+        mainWindowText.Should().Contain("Model follows Settings");
+        mainWindowText.Should().Contain("Start a focused agent task");
+        mainWindowText.Should().Contain("Review current workspace");
+        mainWindowText.Should().NotContain("Command Deck");
+    }
+
+    [Fact]
     public void MainWindow_ActivityPanelUsesStructuredFeedBindings()
     {
         var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());

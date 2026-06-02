@@ -247,6 +247,65 @@ public sealed class MainWindowSlashCommandTests
     }
 
     [Fact]
+    public void AgentChatSessions_DefaultToOneActiveWorkspaceThread()
+    {
+        var viewModel = new MainWindowViewModel();
+
+        viewModel.AgentChatSessions.Should().ContainSingle();
+        viewModel.SelectedAgentChatSession.Should().Be(viewModel.AgentChatSessions[0]);
+        viewModel.SelectedAgentChatSession!.IsSelected.Should().BeTrue();
+        viewModel.SelectedAgentChatSession.Title.Should().Be("Workspace chat");
+        viewModel.HasAgentChatMessages.Should().BeTrue();
+        viewModel.IsChatWorkbenchVisible.Should().BeTrue();
+        viewModel.IsPageHostVisible.Should().BeFalse();
+    }
+
+    [Fact]
+    public void NewAgentChatCommand_CreatesAndSelectsFreshThread()
+    {
+        var viewModel = new MainWindowViewModel();
+
+        viewModel.NewAgentChatCommand.Execute(null);
+
+        viewModel.AgentChatSessions.Should().HaveCount(2);
+        viewModel.SelectedAgentChatSession.Should().Be(viewModel.AgentChatSessions[0]);
+        viewModel.AgentChatSessions[0].Title.Should().Be("New chat");
+        viewModel.AgentChatSessions[0].Messages.Should().BeEmpty();
+        viewModel.AgentChatSessions[0].IsSelected.Should().BeTrue();
+        viewModel.AgentChatSessions[1].IsSelected.Should().BeFalse();
+    }
+
+    [Fact]
+    public void SelectAgentChatCommand_SwitchesActiveThread()
+    {
+        var viewModel = new MainWindowViewModel();
+        var original = viewModel.SelectedAgentChatSession!;
+        viewModel.NewAgentChatCommand.Execute(null);
+
+        viewModel.SelectAgentChatCommand.Execute(original);
+
+        viewModel.SelectedAgentChatSession.Should().Be(original);
+        original.IsSelected.Should().BeTrue();
+        viewModel.AgentChatSessions[0].IsSelected.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SubmitCommandInputAsync_WithPlainText_AddsMessageToActiveThread()
+    {
+        var commandInput = new RecordingCommandInputService();
+        var viewModel = new MainWindowViewModel();
+        viewModel.SetCommandInputService(commandInput);
+        viewModel.SetSlashCommandService(new FakeSlashCommandService());
+        viewModel.CommandInputText = "review the UI";
+
+        await viewModel.SubmitCommandInputAsync();
+
+        viewModel.SelectedAgentChatSession!.Title.Should().Be("review the UI");
+        viewModel.SelectedAgentChatSession.Messages.Last().Role.Should().Be("You");
+        viewModel.SelectedAgentChatSession.Messages.Last().Content.Should().Be("review the UI");
+    }
+
+    [Fact]
     public void AddComposerAttachmentPaths_AddsFileChipsAndAllowsRemoval()
     {
         var viewModel = new MainWindowViewModel();

@@ -94,8 +94,17 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public NavView ActiveView
         {
             get => _activeView;
-            private set => this.RaiseAndSetIfChanged(ref _activeView, value);
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _activeView, value);
+                this.RaisePropertyChanged(nameof(IsChatWorkbenchVisible));
+                this.RaisePropertyChanged(nameof(IsPageHostVisible));
+            }
         }
+
+        public bool IsChatWorkbenchVisible => ActiveView == NavView.Coordinator;
+
+        public bool IsPageHostVisible => ActiveView != NavView.Coordinator;
 
         /* ========================= */
         /* SYSTEM STATUS (HEADER) */
@@ -290,6 +299,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public ICommand SelectSlashCommandCommand { get; }
 
+        public ICommand NewAgentChatCommand { get; }
+
+        public ICommand SelectAgentChatCommand { get; }
+
         public ICommand RemoveComposerAttachmentCommand { get; }
 
         public ICommand ClearComposerAttachmentsCommand { get; }
@@ -312,6 +325,42 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         public bool HasComposerAttachments => ComposerAttachments.Count > 0;
+
+        private ObservableCollection<AgentChatSessionViewModel> _agentChatSessions = new();
+        public ObservableCollection<AgentChatSessionViewModel> AgentChatSessions
+        {
+            get => _agentChatSessions;
+            set => this.RaiseAndSetIfChanged(ref _agentChatSessions, value);
+        }
+
+        private AgentChatSessionViewModel? _selectedAgentChatSession;
+        public AgentChatSessionViewModel? SelectedAgentChatSession
+        {
+            get => _selectedAgentChatSession;
+            private set
+            {
+                if (_selectedAgentChatSession == value)
+                {
+                    return;
+                }
+
+                if (_selectedAgentChatSession is not null)
+                {
+                    _selectedAgentChatSession.IsSelected = false;
+                }
+
+                this.RaiseAndSetIfChanged(ref _selectedAgentChatSession, value);
+
+                if (_selectedAgentChatSession is not null)
+                {
+                    _selectedAgentChatSession.IsSelected = true;
+                }
+
+                this.RaisePropertyChanged(nameof(HasAgentChatMessages));
+            }
+        }
+
+        public bool HasAgentChatMessages => SelectedAgentChatSession?.Messages.Count > 0;
 
         private ActivityPanelMode _selectedActivityPanelMode = ActivityPanelMode.Runs;
         public ActivityPanelMode SelectedActivityPanelMode
@@ -578,6 +627,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ShowRuntimeAgentRunDetailCommand = ReactiveCommand.Create<RuntimeAgentActivityViewModel?>(ShowRuntimeAgentRunDetail);
             SubmitCommand = ReactiveCommand.CreateFromTask(SubmitCommandInputAsync);
             SelectSlashCommandCommand = ReactiveCommand.Create<SlashCommandSuggestionViewModel>(SelectSlashCommand);
+            NewAgentChatCommand = ReactiveCommand.Create(CreateNewAgentChat);
+            SelectAgentChatCommand = ReactiveCommand.Create<AgentChatSessionViewModel?>(SelectAgentChat);
             RemoveComposerAttachmentCommand = ReactiveCommand.Create<ComposerAttachmentViewModel?>(RemoveComposerAttachment);
             ClearComposerAttachmentsCommand = ReactiveCommand.Create(ClearComposerAttachments);
             ShowRunsCommand = ReactiveCommand.Create(() => SelectedActivityPanelMode = ActivityPanelMode.Runs);
@@ -585,6 +636,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ShowEventsCommand = ReactiveCommand.Create(() => SelectedActivityPanelMode = ActivityPanelMode.Events);
             ToggleVoiceCommand = ReactiveCommand.Create(ToggleVoiceEnabled);
             StartVoiceRecordingCommand = ReactiveCommand.CreateFromTask(StartVoiceRecordingAsync);
+            InitializeAgentChatSessions();
 
             Dispatcher.UIThread.Post(() =>
             {
@@ -1002,6 +1054,63 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _resultListenerCts = new CancellationTokenSource();
         }
 
+        private void InitializeAgentChatSessions()
+        {
+            var session = AgentChatSessionViewModel.Create(
+                "Workspace chat",
+                "Ready for a focused agent task",
+                "now");
+            session.Messages.Add(AgentChatMessageViewModel.System(
+                "Ready for a focused task."));
+            AgentChatSessions.Add(session);
+            SelectedAgentChatSession = session;
+        }
+
+        private void CreateNewAgentChat()
+        {
+            var session = AgentChatSessionViewModel.Create(
+                "New chat",
+                "No messages yet",
+                "now");
+            AgentChatSessions.Insert(0, session);
+            SelectAgentChat(session);
+        }
+
+        private void SelectAgentChat(AgentChatSessionViewModel? session)
+        {
+            if (session is null || !AgentChatSessions.Contains(session))
+            {
+                return;
+            }
+
+            SelectedAgentChatSession = session;
+        }
+
+        private void AddAgentChatMessage(string role, string content)
+        {
+            if (SelectedAgentChatSession is null || string.IsNullOrWhiteSpace(content))
+            {
+                return;
+            }
+
+            SelectedAgentChatSession.Messages.Add(new AgentChatMessageViewModel(
+                role,
+                content,
+                DateTime.Now.ToString("HH:mm")));
+
+            if (role.Equals("You", StringComparison.OrdinalIgnoreCase)
+                && SelectedAgentChatSession.Title is "Workspace chat" or "New chat")
+            {
+                SelectedAgentChatSession.Title = content.Length <= 40
+                    ? content
+                    : content[..40].TrimEnd() + "...";
+            }
+
+            SelectedAgentChatSession.Summary = content;
+            SelectedAgentChatSession.RelativeTimeText = "now";
+            this.RaisePropertyChanged(nameof(HasAgentChatMessages));
+        }
+
         public async Task SubmitCommandInputAsync()
         {
             if (string.IsNullOrWhiteSpace(CommandInputText))
@@ -1009,9 +1118,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             var input = CommandInputText.Trim();
             AddLog($"> {input}");
+            AddAgentChatMessage("You", input);
 
             if (TryExecuteLocalSlashCommand(input))
             {
+                AddAgentChatMessage("Kam", "Command handled locally.");
                 CommandInputText = string.Empty;
                 SlashCommandSuggestions.Clear();
                 IsSlashCommandPaletteVisible = false;
@@ -1024,6 +1135,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 AddLog(slashResult.Success
                     ? $"✅ {slashResult.Message}"
                     : $"❌ Error: {slashResult.Message}");
+                AddAgentChatMessage("Kam", slashResult.Message);
                 CommandInputText = string.Empty;
                 SlashCommandSuggestions.Clear();
                 IsSlashCommandPaletteVisible = false;
@@ -1033,6 +1145,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             if (_commandInput is null)
             {
                 AddLog("COMMAND_INPUT_UNAVAILABLE");
+                AddAgentChatMessage("Kam", "Command input service is not available.");
                 return;
             }
 
@@ -1245,10 +1358,12 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 if (e.Success)
                 {
                     AddLog($"✅ {e.Result}");
+                    AddAgentChatMessage("Kam", e.Result);
                 }
                 else
                 {
                     AddLog($"❌ Error: {e.Result}");
+                    AddAgentChatMessage("Kam", $"Error: {e.Result}");
                 }
             });
         }
@@ -1951,6 +2066,82 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             get => _isSelected;
             set => this.RaiseAndSetIfChanged(ref _isSelected, value);
+        }
+    }
+
+    public sealed class AgentChatSessionViewModel : ReactiveObject
+    {
+        private string _title;
+        private string _summary;
+        private string _relativeTimeText;
+        private bool _isSelected;
+
+        private AgentChatSessionViewModel(
+            string title,
+            string summary,
+            string relativeTimeText)
+        {
+            _title = title;
+            _summary = summary;
+            _relativeTimeText = relativeTimeText;
+        }
+
+        public string Title
+        {
+            get => _title;
+            set => this.RaiseAndSetIfChanged(ref _title, value);
+        }
+
+        public string Summary
+        {
+            get => _summary;
+            set => this.RaiseAndSetIfChanged(ref _summary, value);
+        }
+
+        public string RelativeTimeText
+        {
+            get => _relativeTimeText;
+            set => this.RaiseAndSetIfChanged(ref _relativeTimeText, value);
+        }
+
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set => this.RaiseAndSetIfChanged(ref _isSelected, value);
+        }
+
+        public ObservableCollection<AgentChatMessageViewModel> Messages { get; } = new();
+
+        public static AgentChatSessionViewModel Create(
+            string title,
+            string summary,
+            string relativeTimeText)
+        {
+            return new AgentChatSessionViewModel(title, summary, relativeTimeText);
+        }
+    }
+
+    public sealed class AgentChatMessageViewModel
+    {
+        public AgentChatMessageViewModel(
+            string role,
+            string content,
+            string timeText)
+        {
+            Role = role;
+            Content = content;
+            TimeText = timeText;
+        }
+
+        public string Role { get; }
+
+        public string Content { get; }
+
+        public string TimeText { get; }
+
+        public static AgentChatMessageViewModel System(string content)
+        {
+            return new AgentChatMessageViewModel("System", content, DateTime.Now.ToString("HH:mm"));
         }
     }
 

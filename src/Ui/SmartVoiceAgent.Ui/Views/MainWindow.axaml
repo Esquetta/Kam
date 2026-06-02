@@ -218,6 +218,38 @@
 			<Setter Property="Margin" Value="0,0,6,6"/>
 		</Style>
 
+		<Style Selector="Button.ChatSessionItem">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderBrush" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="CornerRadius" Value="6"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+			<Setter Property="Cursor" Value="Hand"/>
+		</Style>
+
+		<Style Selector="Button.ChatSessionItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+		</Style>
+
+		<Style Selector="Border.ChatSessionChrome">
+			<Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding" Value="10"/>
+			<Setter Property="Margin" Value="0,0,0,8"/>
+		</Style>
+
+		<Style Selector="Border.ChatMessage">
+			<Setter Property="Background" Value="{DynamicResource SurfaceBgElevatedBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding" Value="12"/>
+			<Setter Property="Margin" Value="0,0,0,10"/>
+		</Style>
+
 		<!-- Prompt Input Style -->
 		<Style Selector="TextBox#PromptInput">
 			<Setter Property="Padding" Value="0"/>
@@ -472,36 +504,260 @@
 						</Grid>
 					</Border>
 
-					<Border Grid.Row="1"
-							Background="{DynamicResource SurfaceBgBrush}"
-							BorderBrush="{DynamicResource BorderSubtleBrush}"
-							BorderThickness="1"
-							CornerRadius="8"
-							ClipToBounds="True">
-					<ContentControl Content="{Binding CurrentViewModel}" Margin="20">
-						<ContentControl.DataTemplates>
-							<DataTemplate DataType="pagevm:CoordinatorViewModel">
-								<local:CoordinatorView/>
-							</DataTemplate>
+					<Grid Grid.Row="1">
+						<Border Background="{DynamicResource SurfaceBgBrush}"
+								BorderBrush="{DynamicResource BorderSubtleBrush}"
+								BorderThickness="1"
+								CornerRadius="8"
+								ClipToBounds="True"
+								IsVisible="{Binding IsChatWorkbenchVisible}">
+							<Grid ColumnDefinitions="236,*">
+								<Border Grid.Column="0"
+										Background="{DynamicResource CardBgBrush}"
+										BorderBrush="{DynamicResource BorderSubtleBrush}"
+										BorderThickness="0,0,1,0"
+										Padding="14">
+									<Grid RowDefinitions="Auto,*"
+										  RowSpacing="14">
+										<Grid Grid.Row="0"
+											  ColumnDefinitions="*,Auto"
+											  ColumnSpacing="10">
+											<StackPanel Grid.Column="0"
+														Spacing="3">
+												<TextBlock Text="Chats"
+														   FontSize="14"
+														   FontWeight="SemiBold"
+														   Foreground="{DynamicResource TextPrimaryBrush}"/>
+												<TextBlock Text="Agent threads"
+														   FontSize="11"
+														   Foreground="{DynamicResource TextMutedBrush}"/>
+											</StackPanel>
+											<Button Grid.Column="1"
+													Classes="IconButton"
+													Width="32"
+													Height="32"
+													Background="{DynamicResource SurfaceBgElevatedBrush}"
+													BorderBrush="{DynamicResource BorderSubtleBrush}"
+													BorderThickness="1"
+													CornerRadius="7"
+													ToolTip.Tip="New chat"
+													Command="{Binding NewAgentChatCommand}">
+												<Path Data="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"
+													  Fill="{DynamicResource AccentCyanBrush}"
+													  Width="15"
+													  Height="15"
+													  Stretch="Uniform"/>
+											</Button>
+										</Grid>
 
-							<DataTemplate DataType="pagevm:PluginsViewModel">
-								<local:PluginsView/>
-							</DataTemplate>
+										<ScrollViewer Grid.Row="1"
+													  VerticalScrollBarVisibility="Auto"
+													  HorizontalScrollBarVisibility="Disabled">
+											<ItemsControl ItemsSource="{Binding AgentChatSessions}">
+												<ItemsControl.ItemTemplate>
+													<DataTemplate DataType="vm:AgentChatSessionViewModel">
+														<Button Classes="ChatSessionItem"
+																Command="{Binding $parent[Window].DataContext.SelectAgentChatCommand}"
+																CommandParameter="{Binding}">
+															<Border Classes="ChatSessionChrome"
+																	BorderBrush="{Binding IsSelected, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentCyanDimBrush|BorderSubtleBrush'}"
+																	Background="{Binding IsSelected, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='CardBgHoverBrush|SurfaceBgBrush'}">
+																<Grid RowDefinitions="Auto,Auto"
+																	  ColumnDefinitions="*,Auto"
+																	  RowSpacing="4"
+																	  ColumnSpacing="8">
+																	<TextBlock Grid.Row="0"
+																			   Grid.Column="0"
+																			   Text="{Binding Title}"
+																			   FontSize="12"
+																			   FontWeight="SemiBold"
+																			   Foreground="{DynamicResource TextPrimaryBrush}"
+																			   TextTrimming="CharacterEllipsis"/>
+																	<TextBlock Grid.Row="0"
+																			   Grid.Column="1"
+																			   Text="{Binding RelativeTimeText}"
+																			   FontSize="10"
+																			   Foreground="{DynamicResource TextMutedBrush}"/>
+																	<TextBlock Grid.Row="1"
+																			   Grid.ColumnSpan="2"
+																			   Text="{Binding Summary}"
+																			   FontSize="11"
+																			   Foreground="{DynamicResource TextMutedBrush}"
+																			   TextTrimming="CharacterEllipsis"/>
+																</Grid>
+															</Border>
+														</Button>
+													</DataTemplate>
+												</ItemsControl.ItemTemplate>
+											</ItemsControl>
+										</ScrollViewer>
+									</Grid>
+								</Border>
 
-							<DataTemplate DataType="pagevm:RuntimeDiagnosticsViewModel">
-								<local:RuntimeDiagnosticsView/>
-							</DataTemplate>
+								<Grid Grid.Column="1"
+									  RowDefinitions="Auto,*"
+									  Background="{DynamicResource SurfaceBgBrush}">
+									<Border Grid.Row="0"
+											Background="{DynamicResource SurfaceBgElevatedBrush}"
+											BorderBrush="{DynamicResource BorderSubtleBrush}"
+											BorderThickness="0,0,0,1"
+											Padding="18,14">
+										<Grid ColumnDefinitions="*,Auto"
+											  ColumnSpacing="12">
+											<StackPanel Grid.Column="0"
+														Spacing="4">
+												<TextBlock Text="{Binding SelectedAgentChatSession.Title}"
+														   FontSize="18"
+														   FontWeight="SemiBold"
+														   Foreground="{DynamicResource TextPrimaryBrush}"
+														   TextTrimming="CharacterEllipsis"/>
+												<TextBlock Text="Conversation timeline"
+														   FontSize="12"
+														   Foreground="{DynamicResource TextMutedBrush}"/>
+											</StackPanel>
+											<Border Grid.Column="1"
+													Background="{DynamicResource CardBgBrush}"
+													BorderBrush="{DynamicResource BorderSubtleBrush}"
+													BorderThickness="1"
+													CornerRadius="6"
+													Padding="9,5"
+													VerticalAlignment="Center">
+												<TextBlock Text="Model follows Settings"
+														   FontSize="11"
+														   Foreground="{DynamicResource TextSecondaryBrush}"/>
+											</Border>
+										</Grid>
+									</Border>
 
-							<DataTemplate DataType="pagevm:IntegrationsViewModel">
-								<local:IntegrationsView/>
-							</DataTemplate>
+									<ScrollViewer Grid.Row="1"
+												  VerticalScrollBarVisibility="Auto"
+												  HorizontalScrollBarVisibility="Disabled"
+												  Padding="18">
+										<Grid>
+											<Border Classes="ChatMessage"
+													IsVisible="{Binding !HasAgentChatMessages}">
+												<StackPanel Spacing="14">
+													<StackPanel Spacing="5">
+														<TextBlock Text="Start a focused agent task"
+																   FontSize="16"
+																   FontWeight="SemiBold"
+																   Foreground="{DynamicResource TextPrimaryBrush}"/>
+														<TextBlock Text="Pick a thread, attach files, or send the next task from the composer."
+																   FontSize="12"
+																   Foreground="{DynamicResource TextMutedBrush}"
+																   TextWrapping="Wrap"/>
+													</StackPanel>
+													<Grid ColumnDefinitions="*,*,*"
+														  ColumnSpacing="10">
+														<Border Grid.Column="0"
+																Background="{DynamicResource CardBgBrush}"
+																BorderBrush="{DynamicResource BorderSubtleBrush}"
+																BorderThickness="1"
+																CornerRadius="8"
+																Padding="12">
+															<TextBlock Text="Review current workspace"
+																	   FontSize="12"
+																	   Foreground="{DynamicResource TextSecondaryBrush}"
+																	   TextWrapping="Wrap"/>
+														</Border>
+														<Border Grid.Column="1"
+																Background="{DynamicResource CardBgBrush}"
+																BorderBrush="{DynamicResource BorderSubtleBrush}"
+																BorderThickness="1"
+																CornerRadius="8"
+																Padding="12">
+															<TextBlock Text="Inspect failing tests"
+																	   FontSize="12"
+																	   Foreground="{DynamicResource TextSecondaryBrush}"
+																	   TextWrapping="Wrap"/>
+														</Border>
+														<Border Grid.Column="2"
+																Background="{DynamicResource CardBgBrush}"
+																BorderBrush="{DynamicResource BorderSubtleBrush}"
+																BorderThickness="1"
+																CornerRadius="8"
+																Padding="12">
+															<TextBlock Text="Plan next implementation"
+																	   FontSize="12"
+																	   Foreground="{DynamicResource TextSecondaryBrush}"
+																	   TextWrapping="Wrap"/>
+														</Border>
+													</Grid>
+												</StackPanel>
+											</Border>
+											<ItemsControl ItemsSource="{Binding SelectedAgentChatSession.Messages}">
+												<ItemsControl.ItemTemplate>
+													<DataTemplate DataType="vm:AgentChatMessageViewModel">
+														<Border Classes="ChatMessage">
+															<Grid RowDefinitions="Auto,Auto"
+																  RowSpacing="7">
+																<Grid Grid.Row="0"
+																	  ColumnDefinitions="Auto,*,Auto"
+																	  ColumnSpacing="8">
+																	<Border Grid.Column="0"
+																			Width="7"
+																			Height="7"
+																			CornerRadius="4"
+																			Background="{DynamicResource AccentCyanBrush}"
+																			VerticalAlignment="Center"/>
+																	<TextBlock Grid.Column="1"
+																			   Text="{Binding Role}"
+																			   FontSize="11"
+																			   FontWeight="SemiBold"
+																			   Foreground="{DynamicResource TextPrimaryBrush}"/>
+																	<TextBlock Grid.Column="2"
+																			   Text="{Binding TimeText}"
+																			   FontSize="10"
+																			   Foreground="{DynamicResource TextMutedBrush}"/>
+																</Grid>
+																<TextBlock Grid.Row="1"
+																		   Text="{Binding Content}"
+																		   FontSize="13"
+																		   LineHeight="20"
+																		   Foreground="{DynamicResource TextSecondaryBrush}"
+																		   TextWrapping="Wrap"/>
+															</Grid>
+														</Border>
+													</DataTemplate>
+												</ItemsControl.ItemTemplate>
+											</ItemsControl>
+										</Grid>
+									</ScrollViewer>
+								</Grid>
+							</Grid>
+						</Border>
 
-							<DataTemplate DataType="pagevm:SettingsViewModel">
-								<local:SettingsView/>
-							</DataTemplate>
-						</ContentControl.DataTemplates>
-					</ContentControl>
-					</Border>
+						<Border Background="{DynamicResource SurfaceBgBrush}"
+								BorderBrush="{DynamicResource BorderSubtleBrush}"
+								BorderThickness="1"
+								CornerRadius="8"
+								ClipToBounds="True"
+								IsVisible="{Binding IsPageHostVisible}">
+						<ContentControl Content="{Binding CurrentViewModel}" Margin="20">
+							<ContentControl.DataTemplates>
+								<DataTemplate DataType="pagevm:CoordinatorViewModel">
+									<local:CoordinatorView/>
+								</DataTemplate>
+
+								<DataTemplate DataType="pagevm:PluginsViewModel">
+									<local:PluginsView/>
+								</DataTemplate>
+
+								<DataTemplate DataType="pagevm:RuntimeDiagnosticsViewModel">
+									<local:RuntimeDiagnosticsView/>
+								</DataTemplate>
+
+								<DataTemplate DataType="pagevm:IntegrationsViewModel">
+									<local:IntegrationsView/>
+								</DataTemplate>
+
+								<DataTemplate DataType="pagevm:SettingsViewModel">
+									<local:SettingsView/>
+								</DataTemplate>
+							</ContentControl.DataTemplates>
+						</ContentControl>
+						</Border>
+					</Grid>
 				</Grid>
 			</Border>
 
