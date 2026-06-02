@@ -28,10 +28,10 @@ public sealed class MainWindowMetadataTests
             .ToArray();
 
         visibleText.Should().Contain("Activity");
-        visibleText.Should().Contain("Live session events");
-        visibleText.Should().Contain("Agents");
-        visibleText.Should().Contain("Plan trace");
-        visibleText.Should().Contain("Skill results");
+        visibleText.Should().Contain("Session");
+        visibleText.Should().Contain("Agent runs");
+        visibleText.Should().Contain("Event stream");
+        visibleText.Should().Contain("Command prompt");
         visibleText.Should().NotContain(value =>
             value.Contains("ACTIVITY_LOG", StringComparison.Ordinal)
             || value.Contains("KERNEL_LOG", StringComparison.Ordinal)
@@ -39,6 +39,19 @@ public sealed class MainWindowMetadataTests
             || value.Contains("PLANNER_TRACE", StringComparison.Ordinal)
             || value.Contains("RESULT_VIEWER", StringComparison.Ordinal)
             || value.Contains("Coordinator AI", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void MainWindow_UsesModernWorkbenchShellChrome()
+    {
+        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+
+        mainWindowText.Should().Contain("Kam Workbench");
+        mainWindowText.Should().Contain("Model and agents follow Settings");
+        mainWindowText.Should().Contain("SurfaceBgElevatedBrush");
+        mainWindowText.Should().Contain("ContentControl Content=\"{Binding CurrentViewModel}\" Margin=\"28\"");
+        mainWindowText.Should().NotContain("BlurEffect Radius=\"120\"");
+        mainWindowText.Should().NotContain("AccentCyanGlowBrush}\"\r\n\t\t\t\t\t\t\t Opacity=\"0.3\"");
     }
 
     [Fact]

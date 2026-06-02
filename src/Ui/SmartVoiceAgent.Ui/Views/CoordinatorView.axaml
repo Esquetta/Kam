@@ -1,172 +1,342 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:SmartVoiceAgent.Ui.ViewModels.PageModels"
-             xmlns:local="clr-namespace:SmartVoiceAgent.Ui.Views"
-             xmlns:services="clr-namespace:SmartVoiceAgent.Ui.Services"
-             xmlns:converters="clr-namespace:SmartVoiceAgent.Ui.Converters"
              x:Class="SmartVoiceAgent.Ui.Views.CoordinatorView"
              x:DataType="vm:CoordinatorViewModel">
 
-    <UserControl.Resources>
-        <services:WindowStateManager x:Key="WindowStateManager" />
-        <converters:ResponsiveFontSizeConverter x:Key="ResponsiveFontSizeConverter" />
-        <converters:ResponsiveScaleConverter x:Key="ResponsiveScaleConverter" />
-    </UserControl.Resources>
+    <Grid RowDefinitions="Auto, *, Auto"
+          RowSpacing="22"
+          Margin="0"
+          ClipToBounds="True">
 
-    <Grid RowDefinitions="Auto, *, Auto" Margin="0,12,0,18" ClipToBounds="True">
-
-        <!-- Title Section -->
-        <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,16,0,28">
-                <TextBlock Text="{DynamicResource Lang.Coordinator.Title}"
-                           FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=56}"
-                           LetterSpacing="12"
-                           HorizontalAlignment="Center"
-                           Foreground="{Binding LabelColor, Mode=OneWay}"
-                           FontWeight="Light"/>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,0" Spacing="12">
-                    <!-- Status Badge Background -->
-                    <Border Background="{Binding OrbColor, Mode=OneWay, Converter={StaticResource BrushToGlowBrushConverter}}"
-                            BorderBrush="{Binding OrbColor, Mode=OneWay}"
+        <Grid Grid.Row="0"
+              ColumnDefinitions="*, Auto"
+              ColumnSpacing="24">
+            <StackPanel Grid.Column="0"
+                        Spacing="10"
+                        VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal"
+                            Spacing="10">
+                    <Border Background="{DynamicResource AccentCyanGlowBrush}"
+                            BorderBrush="{DynamicResource AccentCyanDimBrush}"
                             BorderThickness="1"
-                            CornerRadius="4"
+                            CornerRadius="6"
                             Padding="8,4">
                         <TextBlock Text="AGENT v1.0"
                                    FontSize="11"
-                                   FontFamily="Consolas"
-                                   Foreground="{Binding OrbColor, Mode=OneWay}"
-                                   LetterSpacing="1"/>
+                                   FontFamily="Consolas, Cascadia Code, monospace"
+                                   Foreground="{DynamicResource AccentCyanBrush}"/>
                     </Border>
-                    <TextBlock Text="//"
-                               FontSize="11"
-                               Foreground="{DynamicResource TextMutedBrush}"
-                               VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding StatusText, Mode=OneWay}"
-                               FontSize="11"
-                               FontFamily="Consolas"
-                               Foreground="{Binding StatusColor, Mode=OneWay}"
-                               LetterSpacing="2"
-                               VerticalAlignment="Center"
-                               FontWeight="SemiBold"/>
+                    <Border Background="{DynamicResource CardBgBrush}"
+                            BorderBrush="{DynamicResource BorderSubtleBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="8,4">
+                        <TextBlock Text="{Binding StatusText, Mode=OneWay}"
+                                   FontSize="11"
+                                   FontFamily="Consolas, Cascadia Code, monospace"
+                                   Foreground="{Binding StatusColor, Mode=OneWay}"/>
+                    </Border>
                 </StackPanel>
+                <TextBlock Text="Command Deck"
+                           FontSize="38"
+                           FontWeight="SemiBold"
+                           Foreground="{Binding LabelColor, Mode=OneWay}"/>
+                <TextBlock Text="Primary command surface for agents, tools, model state, and workspace readiness."
+                           FontSize="14"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           TextWrapping="Wrap"
+                           MaxWidth="720"/>
             </StackPanel>
 
-        <!-- Assistant Orb -->
-        <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,8,0,32">
-                <Viewbox Width="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveScaleConverter}, ConverterParameter=230}"
-                         Height="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveScaleConverter}, ConverterParameter=230}">
-                    <local:NeuralOrb 
-                        IsActive="{Binding IsOnline, Mode=OneWay}"
-                        ToggleCommand="{Binding ToggleOnlineStateCommand}"
-                        OrbColor="{Binding OrbColor, Mode=OneWay}"
-                        RingOpacity="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.3|0.1}"
-                        CoreOpacity="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.65|0.3}"
-                        BoxShadowValue="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToBoxShadowConverter}, ConverterParameter='0 0 40 0 #4006B6D4|0 0 20 0 #40EF4444'}"/>
-                </Viewbox>
-            </Grid>
+            <Border Grid.Column="1"
+                    Background="{DynamicResource CardBgBrush}"
+                    BorderBrush="{DynamicResource BorderSubtleBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16"
+                    MinWidth="220"
+                    VerticalAlignment="Center">
+                <Grid RowDefinitions="Auto, Auto"
+                      ColumnDefinitions="Auto, *"
+                      RowSpacing="8"
+                      ColumnSpacing="10">
+                    <Ellipse Grid.Row="0"
+                             Grid.Column="0"
+                             Width="8"
+                             Height="8"
+                             Fill="{Binding StatusColor, Mode=OneWay}"
+                             VerticalAlignment="Center"/>
+                    <TextBlock Grid.Row="0"
+                               Grid.Column="1"
+                               Text="Runtime"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="1"
+                               Text="Model and agents follow Settings"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               TextWrapping="Wrap"/>
+                </Grid>
+            </Border>
+        </Grid>
 
-        <!-- Bottom Cards - Responsive Grid -->
-        <ItemsControl Grid.Row="2" Margin="0,0,0,8">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <UniformGrid Columns="{Binding Source={StaticResource WindowStateManager}, Path=GridColumns}"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                
-                <!-- Research Card -->
-                <Border Classes="InfoCard" Margin="8">
-                    <Border.Styles>
-                        <Style Selector="Border.InfoCard:pointerover">
-                            <Setter Property="BorderBrush" Value="{Binding ResearchStatusColor, Mode=OneWay}"/>
-                        </Style>
-                    </Border.Styles>
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                            <Grid Width="8" Height="8" Margin="0,0,12,0">
-                                <Ellipse Width="8" Height="8" Fill="{Binding ResearchStatusColor, Mode=OneWay}">
-                                    <Ellipse.Effect>
-                                        <BlurEffect Radius="4"/>
-                                    </Ellipse.Effect>
-                                </Ellipse>
-                                <Ellipse Width="8" Height="8" Fill="{Binding ResearchStatusColor, Mode=OneWay}"/>
-                            </Grid>
-                            <TextBlock Text="{DynamicResource Lang.Coordinator.Research}"
-                                       Foreground="{Binding LabelColor, Mode=OneWay}"
-                                       FontWeight="Medium"
-                                       FontSize="13"
-                                       LetterSpacing="2"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <TextBlock Text="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='19:18:35  Agent workspace ready|19:18:35  Service offline'}"
-                                   Foreground="{Binding ResearchStatusColor, Mode=OneWay}"
-                                   Opacity="0.8"
-                                   FontSize="10"
-                                   FontFamily="Consolas"/>
+        <Grid Grid.Row="1"
+              ColumnDefinitions="1.25*, 0.75*"
+              ColumnSpacing="18">
+            <Border Grid.Column="0"
+                    Classes="InfoCard"
+                    Padding="22">
+                <Grid RowDefinitions="Auto, *, Auto"
+                      RowSpacing="18">
+                    <StackPanel Grid.Row="0"
+                                Spacing="6">
+                        <TextBlock Text="Readiness"
+                                   FontSize="15"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="Run the first checks before starting work."
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextMutedBrush}"/>
                     </StackPanel>
-                </Border>
 
-                <!-- Analyzer Card -->
-                <Border Classes="InfoCard" Margin="8">
-                    <Border.Styles>
-                        <Style Selector="Border.InfoCard:pointerover">
-                            <Setter Property="BorderBrush" Value="{Binding AnalyzerStatusColor, Mode=OneWay}"/>
-                        </Style>
-                    </Border.Styles>
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                            <Grid Width="8" Height="8" Margin="0,0,12,0">
-                                <Ellipse Width="8" Height="8" Fill="{Binding AnalyzerStatusColor, Mode=OneWay}">
-                                    <Ellipse.Effect>
-                                        <BlurEffect Radius="4"/>
-                                    </Ellipse.Effect>
-                                </Ellipse>
-                                <Ellipse Width="8" Height="8" Fill="{Binding AnalyzerStatusColor, Mode=OneWay}"/>
-                            </Grid>
-                            <TextBlock Text="{DynamicResource Lang.Coordinator.Analyzer}"
-                                       Foreground="{Binding LabelColor, Mode=OneWay}"
-                                       FontWeight="Medium"
-                                       FontSize="13"
-                                       LetterSpacing="2"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <TextBlock Text="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='19:18:42  Reasoning engine active|19:18:42  Engine offline'}"
-                                   Foreground="{Binding AnalyzerStatusColor, Mode=OneWay}"
-                                   Opacity="0.8"
-                                   FontSize="10"
-                                   FontFamily="Consolas"/>
-                    </StackPanel>
-                </Border>
+                    <UniformGrid Grid.Row="1"
+                                 Columns="2"
+                                 Rows="2">
+                        <Border Background="{DynamicResource SurfaceBgElevatedBrush}"
+                                BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="16"
+                                Margin="0,0,10,10">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Model"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="Selected provider powers chat, skills, and runtime agents."
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{DynamicResource SurfaceBgElevatedBrush}"
+                                BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="16"
+                                Margin="0,0,0,10">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Workspace"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="Repo, diff, and worktree context stay scoped to coding mode."
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{DynamicResource SurfaceBgElevatedBrush}"
+                                BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="16"
+                                Margin="0,0,10,0">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Tools"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="Skills, MCP, GitHub, and smoke tests are managed from slash commands."
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{DynamicResource SurfaceBgElevatedBrush}"
+                                BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="16">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Run Queue"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="Agent runs appear in Activity with status, observations, and retry controls."
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
 
-                <!-- Tasks Card -->
-                <Border Classes="InfoCard" Margin="8">
-                    <Border.Styles>
-                        <Style Selector="Border.InfoCard:pointerover">
-                            <Setter Property="BorderBrush" Value="{Binding TasksStatusColor, Mode=OneWay}"/>
-                        </Style>
-                    </Border.Styles>
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                            <Grid Width="8" Height="8" Margin="0,0,12,0">
-                                <Ellipse Width="8" Height="8" Fill="{Binding TasksStatusColor, Mode=OneWay}">
-                                    <Ellipse.Effect>
-                                        <BlurEffect Radius="4"/>
-                                    </Ellipse.Effect>
-                                </Ellipse>
-                                <Ellipse Width="8" Height="8" Fill="{Binding TasksStatusColor, Mode=OneWay}"/>
-                            </Grid>
-                            <TextBlock Text="{DynamicResource Lang.Coordinator.Tasks}"
-                                       Foreground="{Binding LabelColor, Mode=OneWay}"
-                                       FontWeight="Medium"
-                                       FontSize="13"
-                                       LetterSpacing="2"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <TextBlock Text="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='18:18:38  Task engine ready|18:18:38  Task engine offline'}"
-                                   Foreground="{Binding TasksStatusColor, Mode=OneWay}"
-                                   Opacity="0.8"
-                                   FontSize="10"
-                                   FontFamily="Consolas"/>
+                    <StackPanel Grid.Row="2"
+                                Orientation="Horizontal"
+                                Spacing="10">
+                        <Border Background="{DynamicResource AccentCyanGlowBrush}"
+                                BorderBrush="{DynamicResource AccentCyanDimBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="10,6">
+                            <TextBlock Text="Open /readiness"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource AccentCyanBrush}"
+                                       FontFamily="Consolas, Cascadia Code, monospace"/>
+                        </Border>
+                        <Border Background="{DynamicResource CardBgBrush}"
+                                BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="10,6">
+                            <TextBlock Text="Use /agent for focused task agents"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        </Border>
                     </StackPanel>
-                </Border>
-            </ItemsControl>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1"
+                    Classes="InfoCard"
+                    Padding="22">
+                <Grid RowDefinitions="Auto, *, Auto"
+                      RowSpacing="18">
+                    <StackPanel Grid.Row="0"
+                                Spacing="6">
+                        <TextBlock Text="Operating modes"
+                                   FontSize="15"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="Quick view of the main agent surfaces."
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextMutedBrush}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1"
+                                Spacing="10">
+                        <Border Background="{DynamicResource AccentPurpleGlowBrush}"
+                                BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="14">
+                            <Grid ColumnDefinitions="Auto, *"
+                                  ColumnSpacing="10">
+                                <Ellipse Grid.Column="0"
+                                         Width="8"
+                                         Height="8"
+                                         Fill="{Binding ResearchStatusColor, Mode=OneWay}"
+                                         VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1"
+                                            Spacing="3">
+                                    <TextBlock Text="{DynamicResource Lang.Coordinator.Research}"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="Workspace planning and implementation"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource TextMutedBrush}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <Border Background="{DynamicResource AccentCyanGlowBrush}"
+                                BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="14">
+                            <Grid ColumnDefinitions="Auto, *"
+                                  ColumnSpacing="10">
+                                <Ellipse Grid.Column="0"
+                                         Width="8"
+                                         Height="8"
+                                         Fill="{Binding AnalyzerStatusColor, Mode=OneWay}"
+                                         VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1"
+                                            Spacing="3">
+                                    <TextBlock Text="{DynamicResource Lang.Coordinator.Analyzer}"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="Screen, file, and runtime inspection"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource TextMutedBrush}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <Border Background="{DynamicResource AccentOrangeGlowBrush}"
+                                BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="14">
+                            <Grid ColumnDefinitions="Auto, *"
+                                  ColumnSpacing="10">
+                                <Ellipse Grid.Column="0"
+                                         Width="8"
+                                         Height="8"
+                                         Fill="{Binding TasksStatusColor, Mode=OneWay}"
+                                         VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1"
+                                            Spacing="3">
+                                    <TextBlock Text="{DynamicResource Lang.Coordinator.Tasks}"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="Follow-ups, approvals, and queued runs"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource TextMutedBrush}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="2"
+                               Text="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='Ready for commands|Runtime paused'}"
+                               Foreground="{Binding StatusColor, Mode=OneWay}"
+                               FontSize="12"
+                               FontFamily="Consolas, Cascadia Code, monospace"/>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="2"
+              ColumnDefinitions="*, *, *"
+              ColumnSpacing="12">
+            <Border Grid.Column="0"
+                    Background="{DynamicResource CardBgBrush}"
+                    BorderBrush="{DynamicResource BorderSubtleBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="14">
+                <TextBlock Text="Type /model health to inspect the active runtime model."
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           FontSize="12"
+                           TextWrapping="Wrap"/>
+            </Border>
+            <Border Grid.Column="1"
+                    Background="{DynamicResource CardBgBrush}"
+                    BorderBrush="{DynamicResource BorderSubtleBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="14">
+                <TextBlock Text="Type /workspace for local repository context."
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           FontSize="12"
+                           TextWrapping="Wrap"/>
+            </Border>
+            <Border Grid.Column="2"
+                    Background="{DynamicResource CardBgBrush}"
+                    BorderBrush="{DynamicResource BorderSubtleBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="14">
+                <TextBlock Text="Type /skills to review tools and smoke tests."
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           FontSize="12"
+                           TextWrapping="Wrap"/>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

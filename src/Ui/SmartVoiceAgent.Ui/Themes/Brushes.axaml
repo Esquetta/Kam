@@ -8,6 +8,7 @@
     <SolidColorBrush x:Key="CardBgBrush" Color="{DynamicResource CardBg}" />
     <SolidColorBrush x:Key="CardBgHoverBrush" Color="{DynamicResource CardBgHover}" />
     <SolidColorBrush x:Key="SurfaceBgBrush" Color="{DynamicResource SurfaceBg}" />
+    <SolidColorBrush x:Key="SurfaceBgElevatedBrush" Color="{DynamicResource SurfaceBgElevated}" />
 
     <!-- Border brushes -->
     <SolidColorBrush x:Key="BorderSubtleBrush" Color="{DynamicResource BorderSubtle}" />

@@ -7,6 +7,7 @@
     <Color x:Key="CardBg">#FFFFFF</Color>
     <Color x:Key="CardBgHover">#F4F4F5</Color>
     <Color x:Key="SurfaceBg">#F4F4F5</Color>
+    <Color x:Key="SurfaceBgElevated">#FFFFFF</Color>
     <Color x:Key="BorderSubtle">#E4E4E7</Color>
     <Color x:Key="BorderMuted">#D4D4D8</Color>
     <Color x:Key="TextPrimary">#18181B</Color>

@@ -54,6 +54,22 @@ public sealed class CoordinatorViewMetadataTests
             .NotContain(element => element.Name.LocalName == "ScrollViewer");
     }
 
+    [Fact]
+    public void CoordinatorView_UsesModernCommandDeckInsteadOfOrbHero()
+    {
+        var viewText = File.ReadAllText(FindCoordinatorViewXamlPath());
+
+        viewText.Should().Contain("Command Deck");
+        viewText.Should().Contain("Primary command surface");
+        viewText.Should().Contain("Readiness");
+        viewText.Should().Contain("Model");
+        viewText.Should().Contain("Workspace");
+        viewText.Should().Contain("Run Queue");
+        viewText.Should().Contain("Open /readiness");
+        viewText.Should().NotContain("NeuralOrb");
+        viewText.Should().NotContain("LetterSpacing=\"12\"");
+    }
+
     private static string FindCoordinatorViewXamlPath()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
