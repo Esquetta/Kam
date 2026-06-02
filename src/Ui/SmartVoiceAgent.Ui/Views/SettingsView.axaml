@@ -15,7 +15,7 @@
             <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="16"/>
         </Style>
 
@@ -38,15 +38,17 @@
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="0,20,0,40" MaxWidth="700" HorizontalAlignment="Center">
+        <StackPanel Classes="WorkbenchPage" Margin="0,20,0,40" MaxWidth="700" HorizontalAlignment="Center">
 
             <!-- Title Section -->
             <StackPanel Margin="0,20,0,40">
                 <TextBlock Text="{DynamicResource Lang.Settings.Title}"
+                           Classes="PageTitle"
                            FontSize="28"
                            Foreground="{DynamicResource TextPrimaryBrush}"
                            FontWeight="Light"/>
                 <TextBlock Text="{DynamicResource Lang.Settings.Subtitle}"
+                           Classes="PageSubtitle"
                            Foreground="{DynamicResource TextMutedBrush}"
                            Margin="0,4,0,0"
                            FontSize="13"/>

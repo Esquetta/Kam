@@ -17,7 +17,7 @@
             <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="24"/>
             <Setter Property="MinHeight" Value="320"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -38,7 +38,7 @@
             <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="24"/>
             <Setter Property="MinHeight" Value="320"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -58,7 +58,7 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="MinHeight" Value="220"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Transitions">
@@ -192,17 +192,19 @@
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <Grid RowDefinitions="Auto, Auto, Auto, Auto, *" Margin="0,20">
+        <Grid Classes="WorkbenchPage" RowDefinitions="Auto, Auto, Auto, Auto, *" Margin="0,20">
 
             <!-- Title Section -->
             <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,20,0,24">
                 <TextBlock Text="{DynamicResource Lang.Plugins.Title}"
+                           Classes="PageTitle"
                            FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=48}"
                            LetterSpacing="16"
                            HorizontalAlignment="Center"
                            Foreground="{DynamicResource TextPrimaryBrush}"
                            FontWeight="Light"/>
                 <TextBlock Text="{DynamicResource Lang.Plugins.Subtitle}"
+                           Classes="PageSubtitle"
                            Foreground="{DynamicResource AccentCyanBrush}"
                            HorizontalAlignment="Center"
                            Margin="0,8,0,0"

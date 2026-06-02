@@ -13,17 +13,19 @@
     </UserControl.Resources>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <Grid RowDefinitions="Auto,*" Margin="20">
+        <Grid Classes="WorkbenchPage" RowDefinitions="Auto,*" Margin="20">
             
             <!-- Header Section -->
             <StackPanel Grid.Row="0" Margin="0,0,0,40">
                 <TextBlock Text="{Binding Title}"
+                           Classes="PageTitle"
                            FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=48}"
                            LetterSpacing="8"
                            HorizontalAlignment="Left"
                            Foreground="{DynamicResource TextPrimaryBrush}"
                            FontWeight="Light"/>
                 <TextBlock Text="Manage external service integrations"
+                           Classes="PageSubtitle"
                            FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=14}"
                            Foreground="{DynamicResource TextMutedBrush}"
                            Margin="0,8,0,0"/>
@@ -819,7 +821,7 @@
             <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="24"/>
             <Setter Property="Transitions">
                 <Transitions>
@@ -887,7 +889,7 @@
             <Setter Property="Background" Value="{DynamicResource AccentCyanGlowBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource AccentCyanDimBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="16"/>
         </Style>
     </UserControl.Styles>

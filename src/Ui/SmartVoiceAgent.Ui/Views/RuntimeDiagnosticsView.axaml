@@ -64,6 +64,7 @@
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, Auto"
+              Classes="WorkbenchPage"
               RowSpacing="16"
               Margin="0,18,0,24"
               MaxWidth="980"
@@ -72,12 +73,14 @@
             <Grid Grid.Row="0" ColumnDefinitions="*, Auto" ColumnSpacing="16">
                 <StackPanel Spacing="8">
                     <TextBlock Text="RUNTIME DIAGNOSTICS"
+                               Classes="PageTitle"
                                FontSize="28"
                                LetterSpacing="4"
                                FontWeight="Light"
                                Foreground="{DynamicResource TextPrimaryBrush}"/>
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <TextBlock Text="LIVE_READINESS"
+                                   Classes="PageSubtitle"
                                    FontSize="12"
                                    FontFamily="Consolas"
                                    FontWeight="SemiBold"
