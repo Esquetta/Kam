@@ -149,23 +149,6 @@
             <Setter Property="Stretch" Value="Uniform"/>
         </Style>
 
-        <!-- Pulsing Dot Animation -->
-        <Style Selector="Ellipse.PulsingDot">
-            <Style.Animations>
-                <Animation Duration="0:0:2" IterationCount="Infinite">
-                    <KeyFrame KeyTime="0:0:0">
-                        <Setter Property="Opacity" Value="1"/>
-                    </KeyFrame>
-                    <KeyFrame KeyTime="0:0:1">
-                        <Setter Property="Opacity" Value="0.4"/>
-                    </KeyFrame>
-                    <KeyFrame KeyTime="0:0:2">
-                        <Setter Property="Opacity" Value="1"/>
-                    </KeyFrame>
-                </Animation>
-            </Style.Animations>
-        </Style>
-
         <Style Selector="Border.EvalSummary">
             <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
@@ -198,11 +181,9 @@
             <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,20,0,24">
                 <TextBlock Text="{DynamicResource Lang.Plugins.Title}"
                            Classes="PageTitle"
-                           FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=48}"
-                           LetterSpacing="16"
                            HorizontalAlignment="Center"
                            Foreground="{DynamicResource TextPrimaryBrush}"
-                           FontWeight="Light"/>
+                           FontWeight="SemiBold"/>
                 <TextBlock Text="{DynamicResource Lang.Plugins.Subtitle}"
                            Classes="PageSubtitle"
                            Foreground="{DynamicResource AccentCyanBrush}"
@@ -328,6 +309,7 @@
                         <Button Grid.Column="2"
                                 Content="Import"
                                 Command="{Binding ImportSkillCommand}"
+                                Classes="PrimaryAction"
                                 MinHeight="34"
                                 Padding="18,0"/>
                     </Grid>
@@ -499,14 +481,9 @@
                                       Width="40" Height="40"
                                       HorizontalAlignment="Left"
                                       Margin="0,0,0,24">
-                                    <Ellipse Width="40" Height="40" Fill="{Binding GlowColor}">
-                                        <Ellipse.Effect>
-                                            <BlurEffect Radius="8"/>
-                                        </Ellipse.Effect>
-                                    </Ellipse>
-                                    <Ellipse Width="40" Height="40" Fill="{Binding GlowColor}"/>
-                                    <Ellipse Classes="PulsingDot"
-                                             Width="16" Height="16"
+                                    <Border Classes="IconBadge"
+                                            Background="{Binding GlowColor}"/>
+                                    <Ellipse Width="16" Height="16"
                                              Fill="{Binding IconColor}"
                                              HorizontalAlignment="Center"
                                              VerticalAlignment="Center"

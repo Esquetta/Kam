@@ -75,8 +75,8 @@
                     <TextBlock Text="RUNTIME DIAGNOSTICS"
                                Classes="PageTitle"
                                FontSize="28"
-                               LetterSpacing="4"
-                               FontWeight="Light"
+                               LetterSpacing="0"
+                               FontWeight="SemiBold"
                                Foreground="{DynamicResource TextPrimaryBrush}"/>
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <TextBlock Text="LIVE_READINESS"
@@ -101,13 +101,10 @@
 
                 <Button Grid.Column="1"
                         Command="{Binding RefreshCommand}"
+                        Classes="SecondaryAction"
                         MinWidth="112"
                         Height="36"
                         Padding="14,0"
-                        CornerRadius="6"
-                        Background="{DynamicResource CardBgHoverBrush}"
-                        BorderBrush="{DynamicResource BorderSubtleBrush}"
-                        BorderThickness="1"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top">
                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -188,13 +185,10 @@
                         </StackPanel>
                         <Button Grid.Column="1"
                                 Command="{Binding CopyReadinessReportCommand}"
+                                Classes="SecondaryAction"
                                 MinWidth="112"
                                 Height="30"
                                 Padding="12,0"
-                                CornerRadius="6"
-                                Background="{DynamicResource CardBgHoverBrush}"
-                                BorderBrush="{DynamicResource BorderSubtleBrush}"
-                                BorderThickness="1"
                                 VerticalAlignment="Top">
                             <TextBlock Text="Copy Report"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
@@ -322,13 +316,10 @@
                         </StackPanel>
                         <Button Grid.Column="1"
                                 Command="{Binding CheckApplicationUpdateCommand}"
+                                Classes="SecondaryAction"
                                 MinWidth="104"
                                 Height="30"
                                 Padding="12,0"
-                                CornerRadius="6"
-                                Background="{DynamicResource CardBgHoverBrush}"
-                                BorderBrush="{DynamicResource BorderSubtleBrush}"
-                                BorderThickness="1"
                                 VerticalAlignment="Top">
                             <TextBlock Text="Check"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
@@ -338,13 +329,10 @@
                         </Button>
                         <Button Grid.Column="2"
                                 Command="{Binding DownloadApplicationUpdateCommand}"
+                                Classes="SecondaryAction"
                                 MinWidth="104"
                                 Height="30"
                                 Padding="12,0"
-                                CornerRadius="6"
-                                Background="{DynamicResource CardBgHoverBrush}"
-                                BorderBrush="{DynamicResource BorderSubtleBrush}"
-                                BorderThickness="1"
                                 VerticalAlignment="Top">
                             <TextBlock Text="Download"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
@@ -354,13 +342,10 @@
                         </Button>
                         <Button Grid.Column="3"
                                 Command="{Binding PlanApplicationRestartCommand}"
+                                Classes="SecondaryAction"
                                 MinWidth="112"
                                 Height="30"
                                 Padding="12,0"
-                                CornerRadius="6"
-                                Background="{DynamicResource CardBgHoverBrush}"
-                                BorderBrush="{DynamicResource BorderSubtleBrush}"
-                                BorderThickness="1"
                                 VerticalAlignment="Top">
                             <TextBlock Text="Restart Plan"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
@@ -544,13 +529,11 @@
                                            Foreground="{DynamicResource TextMutedBrush}"
                                            VerticalAlignment="Center"/>
                                 <Button Command="{Binding RunSkillSmokeCommand}"
+                                        Classes="SecondaryAction"
                                         MinWidth="132"
                                         Height="30"
                                         Padding="12,0"
-                                        CornerRadius="6"
-                                        Background="{DynamicResource CardBgHoverBrush}"
-                                        BorderBrush="{DynamicResource BorderSubtleBrush}"
-                                        BorderThickness="1">
+                                        >
                                     <TextBlock Text="Run Skill Smoke"
                                                Foreground="{DynamicResource TextPrimaryBrush}"
                                                FontSize="11"

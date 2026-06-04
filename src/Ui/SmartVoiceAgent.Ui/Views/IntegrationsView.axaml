@@ -19,11 +19,8 @@
             <StackPanel Grid.Row="0" Margin="0,0,0,40">
                 <TextBlock Text="{Binding Title}"
                            Classes="PageTitle"
-                           FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=48}"
-                           LetterSpacing="8"
                            HorizontalAlignment="Left"
-                           Foreground="{DynamicResource TextPrimaryBrush}"
-                           FontWeight="Light"/>
+                           Foreground="{DynamicResource TextPrimaryBrush}"/>
                 <TextBlock Text="Manage external service integrations"
                            Classes="PageSubtitle"
                            FontSize="{Binding Source={StaticResource WindowStateManager}, Path=WindowWidth, Converter={StaticResource ResponsiveFontSizeConverter}, ConverterParameter=14}"
@@ -44,10 +41,8 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto" MinWidth="100"/>
                             </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" 
-                                    Width="48" 
-                                    Height="48" 
-                                    CornerRadius="12"
+                            <Border Grid.Column="0"
+                                    Classes="IconBadge"
                                     Background="{DynamicResource AccentCyanGlowBrush}"
                                     BorderBrush="{DynamicResource AccentCyanDimBrush}"
                                     BorderThickness="1">
@@ -122,7 +117,7 @@
                                             VerticalAlignment="Center">
                                     <!-- Save Button -->
                                     <Button Command="{Binding SaveTodoistCommand}"
-                                            Classes="IntegrationButton"
+                                            Classes="PrimaryAction"
                                             IsEnabled="{Binding TodoistApiKey, Converter={StaticResource StringIsNotNullOrEmptyConverter}}">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
                                             <Path Data="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"
@@ -136,7 +131,7 @@
                                     
                                     <!-- Clear Button -->
                                     <Button Command="{Binding ClearTodoistCommand}"
-                                            Classes="IntegrationButton Secondary"
+                                            Classes="SecondaryAction"
                                             IsEnabled="{Binding IsTaskAgentEnabled}">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
                                             <Path Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
@@ -164,9 +159,7 @@
                                 <ColumnDefinition Width="Auto" MinWidth="100"/>
                             </Grid.ColumnDefinitions>
                             <Border Grid.Column="0"
-                                    Width="48"
-                                    Height="48"
-                                    CornerRadius="12"
+                                    Classes="IconBadge"
                                     Background="{DynamicResource AccentGreenGlowBrush}"
                                     BorderBrush="{DynamicResource AccentGreenDimBrush}"
                                     BorderThickness="1">
@@ -241,7 +234,7 @@
 
                             <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
                                 <Button Command="{Binding ConnectGitHubCommand}"
-                                        Classes="IntegrationButton"
+                                        Classes="PrimaryAction"
                                         IsEnabled="{Binding CanConnectGitHub}">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <Path Data="M12 .5C5.65.5.5 5.65.5 12c0 5.1 3.29 9.42 7.86 10.95.58.11.79-.25.79-.56v-2.17c-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.18 1.18.92-.26 1.91-.38 2.89-.39.98.01 1.97.13 2.89.39 2.21-1.49 3.18-1.18 3.18-1.18.63 1.58.23 2.75.11 3.04.74.8 1.19 1.83 1.19 3.08 0 4.41-2.69 5.39-5.25 5.67.41.36.78 1.06.78 2.14v3.2c0 .31.21.68.8.56A11.52 11.52 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"
@@ -254,7 +247,7 @@
                                 </Button>
 
                                 <Button Command="{Binding ListGitHubAppRepositoriesCommand}"
-                                        Classes="IntegrationButton Secondary"
+                                        Classes="SecondaryAction"
                                         IsEnabled="{Binding CanListGitHubAppRepositories}">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <Path Data="M10 4H2v16h20V6H12l-2-2zm0 4h10v10H4V6h5.17l.83 2z"
@@ -267,7 +260,7 @@
                                 </Button>
 
                                 <Button Command="{Binding ToggleGitHubAppAdvancedSettingsCommand}"
-                                        Classes="IntegrationButton Secondary">
+                                        Classes="SecondaryAction">
                                     <TextBlock Text="Advanced GitHub App"/>
                                 </Button>
                             </StackPanel>
@@ -380,7 +373,7 @@
                             <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
                                 <!-- Save Button -->
                                 <Button Command="{Binding SaveGitHubAppCommand}"
-                                        Classes="IntegrationButton">
+                                        Classes="PrimaryAction">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <Path Data="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"
                                               Fill="{DynamicResource TextPrimaryBrush}"
@@ -392,7 +385,7 @@
                                 </Button>
 
                                 <Button Command="{Binding TestGitHubAppConnectionCommand}"
-                                        Classes="IntegrationButton Secondary"
+                                        Classes="SecondaryAction"
                                         IsEnabled="{Binding CanTestGitHubAppConnection}">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <Path Data="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"
@@ -405,7 +398,7 @@
                                 </Button>
 
                                 <Button Command="{Binding ListGitHubAppRepositoriesCommand}"
-                                        Classes="IntegrationButton Secondary"
+                                        Classes="SecondaryAction"
                                         IsEnabled="{Binding CanListGitHubAppRepositories}">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <Path Data="M10 4H2v16h20V6H12l-2-2zm0 4h10v10H4V6h5.17l.83 2z"
@@ -419,7 +412,7 @@
 
                                 <!-- Clear Button -->
                                 <Button Command="{Binding ClearGitHubAppCommand}"
-                                        Classes="IntegrationButton Secondary"
+                                        Classes="SecondaryAction"
                                         IsEnabled="{Binding IsGitHubAppConfigured}">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <Path Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
@@ -446,10 +439,8 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto" MinWidth="100"/>
                             </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" 
-                                    Width="48" 
-                                    Height="48" 
-                                    CornerRadius="12"
+                            <Border Grid.Column="0"
+                                    Classes="IconBadge"
                                     Background="{DynamicResource AccentPurpleGlowBrush}"
                                     BorderBrush="{DynamicResource AccentPurpleDimBrush}"
                                     BorderThickness="1">
@@ -622,7 +613,7 @@
                             <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
                                 <!-- Save Button -->
                                 <Button Command="{Binding SaveEmailCommand}"
-                                        Classes="IntegrationButton">
+                                        Classes="PrimaryAction">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <Path Data="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"
                                               Fill="{DynamicResource TextPrimaryBrush}"
@@ -635,7 +626,7 @@
                                 
                                 <!-- Clear Button -->
                                 <Button Command="{Binding ClearEmailCommand}"
-                                        Classes="IntegrationButton Secondary">
+                                        Classes="SecondaryAction">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <Path Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
                                               Fill="{DynamicResource TextMutedBrush}"
@@ -660,10 +651,8 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto" MinWidth="100"/>
                             </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" 
-                                    Width="48" 
-                                    Height="48" 
-                                    CornerRadius="12"
+                            <Border Grid.Column="0"
+                                    Classes="IconBadge"
                                     Background="{DynamicResource AccentOrangeGlowBrush}"
                                     BorderBrush="{DynamicResource AccentOrangeDimBrush}"
                                     BorderThickness="1">
@@ -765,7 +754,7 @@
                             <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
                                 <!-- Save Button -->
                                 <Button Command="{Binding SaveSmsCommand}"
-                                        Classes="IntegrationButton">
+                                        Classes="PrimaryAction">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <Path Data="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"
                                               Fill="{DynamicResource TextPrimaryBrush}"
@@ -778,7 +767,7 @@
                                 
                                 <!-- Clear Button -->
                                 <Button Command="{Binding ClearSmsCommand}"
-                                        Classes="IntegrationButton Secondary">
+                                        Classes="SecondaryAction">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <Path Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
                                               Fill="{DynamicResource TextMutedBrush}"
@@ -852,36 +841,6 @@
         <Style Selector="TextBox.IntegrationInput:focus /template/ Border#PART_BorderElement">
             <Setter Property="BorderBrush" Value="{DynamicResource AccentCyanBrush}"/>
             <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
-        </Style>
-        
-        <!-- Integration Button Style -->
-        <Style Selector="Button.IntegrationButton">
-            <Setter Property="Background" Value="{DynamicResource AccentCyanBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="Height" Value="40"/>
-            <Setter Property="Cursor" Value="Hand"/>
-        </Style>
-        
-        <Style Selector="Button.IntegrationButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource AccentCyanDimBrush}"/>
-        </Style>
-        
-        <Style Selector="Button.IntegrationButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Opacity" Value="0.5"/>
-        </Style>
-        
-        <!-- Secondary Button Style -->
-        <Style Selector="Button.IntegrationButton.Secondary">
-            <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-        </Style>
-        
-        <Style Selector="Button.IntegrationButton.Secondary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}"/>
         </Style>
         
         <!-- Info Card Style -->

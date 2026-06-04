@@ -20,7 +20,11 @@ public sealed class UiDesignSystemMetadataTests
         selectors.Should().Contain("Border.WorkbenchSection");
         selectors.Should().Contain("TextBlock.PageTitle");
         selectors.Should().Contain("TextBlock.PageSubtitle");
+        selectors.Should().Contain("Button.PrimaryAction");
         selectors.Should().Contain("Button.SecondaryAction");
+        selectors.Should().Contain("Button.DestructiveAction");
+        selectors.Should().Contain("Button.IconAction");
+        selectors.Should().Contain("Border.IconBadge");
 
         var cardStyle = controls
             .Descendants()
@@ -48,6 +52,26 @@ public sealed class UiDesignSystemMetadataTests
         viewText.Should().Contain("Classes=\"WorkbenchPage\"");
         viewText.Should().Contain("Classes=\"PageTitle\"");
         viewText.Should().Contain("Classes=\"PageSubtitle\"");
+    }
+
+    [Theory]
+    [InlineData("IntegrationsView.axaml")]
+    [InlineData("PluginsView.axaml")]
+    [InlineData("RuntimeDiagnosticsView.axaml")]
+    [InlineData("SettingsView.axaml")]
+    public void PrimaryPages_UseSharedActionAndIconLanguage(string viewFileName)
+    {
+        var viewText = File.ReadAllText(FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Views", viewFileName));
+
+        var usesSharedActionOrIcon = viewText.Contains("Classes=\"PrimaryAction\"", StringComparison.Ordinal)
+            || viewText.Contains("Classes=\"SecondaryAction\"", StringComparison.Ordinal)
+            || viewText.Contains("Classes=\"IconAction\"", StringComparison.Ordinal)
+            || viewText.Contains("Classes=\"IconBadge\"", StringComparison.Ordinal);
+
+        usesSharedActionOrIcon.Should().BeTrue();
+        viewText.Should().NotContain("LetterSpacing=\"16\"");
+        viewText.Should().NotContain("FontSize=\"48\"");
+        viewText.Should().NotContain("CornerRadius=\"12\"");
     }
 
     private static string? AttributeValue(XElement element, string attributeName)

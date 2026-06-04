@@ -29,12 +29,6 @@
             <Setter Property="Margin" Value="0,8,0,0"/>
         </Style>
 
-        <!-- Icon Container -->
-        <Style Selector="Border.IconContainer">
-            <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Padding" Value="8"/>
-        </Style>
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
@@ -71,7 +65,7 @@
                 <!-- Startup Behavior -->
                 <Border Classes="SettingsItem">
                     <Grid ColumnDefinitions="Auto, *, Auto">
-                        <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                        <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
                             <Path Data="M16.56,5.44L15,7L16.8,8.8C14.14,10.65 12.54,13.42 12.54,16.64C12.54,19.86 14.14,22.63 16.8,24.48L15,26.28L16.56,27.84L20.44,23.96C21.5,22.9 22.28,21.56 22.7,20.04L25.22,17.5L22.22,14.5L24.72,12H22.22L20.44,13.8L16.56,9.92L20.44,6.04L16.56,2.16L15,3.72L18.28,7L16.56,5.44M8.5,12C9.33,12 10,12.67 10,13.5C10,14.33 9.33,15 8.5,15C7.67,15 7,14.33 7,13.5C7,12.67 7.67,12 8.5,12M8.5,17C9.33,17 10,17.67 10,18.5C10,19.33 9.33,20 8.5,20C7.67,20 7,19.33 7,18.5C7,17.67 7.67,17 8.5,17M3,12V20C3,21.11 3.89,22 5,22H11V20H5V12H3M19,2H5C3.89,2 3,2.89 3,4V8H5V4H19V8H21V4C21,2.89 20.11,2 19,2M21,12H19V20H21V12Z"
                                   Fill="{DynamicResource TextMutedBrush}"
                                   Width="16" Height="16"
@@ -99,7 +93,7 @@
                 <!-- Auto Start with Windows -->
                 <Border Classes="SettingsItem">
                     <Grid ColumnDefinitions="Auto, *, Auto">
-                        <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                        <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
                             <Path Data="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.1 14.8,9.5V11C15.4,11 16,11.6 16,12.3V15.8C16,16.4 15.4,17 14.7,17H9.2C8.6,17 8,16.4 8,15.7V12.2C8,11.6 8.6,11 9.2,11V9.5C9.2,8.1 10.6,7 12,7M12,8.2C11.2,8.2 10.5,8.7 10.5,9.5V11H13.5V9.5C13.5,8.7 12.8,8.2 12,8.2Z"
                                   Fill="{DynamicResource TextMutedBrush}"
                                   Width="16" Height="16"
@@ -126,7 +120,7 @@
                 <!-- Start Minimized -->
                 <Border Classes="SettingsItem">
                     <Grid ColumnDefinitions="Auto, *, Auto">
-                        <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                        <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
                             <Path Data="M4,4H20V18H4V4M6,8V16H18V8H6M8,10H16V14H8V10M2,20H22V22H2V20"
                                   Fill="{DynamicResource TextMutedBrush}"
                                   Width="16" Height="16"
@@ -163,7 +157,7 @@
                 <Border Classes="SettingsItem">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="Auto, *">
-                            <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
                                 <Path Data="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M7,13H11V17H13V13H17V11H13V7H11V11H7V13Z"
                                       Fill="{DynamicResource TextMutedBrush}"
                                       Width="16" Height="16"
@@ -205,8 +199,7 @@
                                     <Button Grid.Column="1"
                                             Command="{Binding RefreshAiModelsCommand}"
                                             IsEnabled="{Binding !IsRefreshingAiModels}"
-                                            Background="{DynamicResource CardBgHoverBrush}"
-                                            Foreground="{DynamicResource TextSecondaryBrush}"
+                                            Classes="SecondaryAction"
                                             Padding="12,8">
                                         <TextBlock Text="Refresh" FontSize="12" FontWeight="Medium"/>
                                     </Button>
@@ -238,11 +231,10 @@
                                         Grid.Column="1"
                                         Command="{Binding TestAiConnectionCommand}"
                                         IsEnabled="{Binding !IsTestingAiConnection}"
+                                        Classes="SecondaryAction"
                                         MinWidth="180"
                                         HorizontalAlignment="Stretch"
                                         VerticalAlignment="Stretch"
-                                        Background="{DynamicResource CardBgHoverBrush}"
-                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                         Padding="16,9">
                                     <TextBlock Text="{Binding AiConnectionTestButtonText}" FontSize="12" FontWeight="Medium"/>
                                 </Button>
@@ -256,7 +248,7 @@
                             </Grid>
                         </Grid>
                         <Grid ColumnDefinitions="Auto, *" Margin="0,8,0,0">
-                            <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
                                 <Path Data="M12,3C7.03,3 3,6.58 3,11C3,13.39 4.18,15.54 6.06,17L5,21L9.3,18.86C10.15,19.05 11.06,19 12,19C16.97,19 21,15.42 21,11C21,6.58 16.97,3 12,3Z"
                                       Fill="{DynamicResource TextMutedBrush}"
                                       Width="16" Height="16"
@@ -298,8 +290,7 @@
                                     <Button Grid.Column="1"
                                             Command="{Binding RefreshChatModelsCommand}"
                                             IsEnabled="{Binding !IsRefreshingChatModels}"
-                                            Background="{DynamicResource CardBgHoverBrush}"
-                                            Foreground="{DynamicResource TextSecondaryBrush}"
+                                            Classes="SecondaryAction"
                                             Padding="12,8">
                                         <TextBlock Text="Refresh" FontSize="12" FontWeight="Medium"/>
                                     </Button>
@@ -374,7 +365,7 @@
                     <StackPanel Spacing="12">
                         <!-- Header -->
                         <Grid ColumnDefinitions="Auto, *">
-                            <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
                                 <Path Data="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"
                                       Fill="{DynamicResource TextMutedBrush}"
                                       Width="16" Height="16"
@@ -460,7 +451,7 @@
                     <StackPanel Spacing="12">
                         <!-- Header -->
                         <Grid ColumnDefinitions="Auto, *">
-                            <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
                                 <Path Data="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z"
                                       Fill="{DynamicResource TextMutedBrush}"
                                       Width="16" Height="16"
@@ -537,7 +528,7 @@
                 <!-- Noise Suppression Toggle -->
                 <Border Classes="SettingsItem">
                     <Grid ColumnDefinitions="Auto, *, Auto">
-                        <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                        <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
                             <Path Data="M12,2C13.85,2 15.55,2.78 16.79,4.05C18.03,5.32 18.75,7.05 18.75,8.86C18.75,11.65 16.8,14.03 14.17,14.68C14.41,15.56 14.79,16.39 15.3,17.15C15.5,17.45 15.45,17.85 15.15,18.05C14.85,18.25 14.45,18.2 14.25,17.9C13.58,16.93 13.09,15.85 12.81,14.71H11.19C10.91,15.85 10.42,16.93 9.75,17.9C9.55,18.2 9.15,18.25 8.85,18.05C8.55,17.85 8.5,17.45 8.7,17.15C9.21,16.39 9.59,15.56 9.83,14.68C7.2,14.03 5.25,11.65 5.25,8.86C5.25,7.05 5.97,5.32 7.21,4.05C8.45,2.78 10.15,2 12,2M12,4C10.66,4 9.39,4.53 8.46,5.46C7.53,6.39 7,7.66 7,8.86C7,11.03 8.79,12.82 10.96,12.82H13.04C15.21,12.82 17,11.03 17,8.86C17,7.66 16.47,6.39 15.54,5.46C14.61,4.53 13.34,4 12,4Z"
                                   Fill="{DynamicResource TextMutedBrush}"
                                   Width="16" Height="16"
@@ -567,7 +558,7 @@
                     <StackPanel Spacing="12">
                         <!-- Header -->
                         <Grid ColumnDefinitions="Auto, *">
-                            <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
                                 <Path Data="M12,2A7,7 0 0,0 5,9V14A7,7 0 0,0 12,21A7,7 0 0,0 19,14V9A7,7 0 0,0 12,2M12,4A5,5 0 0,1 17,9V14A5,5 0 0,1 12,19A5,5 0 0,1 7,14V9A5,5 0 0,1 12,4M12,5A8,8 0 0,0 4,13V16H6V13A6,6 0 0,1 12,7A6,6 0 0,1 18,13V16H20V13A8,8 0 0,0 12,5M12,23A2,2 0 0,0 14,21H10A2,2 0 0,0 12,23Z"
                                       Fill="{DynamicResource TextMutedBrush}"
                                       Width="16" Height="16"
@@ -589,8 +580,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <Button Command="{Binding StartMicTestCommand}"
                                     IsEnabled="{Binding !IsRecordingTest}"
-                                    Background="{DynamicResource AccentGreenBrush}"
-                                    Foreground="{DynamicResource AccentGreenOnBrush}"
+                                    Classes="PrimaryAction"
                                     Padding="16,8"
                                     ToolTip.Tip="Record a 10-second sample to test your microphone">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
@@ -604,8 +594,7 @@
                             
                             <Button Command="{Binding StopMicTestCommand}"
                                     IsEnabled="{Binding IsRecordingTest}"
-                                    Background="{DynamicResource AccentErrorBrush}"
-                                    Foreground="{DynamicResource AccentErrorOnBrush}"
+                                    Classes="DestructiveAction"
                                     Padding="16,8"
                                     ToolTip.Tip="Stop recording">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
@@ -619,8 +608,7 @@
                             
                             <Button Command="{Binding PlayTestRecordingCommand}"
                                     IsEnabled="{Binding HasTestRecording}"
-                                    Background="{DynamicResource CardBgHoverBrush}"
-                                    Foreground="{DynamicResource TextSecondaryBrush}"
+                                    Classes="SecondaryAction"
                                     Padding="16,8"
                                     IsVisible="{Binding HasTestRecording}"
                                     ToolTip.Tip="Play back the recorded sample">
@@ -682,7 +670,7 @@
                 <!-- Reduced Motion -->
                 <Border Classes="SettingsItem">
                     <Grid ColumnDefinitions="Auto, *, Auto">
-                        <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                        <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
                             <Path Data="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"
                                   Fill="{DynamicResource TextMutedBrush}"
                                   Width="16" Height="16"
@@ -710,7 +698,7 @@
                 <Border Classes="SettingsItem">
                     <Grid RowDefinitions="Auto, Auto">
                         <Grid Grid.Row="0" ColumnDefinitions="Auto, *">
-                            <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
                                 <Path Data="M12.87,15.07L10.33,12.56L10.36,12.53C12.1,10.59 13.34,8.36 14.07,6H17V4H10V2H8V4H1V6H12.17C11.5,7.92 10.44,9.75 9,11.35C8.07,10.32 7.3,9.19 6.69,8H4.69C5.42,9.63 6.42,11.17 7.67,12.56L2.58,17.58L4,19L9,14L12.11,17.11L12.87,15.07M18.5,10H16.5L12,22H14L15.12,19H19.87L21,22H23L18.5,10M15.88,17L17.5,12.67L19.12,17H15.88Z"
                                       Fill="{DynamicResource TextMutedBrush}"
                                       Width="16" Height="16"
@@ -755,7 +743,7 @@
 
                 <Border Classes="SettingsItem">
                     <Grid ColumnDefinitions="Auto, *">
-                        <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                        <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
                             <Path Data="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6M12,8A4,4 0 0,0 8,12A4,4 0 0,0 12,16A4,4 0 0,0 16,12A4,4 0 0,0 12,8Z"
                                   Fill="{DynamicResource TextMutedBrush}"
                                   Width="16" Height="16"
@@ -787,7 +775,7 @@
 
                 <Border Classes="SettingsItem">
                     <Grid ColumnDefinitions="Auto, *">
-                        <Border Grid.Column="0" Classes="IconContainer" Margin="0,0,16,0">
+                        <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
                             <Path Data="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
                                   Fill="{DynamicResource TextMutedBrush}"
                                   Width="16" Height="16"
