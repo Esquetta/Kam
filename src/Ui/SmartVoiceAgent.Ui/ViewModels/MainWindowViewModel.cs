@@ -362,6 +362,21 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public bool HasAgentChatMessages => SelectedAgentChatSession?.Messages.Count > 0;
 
+        public string AgentChatSessionCountText =>
+            AgentChatSessions.Count == 1
+                ? "1 thread"
+                : $"{AgentChatSessions.Count} threads";
+
+        public string SelectedAgentChatMessageCountText =>
+            SelectedAgentChatSession?.MessageCountText ?? "No messages";
+
+        public string ActiveComposerContextText =>
+            ComposerAttachments.Count == 0
+                ? "No files"
+                : ComposerAttachments.Count == 1
+                    ? "1 file"
+                    : $"{ComposerAttachments.Count} files";
+
         private ActivityPanelMode _selectedActivityPanelMode = ActivityPanelMode.Runs;
         public ActivityPanelMode SelectedActivityPanelMode
         {
@@ -1060,10 +1075,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 "Workspace chat",
                 "Ready for a focused agent task",
                 "now");
-            session.Messages.Add(AgentChatMessageViewModel.System(
-                "Ready for a focused task."));
             AgentChatSessions.Add(session);
             SelectedAgentChatSession = session;
+            RaiseAgentChatStateChanged();
         }
 
         private void CreateNewAgentChat()
@@ -1074,6 +1088,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 "now");
             AgentChatSessions.Insert(0, session);
             SelectAgentChat(session);
+            RaiseAgentChatStateChanged();
         }
 
         private void SelectAgentChat(AgentChatSessionViewModel? session)
@@ -1084,6 +1099,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             }
 
             SelectedAgentChatSession = session;
+            RaiseAgentChatStateChanged();
         }
 
         private void AddAgentChatMessage(string role, string content)
@@ -1093,7 +1109,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 return;
             }
 
-            SelectedAgentChatSession.Messages.Add(new AgentChatMessageViewModel(
+            SelectedAgentChatSession.AddMessage(new AgentChatMessageViewModel(
                 role,
                 content,
                 DateTime.Now.ToString("HH:mm")));
@@ -1108,7 +1124,14 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             SelectedAgentChatSession.Summary = content;
             SelectedAgentChatSession.RelativeTimeText = "now";
+            RaiseAgentChatStateChanged();
+        }
+
+        private void RaiseAgentChatStateChanged()
+        {
             this.RaisePropertyChanged(nameof(HasAgentChatMessages));
+            this.RaisePropertyChanged(nameof(AgentChatSessionCountText));
+            this.RaisePropertyChanged(nameof(SelectedAgentChatMessageCountText));
         }
 
         public async Task SubmitCommandInputAsync()
@@ -1170,6 +1193,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             ComposerAttachments.Add(attachment);
             this.RaisePropertyChanged(nameof(HasComposerAttachments));
+            this.RaisePropertyChanged(nameof(ActiveComposerContextText));
         }
 
         public void AddComposerAttachmentPaths(IEnumerable<string?> paths)
@@ -1189,6 +1213,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             ComposerAttachments.Remove(attachment);
             this.RaisePropertyChanged(nameof(HasComposerAttachments));
+            this.RaisePropertyChanged(nameof(ActiveComposerContextText));
         }
 
         private void ClearComposerAttachments()
@@ -1200,6 +1225,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             ComposerAttachments.Clear();
             this.RaisePropertyChanged(nameof(HasComposerAttachments));
+            this.RaisePropertyChanged(nameof(ActiveComposerContextText));
         }
 
         private static string BuildCommandSubmission(
@@ -2107,10 +2133,33 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public bool IsSelected
         {
             get => _isSelected;
-            set => this.RaiseAndSetIfChanged(ref _isSelected, value);
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _isSelected, value);
+                this.RaisePropertyChanged(nameof(StatusText));
+            }
         }
 
         public ObservableCollection<AgentChatMessageViewModel> Messages { get; } = new();
+
+        public string AgentName => "Kam Agent";
+
+        public string StatusText => IsSelected ? "Active" : "Ready";
+
+        public string ModelText => "Settings model";
+
+        public string MessageCountText =>
+            Messages.Count == 0
+                ? "No messages"
+                : Messages.Count == 1
+                    ? "1 message"
+                    : $"{Messages.Count} messages";
+
+        public void AddMessage(AgentChatMessageViewModel message)
+        {
+            Messages.Add(message);
+            this.RaisePropertyChanged(nameof(MessageCountText));
+        }
 
         public static AgentChatSessionViewModel Create(
             string title,

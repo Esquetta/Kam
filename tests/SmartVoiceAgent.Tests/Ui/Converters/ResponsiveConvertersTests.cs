@@ -47,8 +47,8 @@ public class ResponsiveConvertersTests
 
     [Theory]
     [InlineData(900, 0)]
-    [InlineData(1280, 400)]
-    [InlineData(1600, 520)]
+    [InlineData(1280, 360)]
+    [InlineData(1600, 420)]
     public void LogPanelWidthConverter_Convert_UsesCalmerRailWidths(double windowWidth, double expectedWidth)
     {
         SetWindowWidth(windowWidth);

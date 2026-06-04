@@ -31,7 +31,7 @@ public sealed class MainWindowMetadataTests
         visibleText.Should().Contain("Session");
         visibleText.Should().Contain("Agent runs");
         visibleText.Should().Contain("Event stream");
-        visibleText.Should().Contain("Command prompt");
+        visibleText.Should().Contain("Message");
         visibleText.Should().NotContain(value =>
             value.Contains("ACTIVITY_LOG", StringComparison.Ordinal)
             || value.Contains("KERNEL_LOG", StringComparison.Ordinal)
@@ -47,12 +47,16 @@ public sealed class MainWindowMetadataTests
         var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
 
         mainWindowText.Should().Contain("Kam Workbench");
-        mainWindowText.Should().Contain("Chat Workspace");
+        mainWindowText.Should().Contain("Agent Workbench");
+        mainWindowText.Should().Contain("Parallel task threads and context");
         mainWindowText.Should().Contain("Model and agents follow Settings");
+        mainWindowText.Should().Contain("WorkbenchMetric");
+        mainWindowText.Should().Contain("ComposerSurface");
         mainWindowText.Should().Contain("SurfaceBgElevatedBrush");
         mainWindowText.Should().Contain("ContentControl Content=\"{Binding CurrentViewModel}\"");
         mainWindowText.Should().NotContain("BlurEffect Radius=\"120\"");
         mainWindowText.Should().NotContain("AccentCyanGlowBrush}\"\r\n\t\t\t\t\t\t\t Opacity=\"0.3\"");
+        mainWindowText.Should().NotContain("Command Center");
     }
 
     [Fact]
@@ -81,10 +85,14 @@ public sealed class MainWindowMetadataTests
         mainWindowText.Should().Contain("OnAttachFilesClick");
         mainWindowText.Should().Contain("ComposerAttachments");
         mainWindowText.Should().Contain("HasComposerAttachments");
+        mainWindowText.Should().Contain("ActiveComposerContextText");
+        mainWindowText.Should().Contain("WorkbenchPromptInput");
+        mainWindowText.Should().Contain("Ask Kam to inspect, edit, test, or plan");
         mainWindowText.Should().Contain("RemoveComposerAttachmentCommand");
         mainWindowText.Should().Contain("ClearComposerAttachmentsCommand");
         mainWindowText.Should().Contain("Text=\"{Binding FileName}\"");
         mainWindowText.Should().Contain("Text=\"{Binding DisplayPath}\"");
+        mainWindowText.Should().Contain("IsVisible=\"{Binding IsPageHostVisible}\"");
     }
 
     [Fact]
@@ -94,12 +102,17 @@ public sealed class MainWindowMetadataTests
 
         mainWindowText.Should().Contain("AgentChatSessions");
         mainWindowText.Should().Contain("SelectedAgentChatSession.Messages");
+        mainWindowText.Should().Contain("AgentChatSessionCountText");
+        mainWindowText.Should().Contain("SelectedAgentChatMessageCountText");
+        mainWindowText.Should().Contain("MessageCountText");
+        mainWindowText.Should().Contain("AgentName");
         mainWindowText.Should().Contain("NewAgentChatCommand");
         mainWindowText.Should().Contain("SelectAgentChatCommand");
         mainWindowText.Should().Contain("IsChatWorkbenchVisible");
         mainWindowText.Should().Contain("IsPageHostVisible");
         mainWindowText.Should().Contain("Chats");
         mainWindowText.Should().Contain("Agent threads");
+        mainWindowText.Should().Contain("New task");
         mainWindowText.Should().Contain("Conversation timeline");
         mainWindowText.Should().Contain("Model follows Settings");
         mainWindowText.Should().Contain("Start a focused agent task");
@@ -162,34 +175,40 @@ public sealed class MainWindowMetadataTests
         var mainWindow = XDocument.Load(FindMainWindowXamlPath()).Root;
         var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
 
-        var template = mainWindow!
+        var templates = mainWindow!
             .Descendants()
-            .Single(element =>
+            .Where(element =>
                 element.Name.LocalName == "DataTemplate"
-                && AttributeValue(element, "DataType") == "vm:SlashCommandSuggestionViewModel");
+                && AttributeValue(element, "DataType") == "vm:SlashCommandSuggestionViewModel")
+            .ToArray();
 
-        var suggestionButton = template
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Button"
-                && AttributeValue(element, "Classes") == "SlashCommandItem");
+        templates.Should().HaveCountGreaterThanOrEqualTo(1);
 
-        var suggestionChrome = suggestionButton
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Border"
-                && AttributeValue(element, "Background")?.Contains("IsSelected", StringComparison.Ordinal) == true);
+        foreach (var template in templates)
+        {
+            var suggestionButton = template
+                .Descendants()
+                .Single(element =>
+                    element.Name.LocalName == "Button"
+                    && AttributeValue(element, "Classes") == "SlashCommandItem");
 
-        AttributeValue(suggestionButton, "Command")
-            .Should()
-            .Be("{Binding $parent[Window].DataContext.SelectSlashCommandCommand}");
-        AttributeValue(suggestionChrome, "Background")
-            .Should()
-            .Contain("ConverterParameter='CardBgHoverBrush|TransparentBrush'");
-        AttributeValue(suggestionChrome, "BorderBrush")
-            .Should()
-            .Be("Transparent");
-        AttributeValue(suggestionChrome, "HorizontalAlignment").Should().Be("Stretch");
+            var suggestionChrome = suggestionButton
+                .Descendants()
+                .Single(element =>
+                    element.Name.LocalName == "Border"
+                    && AttributeValue(element, "Background")?.Contains("IsSelected", StringComparison.Ordinal) == true);
+
+            AttributeValue(suggestionButton, "Command")
+                .Should()
+                .Be("{Binding $parent[Window].DataContext.SelectSlashCommandCommand}");
+            AttributeValue(suggestionChrome, "Background")
+                .Should()
+                .Contain("ConverterParameter='CardBgHoverBrush|TransparentBrush'");
+            AttributeValue(suggestionChrome, "BorderBrush")
+                .Should()
+                .Be("Transparent");
+            AttributeValue(suggestionChrome, "HorizontalAlignment").Should().Be("Stretch");
+        }
 
         mainWindowText.Should().Contain("<Style Selector=\"Button.SlashCommandItem\">");
         mainWindowText.Should().Contain("<Style Selector=\"Button.SlashCommandItem /template/ ContentPresenter#PART_ContentPresenter\">");
@@ -203,26 +222,30 @@ public sealed class MainWindowMetadataTests
     {
         var mainWindow = XDocument.Load(FindMainWindowXamlPath()).Root;
 
-        var template = mainWindow!
+        var templates = mainWindow!
             .Descendants()
-            .Single(element =>
+            .Where(element =>
                 element.Name.LocalName == "DataTemplate"
-                && AttributeValue(element, "DataType") == "vm:SlashCommandSuggestionViewModel");
+                && AttributeValue(element, "DataType") == "vm:SlashCommandSuggestionViewModel")
+            .ToArray();
+
+        templates.Should().HaveCountGreaterThanOrEqualTo(1);
 
         var templateText = string.Join(
             " ",
-            template
+            templates
+                .SelectMany(template => template
                 .DescendantsAndSelf()
                 .SelectMany(element => element.Attributes())
-                .Select(attribute => attribute.Value));
+                .Select(attribute => attribute.Value)));
 
         templateText.Should().NotContain("AccentGreen");
         templateText.Should().NotContain("AccentError");
         templateText.Should().NotContain("Red");
         templateText.Should().NotContain("Green");
         templateText.Should().NotContain("BoxShadow");
-        template
-            .Descendants()
+        templates
+            .SelectMany(template => template.Descendants())
             .Should()
             .NotContain(element =>
                 element.Name.LocalName.Contains("Shadow", StringComparison.OrdinalIgnoreCase)

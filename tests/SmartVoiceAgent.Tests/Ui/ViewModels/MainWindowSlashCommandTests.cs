@@ -255,7 +255,9 @@ public sealed class MainWindowSlashCommandTests
         viewModel.SelectedAgentChatSession.Should().Be(viewModel.AgentChatSessions[0]);
         viewModel.SelectedAgentChatSession!.IsSelected.Should().BeTrue();
         viewModel.SelectedAgentChatSession.Title.Should().Be("Workspace chat");
-        viewModel.HasAgentChatMessages.Should().BeTrue();
+        viewModel.HasAgentChatMessages.Should().BeFalse();
+        viewModel.AgentChatSessionCountText.Should().Be("1 thread");
+        viewModel.SelectedAgentChatMessageCountText.Should().Be("No messages");
         viewModel.IsChatWorkbenchVisible.Should().BeTrue();
         viewModel.IsPageHostVisible.Should().BeFalse();
     }
@@ -268,6 +270,7 @@ public sealed class MainWindowSlashCommandTests
         viewModel.NewAgentChatCommand.Execute(null);
 
         viewModel.AgentChatSessions.Should().HaveCount(2);
+        viewModel.AgentChatSessionCountText.Should().Be("2 threads");
         viewModel.SelectedAgentChatSession.Should().Be(viewModel.AgentChatSessions[0]);
         viewModel.AgentChatSessions[0].Title.Should().Be("New chat");
         viewModel.AgentChatSessions[0].Messages.Should().BeEmpty();
@@ -303,6 +306,8 @@ public sealed class MainWindowSlashCommandTests
         viewModel.SelectedAgentChatSession!.Title.Should().Be("review the UI");
         viewModel.SelectedAgentChatSession.Messages.Last().Role.Should().Be("You");
         viewModel.SelectedAgentChatSession.Messages.Last().Content.Should().Be("review the UI");
+        viewModel.SelectedAgentChatSession.MessageCountText.Should().Be("1 message");
+        viewModel.SelectedAgentChatMessageCountText.Should().Be("1 message");
     }
 
     [Fact]
@@ -316,6 +321,7 @@ public sealed class MainWindowSlashCommandTests
         ]);
 
         viewModel.HasComposerAttachments.Should().BeTrue();
+        viewModel.ActiveComposerContextText.Should().Be("2 files");
         viewModel.ComposerAttachments.Select(file => file.FileName)
             .Should()
             .Equal("Program.cs", "README.md");
@@ -324,11 +330,13 @@ public sealed class MainWindowSlashCommandTests
         viewModel.RemoveComposerAttachmentCommand.Execute(viewModel.ComposerAttachments[0]);
 
         viewModel.ComposerAttachments.Select(file => file.FileName).Should().Equal("README.md");
+        viewModel.ActiveComposerContextText.Should().Be("1 file");
 
         viewModel.ClearComposerAttachmentsCommand.Execute(null);
 
         viewModel.HasComposerAttachments.Should().BeFalse();
         viewModel.ComposerAttachments.Should().BeEmpty();
+        viewModel.ActiveComposerContextText.Should().Be("No files");
     }
 
     [Fact]
