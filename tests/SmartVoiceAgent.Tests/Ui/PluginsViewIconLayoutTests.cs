@@ -48,12 +48,13 @@ public sealed class PluginsViewIconLayoutTests
         {
             var classes = AttributeValue(actionButton, "Classes")?.Split(' ') ?? [];
             classes.Should().Contain("IconButton");
+            classes.Should().Contain("CompactIconButton");
             classes.Should().Contain("PluginActionButton");
         }
 
         actionButtons.Should().OnlyContain(element =>
-            AttributeValue(element, "Width") == "24"
-            && AttributeValue(element, "Height") == "24"
+            AttributeValue(element, "Width") == null
+            && AttributeValue(element, "Height") == null
             && AttributeValue(element, "Padding") == "0"
             && AttributeValue(element, "Margin") == null);
 
@@ -142,6 +143,21 @@ public sealed class PluginsViewIconLayoutTests
         setters["Padding"].Should().Be("0");
         setters["HorizontalContentAlignment"].Should().Be("Center");
         setters["VerticalContentAlignment"].Should().Be("Center");
+
+        var compactIconButtonStyle = controls
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Style"
+                && AttributeValue(element, "Selector") == "Button.CompactIconButton");
+
+        var compactSetters = compactIconButtonStyle
+            .Elements()
+            .Where(element => element.Name.LocalName == "Setter")
+            .ToDictionary(element => AttributeValue(element, "Property")!, element => AttributeValue(element, "Value"));
+
+        compactSetters["Width"].Should().Be("24");
+        compactSetters["Height"].Should().Be("24");
+        compactSetters["MinWidth"].Should().Be("24");
+        compactSetters["MinHeight"].Should().Be("24");
 
         var presenterStyle = controls
             .Descendants()

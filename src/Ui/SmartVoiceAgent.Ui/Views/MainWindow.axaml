@@ -940,8 +940,7 @@
 																	   FontWeight="SemiBold"
 																	   Foreground="{DynamicResource TextSecondaryBrush}"/>
 															<Button Grid.Column="1"
-																	Classes="IconButton"
-																	MinWidth="24"
+																	Classes="CompactAction"
 																	Height="24"
 																	Background="Transparent"
 																	BorderThickness="0"
@@ -985,9 +984,7 @@
 																						   TextTrimming="CharacterEllipsis"/>
 																			</StackPanel>
 																			<Button Grid.Column="2"
-																					Classes="IconButton"
-																					Width="22"
-																					Height="22"
+																					Classes="IconButton CompactIconButton"
 																					Background="Transparent"
 																					BorderThickness="0"
 																					ToolTip.Tip="Remove file"
@@ -1515,8 +1512,7 @@
 											   VerticalAlignment="Center"/>
 								</StackPanel>
 								<Button Grid.Column="1"
-										Classes="IconButton"
-										Width="24" Height="24"
+										Classes="IconButton CompactIconButton"
 										Background="Transparent"
 										BorderBrush="{DynamicResource BorderSubtleBrush}"
 										BorderThickness="1"
@@ -1630,8 +1626,7 @@
 											   VerticalAlignment="Center"/>
 								</StackPanel>
 								<Button Grid.Column="1"
-										Classes="IconButton"
-										Width="24" Height="24"
+										Classes="IconButton CompactIconButton"
 										Background="Transparent"
 										BorderBrush="{DynamicResource BorderSubtleBrush}"
 										BorderThickness="1"
@@ -1760,8 +1755,7 @@
 																Orientation="Horizontal"
 																Spacing="6"
 																Margin="0,8,0,0">
-														<Button Classes="IconButton"
-																Width="24" Height="24"
+														<Button Classes="IconButton CompactIconButton"
 																Background="Transparent"
 																BorderBrush="{DynamicResource BorderSubtleBrush}"
 																BorderThickness="1"
@@ -1775,8 +1769,7 @@
 																  Width="13" Height="13"
 																  Stretch="Uniform"/>
 														</Button>
-														<Button Classes="IconButton"
-																Width="24" Height="24"
+														<Button Classes="IconButton CompactIconButton"
 																Background="Transparent"
 																BorderBrush="{DynamicResource BorderSubtleBrush}"
 																BorderThickness="1"
@@ -1791,8 +1784,7 @@
 																  Width="13" Height="13"
 																  Stretch="Uniform"/>
 														</Button>
-														<Button Classes="IconButton"
-																Width="24" Height="24"
+														<Button Classes="IconButton CompactIconButton"
 																Background="Transparent"
 																BorderBrush="{DynamicResource AccentErrorBrush}"
 																BorderThickness="1"
@@ -1807,8 +1799,7 @@
 																  Width="13" Height="13"
 																  Stretch="Uniform"/>
 														</Button>
-														<Button Classes="IconButton"
-																Width="24" Height="24"
+														<Button Classes="IconButton CompactIconButton"
 																Background="Transparent"
 																BorderBrush="{DynamicResource AccentCyanDimBrush}"
 																BorderThickness="1"
@@ -2025,8 +2016,7 @@
 												   FontWeight="SemiBold"
 												   Foreground="{DynamicResource TextSecondaryBrush}"/>
 										<Button Grid.Column="1"
-												Classes="IconButton"
-												MinWidth="24"
+												Classes="CompactAction"
 												Height="24"
 												Background="Transparent"
 												BorderThickness="0"
@@ -2070,9 +2060,7 @@
 																	   TextTrimming="CharacterEllipsis"/>
 														</StackPanel>
 														<Button Grid.Column="2"
-																Classes="IconButton"
-																Width="22"
-																Height="22"
+																Classes="IconButton CompactIconButton"
 																Background="Transparent"
 																BorderThickness="0"
 																ToolTip.Tip="Remove file"

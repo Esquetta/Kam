@@ -630,8 +630,7 @@
                                             HorizontalAlignment="Left"
                                             VerticalAlignment="Bottom"
                                             Margin="0,14,0,0">
-                                    <Button Classes="IconButton PluginActionButton"
-                                            Width="24" Height="24"
+                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
                                             Padding="0"
                                             Cursor="Hand"
                                             ToolTip.Tip="Details"
@@ -643,8 +642,7 @@
                                               VerticalAlignment="Center"
                                               Stretch="Uniform"/>
                                     </Button>
-                                    <Button Classes="IconButton PluginActionButton"
-                                            Width="24" Height="24"
+                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
                                             Padding="0"
                                             Cursor="Hand"
                                             ToolTip.Tip="Test Skill"
@@ -657,8 +655,7 @@
                                               VerticalAlignment="Center"
                                               Stretch="Uniform"/>
                                     </Button>
-                                    <Button Classes="IconButton PluginActionButton"
-                                            Width="24" Height="24"
+                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
                                             Padding="0"
                                             Cursor="Hand"
                                             ToolTip.Tip="Approve Review"
@@ -671,8 +668,7 @@
                                               VerticalAlignment="Center"
                                               Stretch="Uniform"/>
                                     </Button>
-                                    <Button Classes="IconButton PluginActionButton"
-                                            Width="24" Height="24"
+                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
                                             Padding="0"
                                             Cursor="Hand"
                                             ToolTip.Tip="Enable"
@@ -685,8 +681,7 @@
                                               VerticalAlignment="Center"
                                               Stretch="Uniform"/>
                                     </Button>
-                                    <Button Classes="IconButton PluginActionButton"
-                                            Width="24" Height="24"
+                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
                                             Padding="0"
                                             Cursor="Hand"
                                             ToolTip.Tip="Grant Permissions"
@@ -699,8 +694,7 @@
                                               VerticalAlignment="Center"
                                               Stretch="Uniform"/>
                                     </Button>
-                                    <Button Classes="IconButton PluginActionButton"
-                                            Width="24" Height="24"
+                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
                                             Padding="0"
                                             Cursor="Hand"
                                             ToolTip.Tip="Disable"
@@ -713,8 +707,7 @@
                                               VerticalAlignment="Center"
                                               Stretch="Uniform"/>
                                     </Button>
-                                    <Button Classes="IconButton PluginActionButton"
-                                            Width="24" Height="24"
+                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
                                             Padding="0"
                                             Cursor="Hand"
                                             ToolTip.Tip="Revoke Permissions"

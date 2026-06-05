@@ -24,6 +24,8 @@ public sealed class UiDesignSystemMetadataTests
         selectors.Should().Contain("Button.SecondaryAction");
         selectors.Should().Contain("Button.DestructiveAction");
         selectors.Should().Contain("Button.IconAction");
+        selectors.Should().Contain("Button.CompactIconButton");
+        selectors.Should().Contain("Button.CompactAction");
         selectors.Should().Contain("Border.IconBadge");
 
         var cardStyle = controls
@@ -38,6 +40,43 @@ public sealed class UiDesignSystemMetadataTests
             .Value
             .Should()
             .Be("8");
+
+        foreach (var selector in new[] { "Button.PrimaryAction", "Button.SecondaryAction", "Button.DestructiveAction" })
+        {
+            var actionSetters = controls
+                .Descendants()
+                .Single(element => element.Name.LocalName == "Style"
+                    && AttributeValue(element, "Selector") == selector)
+                .Elements()
+                .Where(element => element.Name.LocalName == "Setter")
+                .ToDictionary(element => AttributeValue(element, "Property")!, element => AttributeValue(element, "Value"));
+
+            actionSetters["HorizontalContentAlignment"].Should().Be("Center");
+            actionSetters["VerticalContentAlignment"].Should().Be("Center");
+        }
+    }
+
+    [Theory]
+    [InlineData("MainWindow.axaml")]
+    [InlineData("PluginsView.axaml")]
+    public void CompactIconButtons_DoNotOverrideSharedDimensions(string viewFileName)
+    {
+        var view = XDocument.Load(FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Views", viewFileName)).Root;
+
+        var compactButtons = view!
+            .Descendants()
+            .Where(element => element.Name.LocalName == "Button")
+            .Where(element => (AttributeValue(element, "Classes") ?? string.Empty)
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Contains("CompactIconButton"))
+            .ToArray();
+
+        compactButtons.Should().NotBeEmpty();
+        compactButtons.Should().OnlyContain(element =>
+            AttributeValue(element, "Width") == null
+            && AttributeValue(element, "Height") == null
+            && AttributeValue(element, "MinWidth") == null
+            && AttributeValue(element, "MinHeight") == null);
     }
 
     [Theory]
