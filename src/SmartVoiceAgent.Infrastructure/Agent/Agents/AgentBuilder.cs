@@ -243,10 +243,10 @@ public class AgentBuilder : IAgentBuilder
             _name,
             _tools.Count);
 
-        return _chatClient.CreateAIAgent(
-            name: _name,
+        return _chatClient.AsAIAgent(
             instructions: _instructions,
-            tools: _tools.ToArray()
+            name: _name,
+            tools: _tools.Cast<AITool>().ToArray()
         );
     }
 
