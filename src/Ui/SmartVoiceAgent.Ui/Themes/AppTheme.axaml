@@ -1,36 +1,70 @@
 <ResourceDictionary
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    
+
     <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Dark">
             <ResourceDictionary.MergedDictionaries>
                 <ResourceInclude Source="avares://SmartVoiceAgent.Ui/Themes/Colors.Dark.axaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
-        
+
         <ResourceDictionary x:Key="Light">
             <ResourceDictionary.MergedDictionaries>
                 <ResourceInclude Source="avares://SmartVoiceAgent.Ui/Themes/Colors.Light.axaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
-    
+
     <ResourceDictionary.MergedDictionaries>
         <ResourceInclude Source="avares://SmartVoiceAgent.Ui/Themes/Brushes.axaml"/>
     </ResourceDictionary.MergedDictionaries>
-    
+
+    <!-- Typography -->
+    <FontFamily x:Key="MonoFontFamily">Cascadia Code, Consolas, JetBrains Mono, Menlo, monospace</FontFamily>
+
+    <!-- Shape scale shared by Fluent controls and Kam surfaces -->
+    <CornerRadius x:Key="ControlCornerRadius">8</CornerRadius>
+    <CornerRadius x:Key="OverlayCornerRadius">10</CornerRadius>
+    <CornerRadius x:Key="RadiusSmall">6</CornerRadius>
+    <CornerRadius x:Key="RadiusMedium">8</CornerRadius>
+    <CornerRadius x:Key="RadiusLarge">10</CornerRadius>
+    <CornerRadius x:Key="RadiusPill">999</CornerRadius>
+
+    <!-- Stroke icons (24x24, Lucide-style). Render with Path.Icon inside a Viewbox. -->
+    <StreamGeometry x:Key="IconChat">M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z</StreamGeometry>
+    <StreamGeometry x:Key="IconActivity">M22 12h-4l-3 9L9 3l-3 9H2</StreamGeometry>
+    <StreamGeometry x:Key="IconBlocks">M10 22V7a1 1 0 0 0-1-1H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5a1 1 0 0 0-1-1H2 M14 2h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z</StreamGeometry>
+    <StreamGeometry x:Key="IconPlug">M12 22v-5 M9 8V2 M15 8V2 M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8z</StreamGeometry>
+    <StreamGeometry x:Key="IconSliders">M21 4h-7 M10 4H3 M21 12h-9 M8 12H3 M21 20h-5 M12 20H3 M14 2v4 M8 10v4 M16 18v4</StreamGeometry>
+    <StreamGeometry x:Key="IconSun">M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8z M12 2v2 M12 20v2 M4.93 4.93l1.41 1.41 M17.66 17.66l1.41 1.41 M2 12h2 M20 12h2 M6.34 17.66l-1.41 1.41 M19.07 4.93l-1.41 1.41</StreamGeometry>
+    <StreamGeometry x:Key="IconMoon">M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z</StreamGeometry>
+    <StreamGeometry x:Key="IconArrowUp">M12 19V5 M5 12l7-7 7 7</StreamGeometry>
+    <StreamGeometry x:Key="IconPaperclip">M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48</StreamGeometry>
+    <StreamGeometry x:Key="IconMic">M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z M19 10v2a7 7 0 0 1-14 0v-2 M12 19v3</StreamGeometry>
+    <StreamGeometry x:Key="IconPlus">M12 5v14 M5 12h14</StreamGeometry>
+    <StreamGeometry x:Key="IconSparkles">M12 3l1.9 5.8 5.8 1.9-5.8 1.9L12 18.4l-1.9-5.8-5.8-1.9 5.8-1.9z M19 3v4 M17 5h4</StreamGeometry>
+    <StreamGeometry x:Key="IconFile">M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6</StreamGeometry>
+    <StreamGeometry x:Key="IconX">M18 6L6 18 M6 6l12 12</StreamGeometry>
+    <StreamGeometry x:Key="IconRefresh">M3 12a9 9 0 0 1 15-6.7L21 8 M21 3v5h-5 M21 12a9 9 0 0 1-15 6.7L3 16 M3 21v-5h5</StreamGeometry>
+    <StreamGeometry x:Key="IconCopy">M8 8h12v12H8z M16 8V4H4v12h4</StreamGeometry>
+    <StreamGeometry x:Key="IconTrash">M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6 M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2</StreamGeometry>
+    <StreamGeometry x:Key="IconCheck">M20 6L9 17l-5-5</StreamGeometry>
+    <StreamGeometry x:Key="IconAlert">M12 9v4 M12 17h.01 M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z</StreamGeometry>
+    <StreamGeometry x:Key="IconBot">M12 8V4H8 M4 8h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z M2 14h2 M20 14h2 M15 13v2 M9 13v2</StreamGeometry>
+    <StreamGeometry x:Key="IconSearch">M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14z M21 21l-4.3-4.3</StreamGeometry>
+
     <!-- SunIcon - Simplified for Avalonia -->
     <StreamGeometry x:Key="SunIconGeometry">
-        M12 2 L12 4 M12 20 L12 22 M4 12 L2 12 M22 12 L20 12 
-        M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66 
-        M17.66 6.34 L19.07 4.93 M4.93 19.07 L6.34 17.66 
+        M12 2 L12 4 M12 20 L12 22 M4 12 L2 12 M22 12 L20 12
+        M6.34 6.34 L4.93 4.93 M19.07 19.07 L17.66 17.66
+        M17.66 6.34 L19.07 4.93 M4.93 19.07 L6.34 17.66
         M12 8 A4 4 0 1 1 12 16 A4 4 0 1 1 12 8 Z
     </StreamGeometry>
-    
+
     <!-- MoonIcon - Simplified for Avalonia -->
     <StreamGeometry x:Key="MoonIconGeometry">
         M21 12.79 A9 9 0 1 1 11.21 3 A7 7 0 0 0 21 12.79 Z
     </StreamGeometry>
-    
+
 </ResourceDictionary>

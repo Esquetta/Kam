@@ -40,7 +40,7 @@
     <x:String x:Key="Lang.Settings.About">ABOUT</x:String>
     
     <!-- Plugins -->
-    <x:String x:Key="Lang.Plugins.Title">PLUGINS</x:String>
-    <x:String x:Key="Lang.Plugins.Subtitle">SKILL MANAGER // EXTENSIBLE WORKSPACE</x:String>
+    <x:String x:Key="Lang.Plugins.Title">Skills</x:String>
+    <x:String x:Key="Lang.Plugins.Subtitle">Manage, test and grant permissions to installed skills.</x:String>
     
 </ResourceDictionary>

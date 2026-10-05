@@ -40,7 +40,7 @@
     <x:String x:Key="Lang.Settings.About">概要</x:String>
     
     <!-- Plugins -->
-    <x:String x:Key="Lang.Plugins.Title">プラグイン</x:String>
-    <x:String x:Key="Lang.Plugins.Subtitle">拡張機能マネージャー // モジュラーシステム</x:String>
+    <x:String x:Key="Lang.Plugins.Title">スキル</x:String>
+    <x:String x:Key="Lang.Plugins.Subtitle">インストール済みスキルの管理、テスト、権限付与。</x:String>
     
 </ResourceDictionary>

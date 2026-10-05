@@ -71,7 +71,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             IGitHubAppClientFactory? githubAppClientFactory = null,
             IGitHubDesktopConnector? githubDesktopConnector = null)
         {
-            Title = "INTEGRATIONS";
+            Title = "Integrations";
             _settingsService = settingsService;
             _githubAppClientFactory = githubAppClientFactory;
             _githubDesktopConnector = githubDesktopConnector ?? new GitHubCliDesktopConnector();

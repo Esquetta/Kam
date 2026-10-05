@@ -40,7 +40,7 @@
     <x:String x:Key="Lang.Settings.About">ÜBER</x:String>
     
     <!-- Plugins -->
-    <x:String x:Key="Lang.Plugins.Title">PLUGINS</x:String>
-    <x:String x:Key="Lang.Plugins.Subtitle">ERWEITERUNGSMANAGER // MODULARES SYSTEM</x:String>
+    <x:String x:Key="Lang.Plugins.Title">Skills</x:String>
+    <x:String x:Key="Lang.Plugins.Subtitle">Installierte Skills verwalten, testen und freigeben.</x:String>
     
 </ResourceDictionary>

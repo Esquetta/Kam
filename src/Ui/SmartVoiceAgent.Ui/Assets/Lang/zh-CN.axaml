@@ -40,7 +40,7 @@
     <x:String x:Key="Lang.Settings.About">关于</x:String>
     
     <!-- Plugins -->
-    <x:String x:Key="Lang.Plugins.Title">插件</x:String>
-    <x:String x:Key="Lang.Plugins.Subtitle">扩展管理器 // 模块化系统</x:String>
+    <x:String x:Key="Lang.Plugins.Title">技能</x:String>
+    <x:String x:Key="Lang.Plugins.Subtitle">管理、测试已安装的技能并授予权限。</x:String>
     
 </ResourceDictionary>

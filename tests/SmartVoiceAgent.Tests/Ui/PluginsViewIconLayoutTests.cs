@@ -17,15 +17,17 @@ public sealed class PluginsViewIconLayoutTests
 
         var stateGlyphs = iconBadge
             .Elements()
-            .Where(element => element.Name.LocalName == "Ellipse"
-                && AttributeValue(element, "Width") == "16"
-                && AttributeValue(element, "Height") == "16")
+            .Where(element => element.Name.LocalName == "Path"
+                && AttributeValue(element, "Data") == "{Binding IconPath}"
+                && AttributeValue(element, "Width") == "18"
+                && AttributeValue(element, "Height") == "18")
             .ToArray();
 
         stateGlyphs.Should().HaveCount(2);
         stateGlyphs.Should().OnlyContain(element =>
             AttributeValue(element, "HorizontalAlignment") == "Center"
-            && AttributeValue(element, "VerticalAlignment") == "Center");
+            && AttributeValue(element, "VerticalAlignment") == "Center"
+            && AttributeValue(element, "Stretch") == "Uniform");
     }
 
     [Fact]
@@ -115,7 +117,7 @@ public sealed class PluginsViewIconLayoutTests
             .Descendants()
             .Single(element => element.Name.LocalName == "TextBlock"
                 && AttributeValue(element, "Text") == "{Binding Name}"
-                && AttributeValue(element, "FontSize") == "16"
+                && AttributeValue(element, "FontSize") == "15"
                 && AttributeValue(element, "FontWeight") == "SemiBold");
 
         AttributeValue(nameText, "TextWrapping").Should().Be("Wrap");

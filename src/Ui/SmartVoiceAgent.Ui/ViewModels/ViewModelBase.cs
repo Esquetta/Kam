@@ -14,11 +14,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
             protected set => this.RaiseAndSetIfChanged(ref _title, value);
         }
 
-        private string _statusText = "SYSTEM ONLINE";
-        private IBrush _statusColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#10B981"));
+        private string _statusText = "Starting";
+        private IBrush _statusColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#9A9AA8"));
 
         /// <summary>
-        /// Status text for header display (e.g., "SYSTEM ONLINE", "SYSTEM OFFLINE")
+        /// Status text for header display (e.g., "Agent online", "Agent offline")
         /// </summary>
         public virtual string StatusText
         {

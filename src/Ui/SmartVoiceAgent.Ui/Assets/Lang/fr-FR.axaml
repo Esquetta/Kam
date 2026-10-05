@@ -40,7 +40,7 @@
     <x:String x:Key="Lang.Settings.About">À PROPOS</x:String>
     
     <!-- Plugins -->
-    <x:String x:Key="Lang.Plugins.Title">PLUGINS</x:String>
-    <x:String x:Key="Lang.Plugins.Subtitle">GESTIONNAIRE D'EXTENSIONS // SYSTÈME MODULAIRE</x:String>
+    <x:String x:Key="Lang.Plugins.Title">Compétences</x:String>
+    <x:String x:Key="Lang.Plugins.Subtitle">Gérez, testez et autorisez les compétences installées.</x:String>
     
 </ResourceDictionary>

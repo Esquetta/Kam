@@ -2,34 +2,47 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- Zinc-based dark palette matching HTML design -->
-    <Color x:Key="PanelBg">#09090B</Color>
-    <Color x:Key="CardBg">#18181B</Color>
-    <Color x:Key="CardBgHover">#27272A</Color>
-    <Color x:Key="SurfaceBg">#0C0C0E</Color>
-    <Color x:Key="SurfaceBgElevated">#111114</Color>
-    <Color x:Key="BorderSubtle">#1F1F23</Color>
-    <Color x:Key="BorderMuted">#27272A</Color>
-    <Color x:Key="TextPrimary">#FAFAFA</Color>
-    <Color x:Key="TextSecondary">#D4D4D8</Color>
-    <Color x:Key="TextMuted">#A1A1AA</Color>
+    <!-- Neutral surfaces: layered from the window background up to hovered cards -->
+    <Color x:Key="PanelBg">#0C0C10</Color>
+    <Color x:Key="SurfaceBg">#111116</Color>
+    <Color x:Key="CardBg">#16161C</Color>
+    <Color x:Key="SurfaceBgElevated">#1A1A21</Color>
+    <Color x:Key="CardBgHover">#1F1F27</Color>
+    <Color x:Key="BorderSubtle">#24242D</Color>
+    <Color x:Key="BorderMuted">#33333F</Color>
+    <Color x:Key="TextPrimary">#F5F5F7</Color>
+    <Color x:Key="TextSecondary">#CBCBD4</Color>
+    <Color x:Key="TextMuted">#9A9AA8</Color>
 
-    <!-- Accent colors -->
-    <Color x:Key="AccentCyan">#06B6D4</Color>
-    <Color x:Key="AccentCyanDim">#0891B2</Color>
-    <Color x:Key="AccentCyanGlow">#1606B6D4</Color>
-    <Color x:Key="AccentGreen">#10B981</Color>
-    <Color x:Key="AccentGreenDim">#059669</Color>
-    <Color x:Key="AccentGreenGlow">#1610B981</Color>
-    <Color x:Key="AccentGreenOn">#000000</Color>
-    <Color x:Key="AccentPurple">#8B5CF6</Color>
-    <Color x:Key="AccentPurpleDim">#7C3AED</Color>
-    <Color x:Key="AccentPurpleGlow">#168B5CF6</Color>
-    <Color x:Key="AccentOrange">#F97316</Color>
-    <Color x:Key="AccentOrangeDim">#EA580C</Color>
-    <Color x:Key="AccentOrangeGlow">#16F97316</Color>
-    <Color x:Key="AccentError">#EF4444</Color>
-    <Color x:Key="AccentErrorDim">#DC2626</Color>
-    <Color x:Key="AccentErrorGlow">#16EF4444</Color>
-    <Color x:Key="AccentErrorOn">#000000</Color>
+    <!-- Brand accent: Accent is for text and icons, AccentStrong for fills and focus rings -->
+    <Color x:Key="Accent">#8B7CFF</Color>
+    <Color x:Key="AccentStrong">#6E5BF0</Color>
+    <Color x:Key="AccentStrongHover">#7B69F6</Color>
+    <Color x:Key="AccentSubtle">#248B7CFF</Color>
+    <Color x:Key="AccentOn">#FFFFFF</Color>
+
+    <!-- Status colors -->
+    <Color x:Key="AccentGreen">#34D399</Color>
+    <Color x:Key="AccentGreenDim">#10B981</Color>
+    <Color x:Key="AccentGreenGlow">#1F34D399</Color>
+    <Color x:Key="AccentGreenOn">#04120C</Color>
+    <Color x:Key="AccentPurple">#C084FC</Color>
+    <Color x:Key="AccentPurpleDim">#A855F7</Color>
+    <Color x:Key="AccentPurpleGlow">#1FC084FC</Color>
+    <Color x:Key="AccentOrange">#FBBF24</Color>
+    <Color x:Key="AccentOrangeDim">#F59E0B</Color>
+    <Color x:Key="AccentOrangeGlow">#1FFBBF24</Color>
+    <Color x:Key="AccentError">#F87171</Color>
+    <Color x:Key="AccentErrorDim">#EF4444</Color>
+    <Color x:Key="AccentErrorGlow">#1FF87171</Color>
+    <Color x:Key="AccentErrorOn">#1A0505</Color>
+
+    <!-- Fluent theme accent overrides so built-in controls follow the brand accent -->
+    <Color x:Key="SystemAccentColor">#6E5BF0</Color>
+    <Color x:Key="SystemAccentColorLight1">#7B69F6</Color>
+    <Color x:Key="SystemAccentColorLight2">#8B7CFF</Color>
+    <Color x:Key="SystemAccentColorLight3">#A99EFF</Color>
+    <Color x:Key="SystemAccentColorDark1">#5B45E0</Color>
+    <Color x:Key="SystemAccentColorDark2">#4A35C9</Color>
+    <Color x:Key="SystemAccentColorDark3">#3A28A8</Color>
 </ResourceDictionary>

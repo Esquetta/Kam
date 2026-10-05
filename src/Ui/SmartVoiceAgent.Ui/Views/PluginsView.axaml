@@ -7,8 +7,6 @@
              x:DataType="vm:PluginsViewModel">
 
     <UserControl.Resources>
-        <services:WindowStateManager x:Key="WindowStateManager" />
-        <converters:ResponsiveFontSizeConverter x:Key="ResponsiveFontSizeConverter" />
     </UserControl.Resources>
 
     <UserControl.Styles>
@@ -17,9 +15,9 @@
             <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="24"/>
-            <Setter Property="MinHeight" Value="320"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="MinHeight" Value="300"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Transitions">
                 <Transitions>
@@ -30,7 +28,7 @@
         </Style>
 
         <Style Selector="Border.PluginCard:pointerover">
-            <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
         </Style>
 
         <!-- Inactive Plugin Card -->
@@ -38,9 +36,9 @@
             <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="24"/>
-            <Setter Property="MinHeight" Value="320"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="MinHeight" Value="300"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Transitions">
                 <Transitions>
@@ -77,15 +75,15 @@
         <!-- Status Badge Active -->
         <Style Selector="Border.StatusActive">
             <Setter Property="Background" Value="{DynamicResource AccentGreenGlowBrush}"/>
-            <Setter Property="Padding" Value="6,2"/>
-            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="8,2"/>
+            <Setter Property="CornerRadius" Value="999"/>
         </Style>
 
         <!-- Status Badge Inactive -->
         <Style Selector="Border.StatusInactive">
             <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
-            <Setter Property="Padding" Value="6,2"/>
-            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="8,2"/>
+            <Setter Property="CornerRadius" Value="999"/>
         </Style>
 
         <Style Selector="Button.PluginActionButton">
@@ -150,48 +148,39 @@
         </Style>
 
         <Style Selector="Border.EvalSummary">
-            <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="14,12"/>
+            <Setter Property="Padding" Value="16,14"/>
         </Style>
 
         <Style Selector="Border.EvalHealthy">
-            <Setter Property="BorderBrush" Value="#4010B981"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
         </Style>
 
         <Style Selector="Border.EvalUnhealthy">
-            <Setter Property="BorderBrush" Value="#40F59E0B"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentOrangeGlowBrush}"/>
         </Style>
 
         <Style Selector="Border.ImportPanel">
-            <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="14,12"/>
+            <Setter Property="Padding" Value="16,14"/>
         </Style>
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <Grid Classes="WorkbenchPage" RowDefinitions="Auto, Auto, Auto, Auto, *" Margin="0,20">
+        <Grid Classes="WorkbenchPage" RowDefinitions="Auto, Auto, Auto, Auto, *" Margin="32,28,32,40">
 
             <!-- Title Section -->
-            <StackPanel Grid.Row="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,20,0,24">
+            <StackPanel Grid.Row="0" Spacing="6" Margin="8,0,8,24">
                 <TextBlock Text="{DynamicResource Lang.Plugins.Title}"
-                           Classes="PageTitle"
-                           HorizontalAlignment="Center"
-                           Foreground="{DynamicResource TextPrimaryBrush}"
-                           FontWeight="SemiBold"/>
+                           Classes="PageTitle"/>
                 <TextBlock Text="{DynamicResource Lang.Plugins.Subtitle}"
-                           Classes="PageSubtitle"
-                           Foreground="{DynamicResource AccentCyanBrush}"
-                           HorizontalAlignment="Center"
-                           Margin="0,8,0,0"
-                           FontSize="12"
-                           FontFamily="Consolas"
-                           LetterSpacing="2"/>
+                           Classes="PageSubtitle"/>
             </StackPanel>
 
             <Border Grid.Row="1"
@@ -199,13 +188,12 @@
                     Classes.EvalHealthy="{Binding IsSkillEvalHealthy}"
                     Classes.EvalUnhealthy="{Binding !IsSkillEvalHealthy}"
                     Margin="8,0,8,20"
-                    MaxWidth="920"
                     HorizontalAlignment="Stretch">
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                     <Ellipse Grid.Column="0"
                              Width="10"
                              Height="10"
-                             Fill="{DynamicResource AccentCyanBrush}"
+                             Fill="{DynamicResource AccentBrush}"
                              VerticalAlignment="Top"
                              Margin="0,4,0,0"
                              IsVisible="{Binding IsSkillEvalHealthy}"/>
@@ -218,8 +206,8 @@
                              IsVisible="{Binding !IsSkillEvalHealthy}"/>
                     <StackPanel Grid.Column="1" Spacing="4">
                         <TextBlock Text="{Binding SkillEvalStatus}"
-                                   FontSize="12"
-                                   FontFamily="Consolas"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"/>
                         <TextBlock Text="{Binding SkillEvalDetail}"
@@ -240,13 +228,13 @@
                                             <TextBlock Grid.Column="0"
                                                        Text="{Binding StatusText}"
                                                        FontSize="10"
-                                                       FontFamily="Consolas"
+                                                       FontFamily="{StaticResource MonoFontFamily}"
                                                        Foreground="{Binding StatusColor}"
                                                        TextWrapping="NoWrap"/>
                                             <StackPanel Grid.Column="1" Spacing="1">
                                                 <TextBlock Text="{Binding Name}"
                                                            FontSize="10"
-                                                           FontFamily="Consolas"
+                                                           FontFamily="{StaticResource MonoFontFamily}"
                                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                                            TextWrapping="NoWrap"
                                                            TextTrimming="CharacterEllipsis"/>
@@ -264,7 +252,7 @@
                                             <TextBlock Grid.Column="2"
                                                        Text="{Binding SkillId}"
                                                        FontSize="10"
-                                                       FontFamily="Consolas"
+                                                       FontFamily="{StaticResource MonoFontFamily}"
                                                        Foreground="{DynamicResource TextMutedBrush}"
                                                        TextWrapping="NoWrap"
                                                        TextTrimming="CharacterEllipsis"/>
@@ -283,7 +271,7 @@
                             Padding="0"
                             VerticalAlignment="Center">
                         <Path Data="M8,5V19L19,12L8,5Z"
-                              Fill="{DynamicResource AccentCyanBrush}"
+                              Fill="{DynamicResource AccentBrush}"
                               Width="13"
                               Height="13"
                               Stretch="Uniform"/>
@@ -294,7 +282,6 @@
             <Border Grid.Row="2"
                     Classes="ImportPanel"
                     Margin="8,0,8,20"
-                    MaxWidth="920"
                     HorizontalAlignment="Stretch">
                 <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
                     <Grid Grid.Row="0" ColumnDefinitions="150,*,Auto" ColumnSpacing="8">
@@ -325,56 +312,54 @@
                     Classes="ImportPanel"
                     IsVisible="{Binding HasSelectedPlugin}"
                     Margin="8,0,8,20"
-                    MaxWidth="920"
                     HorizontalAlignment="Stretch">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                     <StackPanel Grid.Column="0" Spacing="6">
                         <TextBlock Text="{Binding SelectedSkillTitle}"
                                    FontSize="15"
                                    FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextPrimaryBrush}"
                                    TextWrapping="Wrap"/>
                         <TextBlock Text="{Binding SelectedSkillId}"
                                    FontSize="11"
-                                   FontFamily="Consolas"
-                                   Foreground="{DynamicResource AccentCyanBrush}"
+                                   FontFamily="{StaticResource MonoFontFamily}"
+                                   Foreground="{DynamicResource AccentBrush}"
                                    TextWrapping="NoWrap"
                                    TextTrimming="CharacterEllipsis"/>
                         <TextBlock Text="{Binding SelectedSkillSource}"
                                    FontSize="10"
-                                   FontFamily="Consolas"
+                                   FontFamily="{StaticResource MonoFontFamily}"
                                    Foreground="{DynamicResource TextMutedBrush}"
                                    TextWrapping="NoWrap"
                                    TextTrimming="CharacterEllipsis"/>
                         <WrapPanel>
                             <TextBlock Text="{Binding SelectedSkillExecutor}"
                                        FontSize="10"
-                                       FontFamily="Consolas"
+                                       FontFamily="{StaticResource MonoFontFamily}"
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        Margin="0,0,14,0"/>
                             <TextBlock Text="{Binding SelectedSkillRisk}"
                                        FontSize="10"
-                                       FontFamily="Consolas"
+                                       FontFamily="{StaticResource MonoFontFamily}"
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        Margin="0,0,14,0"/>
                             <TextBlock Text="{Binding SelectedSkillChecksum}"
                                        FontSize="10"
-                                       FontFamily="Consolas"
+                                       FontFamily="{StaticResource MonoFontFamily}"
                                        Foreground="{DynamicResource TextMutedBrush}"/>
                         </WrapPanel>
                         <TextBlock Text="{Binding SelectedSkillPermissions}"
                                    FontSize="10"
-                                   FontFamily="Consolas"
+                                   FontFamily="{StaticResource MonoFontFamily}"
                                    Foreground="{DynamicResource TextMutedBrush}"
                                    TextWrapping="Wrap"/>
                         <TextBlock Text="{Binding SelectedSkillLastRun}"
                                    FontSize="10"
-                                   FontFamily="Consolas"
+                                   FontFamily="{StaticResource MonoFontFamily}"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"/>
                         <TextBlock Text="{Binding SelectedSkillHealthMetrics}"
                                    FontSize="10"
-                                   FontFamily="Consolas"
+                                   FontFamily="{StaticResource MonoFontFamily}"
                                    Foreground="{DynamicResource TextMutedBrush}"
                                    TextWrapping="Wrap"/>
                         <StackPanel IsVisible="{Binding HasSelectedSkillExecutionHistory}"
@@ -382,7 +367,7 @@
                                     Margin="0,4,0,0">
                             <TextBlock Text="Execution History"
                                        FontSize="10"
-                                       FontFamily="Consolas"
+                                       FontFamily="{StaticResource MonoFontFamily}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                             <ItemsControl ItemsSource="{Binding SelectedSkillExecutionHistory}">
                                 <ItemsControl.ItemTemplate>
@@ -393,13 +378,13 @@
                                             <TextBlock Grid.Column="0"
                                                        Text="{Binding TimestampText}"
                                                        FontSize="10"
-                                                       FontFamily="Consolas"
+                                                       FontFamily="{StaticResource MonoFontFamily}"
                                                        Foreground="{DynamicResource TextMutedBrush}"
                                                        TextWrapping="NoWrap"/>
                                             <TextBlock Grid.Column="1"
                                                        Text="{Binding StatusText}"
                                                        FontSize="10"
-                                                       FontFamily="Consolas"
+                                                       FontFamily="{StaticResource MonoFontFamily}"
                                                        Foreground="{Binding StatusColor}"
                                                        TextWrapping="NoWrap"
                                                        TextTrimming="CharacterEllipsis"/>
@@ -416,7 +401,7 @@
                         </StackPanel>
                         <TextBlock Text="{Binding SelectedSkillPolicyGuardrail}"
                                    FontSize="10"
-                                   FontFamily="Consolas"
+                                   FontFamily="{StaticResource MonoFontFamily}"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"/>
                         <Grid ColumnDefinitions="170,*,Auto"
@@ -436,7 +421,6 @@
                                     MinHeight="32"
                                     Padding="10,0">
                                 <Path Data="M9,16.2L4.8,12L3.4,13.4L9,19L21,7L19.6,5.6L9,16.2Z"
-                                      Fill="{DynamicResource AccentCyanBrush}"
                                       Width="13"
                                       Height="13"
                                       Stretch="Uniform"/>
@@ -453,7 +437,7 @@
                             Padding="0"
                             VerticalAlignment="Top">
                         <Path Data="M8,5V19L19,12L8,5Z"
-                              Fill="{DynamicResource AccentCyanBrush}"
+                              Fill="{DynamicResource AccentBrush}"
                               Width="13"
                               Height="13"
                               Stretch="Uniform"/>
@@ -465,7 +449,7 @@
             <ItemsControl Grid.Row="4" ItemsSource="{Binding Plugins}" Margin="0,0,0,20">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <UniformGrid Columns="{Binding Source={StaticResource WindowStateManager}, Path=GridColumns}"/>
+                        <UniformGrid Columns="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=GridColumns}"/>
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
 
@@ -480,28 +464,31 @@
                                       Classes="PluginIconBadge"
                                       Width="40" Height="40"
                                       HorizontalAlignment="Left"
-                                      Margin="0,0,0,24">
+                                      Margin="0,0,0,16">
                                     <Border Classes="IconBadge"
                                             Background="{Binding GlowColor}"/>
-                                    <Ellipse Width="16" Height="16"
-                                             Fill="{Binding IconColor}"
-                                             HorizontalAlignment="Center"
-                                             VerticalAlignment="Center"
-                                             IsVisible="{Binding IsActive}"/>
-                                    <Ellipse Width="16" Height="16"
-                                             Fill="{DynamicResource TextMutedBrush}"
-                                             HorizontalAlignment="Center"
-                                             VerticalAlignment="Center"
-                                             IsVisible="{Binding !IsActive}"/>
+                                    <Path Data="{Binding IconPath}"
+                                          Fill="{Binding IconColor}"
+                                          Width="18" Height="18"
+                                          Stretch="Uniform"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          IsVisible="{Binding IsActive}"/>
+                                    <Path Data="{Binding IconPath}"
+                                          Fill="{DynamicResource TextMutedBrush}"
+                                          Width="18" Height="18"
+                                          Stretch="Uniform"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          IsVisible="{Binding !IsActive}"/>
                                 </Grid>
 
                                 <!-- Content -->
                                 <StackPanel Grid.Row="1" VerticalAlignment="Stretch">
                                     <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
                                         <TextBlock Text="{Binding Name}"
-                                                   FontSize="16"
+                                                   FontSize="15"
                                                    FontWeight="SemiBold"
-                                                   LetterSpacing="1"
                                                    Foreground="{Binding TextColor}"
                                                    TextWrapping="Wrap"
                                                    TextTrimming="CharacterEllipsis"
@@ -513,8 +500,8 @@
                                                 MaxWidth="82"
                                                 Margin="8,0,0,0">
                                             <TextBlock Text="{Binding Status}"
-                                                       FontSize="9"
-                                                       FontFamily="Consolas"
+                                                       FontSize="11"
+                                                       FontWeight="Medium"
                                                        Foreground="{Binding StatusColor}"
                                                        VerticalAlignment="Center"
                                                        TextWrapping="NoWrap"
@@ -523,42 +510,38 @@
                                     </Grid>
                                     <TextBlock Text="{Binding SkillId}"
                                                FontSize="10"
-                                               Foreground="{DynamicResource AccentCyanBrush}"
-                                               FontFamily="Consolas"
+                                               Foreground="{DynamicResource AccentBrush}"
+                                               FontFamily="{StaticResource MonoFontFamily}"
                                                TextWrapping="NoWrap"
                                                TextTrimming="CharacterEllipsis"
                                                Margin="0,0,0,6"/>
                                     <TextBlock Text="{Binding Source}"
-                                               FontSize="10"
+                                               FontSize="11"
                                                Foreground="{DynamicResource TextMutedBrush}"
-                                               FontFamily="Consolas"
                                                TextWrapping="NoWrap"
                                                TextTrimming="CharacterEllipsis"
                                                Margin="0,0,0,8"/>
                                     <TextBlock Text="{Binding RequiredPermissionsText}"
-                                               FontSize="10"
+                                               FontSize="11"
                                                Foreground="{DynamicResource TextMutedBrush}"
-                                               FontFamily="Consolas"
                                                TextWrapping="NoWrap"
                                                TextTrimming="CharacterEllipsis"
                                                Margin="0,0,0,4"/>
                                     <TextBlock Text="{Binding GrantedPermissionsText}"
-                                               FontSize="10"
+                                               FontSize="11"
                                                Foreground="{DynamicResource TextMutedBrush}"
-                                               FontFamily="Consolas"
                                                TextWrapping="NoWrap"
                                                TextTrimming="CharacterEllipsis"
                                                Margin="0,0,0,4"/>
                                     <TextBlock Text="{Binding MissingPermissionsText}"
-                                               FontSize="10"
+                                               FontSize="11"
                                                Foreground="{DynamicResource AccentErrorBrush}"
-                                               FontFamily="Consolas"
                                                TextWrapping="NoWrap"
                                                TextTrimming="CharacterEllipsis"
                                                IsVisible="{Binding HasMissingPermissions}"
                                                Margin="0,0,0,8"/>
                                     <TextBlock Text="{Binding Description}"
-                                               FontSize="11"
+                                               FontSize="12"
                                                Foreground="{DynamicResource TextMutedBrush}"
                                                TextWrapping="Wrap"
                                                LineHeight="18"
@@ -575,7 +558,7 @@
                                                 Margin="0,8,0,0">
                                         <TextBlock Text="{Binding LastRunStatus}"
                                                    FontSize="10"
-                                                   FontFamily="Consolas"
+                                                   FontFamily="{StaticResource MonoFontFamily}"
                                                    Foreground="{Binding LastRunColor}"
                                                    TextWrapping="NoWrap"
                                                    TextTrimming="CharacterEllipsis"/>
@@ -590,7 +573,7 @@
                                                 Margin="0,8,0,0">
                                         <TextBlock Text="{Binding HealthMetricsText}"
                                                    FontSize="10"
-                                                   FontFamily="Consolas"
+                                                   FontFamily="{StaticResource MonoFontFamily}"
                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                    TextWrapping="Wrap"
                                                    MaxLines="2"/>
@@ -611,8 +594,8 @@
                                         <StackPanel Spacing="3">
                                             <TextBlock Text="{Binding LastEvalStatus}"
                                                        FontSize="10"
-                                                       FontFamily="Consolas"
-                                                       Foreground="{DynamicResource AccentCyanBrush}"
+                                                       FontFamily="{StaticResource MonoFontFamily}"
+                                                       Foreground="{DynamicResource AccentBrush}"
                                                        TextWrapping="NoWrap"
                                                        TextTrimming="CharacterEllipsis"/>
                                             <TextBlock Text="{Binding LastEvalDetail}"
@@ -636,7 +619,7 @@
                                             ToolTip.Tip="Details"
                                             Command="{Binding SelectCommand}">
                                         <Path Data="M11,17H13V11H11V17M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,7V9H13V7H11Z"
-                                              Fill="{DynamicResource AccentCyanBrush}"
+                                              Fill="{DynamicResource AccentBrush}"
                                               Width="16" Height="16"
                                               HorizontalAlignment="Center"
                                               VerticalAlignment="Center"
@@ -649,7 +632,7 @@
                                             IsVisible="{Binding CanTestSkill}"
                                             Command="{Binding TestSkillCommand}">
                                         <Path Data="M8,5V19L19,12L8,5Z"
-                                              Fill="{DynamicResource AccentCyanBrush}"
+                                              Fill="{DynamicResource AccentBrush}"
                                               Width="16" Height="16"
                                               HorizontalAlignment="Center"
                                               VerticalAlignment="Center"
@@ -662,7 +645,7 @@
                                             IsVisible="{Binding CanApproveReview}"
                                             Command="{Binding ApproveReviewCommand}">
                                         <Path Data="M9,16.17L4.83,12L3.41,13.41L9,19L21,7L19.59,5.59L9,16.17Z"
-                                              Fill="{DynamicResource AccentCyanBrush}"
+                                              Fill="{DynamicResource AccentBrush}"
                                               Width="16" Height="16"
                                               HorizontalAlignment="Center"
                                               VerticalAlignment="Center"
@@ -688,7 +671,7 @@
                                             IsVisible="{Binding CanGrantPermissions}"
                                             Command="{Binding GrantPermissionsCommand}">
                                         <Path Data="M12,17A2,2 0 0,0 14,15A2,2 0 0,0 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8H17V6A5,5 0 0,0 7,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0,0 18,8M9,8V6A3,3 0 0,1 15,6V8H9Z"
-                                              Fill="{DynamicResource AccentCyanBrush}"
+                                              Fill="{DynamicResource AccentBrush}"
                                               Width="16" Height="16"
                                               HorizontalAlignment="Center"
                                               VerticalAlignment="Center"

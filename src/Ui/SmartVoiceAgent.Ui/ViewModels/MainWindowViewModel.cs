@@ -38,7 +38,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
     public class MainWindowViewModel : ViewModelBase
     {
         private TrayIconService? _trayIconService;
-        private DispatcherTimer? _simulationTimer;
         private ICommandInputService? _commandInput;
         private CancellationTokenSource? _resultListenerCts;
         private IVoiceAgentHostControl? _hostControl;
@@ -99,8 +98,23 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 this.RaiseAndSetIfChanged(ref _activeView, value);
                 this.RaisePropertyChanged(nameof(IsChatWorkbenchVisible));
                 this.RaisePropertyChanged(nameof(IsPageHostVisible));
+                this.RaisePropertyChanged(nameof(ActivePageTitle));
             }
         }
+
+        /// <summary>
+        /// Gets the display name of the active page, shown in the window title bar.
+        /// </summary>
+        public string ActivePageTitle => ActiveView switch
+        {
+            NavView.Coordinator => "Workbench",
+            NavView.Diagnostics => "Diagnostics",
+            NavView.Network => "Network",
+            NavView.Plugins => "Skills",
+            NavView.Integrations => "Integrations",
+            NavView.Settings => "Settings",
+            _ => string.Empty
+        };
 
         public bool IsChatWorkbenchVisible => ActiveView == NavView.Coordinator;
 
@@ -145,20 +159,16 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         private void UpdateStatusProperties()
         {
-            Console.WriteLine($"[UpdateStatusProperties] IsHostRunning={IsHostRunning}");
             
             // Use cached brushes to avoid repeated allocations
-            var newText = IsHostRunning ? "SYSTEM ONLINE" : "SYSTEM OFFLINE";
+            var newText = IsHostRunning ? "Agent online" : "Agent offline";
             var newColor = IsHostRunning ? OnlineStatusColor : OfflineStatusColor;
             
-            Console.WriteLine($"[UpdateStatusProperties] Setting StatusText to: {newText}");
-            Console.WriteLine($"[UpdateStatusProperties] Current StatusText before set: {StatusText}");
             
             // Use base class property setters
             base.StatusText = newText;
             base.StatusColor = newColor;
             
-            Console.WriteLine($"[UpdateStatusProperties] StatusText after set: {StatusText}");
             
             // Also explicitly raise property changed for this class
             this.RaisePropertyChanged(nameof(StatusText));
@@ -312,6 +322,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public ICommand ShowContextCommand { get; }
 
         public ICommand ShowEventsCommand { get; }
+
+        /// <summary>
+        /// Gets the command that copies a starter prompt into the composer.
+        /// </summary>
+        public ICommand UseComposerSuggestionCommand { get; }
 
         private ObservableCollection<ComposerAttachmentViewModel> _composerAttachments = new();
         public ObservableCollection<ComposerAttachmentViewModel> ComposerAttachments
@@ -649,6 +664,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ShowRunsCommand = ReactiveCommand.Create(() => SelectedActivityPanelMode = ActivityPanelMode.Runs);
             ShowContextCommand = ReactiveCommand.Create(() => SelectedActivityPanelMode = ActivityPanelMode.Context);
             ShowEventsCommand = ReactiveCommand.Create(() => SelectedActivityPanelMode = ActivityPanelMode.Events);
+            UseComposerSuggestionCommand = ReactiveCommand.Create<string?>(UseComposerSuggestion);
             ToggleVoiceCommand = ReactiveCommand.Create(ToggleVoiceEnabled);
             StartVoiceRecordingCommand = ReactiveCommand.CreateFromTask(StartVoiceRecordingAsync);
             InitializeAgentChatSessions();
@@ -693,7 +709,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
             // or if no view model is set yet
             if (CurrentViewModel is CoordinatorViewModel || CurrentViewModel == null)
             {
-                Console.WriteLine("[SetVoiceAgentHostControl] Recreating CoordinatorViewModel with host control");
                 CurrentViewModel = new CoordinatorViewModel(_hostControl, this);
                 _viewModelCache[NavView.Coordinator] = CurrentViewModel;
                 ActiveView = NavView.Coordinator;
@@ -805,23 +820,19 @@ namespace SmartVoiceAgent.Ui.ViewModels
         
         private void OnHostStateChanged(object? sender, bool isRunning)
         {
-            Console.WriteLine($"[MainWindowViewModel] OnHostStateChanged called: isRunning={isRunning}");
             
             // Update state immediately on UI thread with maximum priority
             Dispatcher.UIThread.Post(() =>
             {
-                Console.WriteLine($"[MainWindowViewModel] Updating UI on dispatcher thread: isRunning={isRunning}");
                 
                 // Use the property setter to ensure proper notification
                 IsHostRunning = isRunning;
                 
-                Console.WriteLine($"[MainWindowViewModel] Adding log message");
                 AddLog(isRunning ? "🟢 VoiceAgent Host started" : "🔴 VoiceAgent Host stopped");
                 
                 // Also update the CoordinatorViewModel if it's active
                 if (CurrentViewModel is CoordinatorViewModel coordinator)
                 {
-                    Console.WriteLine($"[MainWindowViewModel] Syncing CoordinatorViewModel");
                     coordinator.SyncWithHostState(isRunning);
                 }
             }, DispatcherPriority.Send);
@@ -832,27 +843,20 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// </summary>
         public async Task ToggleHostAsync()
         {
-            Console.WriteLine($"[MainWindowViewModel] ToggleHostAsync called, _hostControl is null: {_hostControl == null}");
             
             if (_hostControl == null)
             {
-                Console.WriteLine("[MainWindowViewModel] Host control is null, cannot toggle");
                 return;
             }
 
-            Console.WriteLine($"[MainWindowViewModel] Host is running: {_hostControl.IsRunning}");
             
             if (_hostControl.IsRunning)
             {
-                Console.WriteLine("[MainWindowViewModel] Calling StopAsync...");
                 await _hostControl.StopAsync();
-                Console.WriteLine("[MainWindowViewModel] StopAsync completed");
             }
             else
             {
-                Console.WriteLine("[MainWindowViewModel] Calling StartAsync...");
                 await _hostControl.StartAsync();
-                Console.WriteLine("[MainWindowViewModel] StartAsync completed");
             }
         }
 
@@ -1089,6 +1093,16 @@ namespace SmartVoiceAgent.Ui.ViewModels
             AgentChatSessions.Insert(0, session);
             SelectAgentChat(session);
             RaiseAgentChatStateChanged();
+        }
+
+        private void UseComposerSuggestion(string? suggestion)
+        {
+            if (string.IsNullOrWhiteSpace(suggestion))
+            {
+                return;
+            }
+
+            CommandInputText = suggestion;
         }
 
         private void SelectAgentChat(AgentChatSessionViewModel? session)
@@ -1973,21 +1987,12 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /* SIMULATION - DISABLED */
         /* ========================= */
 
-        public void StartSimulation()
-        {
-            // Simulation disabled - only real agent logs are shown
-            // This method kept for compatibility but does nothing
-        }
-
         /* ========================= */
         /* CLEANUP */
         /* ========================= */
 
         public void Cleanup()
         {
-            _simulationTimer?.Stop();
-            _simulationTimer = null;
-            
             _resultListenerCts?.Cancel();
             _resultListenerCts?.Dispose();
             
@@ -2187,6 +2192,16 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public string Content { get; }
 
         public string TimeText { get; }
+
+        /// <summary>
+        /// Gets whether the message was written by the user, which renders it as an outgoing bubble.
+        /// </summary>
+        public bool IsUser => Role.Equals("You", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Gets whether the message came from the agent or the system.
+        /// </summary>
+        public bool IsAgent => !IsUser;
 
         public static AgentChatMessageViewModel System(string content)
         {

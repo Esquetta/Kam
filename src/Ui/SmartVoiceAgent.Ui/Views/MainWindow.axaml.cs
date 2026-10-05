@@ -1,10 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Media;
-using Avalonia.Controls.Shapes;
 using Avalonia.Platform.Storage;
-using Avalonia.VisualTree;
 using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.ViewModels;
 using System;
@@ -26,7 +23,6 @@ namespace SmartVoiceAgent.Ui.Views
             _logScrollViewer = this.FindControl<ScrollViewer>("LogScrollViewer");
 
             this.Closing += MainWindow_Closed;
-            this.Opened += MainWindow_Opened;
             this.DataContextChanged += OnDataContextChanged;
         }
 
@@ -44,7 +40,6 @@ namespace SmartVoiceAgent.Ui.Views
             if (_viewModel != null)
             {
                 _viewModel.LogUpdated -= OnLogUpdated;
-                _viewModel.StatusChanged -= OnStatusChanged;
             }
 
             // Subscribe to new view model
@@ -52,38 +47,6 @@ namespace SmartVoiceAgent.Ui.Views
             if (_viewModel != null)
             {
                 _viewModel.LogUpdated += OnLogUpdated;
-                _viewModel.StatusChanged += OnStatusChanged;
-            }
-        }
-
-        private void OnStatusChanged(object? sender, EventArgs e)
-        {
-            // Force immediate visual refresh of header elements
-            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-            {
-                ForceHeaderRefresh();
-            }, Avalonia.Threading.DispatcherPriority.Send);
-        }
-
-        /// <summary>
-        /// Forces the header status indicators to refresh
-        /// </summary>
-        private void ForceHeaderRefresh()
-        {
-            // Find all header text blocks and ellipses and invalidate them
-            foreach (var descendant in this.GetVisualDescendants())
-            {
-                if (descendant is TextBlock textBlock)
-                {
-                    if (textBlock.Text?.Contains("SYSTEM") == true)
-                    {
-                        textBlock.InvalidateVisual();
-                    }
-                }
-                else if (descendant is Ellipse ellipse)
-                {
-                    ellipse.InvalidateVisual();
-                }
             }
         }
 
@@ -99,14 +62,6 @@ namespace SmartVoiceAgent.Ui.Views
             }
         }
 
-        private void MainWindow_Opened(object? sender, EventArgs e)
-        {
-            if (DataContext is MainWindowViewModel vm)
-            {
-                vm.StartSimulation();
-            }
-        }
-
         private void OnHeaderPointerPressed(object? sender, PointerPressedEventArgs e)
         {
             if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
@@ -119,12 +74,6 @@ namespace SmartVoiceAgent.Ui.Views
         {
             e.Cancel = true;
             this.Hide();
-        }
-
-        private void ToggleTheme(object? sender, RoutedEventArgs e)
-        {
-            if (DataContext is MainWindowViewModel vm)
-                vm.ToggleTheme();
         }
 
         private void OnPromptKeyDown(object? sender, KeyEventArgs e)

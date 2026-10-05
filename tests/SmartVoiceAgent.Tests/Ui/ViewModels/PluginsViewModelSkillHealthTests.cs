@@ -49,7 +49,7 @@ public class PluginsViewModelSkillHealthTests
         viewModel.Plugins.Should().HaveCount(3);
 
         var healthy = viewModel.Plugins[0];
-        healthy.Name.Should().Be("READ FILE");
+        healthy.Name.Should().Be("Read File");
         healthy.SkillId.Should().Be("files.read");
         healthy.Source.Should().Be("builtin");
         healthy.Status.Should().Be("Healthy");
@@ -57,13 +57,13 @@ public class PluginsViewModelSkillHealthTests
         healthy.IsActive.Should().BeTrue();
 
         var missing = viewModel.Plugins[1];
-        missing.Name.Should().Be("ADD TODOIST TASK");
+        missing.Name.Should().Be("Add Todoist Task");
         missing.Status.Should().Be("Missing Executor");
         missing.HealthDetail.Should().Contain("No executor");
         missing.IsActive.Should().BeFalse();
 
         var reviewRequired = viewModel.Plugins[2];
-        reviewRequired.Name.Should().Be("DESKTOP NAVIGATION");
+        reviewRequired.Name.Should().Be("Desktop Navigation");
         reviewRequired.Status.Should().Be("Review Required");
         reviewRequired.HealthDetail.Should().Contain("requires review");
         reviewRequired.IsActive.Should().BeFalse();
@@ -369,7 +369,7 @@ public class PluginsViewModelSkillHealthTests
 
         viewModel.HasSelectedPlugin.Should().BeTrue();
         viewModel.SelectedSkillId.Should().Be("local.desktop-navigation");
-        viewModel.SelectedSkillTitle.Should().Be("DESKTOP NAVIGATION");
+        viewModel.SelectedSkillTitle.Should().Be("Desktop Navigation");
         viewModel.SelectedSkillExecutor.Should().Be("Executor: local");
         viewModel.SelectedSkillRisk.Should().Be("Risk: High");
         viewModel.SelectedSkillChecksum.Should().Be("Checksum: abc123");
