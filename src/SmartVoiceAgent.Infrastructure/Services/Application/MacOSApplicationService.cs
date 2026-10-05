@@ -1,6 +1,7 @@
 ﻿using SmartVoiceAgent.Core.Dtos;
 using SmartVoiceAgent.Core.Enums;
 using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Infrastructure.Security;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 
@@ -10,44 +11,50 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
     {
         public Task OpenApplicationAsync(string appName)
         {
+            EnsureSafeApplicationName(appName);
+
             // macOS'ta uygulama açmak için 'open' komutu kullanılır
             if (appName.EndsWith(".app"))
             {
                 // .app bundle için
-                ExecuteShellCommand($"open -a \"{appName}\"");
+                ExecuteShellCommand($"open -a {PosixShell.Quote(appName)}");
             }
             else
             {
                 // Diğer executable'lar için
-                ExecuteShellCommand($"open \"{appName}\" &");
+                ExecuteShellCommand($"open {PosixShell.Quote(appName)} &");
             }
             return Task.CompletedTask;
         }
 
         public Task<AppStatus> GetApplicationStatusAsync(string appName)
         {
+            EnsureSafeApplicationName(appName);
+
             // .app uzantısını kaldır
             var processName = appName.Replace(".app", "");
-            var output = ExecuteShellCommand($"pgrep -i \"{processName}\"");
+            var output = ExecuteShellCommand($"pgrep -i -- {PosixShell.Quote(processName)}");
             var isRunning = !string.IsNullOrWhiteSpace(output);
             return Task.FromResult(isRunning ? AppStatus.Running : AppStatus.Stopped);
         }
 
         public Task CloseApplicationAsync(string appName)
         {
+            EnsureSafeApplicationName(appName);
+
             // .app uzantısını kaldır
             var processName = appName.Replace(".app", "");
 
             // Önce nazikçe kapatmaya çalış
-            ExecuteShellCommand($"pkill -i \"{processName}\"");
+            ExecuteShellCommand($"pkill -i -- {PosixShell.Quote(processName)}");
 
             // Eğer hala çalışıyorsa force kill
             Task.Delay(2000).ContinueWith(_ =>
             {
-                var stillRunning = ExecuteShellCommand($"pgrep -i \"{processName}\"");
+                var stillRunning = ExecuteShellCommand($"pgrep -i -- {PosixShell.Quote(processName)}");
                 if (!string.IsNullOrWhiteSpace(stillRunning))
                 {
-                    ExecuteShellCommand($"pkill -9 -i \"{processName}\"");
+                    ExecuteShellCommand($"pkill -9 -i -- {PosixShell.Quote(processName)}");
                 }
             });
 
@@ -114,7 +121,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
 
         private bool IsApplicationRunning(string appName)
         {
-            var output = ExecuteShellCommand($"pgrep -i \"{appName}\"");
+            var output = ExecuteShellCommand($"pgrep -i -- {PosixShell.Quote(appName)}");
             return !string.IsNullOrWhiteSpace(output);
         }
 
@@ -180,33 +187,21 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             };
         }
 
-        private string ExecuteShellCommand(string command)
+        // zsh is the default macOS shell
+        private static string ExecuteShellCommand(string command) => PosixShell.Run("/bin/zsh", command);
+
+        private static void EnsureSafeApplicationName(string appName)
         {
-            try
+            // Security: application names reach the shell, so reject anything outside the safe character set
+            if (!SecurityUtilities.IsSafeApplicationName(appName))
             {
-                var process = new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "/bin/zsh", // macOS varsayılan shell zsh
-                        Arguments = $"-c \"{command}\"",
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
-                };
-
-                process.Start();
-                string result = process.StandardOutput.ReadToEnd();
-                process.WaitForExit();
-
-                return result;
+                throw new ArgumentException("Invalid application name. Potentially dangerous characters detected.", nameof(appName));
             }
-            catch (Exception)
-            {
-                return string.Empty;
-            }
+        }
+
+        private static string EscapeSpotlightValue(string value)
+        {
+            return value.Replace("\\", "\\\\").Replace("'", "\\'");
         }
 
         // macOS'a özel: Dock'taki uygulamaları listele
@@ -222,7 +217,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
                     end tell
                 ";
 
-                var output = ExecuteShellCommand($"osascript -e '{appleScript}'");
+                var output = ExecuteShellCommand($"osascript -e {PosixShell.Quote(appleScript)}");
                 var dockApps = output.Split(',')
                                    .Select(app => app.Trim())
                                    .Where(app => !string.IsNullOrEmpty(app))
@@ -242,7 +237,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             try
             {
                 // Uygulamanın tam yolunu bul
-                var output = ExecuteShellCommand($"mdfind \"kMDItemKind == 'Application' && kMDItemDisplayName == '{appName}'\"");
+                var output = ExecuteShellCommand($"mdfind {PosixShell.Quote($"kMDItemKind == 'Application' && kMDItemDisplayName == '{EscapeSpotlightValue(appName)}'")}");
                 var firstPath = output.Split('\n').FirstOrDefault(path => !string.IsNullOrEmpty(path));
                 return firstPath ?? $"/Applications/{appName}.app";
             }
@@ -320,7 +315,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
                 return pathResult;
 
             // mdfind ile ara
-            var mdfindResult = ExecuteShellCommand($"mdfind \"kMDItemKind == 'Application' && kMDItemDisplayName == '*{appName}*'\" | head -1");
+            var mdfindResult = ExecuteShellCommand($"mdfind {PosixShell.Quote($"kMDItemKind == 'Application' && kMDItemDisplayName == '*{EscapeSpotlightValue(appName)}*'")} | head -1");
             if (!string.IsNullOrEmpty(mdfindResult))
                 return mdfindResult.Trim();
 
@@ -376,7 +371,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
                 else
                 {
                     // Regular executable için --version dene
-                    var versionOutput = ExecuteShellCommand($"'{executablePath}' --version 2>/dev/null | head -1");
+                    var versionOutput = ExecuteShellCommand($"{PosixShell.Quote(executablePath)} --version 2>/dev/null | head -1");
                     if (!string.IsNullOrEmpty(versionOutput))
                     {
                         var versionMatch = Regex.Match(versionOutput, @"(\d+\.)*\d+");

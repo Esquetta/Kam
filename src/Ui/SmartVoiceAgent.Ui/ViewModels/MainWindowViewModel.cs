@@ -159,23 +159,31 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         private void UpdateStatusProperties()
         {
-            
             // Use cached brushes to avoid repeated allocations
-            var newText = IsHostRunning ? "Agent online" : "Agent offline";
-            var newColor = IsHostRunning ? OnlineStatusColor : OfflineStatusColor;
-            
-            
-            // Use base class property setters
-            base.StatusText = newText;
-            base.StatusColor = newColor;
-            
-            
+            base.StatusText = IsHostRunning ? "Agent online" : "Agent offline";
+            base.StatusColor = IsHostRunning ? OnlineStatusColor : OfflineStatusColor;
+
             // Also explicitly raise property changed for this class
             this.RaisePropertyChanged(nameof(StatusText));
             this.RaisePropertyChanged(nameof(StatusColor));
-            
-            // Notify view that status changed for immediate visual refresh
             StatusChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Shows a host start failure in the title bar status and the activity log.
+        /// </summary>
+        /// <param name="reason">Short reason shown to the user.</param>
+        public void ReportHostStartFailure(string reason)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                base.StatusText = "Agent failed to start";
+                base.StatusColor = OfflineStatusColor;
+                this.RaisePropertyChanged(nameof(StatusText));
+                this.RaisePropertyChanged(nameof(StatusColor));
+            });
+
+            AddLog($"Agent host failed to start: {reason}");
         }
 
         /* ========================= */

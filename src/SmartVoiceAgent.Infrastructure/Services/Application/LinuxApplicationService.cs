@@ -1,6 +1,7 @@
 ﻿using SmartVoiceAgent.Core.Dtos;
 using SmartVoiceAgent.Core.Enums;
 using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Infrastructure.Security;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 
@@ -15,19 +16,21 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
 
         public async Task OpenApplicationAsync(string appName)
         {
+            EnsureSafeApplicationName(appName);
+
             var executablePath = await FindApplicationExecutableAsync(appName);
 
             if (!string.IsNullOrEmpty(executablePath))
             {
                 // Tam path ile başlat
-                ExecuteBashCommand($"nohup '{executablePath}' > /dev/null 2>&1 &");
+                ExecuteBashCommand($"nohup {PosixShell.Quote(executablePath)} > /dev/null 2>&1 &");
             }
             else
             {
                 // Son çare: orijinal isimle dene
                 try
                 {
-                    ExecuteBashCommand($"nohup {appName} > /dev/null 2>&1 &");
+                    ExecuteBashCommand($"nohup {PosixShell.Quote(appName)} > /dev/null 2>&1 &");
                 }
                 catch
                 {
@@ -38,32 +41,36 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
 
         public Task<AppStatus> GetApplicationStatusAsync(string appName)
         {
+            EnsureSafeApplicationName(appName);
+
             // Önce process ismiyle ara
-            var output = ExecuteBashCommand($"pgrep -x {appName}");
+            var output = ExecuteBashCommand($"pgrep -x -- {PosixShell.Quote(appName)}");
             if (!string.IsNullOrWhiteSpace(output))
             {
                 return Task.FromResult(AppStatus.Running);
             }
 
             // Sonra executable ismiyle ara
-            output = ExecuteBashCommand($"pgrep -f {appName}");
+            output = ExecuteBashCommand($"pgrep -f -- {PosixShell.Quote(appName)}");
             var isRunning = !string.IsNullOrWhiteSpace(output);
             return Task.FromResult(isRunning ? AppStatus.Running : AppStatus.Stopped);
         }
 
         public Task CloseApplicationAsync(string appName)
         {
+            EnsureSafeApplicationName(appName);
+
             // Önce SIGTERM ile nazikçe kapat
-            ExecuteBashCommand($"pkill {appName}");
+            ExecuteBashCommand($"pkill -- {PosixShell.Quote(appName)}");
 
             // 2 saniye bekle
             Thread.Sleep(2000);
 
             // Hala çalışıyorsa SIGKILL ile zorla kapat
-            var stillRunning = ExecuteBashCommand($"pgrep -x {appName}");
+            var stillRunning = ExecuteBashCommand($"pgrep -x -- {PosixShell.Quote(appName)}");
             if (!string.IsNullOrWhiteSpace(stillRunning))
             {
-                ExecuteBashCommand($"pkill -9 {appName}");
+                ExecuteBashCommand($"pkill -9 -- {PosixShell.Quote(appName)}");
             }
 
             return Task.CompletedTask;
@@ -133,14 +140,14 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             if (!string.IsNullOrEmpty(pathResult)) return pathResult;
 
             // which komutu ile ara
-            var whichResult = ExecuteBashCommand($"which {appName}").Trim();
+            var whichResult = ExecuteBashCommand($"which -- {PosixShell.Quote(appName)}").Trim();
             if (!string.IsNullOrEmpty(whichResult) && File.Exists(whichResult))
             {
                 return whichResult;
             }
 
             // whereis komutu ile ara
-            var whereisResult = ExecuteBashCommand($"whereis -b {appName}").Trim();
+            var whereisResult = ExecuteBashCommand($"whereis -b {PosixShell.Quote(appName)}").Trim();
             if (!string.IsNullOrEmpty(whereisResult))
             {
                 var parts = whereisResult.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -291,7 +298,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
                 }
 
                 // Değilse which ile tam path'i bul
-                var whichResult = ExecuteBashCommand($"which {firstWord}").Trim();
+                var whichResult = ExecuteBashCommand($"which -- {PosixShell.Quote(firstWord)}").Trim();
                 if (!string.IsNullOrEmpty(whichResult) && File.Exists(whichResult))
                 {
                     return whichResult;
@@ -409,14 +416,14 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
         private async Task<string?> PerformDetailedSearchAsync(string appName)
         {
             // locate komutu ile ara (varsa)
-            var locateResult = ExecuteBashCommand($"locate -i '{appName}' | grep -E '/(bin|sbin)/' | head -1").Trim();
+            var locateResult = ExecuteBashCommand($"locate -i -- {PosixShell.Quote(appName)} | grep -E '/(bin|sbin)/' | head -1").Trim();
             if (!string.IsNullOrEmpty(locateResult) && File.Exists(locateResult) && IsExecutable(locateResult))
             {
                 return locateResult;
             }
 
             // find komutu ile sistem genelinde ara (yavaş olabilir)
-            var findResult = ExecuteBashCommand($"find /usr /opt -name '*{appName}*' -type f -executable 2>/dev/null | head -1").Trim();
+            var findResult = ExecuteBashCommand($"find /usr /opt -name {PosixShell.Quote($"*{appName}*")} -type f -executable 2>/dev/null | head -1").Trim();
             if (!string.IsNullOrEmpty(findResult) && File.Exists(findResult))
             {
                 return findResult;
@@ -673,7 +680,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             {
                 var fileInfo = new FileInfo(filePath);
                 // Linux'ta executable kontrolü için stat komutunu kullan
-                var result = ExecuteBashCommand($"test -x '{filePath}' && echo 'executable'");
+                var result = ExecuteBashCommand($"test -x {PosixShell.Quote(filePath)} && echo 'executable'");
                 return result.Trim() == "executable";
             }
             catch
@@ -733,32 +740,14 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             };
         }
 
-        private string ExecuteBashCommand(string command)
+        private static string ExecuteBashCommand(string command) => PosixShell.Run("/bin/bash", command);
+
+        private static void EnsureSafeApplicationName(string appName)
         {
-            try
+            // Security: application names reach the shell, so reject anything outside the safe character set
+            if (!SecurityUtilities.IsSafeApplicationName(appName))
             {
-                var process = new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "/bin/bash",
-                        Arguments = $"-c \"{command}\"",
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
-                };
-
-                process.Start();
-                string result = process.StandardOutput.ReadToEnd();
-                process.WaitForExit();
-
-                return result;
-            }
-            catch (Exception)
-            {
-                return string.Empty;
+                throw new ArgumentException("Invalid application name. Potentially dangerous characters detected.", nameof(appName));
             }
         }
 
@@ -863,7 +852,7 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
             try
             {
                 // Önce --version parametresi ile dene
-                var versionOutput = ExecuteBashCommand($"'{executablePath}' --version 2>/dev/null | head -1");
+                var versionOutput = ExecuteBashCommand($"{PosixShell.Quote(executablePath)} --version 2>/dev/null | head -1");
                 if (!string.IsNullOrEmpty(versionOutput))
                 {
                     var versionMatch = Regex.Match(versionOutput, @"(\d+\.)*\d+");
@@ -873,12 +862,12 @@ namespace SmartVoiceAgent.Infrastructure.Services.Application
 
                 // dpkg ile dene (Debian/Ubuntu)
                 var packageName = Path.GetFileName(executablePath);
-                var dpkgOutput = ExecuteBashCommand($"dpkg -l | grep {packageName} | awk '{{print $3}}' | head -1");
+                var dpkgOutput = ExecuteBashCommand($"dpkg -l | grep -F -- {PosixShell.Quote(packageName)} | awk '{{print $3}}' | head -1");
                 if (!string.IsNullOrEmpty(dpkgOutput))
                     return dpkgOutput.Trim();
 
                 // rpm ile dene (RedHat/CentOS)
-                var rpmOutput = ExecuteBashCommand($"rpm -q --qf '%{{VERSION}}' $(rpm -qf '{executablePath}' 2>/dev/null) 2>/dev/null");
+                var rpmOutput = ExecuteBashCommand($"rpm -q --qf '%{{VERSION}}' $(rpm -qf {PosixShell.Quote(executablePath)} 2>/dev/null) 2>/dev/null");
                 if (!string.IsNullOrEmpty(rpmOutput) && !rpmOutput.Contains("not owned"))
                     return rpmOutput.Trim();
             }

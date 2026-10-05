@@ -155,16 +155,29 @@ namespace SmartVoiceAgent.Ui
                 // Start the host
                 _ = StartHostAsync(_host);
 
-                desktop.ShutdownRequested += async (s, e) =>
+                desktop.ShutdownRequested += (s, e) =>
                 {
                     _errorHandlingService?.LogInformation("Application shutting down...");
                     settingsService.Dispose();
                     _mainViewModel.Cleanup();
                     _trayIconService?.Dispose();
-                    
+
                     if (_host != null)
                     {
-                        await _host.StopAsync();
+                        // Block until hosted services stop: an async void handler let the process
+                        // exit mid-shutdown. Stop on the thread pool so services that marshal to the
+                        // UI thread cannot deadlock, and cap the wait so a stuck service can't hang exit.
+                        var host = _host;
+                        using var stopTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                        try
+                        {
+                            Task.Run(() => host.StopAsync(stopTimeout.Token)).Wait(TimeSpan.FromSeconds(6));
+                        }
+                        catch (Exception ex)
+                        {
+                            _errorHandlingService?.LogError(ex, "Host failed to stop cleanly");
+                        }
+
                         _applicationScope?.Dispose();
                         _applicationScope = null;
                         _host.Dispose();
@@ -414,7 +427,7 @@ namespace SmartVoiceAgent.Ui
             catch (Exception ex)
             {
                 _errorHandlingService?.LogError(ex, "Host failed to start");
-                Console.WriteLine($"HOST START ERROR: {ex.Message}");
+                _mainViewModel?.ReportHostStartFailure(ex.Message);
             }
         }
 
