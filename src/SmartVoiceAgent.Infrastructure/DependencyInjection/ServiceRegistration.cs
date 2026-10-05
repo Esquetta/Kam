@@ -54,7 +54,6 @@ public static class ServiceRegistration
         services.Configure<GitHubAppOptions>(configuration.GetSection(GitHubAppOptions.SectionName));
         services.Configure<ApplicationUpdateOptions>(configuration.GetSection(ApplicationUpdateOptions.SectionName));
 
-        services.AddScoped<ICommandLearningService, CommandLearningService>();
         services.AddSingleton<ISTTServiceFactory, STTServiceFactory>();
         services.AddSingleton<AudioProcessingService>();
         services.AddScoped<ILanguageDetectionService, HuggingFaceLanguageDetectionService>();
@@ -76,8 +75,6 @@ public static class ServiceRegistration
         services.AddSingleton<WhisperSTTService>();
         services.AddSingleton<HuggingFaceSTTService>();
 
-        services.AddSingleton<IOcrService, OcrService>();
-
         services.AddSingleton<ISystemControlServiceFactory, SystemControlServiceFactory>();
 
         services.AddScoped<IntentDetectorService>(); // Original pattern-based service
@@ -91,6 +88,10 @@ public static class ServiceRegistration
         if (OperatingSystem.IsWindowsVersionAtLeast(6, 1))
         {
             AddWindowsScreenServices(services);
+        }
+        else
+        {
+            services.AddScoped<IScreenContextService, UnsupportedScreenContextService>();
         }
 
 

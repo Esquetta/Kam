@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform;
+using SmartVoiceAgent.Ui.ViewModels;
 using System;
 using System.IO;
 
@@ -16,7 +17,6 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
         private NativeMenu? _menu;
         private NativeMenuItem? _statusMenuItem;
         private NativeMenuItem? _voiceToggleItem;
-        private NativeMenuItem? _showWindowItem;
 
         /// <summary>
         /// Event raised when user requests to show the main window
@@ -24,9 +24,9 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
         public event EventHandler? ShowWindowRequested;
 
         /// <summary>
-        /// Event raised when user requests to open settings
+        /// Event raised when user picks a page from the tray menu
         /// </summary>
-        public event EventHandler? OpenSettingsRequested;
+        public event EventHandler<NavView>? NavigateRequested;
 
         /// <summary>
         /// Event raised when user requests to toggle voice recognition
@@ -111,104 +111,65 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
             if (_trayIcon == null)
                 return;
 
+            // Native menus render with the OS theme, so keep labels short and plain (no emoji)
             _menu = new NativeMenu();
 
-            // Show Window
-            _showWindowItem = new NativeMenuItem
-            {
-                Header = "🖥️ Show Window"
-            };
-            _showWindowItem.Click += OnShowWindowClick;
-            _menu.Add(_showWindowItem);
+            _menu.Add(CreateItem("Open Kam", (_, _) => ShowWindowRequested?.Invoke(this, EventArgs.Empty)));
+            _menu.Add(CreateItem("New task", (_, _) => NavigateAndShow(NavView.Coordinator)));
 
-            _menu.Add(new NativeMenuItemSeparator());
-
-            // Quick Actions Section
-            var quickActionsHeader = new NativeMenuItem
-            {
-                Header = "⚡ Quick Actions",
-                IsEnabled = false
-            };
-            _menu.Add(quickActionsHeader);
-
-            // Voice Toggle
             _voiceToggleItem = new NativeMenuItem
             {
-                Header = "🎤 Enable Voice"
+                Header = "Voice listening",
+                ToggleType = MenuItemToggleType.CheckBox,
+                IsChecked = _isVoiceEnabled
             };
-            _voiceToggleItem.Click += OnToggleVoiceClick;
+            _voiceToggleItem.Click += (_, _) => ToggleVoiceRequested?.Invoke(this, EventArgs.Empty);
             _menu.Add(_voiceToggleItem);
-
-            // Settings
-            var settingsItem = new NativeMenuItem
-            {
-                Header = "⚙️ Settings"
-            };
-            settingsItem.Click += OnSettingsClick;
-            _menu.Add(settingsItem);
 
             _menu.Add(new NativeMenuItemSeparator());
 
-            // Status Section
+            _menu.Add(CreateItem("Skills", (_, _) => NavigateAndShow(NavView.Plugins)));
+            _menu.Add(CreateItem("Diagnostics", (_, _) => NavigateAndShow(NavView.Diagnostics)));
+            _menu.Add(CreateItem("Integrations", (_, _) => NavigateAndShow(NavView.Integrations)));
+            _menu.Add(CreateItem("Settings", (_, _) => NavigateAndShow(NavView.Settings)));
+
+            _menu.Add(new NativeMenuItemSeparator());
+
             _statusMenuItem = new NativeMenuItem
             {
-                Header = "● Status: Ready",
+                Header = "Voice: Ready",
                 IsEnabled = false
             };
             _menu.Add(_statusMenuItem);
 
             _menu.Add(new NativeMenuItemSeparator());
 
-            // About
-            var aboutItem = new NativeMenuItem
+            _menu.Add(CreateItem("About Kam", (_, _) =>
             {
-                Header = "ℹ️ About Kam"
-            };
-            aboutItem.Click += OnAboutClick;
-            _menu.Add(aboutItem);
-
-            // Exit
-            var exitItem = new NativeMenuItem
-            {
-                Header = "❌ Exit"
-            };
-            exitItem.Click += OnExitClick;
-            _menu.Add(exitItem);
+                AboutRequested?.Invoke(this, EventArgs.Empty);
+                ShowWindowRequested?.Invoke(this, EventArgs.Empty);
+            }));
+            _menu.Add(CreateItem("Quit Kam", (_, _) => ExitRequested?.Invoke(this, EventArgs.Empty)));
 
             _trayIcon.Menu = _menu;
+        }
+
+        private static NativeMenuItem CreateItem(string header, EventHandler onClick)
+        {
+            var item = new NativeMenuItem { Header = header };
+            item.Click += onClick;
+            return item;
+        }
+
+        private void NavigateAndShow(NavView view)
+        {
+            NavigateRequested?.Invoke(this, view);
+            ShowWindowRequested?.Invoke(this, EventArgs.Empty);
         }
 
         private void OnTrayIconClicked(object? sender, EventArgs e)
         {
             ShowWindowRequested?.Invoke(this, EventArgs.Empty);
-        }
-
-        private void OnShowWindowClick(object? sender, EventArgs e)
-        {
-            ShowWindowRequested?.Invoke(this, EventArgs.Empty);
-        }
-
-        private void OnSettingsClick(object? sender, EventArgs e)
-        {
-            OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
-            // Also show window when opening settings
-            ShowWindowRequested?.Invoke(this, EventArgs.Empty);
-        }
-
-        private void OnToggleVoiceClick(object? sender, EventArgs e)
-        {
-            ToggleVoiceRequested?.Invoke(this, EventArgs.Empty);
-        }
-
-        private void OnAboutClick(object? sender, EventArgs e)
-        {
-            AboutRequested?.Invoke(this, EventArgs.Empty);
-            ShowWindowRequested?.Invoke(this, EventArgs.Empty);
-        }
-
-        private void OnExitClick(object? sender, EventArgs e)
-        {
-            ExitRequested?.Invoke(this, EventArgs.Empty);
         }
 
         /// <summary>
@@ -219,7 +180,7 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
             _isVoiceEnabled = enabled;
             if (_voiceToggleItem != null)
             {
-                _voiceToggleItem.Header = enabled ? "🔴 Disable Voice" : "🎤 Enable Voice";
+                _voiceToggleItem.IsChecked = enabled;
             }
         }
 
@@ -241,8 +202,7 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
         {
             if (_statusMenuItem != null)
             {
-                var indicator = isRunning ? "●" : "○";
-                _statusMenuItem.Header = $"{indicator} Status: {status}";
+                _statusMenuItem.Header = $"Voice: {status}";
             }
         }
 

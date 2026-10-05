@@ -20,7 +20,11 @@ Kam is evolving into a product-grade local agent runtime:
 ## Interface
 
 <p align="center">
-  <img src="assets/dashboard.png" alt="Kam coordinator dashboard" width="840">
+  <img src="assets/dashboard.png" alt="Kam agent workbench in dark mode" width="840">
+</p>
+
+<p align="center">
+  <img src="assets/dashboard-light.png" alt="Kam agent workbench in light mode" width="840">
 </p>
 
 <p align="center">
@@ -86,6 +90,7 @@ scripts/
   local-production-smoke.ps1
 assets/
   dashboard.png
+  dashboard-light.png
   plugins.png
   settings.png
 ```

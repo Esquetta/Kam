@@ -11,20 +11,38 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Agents;
 /// <summary>
 /// Factory for creating AI agents with optimized instructions for reliable function calling.
 /// </summary>
-public class AgentFactory : IAgentFactory
+public class AgentFactory : IAgentFactory, IDisposable
 {
     private readonly IChatClient _chatClient;
+    private readonly IServiceScope _agentScope;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<AgentFactory> _logger;
 
+    /// <summary>
+    /// Creates the factory. Agents live as long as the app, so their scoped tools are
+    /// resolved from one dedicated scope owned by this factory instead of the root provider.
+    /// </summary>
+    /// <param name="chatClient">Chat client the agents talk through.</param>
+    /// <param name="serviceProvider">Root provider used to create the agent scope.</param>
+    /// <param name="logger">Factory logger.</param>
     public AgentFactory(
         IChatClient chatClient,
         IServiceProvider serviceProvider,
         ILogger<AgentFactory> logger)
     {
         _chatClient = chatClient;
-        _serviceProvider = serviceProvider;
+        _agentScope = serviceProvider.CreateScope();
+        _serviceProvider = _agentScope.ServiceProvider;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Disposes the scope that owns the agents' tool instances.
+    /// </summary>
+    public void Dispose()
+    {
+        _agentScope.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     private IAgentBuilder CreateBuilder()

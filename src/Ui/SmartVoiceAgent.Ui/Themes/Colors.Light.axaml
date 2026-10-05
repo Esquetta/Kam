@@ -2,34 +2,47 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- Zinc-based light palette matching HTML design -->
-    <Color x:Key="PanelBg">#FAFAFA</Color>
+    <!-- Neutral surfaces: layered from the window background up to hovered cards -->
+    <Color x:Key="PanelBg">#F5F5F7</Color>
+    <Color x:Key="SurfaceBg">#FAFAFB</Color>
     <Color x:Key="CardBg">#FFFFFF</Color>
-    <Color x:Key="CardBgHover">#F4F4F5</Color>
-    <Color x:Key="SurfaceBg">#F4F4F5</Color>
     <Color x:Key="SurfaceBgElevated">#FFFFFF</Color>
-    <Color x:Key="BorderSubtle">#E4E4E7</Color>
-    <Color x:Key="BorderMuted">#D4D4D8</Color>
-    <Color x:Key="TextPrimary">#18181B</Color>
-    <Color x:Key="TextSecondary">#3F3F46</Color>
-    <Color x:Key="TextMuted">#52525B</Color>
+    <Color x:Key="CardBgHover">#F0F0F4</Color>
+    <Color x:Key="BorderSubtle">#E5E5EB</Color>
+    <Color x:Key="BorderMuted">#D4D4DC</Color>
+    <Color x:Key="TextPrimary">#15151B</Color>
+    <Color x:Key="TextSecondary">#3B3B46</Color>
+    <Color x:Key="TextMuted">#5E5E6B</Color>
 
-    <!-- Accent colors -->
-    <Color x:Key="AccentCyan">#0891B2</Color>
-    <Color x:Key="AccentCyanDim">#0E7490</Color>
-    <Color x:Key="AccentCyanGlow">#1A0891B2</Color>
-    <Color x:Key="AccentGreen">#059669</Color>
-    <Color x:Key="AccentGreenDim">#047857</Color>
-    <Color x:Key="AccentGreenGlow">#1A059669</Color>
-    <Color x:Key="AccentGreenOn">#000000</Color>
-    <Color x:Key="AccentPurple">#7C3AED</Color>
-    <Color x:Key="AccentPurpleDim">#6D28D9</Color>
-    <Color x:Key="AccentPurpleGlow">#1A7C3AED</Color>
-    <Color x:Key="AccentOrange">#EA580C</Color>
-    <Color x:Key="AccentOrangeDim">#C2410C</Color>
-    <Color x:Key="AccentOrangeGlow">#1AEA580C</Color>
-    <Color x:Key="AccentError">#DC2626</Color>
-    <Color x:Key="AccentErrorDim">#B91C1C</Color>
-    <Color x:Key="AccentErrorGlow">#1ADC2626</Color>
+    <!-- Brand accent: Accent is for text and icons, AccentStrong for fills and focus rings -->
+    <Color x:Key="Accent">#5B45E0</Color>
+    <Color x:Key="AccentStrong">#5B45E0</Color>
+    <Color x:Key="AccentStrongHover">#4A35C9</Color>
+    <Color x:Key="AccentSubtle">#165B45E0</Color>
+    <Color x:Key="AccentOn">#FFFFFF</Color>
+
+    <!-- Status colors -->
+    <Color x:Key="AccentGreen">#047857</Color>
+    <Color x:Key="AccentGreenDim">#065F46</Color>
+    <Color x:Key="AccentGreenGlow">#16047857</Color>
+    <Color x:Key="AccentGreenOn">#FFFFFF</Color>
+    <Color x:Key="AccentPurple">#7E22CE</Color>
+    <Color x:Key="AccentPurpleDim">#6B21A8</Color>
+    <Color x:Key="AccentPurpleGlow">#167E22CE</Color>
+    <Color x:Key="AccentOrange">#B45309</Color>
+    <Color x:Key="AccentOrangeDim">#92400E</Color>
+    <Color x:Key="AccentOrangeGlow">#16B45309</Color>
+    <Color x:Key="AccentError">#C62828</Color>
+    <Color x:Key="AccentErrorDim">#A61B1B</Color>
+    <Color x:Key="AccentErrorGlow">#16C62828</Color>
     <Color x:Key="AccentErrorOn">#FFFFFF</Color>
+
+    <!-- Fluent theme accent overrides so built-in controls follow the brand accent -->
+    <Color x:Key="SystemAccentColor">#5B45E0</Color>
+    <Color x:Key="SystemAccentColorLight1">#7B69F6</Color>
+    <Color x:Key="SystemAccentColorLight2">#8B7CFF</Color>
+    <Color x:Key="SystemAccentColorLight3">#A99EFF</Color>
+    <Color x:Key="SystemAccentColorDark1">#5B45E0</Color>
+    <Color x:Key="SystemAccentColorDark2">#4A35C9</Color>
+    <Color x:Key="SystemAccentColorDark3">#3A28A8</Color>
 </ResourceDictionary>

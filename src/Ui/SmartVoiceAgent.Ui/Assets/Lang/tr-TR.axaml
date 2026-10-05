@@ -40,7 +40,7 @@
     <x:String x:Key="Lang.Settings.About">HAKKINDA</x:String>
     
     <!-- Plugins -->
-    <x:String x:Key="Lang.Plugins.Title">EKLENTİLER</x:String>
-    <x:String x:Key="Lang.Plugins.Subtitle">UZANTI YÖNETİCİSİ // MODÜLER SİSTEM</x:String>
+    <x:String x:Key="Lang.Plugins.Title">Yetenekler</x:String>
+    <x:String x:Key="Lang.Plugins.Subtitle">Yüklü yetenekleri yönetin, test edin ve izin verin.</x:String>
     
 </ResourceDictionary>

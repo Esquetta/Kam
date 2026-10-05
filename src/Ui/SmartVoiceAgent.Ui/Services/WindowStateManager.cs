@@ -22,10 +22,17 @@ public class WindowStateManager : ReactiveObject
     private bool _reducedMotion;
 
     private static readonly WindowStateManager _instance = new();
+
+    /// <summary>
+    /// Gets the shared instance. XAML must bind to it with <c>{x:Static services:WindowStateManager.Instance}</c>;
+    /// a new instance would never receive window size updates.
+    /// </summary>
     public static WindowStateManager Instance => _instance;
 
-    // Public constructor for XAML resource instantiation (returns same instance)
-    public WindowStateManager() { }
+    /// <summary>
+    /// Creates a standalone manager. Production code uses <see cref="Instance"/>; this exists for tests.
+    /// </summary>
+    internal WindowStateManager() { }
 
     /// <summary>
     /// Current window width
@@ -114,9 +121,10 @@ public class WindowStateManager : ReactiveObject
         WindowWidth = window.Bounds.Width;
         WindowHeight = window.Bounds.Height;
 
-        // Subscribe to bounds changes
+        // Bounds changes are raised on the UI thread; keep them there so bound
+        // properties are never updated from a background scheduler.
         window.GetObservable(Visual.BoundsProperty)
-            .Throttle(TimeSpan.FromMilliseconds(50))
+            .DistinctUntilChanged()
             .Subscribe(bounds =>
             {
                 WindowWidth = bounds.Width;

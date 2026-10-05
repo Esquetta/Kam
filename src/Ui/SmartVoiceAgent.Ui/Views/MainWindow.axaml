@@ -8,38 +8,44 @@
 		x:Class="SmartVoiceAgent.Ui.Views.MainWindow"
 		x:DataType="vm:MainWindowViewModel"
 		Background="{DynamicResource PanelBgBrush}"
+		Foreground="{DynamicResource TextPrimaryBrush}"
+		FontSize="13"
 		TransparencyLevelHint="Mica"
 		ExtendClientAreaToDecorationsHint="True"
 		Title=""
 		Icon="/Assets/favicon.ico"
-		Width="1280" Height="800"
+		Width="1360" Height="860"
 		MinWidth="800" MinHeight="600">
 
 	<Window.Resources>
-		<!-- Window State Manager Instance -->
-		<services:WindowStateManager x:Key="WindowStateManager" />
-		
-		<!-- Converters -->
-		<converters:LogPanelVisibilityConverter x:Key="LogPanelVisibilityConverter" />
 		<converters:LogPanelWidthConverter x:Key="LogPanelWidthConverter" />
-		<converters:ResponsiveFontSizeConverter x:Key="ResponsiveFontSizeConverter" />
-		<converters:ResponsiveScaleConverter x:Key="ResponsiveScaleConverter" />
-		<converters:CompactModeConverter x:Key="CompactModeConverter" />
-		<converters:MediumModeConverter x:Key="MediumModeConverter" />
-		<converters:ExpandedModeConverter x:Key="ExpandedModeConverter" />
 	</Window.Resources>
 
 	<Window.Styles>
-		<!-- NavBtn Base Style -->
+		<!-- ========================= -->
+		<!-- SIDEBAR NAVIGATION -->
+		<!-- ========================= -->
+
+		<Style Selector="Border.Sidebar">
+			<Setter Property="Width" Value="232"/>
+			<Setter Property="Background" Value="{DynamicResource PanelBgBrush}"/>
+		</Style>
+
+		<Style Selector="Border.Sidebar.Compact">
+			<Setter Property="Width" Value="68"/>
+		</Style>
+
+		<Style Selector="Border.Sidebar.Compact TextBlock.NavLabel">
+			<Setter Property="IsVisible" Value="False"/>
+		</Style>
+
 		<Style Selector="Button.NavBtn">
-			<Setter Property="MinWidth" Value="40"/>
-			<Setter Property="Width" Value="40"/>
-			<Setter Property="Height" Value="40"/>
-			<Setter Property="Margin" Value="0,4"/>
-			<Setter Property="HorizontalAlignment" Value="Center"/>
-			<Setter Property="HorizontalContentAlignment" Value="Center"/>
+			<Setter Property="Height" Value="36"/>
+			<Setter Property="Margin" Value="0,1"/>
+			<Setter Property="HorizontalAlignment" Value="Stretch"/>
+			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
 			<Setter Property="VerticalContentAlignment" Value="Center"/>
-			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Padding" Value="10,0"/>
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderThickness" Value="0"/>
 			<Setter Property="CornerRadius" Value="8"/>
@@ -47,14 +53,9 @@
 		</Style>
 
 		<Style Selector="Button.NavBtn /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="CornerRadius" Value="8"/>
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="HorizontalContentAlignment" Value="Center"/>
-			<Setter Property="VerticalContentAlignment" Value="Center"/>
-			<Setter Property="Padding" Value="0"/>
 			<Setter Property="Transitions">
 				<Transitions>
-					<BrushTransition Property="Background" Duration="0:0:0.2"/>
+					<BrushTransition Property="Background" Duration="0:0:0.12"/>
 				</Transitions>
 			</Setter>
 		</Style>
@@ -63,80 +64,45 @@
 			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
 		</Style>
 
-		<!-- Active button style -->
 		<Style Selector="Button.NavBtn.Active /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+			<Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
 		</Style>
 
-		<Style Selector="Button.NavBtn Path">
-			<Setter Property="Fill" Value="{DynamicResource TextMutedBrush}"/>
-			<Setter Property="Width" Value="20"/>
-			<Setter Property="Height" Value="20"/>
-			<Setter Property="Stretch" Value="Uniform"/>
-			<Setter Property="HorizontalAlignment" Value="Center"/>
+		<Style Selector="Button.NavBtn Path.Icon">
+			<Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}"/>
+		</Style>
+
+		<Style Selector="Button.NavBtn:pointerover Path.Icon">
+			<Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}"/>
+		</Style>
+
+		<Style Selector="Button.NavBtn.Active Path.Icon">
+			<Setter Property="Stroke" Value="{DynamicResource AccentBrush}"/>
+		</Style>
+
+		<Style Selector="Button.NavBtn TextBlock.NavLabel">
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="FontWeight" Value="Medium"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
 			<Setter Property="VerticalAlignment" Value="Center"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<BrushTransition Property="Fill" Duration="0:0:0.2"/>
-				</Transitions>
-			</Setter>
 		</Style>
 
-		<Style Selector="Button.NavBtn:pointerover Path">
-			<Setter Property="Fill" Value="{DynamicResource TextPrimaryBrush}"/>
+		<Style Selector="Button.NavBtn.Active TextBlock.NavLabel">
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
 		</Style>
 
-		<Style Selector="Button.NavBtn.Active Path">
-			<Setter Property="Fill" Value="{DynamicResource AccentCyanBrush}"/>
-		</Style>
-
-		<!-- Active Indicator -->
-		<Style Selector="Border.ActiveIndicator">
-			<Setter Property="Width" Value="2"/>
-			<Setter Property="Height" Value="12"/>
-			<Setter Property="Background" Value="{DynamicResource AccentCyanBrush}"/>
-			<Setter Property="CornerRadius" Value="0,1,1,0"/>
-			<Setter Property="HorizontalAlignment" Value="Left"/>
-			<Setter Property="VerticalAlignment" Value="Center"/>
-			<Setter Property="Opacity" Value="0"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
-				</Transitions>
-			</Setter>
-		</Style>
-
-		<!-- InfoCard Style -->
-		<Style Selector="Border.InfoCard">
-			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-			<Setter Property="BorderThickness" Value="1"/>
-			<Setter Property="CornerRadius" Value="16"/>
-			<Setter Property="Padding" Value="24"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<BrushTransition Property="BorderBrush" Duration="0:0:0.3"/>
-					<BrushTransition Property="Background" Duration="0:0:0.3"/>
-				</Transitions>
-			</Setter>
-		</Style>
-
-		<Style Selector="Border.InfoCard:pointerover">
-			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
-		</Style>
+		<!-- ========================= -->
+		<!-- ACTIVITY PANEL -->
+		<!-- ========================= -->
 
 		<Style Selector="Border.ActivityLogItem">
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
 			<Setter Property="BorderThickness" Value="0,0,0,1"/>
 			<Setter Property="CornerRadius" Value="0"/>
-			<Setter Property="Padding" Value="4,9"/>
+			<Setter Property="Padding" Value="4,10"/>
 			<Setter Property="Margin" Value="0"/>
-			<Setter Property="Transitions">
-				<Transitions>
-					<BrushTransition Property="Background" Duration="0:0:0.2"/>
-				</Transitions>
-			</Setter>
 		</Style>
 
 		<Style Selector="Border.ActivityLogItem:pointerover">
@@ -144,17 +110,57 @@
 		</Style>
 
 		<Style Selector="TextBlock.ActivityMeta">
-			<Setter Property="FontSize" Value="10"/>
+			<Setter Property="FontSize" Value="11"/>
 			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
 			<Setter Property="FontWeight" Value="Medium"/>
 		</Style>
 
 		<Style Selector="TextBlock.ActivityMessage">
 			<Setter Property="FontSize" Value="12"/>
-			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
 			<Setter Property="LineHeight" Value="18"/>
 			<Setter Property="TextWrapping" Value="Wrap"/>
 		</Style>
+
+		<!-- Segmented control used for the activity drawer tabs -->
+		<Style Selector="Border.Segmented">
+			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding" Value="3"/>
+		</Style>
+
+		<Style Selector="Button.DrawerTab">
+			<Setter Property="MinHeight" Value="28"/>
+			<Setter Property="Padding" Value="8,0"/>
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="FontWeight" Value="Medium"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="CornerRadius" Value="6"/>
+			<Setter Property="HorizontalAlignment" Value="Stretch"/>
+			<Setter Property="HorizontalContentAlignment" Value="Center"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+			<Setter Property="Cursor" Value="Hand"/>
+		</Style>
+
+		<Style Selector="Button.DrawerTab:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+		</Style>
+
+		<Style Selector="Button.DrawerTab.Selected">
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+		</Style>
+
+		<Style Selector="Button.DrawerTab.Selected /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
+			<Setter Property="BoxShadow" Value="0 1 2 0 #1F000000"/>
+		</Style>
+
+		<!-- ========================= -->
+		<!-- SLASH COMMAND PALETTE -->
+		<!-- ========================= -->
 
 		<Style Selector="Button.SlashCommandItem">
 			<Setter Property="MinHeight" Value="36"/>
@@ -194,26 +200,14 @@
 			<Setter Property="BorderBrush" Value="Transparent"/>
 		</Style>
 
-		<Style Selector="Button.DrawerTab">
-			<Setter Property="MinHeight" Value="28"/>
-			<Setter Property="Padding" Value="10,0"/>
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-			<Setter Property="BorderThickness" Value="1"/>
-			<Setter Property="CornerRadius" Value="6"/>
-			<Setter Property="HorizontalContentAlignment" Value="Center"/>
-			<Setter Property="Cursor" Value="Hand"/>
-		</Style>
-
-		<Style Selector="Button.DrawerTab:pointerover">
-			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
-		</Style>
+		<!-- ========================= -->
+		<!-- CHAT WORKBENCH -->
+		<!-- ========================= -->
 
 		<Style Selector="Border.AttachmentChip">
-			<Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-			<Setter Property="BorderThickness" Value="1"/>
-			<Setter Property="CornerRadius" Value="6"/>
+			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="CornerRadius" Value="8"/>
 			<Setter Property="Padding" Value="8,6"/>
 			<Setter Property="Margin" Value="0,0,6,6"/>
 		</Style>
@@ -222,1723 +216,518 @@
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderBrush" Value="Transparent"/>
 			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="CornerRadius" Value="6"/>
+			<Setter Property="CornerRadius" Value="8"/>
 			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Margin" Value="0,0,0,2"/>
+			<Setter Property="HorizontalAlignment" Value="Stretch"/>
 			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
 			<Setter Property="Cursor" Value="Hand"/>
 		</Style>
 
 		<Style Selector="Button.ChatSessionItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
 		</Style>
 
 		<Style Selector="Border.ChatSessionChrome">
-			<Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="BorderThickness" Value="0"/>
 			<Setter Property="CornerRadius" Value="8"/>
-			<Setter Property="Padding" Value="10"/>
-			<Setter Property="Margin" Value="0,0,0,8"/>
+			<Setter Property="Padding" Value="10,9"/>
 		</Style>
 
 		<Style Selector="Border.ChatMessage">
-			<Setter Property="Background" Value="{DynamicResource SurfaceBgElevatedBrush}"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-			<Setter Property="BorderThickness" Value="1"/>
-			<Setter Property="CornerRadius" Value="8"/>
-			<Setter Property="Padding" Value="12"/>
-			<Setter Property="Margin" Value="0,0,0,10"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Margin" Value="0,0,0,22"/>
 		</Style>
 
-		<Style Selector="Border.WorkbenchMetric">
+		<Style Selector="Border.UserBubble">
+			<Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+			<Setter Property="CornerRadius" Value="14,14,4,14"/>
+			<Setter Property="Padding" Value="14,10"/>
+			<Setter Property="HorizontalAlignment" Value="Right"/>
+			<Setter Property="MaxWidth" Value="560"/>
+		</Style>
+
+		<Style Selector="Border.AgentAvatar">
+			<Setter Property="Width" Value="28"/>
+			<Setter Property="Height" Value="28"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Background" Value="{DynamicResource BrandGradientBrush}"/>
+			<Setter Property="VerticalAlignment" Value="Top"/>
+		</Style>
+
+		<Style Selector="Button.SuggestionCard">
 			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
 			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
 			<Setter Property="BorderThickness" Value="1"/>
-			<Setter Property="CornerRadius" Value="8"/>
-			<Setter Property="Padding" Value="12,9"/>
+			<Setter Property="CornerRadius" Value="10"/>
+			<Setter Property="Padding" Value="14,12"/>
+			<Setter Property="HorizontalAlignment" Value="Stretch"/>
+			<Setter Property="VerticalAlignment" Value="Stretch"/>
+			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+			<Setter Property="VerticalContentAlignment" Value="Top"/>
+			<Setter Property="Cursor" Value="Hand"/>
+		</Style>
+
+		<Style Selector="Button.SuggestionCard:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
 		</Style>
 
 		<Style Selector="Border.ComposerSurface">
-			<Setter Property="Background" Value="{DynamicResource SurfaceBgElevatedBrush}"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-			<Setter Property="BorderThickness" Value="1,0,0,0"/>
-			<Setter Property="Padding" Value="18,12"/>
+			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="14"/>
+			<Setter Property="Padding" Value="14,12,10,10"/>
+			<Setter Property="BoxShadow" Value="0 8 24 0 #14000000"/>
 		</Style>
 
-		<!-- Prompt Input Style -->
-		<Style Selector="TextBox#PromptInput">
+		<!-- Composer inputs render without their own chrome; the surrounding surface provides it -->
+		<Style Selector="TextBox.BareInput">
 			<Setter Property="Padding" Value="0"/>
-			<Setter Property="MinHeight" Value="20"/>
-		</Style>
-
-		<Style Selector="TextBox#PromptInput /template/ Border#PART_BorderElement">
+			<Setter Property="MinHeight" Value="22"/>
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderThickness" Value="0"/>
 		</Style>
 
-		<Style Selector="TextBox#PromptInput:focus /template/ Border#PART_BorderElement">
+		<Style Selector="TextBox.BareInput /template/ Border#PART_BorderElement">
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderThickness" Value="0"/>
 		</Style>
 
-		<Style Selector="TextBox#PromptInput:pointerover /template/ Border#PART_BorderElement">
+		<Style Selector="TextBox.BareInput:focus /template/ Border#PART_BorderElement">
 			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+		</Style>
+
+		<Style Selector="TextBox.BareInput:pointerover /template/ Border#PART_BorderElement">
+			<Setter Property="Background" Value="Transparent"/>
+		</Style>
+
+		<Style Selector="Button.SendButton">
+			<Setter Property="Width" Value="32"/>
+			<Setter Property="Height" Value="32"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="CornerRadius" Value="16"/>
+			<Setter Property="Background" Value="{DynamicResource AccentStrongBrush}"/>
+			<Setter Property="HorizontalContentAlignment" Value="Center"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+			<Setter Property="Cursor" Value="Hand"/>
+		</Style>
+
+		<Style Selector="Button.SendButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource AccentStrongHoverBrush}"/>
+		</Style>
+
+		<Style Selector="Button.SendButton Path.Icon">
+			<Setter Property="Stroke" Value="{DynamicResource AccentOnBrush}"/>
+			<Setter Property="StrokeThickness" Value="2.5"/>
 		</Style>
 	</Window.Styles>
 
-	<Panel>
-		<Grid RowDefinitions="48, *">
-			<Grid.ColumnDefinitions>
-				<ColumnDefinition Width="64"/>
-				<ColumnDefinition Width="*"/>
-				<ColumnDefinition Width="{Binding Source={StaticResource WindowStateManager}, Path=IsLogPanelVisible, Converter={StaticResource LogPanelWidthConverter}}"/>
-			</Grid.ColumnDefinitions>
+	<Grid RowDefinitions="44,*">
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="*"/>
+		</Grid.ColumnDefinitions>
 
-			<!-- Header Bar (Draggable) -->
-			<Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
-					Background="{DynamicResource CardBgBrush}"
-					BorderBrush="{DynamicResource BorderSubtleBrush}"
-					BorderThickness="0,0,0,1"
-					PointerPressed="OnHeaderPointerPressed">
-				<Grid Margin="20,0"
-					  ColumnDefinitions="Auto, *, Auto"
-					  ColumnSpacing="16">
-					<StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
-						<!-- Status Indicator - Green when online, Red when offline -->
-						<Ellipse Width="6" Height="6" 
-								 Fill="{Binding StatusColor, Mode=OneWay}" 
-								 Margin="0,0,8,0">
-							<Ellipse.Effect>
-								<BlurEffect Radius="3"/>
-							</Ellipse.Effect>
-						</Ellipse>
-						<Ellipse Width="6" Height="6" 
-								 Fill="{Binding StatusColor, Mode=OneWay}" 
-								 Margin="-6,0,8,0"/>
-						<TextBlock Text="{Binding StatusText, Mode=OneWay}"
-								   FontSize="11"
-								   FontWeight="Medium"
-								   Foreground="{Binding StatusColor, Mode=OneWay}"
-								   LetterSpacing="1"
-								   VerticalAlignment="Center"/>
-					</StackPanel>
-					<StackPanel Grid.Column="1"
-								Orientation="Horizontal"
-								Spacing="10"
-								VerticalAlignment="Center"
-								HorizontalAlignment="Center">
-						<TextBlock Text="Kam Workbench"
-								   FontSize="13"
-								   FontWeight="SemiBold"
-								   Foreground="{DynamicResource TextPrimaryBrush}"
-								   VerticalAlignment="Center"/>
-						<Border Background="{DynamicResource SurfaceBgElevatedBrush}"
-								BorderBrush="{DynamicResource BorderSubtleBrush}"
-								BorderThickness="1"
-								CornerRadius="6"
-								Padding="8,3">
-							<TextBlock Text="Model and agents follow Settings"
-									   FontSize="10"
+		<!-- ========================= -->
+		<!-- SIDEBAR -->
+		<!-- ========================= -->
+		<Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
+				Classes="Sidebar"
+				Classes.Compact="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsCompact}"
+				PointerPressed="OnHeaderPointerPressed">
+			<Grid RowDefinitions="Auto,*,Auto" Margin="12,12,12,14">
+
+				<!-- Brand -->
+				<Button Grid.Row="0"
+						Classes="NavBtn"
+						Height="44"
+						Padding="4,0"
+						Margin="0,0,0,18"
+						Command="{Binding NavigateToCoordinatorCommand}"
+						ToolTip.Tip="Kam">
+					<StackPanel Orientation="Horizontal" Spacing="10">
+						<Border Width="30" Height="30"
+								CornerRadius="9"
+								Background="{DynamicResource BrandGradientBrush}">
+							<Viewbox Width="18" Height="18">
+								<Path Classes="Icon"
+									  Data="{StaticResource IconBrandWave}"
+									  Stroke="White"
+									  StrokeThickness="2.6"/>
+							</Viewbox>
+						</Border>
+						<StackPanel VerticalAlignment="Center" Spacing="0">
+							<TextBlock Classes="NavLabel"
+									   Text="Kam"
+									   FontSize="14"
+									   FontWeight="Bold"
+									   Foreground="{DynamicResource TextPrimaryBrush}"/>
+							<TextBlock Classes="NavLabel"
+									   Text="Agent workspace"
+									   FontSize="11"
+									   FontWeight="Normal"
 									   Foreground="{DynamicResource TextMutedBrush}"/>
-						</Border>
+						</StackPanel>
 					</StackPanel>
-				</Grid>
-			</Border>
+				</Button>
 
-			<!-- Left Navbar -->
-			<Border Grid.Row="1" Grid.Column="0"
-					Background="{DynamicResource CardBgBrush}"
-					BorderBrush="{DynamicResource BorderSubtleBrush}"
-					BorderThickness="0,0,1,0">
-				<Grid RowDefinitions="Auto, *, Auto" Margin="0,24,0,24">
-
-					<!-- Brand/Logo Button -->
-					<Button Grid.Row="0"
-							Classes="NavBtn"
-							Width="40" Height="40"
-							Margin="0,0,0,24"
+				<!-- Primary navigation -->
+				<StackPanel Grid.Row="1" VerticalAlignment="Top">
+					<TextBlock Classes="NavLabel Overline"
+							   Text="WORKSPACE"
+							   Margin="10,0,0,8"/>
+					<Button Classes.NavBtn="True"
+							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Coordinator}}"
 							Command="{Binding NavigateToCoordinatorCommand}"
-							ToolTip.Tip="Chat Workbench">
-						<Button.Styles>
-							<Style Selector="Button#BrandBtn /template/ ContentPresenter#PART_ContentPresenter">
-								<Setter Property="Background" Value="{DynamicResource AccentCyanGlowBrush}"/>
-								<Setter Property="BorderBrush" Value="{DynamicResource AccentCyanDimBrush}"/>
-								<Setter Property="BorderThickness" Value="1"/>
-								<Setter Property="CornerRadius" Value="8"/>
-							</Style>
-						</Button.Styles>
-						<Border Background="{DynamicResource AccentCyanGlowBrush}"
-								BorderBrush="{DynamicResource AccentCyanDimBrush}"
-								BorderThickness="1"
-								CornerRadius="8"
-								Width="40" Height="40">
-							<Path Data="M3,11H11V3H3M3,21H11V13H3M13,21H21V13H13M13,3V11H21V3"
-								  Fill="{DynamicResource AccentCyanBrush}"
-								  Width="20" Height="20"
-								  Stretch="Uniform"
-								  HorizontalAlignment="Center"
-								  VerticalAlignment="Center"/>
-						</Border>
+							ToolTip.Tip="Workbench">
+						<StackPanel Orientation="Horizontal" Spacing="12">
+							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconChat}"/></Viewbox>
+							<TextBlock Classes="NavLabel" Text="Workbench"/>
+						</StackPanel>
 					</Button>
+					<Button Classes.NavBtn="True"
+							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Diagnostics}}"
+							Command="{Binding NavigateToDiagnosticsCommand}"
+							ToolTip.Tip="Runtime Diagnostics">
+						<StackPanel Orientation="Horizontal" Spacing="12">
+							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconActivity}"/></Viewbox>
+							<TextBlock Classes="NavLabel" Text="Diagnostics"/>
+						</StackPanel>
+					</Button>
+					<Button Classes.NavBtn="True"
+							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Plugins}}"
+							Command="{Binding NavigateToPluginsCommand}"
+							ToolTip.Tip="Skills">
+						<StackPanel Orientation="Horizontal" Spacing="12">
+							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconBlocks}"/></Viewbox>
+							<TextBlock Classes="NavLabel" Text="Skills"/>
+						</StackPanel>
+					</Button>
+					<Button Classes.NavBtn="True"
+							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Integrations}}"
+							Command="{Binding NavigateToIntegrationsCommand}"
+							ToolTip.Tip="Integrations">
+						<StackPanel Orientation="Horizontal" Spacing="12">
+							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconPlug}"/></Viewbox>
+							<TextBlock Classes="NavLabel" Text="Integrations"/>
+						</StackPanel>
+					</Button>
+					<Button Classes.NavBtn="True"
+							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Settings}}"
+							Command="{Binding NavigateToSettingsCommand}"
+							ToolTip.Tip="Settings">
+						<StackPanel Orientation="Horizontal" Spacing="12">
+							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconSliders}"/></Viewbox>
+							<TextBlock Classes="NavLabel" Text="Settings"/>
+						</StackPanel>
+					</Button>
+				</StackPanel>
 
-					<!-- Top Navigation -->
-					<StackPanel Grid.Row="1" VerticalAlignment="Top" Margin="12,0">
-						<!-- Dashboard / Coordinator -->
-						<Grid>
-							<Border Classes="ActiveIndicator"
-									Opacity="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Coordinator}}"/>
-							<Button Classes.NavBtn="True"
-									Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Coordinator}}"
-									Command="{Binding NavigateToCoordinatorCommand}"
-									ToolTip.Tip="Dashboard">
-								<Path Data="M22 12h-4l-3 9L9 3l-3 9H2"/>
-							</Button>
-						</Grid>
-
-						<!-- Runtime Diagnostics -->
-						<Grid>
-							<Border Classes="ActiveIndicator"
-									Opacity="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Diagnostics}}"/>
-							<Button Classes.NavBtn="True"
-									Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Diagnostics}}"
-									Command="{Binding NavigateToDiagnosticsCommand}"
-									ToolTip.Tip="Runtime Diagnostics">
-								<Path Data="M3,3H21V21H3V3M5,5V19H19V5H5M7,7H9V9H7V7M10,7H17V9H10V7M7,11H9V13H7V11M10,11H17V13H10V11M7,15H9V17H7V15M10,15H17V17H10V15Z"/>
-							</Button>
-						</Grid>
-
-						<!-- Plugins -->
-						<Grid>
-							<Border Classes="ActiveIndicator"
-									Opacity="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Plugins}}"/>
-							<Button Classes.NavBtn="True"
-									Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Plugins}}"
-									Command="{Binding NavigateToPluginsCommand}"
-									ToolTip.Tip="Plugins">
-								<Path Data="M20.5,11H19V7C19,5.89 18.1,5 17,5H13V3.5A2.5,2.5 0 0,0 10.5,1A2.5,2.5 0 0,0 8,3.5V5H4A2,2 0 0,0 2,7V10.8H3.5C5,10.8 6.2,12 6.2,13.5C6.2,15 5,16.2 3.5,16.2H2V20A2,2 0 0,0 4,22H7.8V20.5C7.8,19 9,17.8 10.5,17.8C12,17.8 13.2,19 13.2,20.5V22H17A2,2 0 0,0 19,20V16H20.5A2.5,2.5 0 0,0 23,13.5A2.5,2.5 0 0,0 20.5,11Z"/>
-							</Button>
-						</Grid>
-
-						<!-- Integrations -->
-						<Grid>
-							<Border Classes="ActiveIndicator"
-									Opacity="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Integrations}}"/>
-							<Button Classes.NavBtn="True"
-									Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Integrations}}"
-									Command="{Binding NavigateToIntegrationsCommand}"
-									ToolTip.Tip="Integrations">
-								<Path Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-							</Button>
-						</Grid>
-
-						<!-- Settings -->
-						<Grid>
-							<Border Classes="ActiveIndicator"
-									Opacity="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Settings}}"/>
-							<Button Classes.NavBtn="True"
-									Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Settings}}"
-									Command="{Binding NavigateToSettingsCommand}"
-									ToolTip.Tip="Settings">
-								<Path Data="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11.03L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.97 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.97 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11.03C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.95C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.95L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
-							</Button>
-						</Grid>
-					</StackPanel>
-
-					<!-- Bottom Navigation -->
-					<StackPanel Grid.Row="2" Margin="12,0">
-						<!-- Theme Toggle -->
-						<Button Classes="NavBtn"
-								Command="{Binding ToggleThemeCommand}"
-								ToolTip.Tip="Toggle Theme">
-							<Panel Width="20" Height="20">
-								<Path Data="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"
-									  Fill="#FACC15"
-									  Stretch="Uniform"
-									  IsVisible="{Binding IsDarkMode}"/>
-								<Path Data="M17.75,4.09L15.22,6.03L16.13,9.09L13.5,7.28L10.87,9.09L11.78,6.03L9.25,4.09L12.44,4L13.5,1L14.56,4L17.75,4.09M21.25,11L19.61,12.25L20.2,14.23L18.5,13.06L16.8,14.23L17.39,12.25L15.75,11L17.81,10.95L18.5,9L19.19,10.95L21.25,11M18.97,15.95C19.8,15.87 20.69,17.05 20.16,17.8C19.84,18.25 19.5,18.67 19.08,19.07C15.17,23 8.84,23 4.94,19.07C1.03,15.17 1.03,8.83 4.94,4.93C5.34,4.53 5.76,4.17 6.21,3.85C6.96,3.32 8.14,4.21 8.06,5.04C7.79,7.9 8.75,10.87 10.95,13.06C13.14,15.26 16.1,16.22 18.97,15.95Z"
-									  Fill="#A5B4FC"
-									  Stretch="Uniform"
-									  IsVisible="{Binding !IsDarkMode}"/>
+				<!-- Bottom navigation: theme toggle -->
+				<StackPanel Grid.Row="2" Classes="SidebarFooter" Spacing="4">
+					<Button Classes="NavBtn"
+							Command="{Binding ToggleThemeCommand}"
+							ToolTip.Tip="Toggle Theme">
+						<StackPanel Orientation="Horizontal" Spacing="12">
+							<Panel Width="18" Height="18">
+								<Viewbox IsVisible="{Binding IsDarkMode}"><Path Classes="Icon" Data="{StaticResource IconSun}"/></Viewbox>
+								<Viewbox IsVisible="{Binding !IsDarkMode}"><Path Classes="Icon" Data="{StaticResource IconMoon}"/></Viewbox>
 							</Panel>
-						</Button>
+							<TextBlock Classes="NavLabel" Text="{Binding IsDarkMode, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='Light mode|Dark mode'}"/>
+						</StackPanel>
+					</Button>
+				</StackPanel>
+			</Grid>
+		</Border>
 
+		<!-- ========================= -->
+		<!-- TITLE BAR (draggable) -->
+		<!-- ========================= -->
+		<Border Grid.Row="0" Grid.Column="1"
+				Background="Transparent"
+				PointerPressed="OnHeaderPointerPressed">
+			<Grid ColumnDefinitions="Auto,Auto,*"
+				  ColumnSpacing="12"
+				  Margin="20,0,150,0">
+				<TextBlock Grid.Column="0"
+						   Text="{Binding ActivePageTitle}"
+						   FontSize="13"
+						   FontWeight="SemiBold"
+						   Foreground="{DynamicResource TextPrimaryBrush}"
+						   VerticalAlignment="Center"/>
+				<Border Grid.Column="1" Classes="Pill">
+					<StackPanel Orientation="Horizontal" Spacing="6">
+						<Ellipse Width="6" Height="6"
+								 Fill="{Binding StatusColor, Mode=OneWay}"
+								 VerticalAlignment="Center"/>
+						<TextBlock Text="{Binding StatusText, Mode=OneWay}"
+								   Foreground="{DynamicResource TextSecondaryBrush}"/>
 					</StackPanel>
-				</Grid>
-			</Border>
+				</Border>
+			</Grid>
+		</Border>
 
-			<!-- Center Content - View Container -->
-			<Border Grid.Row="1" Grid.Column="1"
-					Background="{DynamicResource PanelBgBrush}"
-					ClipToBounds="True">
-				<Grid RowDefinitions="Auto,*"
-					  Margin="24"
-					  RowSpacing="14">
-					<Border Grid.Row="0"
-							Background="{DynamicResource SurfaceBgElevatedBrush}"
+		<!-- ========================= -->
+		<!-- CONTENT + ACTIVITY (inset surface) -->
+		<!-- ========================= -->
+		<Border Grid.Row="1" Grid.Column="1"
+				Background="{DynamicResource SurfaceBgBrush}"
+				BorderBrush="{DynamicResource BorderSubtleBrush}"
+				BorderThickness="1,1,0,0"
+				CornerRadius="12,0,0,0"
+				ClipToBounds="True">
+			<Grid>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsLogPanelVisible, Converter={StaticResource LogPanelWidthConverter}}"/>
+				</Grid.ColumnDefinitions>
+
+				<!-- Chat workbench -->
+				<Grid Grid.Column="0"
+					  ColumnDefinitions="260,*"
+					  IsVisible="{Binding IsChatWorkbenchVisible}">
+
+					<!-- Thread list -->
+					<Border Grid.Column="0"
 							BorderBrush="{DynamicResource BorderSubtleBrush}"
-							BorderThickness="1"
-							CornerRadius="8"
-							Padding="16,12">
-						<Grid ColumnDefinitions="*,Auto,Auto,Auto"
-							  ColumnSpacing="10">
-							<StackPanel Grid.Column="0"
-										Spacing="4">
-								<TextBlock Text="Agent Workbench"
-										   FontSize="18"
-										   FontWeight="SemiBold"
-										   Foreground="{DynamicResource TextPrimaryBrush}"/>
-								<TextBlock Text="Parallel task threads and context in one workspace."
-										   FontSize="12"
-										   Foreground="{DynamicResource TextMutedBrush}"
-										   TextTrimming="CharacterEllipsis"/>
-							</StackPanel>
-							<Border Grid.Column="1"
-									Classes="WorkbenchMetric"
-									VerticalAlignment="Center">
-								<StackPanel Spacing="2">
-									<TextBlock Text="Threads"
-											   FontSize="10"
-											   Foreground="{DynamicResource TextMutedBrush}"/>
-									<TextBlock Text="{Binding AgentChatSessionCountText}"
-											   FontSize="12"
-											   FontWeight="SemiBold"
-											   Foreground="{DynamicResource TextPrimaryBrush}"/>
+							BorderThickness="0,0,1,0"
+							Padding="12,16,12,12">
+						<Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+							<Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="4,0">
+								<StackPanel Spacing="1">
+									<TextBlock Text="Chats" Classes="SectionTitle"/>
+									<TextBlock Text="Agent threads" Classes="Caption"/>
 								</StackPanel>
-							</Border>
-							<Border Grid.Column="2"
-									Classes="WorkbenchMetric"
-									VerticalAlignment="Center">
-								<StackPanel Spacing="2">
-									<TextBlock Text="Context"
-											   FontSize="10"
-											   Foreground="{DynamicResource TextMutedBrush}"/>
-									<TextBlock Text="{Binding ActiveComposerContextText}"
-											   FontSize="12"
-											   FontWeight="SemiBold"
-											   Foreground="{DynamicResource TextPrimaryBrush}"/>
-								</StackPanel>
-							</Border>
-							<Border Grid.Column="3"
-									Classes="WorkbenchMetric"
-									VerticalAlignment="Center">
-								<StackPanel Spacing="2">
-									<TextBlock Text="Model"
-											   FontSize="10"
-											   Foreground="{DynamicResource TextMutedBrush}"/>
-									<TextBlock Text="Settings controlled"
-											   FontSize="12"
-											   FontWeight="SemiBold"
-											   Foreground="{DynamicResource TextPrimaryBrush}"/>
-								</StackPanel>
-							</Border>
-						</Grid>
-					</Border>
-
-					<Grid Grid.Row="1">
-							<Border Background="{DynamicResource SurfaceBgBrush}"
-								BorderBrush="{DynamicResource BorderSubtleBrush}"
-								BorderThickness="1"
-								CornerRadius="8"
-								ClipToBounds="True"
-								IsVisible="{Binding IsChatWorkbenchVisible}">
-							<Grid ColumnDefinitions="280,*">
-								<Border Grid.Column="0"
-										Background="{DynamicResource CardBgBrush}"
-										BorderBrush="{DynamicResource BorderSubtleBrush}"
-										BorderThickness="0,0,1,0"
-										Padding="14">
-									<Grid RowDefinitions="Auto,Auto,*"
-										  RowSpacing="14">
-										<Grid Grid.Row="0"
-											  ColumnDefinitions="*,Auto"
-											  ColumnSpacing="10">
-											<StackPanel Grid.Column="0"
-														Spacing="3">
-												<TextBlock Text="Chats"
-														   FontSize="14"
-														   FontWeight="SemiBold"
-														   Foreground="{DynamicResource TextPrimaryBrush}"/>
-												<TextBlock Text="Agent threads"
-														   FontSize="11"
-														   Foreground="{DynamicResource TextMutedBrush}"/>
-											</StackPanel>
-											<Button Grid.Column="1"
-													Classes="PrimaryAction"
-													MinWidth="96"
-													Height="32"
-													ToolTip.Tip="New chat"
-													Command="{Binding NewAgentChatCommand}">
-												<StackPanel Orientation="Horizontal"
-															Spacing="7">
-													<Path Data="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"
-														  Fill="{DynamicResource PanelBgBrush}"
-														  Width="14"
-														  Height="14"
-														  Stretch="Uniform"
-														  VerticalAlignment="Center"/>
-													<TextBlock Text="New task"
-															   FontSize="12"
-															   FontWeight="SemiBold"
-															   Foreground="{DynamicResource PanelBgBrush}"
-															   VerticalAlignment="Center"/>
-												</StackPanel>
-											</Button>
-										</Grid>
-
-										<Grid Grid.Row="1"
-											  ColumnDefinitions="*,*"
-											  ColumnSpacing="8">
-											<Border Grid.Column="0"
-													Classes="WorkbenchMetric">
-												<StackPanel Spacing="2">
-													<TextBlock Text="Open"
-															   FontSize="10"
-															   Foreground="{DynamicResource TextMutedBrush}"/>
-													<TextBlock Text="{Binding AgentChatSessionCountText}"
-															   FontSize="12"
-															   FontWeight="SemiBold"
-															   Foreground="{DynamicResource TextPrimaryBrush}"/>
-												</StackPanel>
-											</Border>
-											<Border Grid.Column="1"
-													Classes="WorkbenchMetric">
-												<StackPanel Spacing="2">
-													<TextBlock Text="Selected"
-															   FontSize="10"
-															   Foreground="{DynamicResource TextMutedBrush}"/>
-													<TextBlock Text="{Binding SelectedAgentChatMessageCountText}"
-															   FontSize="12"
-															   FontWeight="SemiBold"
-															   Foreground="{DynamicResource TextPrimaryBrush}"/>
-												</StackPanel>
-											</Border>
-										</Grid>
-
-										<ScrollViewer Grid.Row="2"
-													  VerticalScrollBarVisibility="Auto"
-													  HorizontalScrollBarVisibility="Disabled">
-											<ItemsControl ItemsSource="{Binding AgentChatSessions}">
-												<ItemsControl.ItemTemplate>
-													<DataTemplate DataType="vm:AgentChatSessionViewModel">
-														<Button Classes="ChatSessionItem"
-																Command="{Binding $parent[Window].DataContext.SelectAgentChatCommand}"
-																CommandParameter="{Binding}">
-															<Border Classes="ChatSessionChrome"
-																	BorderBrush="{Binding IsSelected, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentCyanDimBrush|BorderSubtleBrush'}"
-																	Background="{Binding IsSelected, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='CardBgHoverBrush|SurfaceBgBrush'}">
-																<Grid RowDefinitions="Auto,Auto,Auto"
-																	  ColumnDefinitions="*,Auto"
-																	  RowSpacing="4"
-																	  ColumnSpacing="8">
-																	<TextBlock Grid.Row="0"
-																			   Grid.Column="0"
-																			   Text="{Binding Title}"
-																			   FontSize="12"
-																			   FontWeight="SemiBold"
-																			   Foreground="{DynamicResource TextPrimaryBrush}"
-																			   TextTrimming="CharacterEllipsis"/>
-																	<TextBlock Grid.Row="0"
-																			   Grid.Column="1"
-																			   Text="{Binding RelativeTimeText}"
-																			   FontSize="10"
-																			   Foreground="{DynamicResource TextMutedBrush}"/>
-																	<TextBlock Grid.Row="1"
-																			   Grid.ColumnSpan="2"
-																			   Text="{Binding Summary}"
-																			   FontSize="11"
-																			   Foreground="{DynamicResource TextMutedBrush}"
-																			   TextTrimming="CharacterEllipsis"/>
-																	<Grid Grid.Row="2"
-																		  Grid.ColumnSpan="2"
-																		  ColumnDefinitions="*,Auto"
-																		  ColumnSpacing="8"
-																		  Margin="0,4,0,0">
-																		<StackPanel Grid.Column="0"
-																					Orientation="Horizontal"
-																					Spacing="6">
-																			<TextBlock Text="{Binding AgentName}"
-																					   FontSize="10"
-																					   Foreground="{DynamicResource TextSecondaryBrush}"/>
-																		</StackPanel>
-																		<StackPanel Grid.Column="1"
-																					Orientation="Horizontal"
-																					Spacing="6"
-																					Margin="10,0,0,0">
-																			<TextBlock Text="{Binding StatusText}"
-																					   FontSize="10"
-																					   FontWeight="SemiBold"
-																					   Foreground="{DynamicResource AccentCyanBrush}"/>
-																			<TextBlock Text="{Binding MessageCountText}"
-																					   FontSize="10"
-																					   Foreground="{DynamicResource TextMutedBrush}"/>
-																		</StackPanel>
-																	</Grid>
-																</Grid>
-															</Border>
-														</Button>
-													</DataTemplate>
-												</ItemsControl.ItemTemplate>
-											</ItemsControl>
-										</ScrollViewer>
-									</Grid>
+								<Border Grid.Column="1" Classes="Pill">
+									<TextBlock Text="{Binding AgentChatSessionCountText}"/>
 								</Border>
+							</Grid>
 
-								<Grid Grid.Column="1"
-									  RowDefinitions="Auto,*,Auto"
-									  Background="{DynamicResource SurfaceBgBrush}">
-									<Border Grid.Row="0"
-											Background="{DynamicResource SurfaceBgElevatedBrush}"
-											BorderBrush="{DynamicResource BorderSubtleBrush}"
-											BorderThickness="0,0,0,1"
-											Padding="18,14">
-										<Grid ColumnDefinitions="*,Auto"
-											  ColumnSpacing="12">
-											<StackPanel Grid.Column="0"
-														Spacing="4">
-												<TextBlock Text="{Binding SelectedAgentChatSession.Title}"
-														   FontSize="18"
-														   FontWeight="SemiBold"
-														   Foreground="{DynamicResource TextPrimaryBrush}"
-														   TextTrimming="CharacterEllipsis"/>
-												<TextBlock Text="Conversation timeline"
-														   FontSize="12"
-														   Foreground="{DynamicResource TextMutedBrush}"/>
-											</StackPanel>
-											<Border Grid.Column="1"
-													Background="{DynamicResource CardBgBrush}"
-													BorderBrush="{DynamicResource BorderSubtleBrush}"
-													BorderThickness="1"
-													CornerRadius="6"
-													Padding="9,5"
-													VerticalAlignment="Center">
-												<TextBlock Text="Model follows Settings"
-														   FontSize="11"
-														   Foreground="{DynamicResource TextSecondaryBrush}"/>
-											</Border>
-										</Grid>
-									</Border>
+							<Button Grid.Row="1"
+									Classes="PrimaryAction"
+									HorizontalAlignment="Stretch"
+									ToolTip.Tip="New chat"
+									Command="{Binding NewAgentChatCommand}">
+								<StackPanel Orientation="Horizontal" Spacing="8">
+									<Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconPlus}" Stroke="{DynamicResource AccentOnBrush}" StrokeThickness="2.5"/></Viewbox>
+									<TextBlock Text="New task" FontWeight="SemiBold" VerticalAlignment="Center"/>
+								</StackPanel>
+							</Button>
 
-									<ScrollViewer Grid.Row="1"
-												  VerticalScrollBarVisibility="Auto"
-												  HorizontalScrollBarVisibility="Disabled"
-												  Padding="18">
-										<Grid>
-											<Border Classes="ChatMessage"
-													IsVisible="{Binding !HasAgentChatMessages}">
-												<StackPanel Spacing="14">
-													<StackPanel Spacing="5">
-														<TextBlock Text="Start a focused agent task"
-																   FontSize="16"
+							<ScrollViewer Grid.Row="2"
+										  VerticalScrollBarVisibility="Auto"
+										  HorizontalScrollBarVisibility="Disabled">
+								<ItemsControl ItemsSource="{Binding AgentChatSessions}">
+									<ItemsControl.ItemTemplate>
+										<DataTemplate DataType="vm:AgentChatSessionViewModel">
+											<Button Classes="ChatSessionItem"
+													Command="{Binding $parent[Window].DataContext.SelectAgentChatCommand}"
+													CommandParameter="{Binding}">
+												<Border Classes="ChatSessionChrome"
+														Background="{Binding IsSelected, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentSubtleBrush|TransparentBrush'}">
+													<Grid RowDefinitions="Auto,Auto,Auto"
+														  ColumnDefinitions="*,Auto"
+														  RowSpacing="3"
+														  ColumnSpacing="8">
+														<TextBlock Grid.Row="0" Grid.Column="0"
+																   Text="{Binding Title}"
+																   FontSize="13"
 																   FontWeight="SemiBold"
-																   Foreground="{DynamicResource TextPrimaryBrush}"/>
-														<TextBlock Text="Pick a thread, attach files, or send the next task from the composer."
+																   Foreground="{DynamicResource TextPrimaryBrush}"
+																   TextTrimming="CharacterEllipsis"/>
+														<TextBlock Grid.Row="0" Grid.Column="1"
+																   Text="{Binding RelativeTimeText}"
+																   FontSize="11"
+																   Foreground="{DynamicResource TextMutedBrush}"/>
+														<TextBlock Grid.Row="1" Grid.ColumnSpan="2"
+																   Text="{Binding Summary}"
 																   FontSize="12"
 																   Foreground="{DynamicResource TextMutedBrush}"
-																   TextWrapping="Wrap"/>
-													</StackPanel>
-													<Grid ColumnDefinitions="*,*,*"
-														  ColumnSpacing="10">
-														<Border Grid.Column="0"
-																Background="{DynamicResource CardBgBrush}"
-																BorderBrush="{DynamicResource BorderSubtleBrush}"
-																BorderThickness="1"
-																CornerRadius="8"
-																Padding="12">
-															<TextBlock Text="Review current workspace"
-																	   FontSize="12"
-																	   Foreground="{DynamicResource TextSecondaryBrush}"
-																	   TextWrapping="Wrap"/>
-														</Border>
-														<Border Grid.Column="1"
-																Background="{DynamicResource CardBgBrush}"
-																BorderBrush="{DynamicResource BorderSubtleBrush}"
-																BorderThickness="1"
-																CornerRadius="8"
-																Padding="12">
-															<TextBlock Text="Inspect failing tests"
-																	   FontSize="12"
-																	   Foreground="{DynamicResource TextSecondaryBrush}"
-																	   TextWrapping="Wrap"/>
-														</Border>
-														<Border Grid.Column="2"
-																Background="{DynamicResource CardBgBrush}"
-																BorderBrush="{DynamicResource BorderSubtleBrush}"
-																BorderThickness="1"
-																CornerRadius="8"
-																Padding="12">
-															<TextBlock Text="Plan next implementation"
-																	   FontSize="12"
-																	   Foreground="{DynamicResource TextSecondaryBrush}"
-																	   TextWrapping="Wrap"/>
-														</Border>
-													</Grid>
-												</StackPanel>
-											</Border>
-											<ItemsControl ItemsSource="{Binding SelectedAgentChatSession.Messages}">
-												<ItemsControl.ItemTemplate>
-													<DataTemplate DataType="vm:AgentChatMessageViewModel">
-														<Border Classes="ChatMessage">
-															<Grid RowDefinitions="Auto,Auto"
-																  RowSpacing="7">
-																<Grid Grid.Row="0"
-																	  ColumnDefinitions="Auto,*,Auto"
-																	  ColumnSpacing="8">
-																	<Border Grid.Column="0"
-																			Width="7"
-																			Height="7"
-																			CornerRadius="4"
-																			Background="{DynamicResource AccentCyanBrush}"
-																			VerticalAlignment="Center"/>
-																	<TextBlock Grid.Column="1"
-																			   Text="{Binding Role}"
-																			   FontSize="11"
-																			   FontWeight="SemiBold"
-																			   Foreground="{DynamicResource TextPrimaryBrush}"/>
-																	<TextBlock Grid.Column="2"
-																			   Text="{Binding TimeText}"
-																			   FontSize="10"
-																			   Foreground="{DynamicResource TextMutedBrush}"/>
-																</Grid>
-																<TextBlock Grid.Row="1"
-																		   Text="{Binding Content}"
-																		   FontSize="13"
-																		   LineHeight="20"
-																		   Foreground="{DynamicResource TextSecondaryBrush}"
-																		   TextWrapping="Wrap"/>
-															</Grid>
-														</Border>
-													</DataTemplate>
-												</ItemsControl.ItemTemplate>
-											</ItemsControl>
-										</Grid>
-									</ScrollViewer>
-
-									<Border Grid.Row="2"
-											Classes="ComposerSurface">
-										<Grid RowDefinitions="Auto,Auto,Auto"
-											  RowSpacing="8">
-											<Grid Grid.Row="0"
-												  ColumnDefinitions="*,Auto"
-												  ColumnSpacing="12">
-												<StackPanel Grid.Column="0"
-															Spacing="2">
-													<TextBlock Text="Message"
-															   FontSize="12"
-															   FontWeight="SemiBold"
-															   Foreground="{DynamicResource TextPrimaryBrush}"/>
-													<TextBlock Text="{Binding ActiveComposerContextText}"
-															   FontSize="11"
-															   Foreground="{DynamicResource TextMutedBrush}"/>
-												</StackPanel>
-												<StackPanel Grid.Column="1"
-															Orientation="Horizontal"
-															Spacing="8"
-															VerticalAlignment="Center">
-													<Border Background="{DynamicResource CardBgBrush}"
-															BorderBrush="{DynamicResource BorderSubtleBrush}"
-															BorderThickness="1"
-															CornerRadius="6"
-															Padding="8,4">
-														<TextBlock Text="{Binding SelectedAgentChatMessageCountText}"
-																   FontSize="11"
-																   Foreground="{DynamicResource TextSecondaryBrush}"/>
-													</Border>
-													<Border Background="{DynamicResource CardBgBrush}"
-															BorderBrush="{DynamicResource BorderSubtleBrush}"
-															BorderThickness="1"
-															CornerRadius="6"
-															Padding="8,4">
-														<TextBlock Text="Type / for commands"
-																   FontSize="11"
-																   Foreground="{DynamicResource TextSecondaryBrush}"/>
-													</Border>
-												</StackPanel>
-											</Grid>
-
-											<Border Grid.Row="1"
-													Background="{DynamicResource SurfaceBgBrush}"
-													BorderBrush="{DynamicResource BorderSubtleBrush}"
-													BorderThickness="1"
-													CornerRadius="8"
-													Padding="4"
-													ClipToBounds="True"
-													IsVisible="{Binding IsSlashCommandPaletteVisible}">
-												<ItemsControl ItemsSource="{Binding SlashCommandSuggestions}"
-															  HorizontalAlignment="Stretch">
-													<ItemsControl.ItemTemplate>
-														<DataTemplate DataType="vm:SlashCommandSuggestionViewModel">
-															<Button Command="{Binding $parent[Window].DataContext.SelectSlashCommandCommand}"
-																	CommandParameter="{Binding}"
-																	Classes="SlashCommandItem"
-																	HorizontalAlignment="Stretch">
-																<Border Background="{Binding IsSelected, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='CardBgHoverBrush|TransparentBrush'}"
-																		BorderBrush="Transparent"
-																		BorderThickness="0"
-																		CornerRadius="6"
-																		Padding="8,7"
-																		HorizontalAlignment="Stretch">
-																	<Grid ColumnDefinitions="Auto, *, Auto"
-																		  RowDefinitions="Auto, Auto"
-																		  RowSpacing="2">
-																		<Border Grid.Column="0"
-																				Grid.Row="0"
-																				Grid.RowSpan="2"
-																				Width="2"
-																				Height="24"
-																				Background="{DynamicResource AccentCyanBrush}"
-																				CornerRadius="2"
-																				Opacity="{Binding IsSelected, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter='1|0'}"
-																				VerticalAlignment="Center"
-																				Margin="0,0,8,0"/>
-																		<TextBlock Grid.Column="1"
-																				   Grid.Row="0"
-																				   Text="{Binding Name}"
-																				   FontSize="12"
-																				   FontFamily="Consolas"
-																				   FontWeight="SemiBold"
-																				   Foreground="{DynamicResource AccentCyanBrush}"/>
-																		<TextBlock Grid.Column="2"
-																				   Grid.Row="0"
-																				   Text="{Binding Category}"
-																				   FontSize="10"
-																				   FontFamily="Consolas"
-																				   Foreground="{DynamicResource TextMutedBrush}"
-																				   VerticalAlignment="Center"
-																				   Margin="12,0,0,0"/>
-																		<TextBlock Grid.Column="1"
-																				   Grid.ColumnSpan="2"
-																				   Grid.Row="1"
-																				   Text="{Binding Summary}"
-																				   FontSize="11"
-																				   Foreground="{DynamicResource TextSecondaryBrush}"
-																				   TextTrimming="CharacterEllipsis"/>
-																	</Grid>
-																</Border>
-															</Button>
-														</DataTemplate>
-													</ItemsControl.ItemTemplate>
-												</ItemsControl>
-											</Border>
-
-											<Grid Grid.Row="2"
-												  RowDefinitions="Auto,Auto"
-												  RowSpacing="8">
-												<Border Grid.Row="0"
-														Background="{DynamicResource CardBgHoverBrush}"
-														BorderBrush="{DynamicResource BorderSubtleBrush}"
-														BorderThickness="1"
-														CornerRadius="8"
-														Padding="8"
-														IsVisible="{Binding HasComposerAttachments}">
-													<Grid RowDefinitions="Auto,Auto"
-														  RowSpacing="8">
-														<Grid Grid.Row="0"
-															  ColumnDefinitions="*,Auto">
-															<TextBlock Grid.Column="0"
-																	   Text="Context files"
+																   TextTrimming="CharacterEllipsis"/>
+														<StackPanel Grid.Row="2" Grid.ColumnSpan="2"
+																	Orientation="Horizontal"
+																	Spacing="6"
+																	Margin="0,3,0,0">
+															<TextBlock Text="{Binding AgentName}"
+																	   FontSize="11"
+																	   Foreground="{DynamicResource TextSecondaryBrush}"/>
+															<TextBlock Text="·" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+															<TextBlock Text="{Binding StatusText}"
 																	   FontSize="11"
 																	   FontWeight="SemiBold"
-																	   Foreground="{DynamicResource TextSecondaryBrush}"/>
-															<Button Grid.Column="1"
-																	Classes="CompactAction"
-																	Height="24"
-																	Background="Transparent"
-																	BorderThickness="0"
-																	ToolTip.Tip="Clear context files"
-																	Command="{Binding ClearComposerAttachmentsCommand}">
-																<TextBlock Text="Clear context"
-																		   FontSize="10"
-																		   Foreground="{DynamicResource TextMutedBrush}"/>
-															</Button>
-														</Grid>
-														<ItemsControl Grid.Row="1"
-																	  ItemsSource="{Binding ComposerAttachments}">
-															<ItemsControl.ItemsPanel>
-																<ItemsPanelTemplate>
-																	<WrapPanel/>
-																</ItemsPanelTemplate>
-															</ItemsControl.ItemsPanel>
-															<ItemsControl.ItemTemplate>
-																<DataTemplate DataType="vm:ComposerAttachmentViewModel">
-																	<Border Classes="AttachmentChip">
-																		<Grid ColumnDefinitions="Auto,*,Auto"
-																			  ColumnSpacing="8">
-																			<Path Grid.Column="0"
-																				  Data="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M13,9V3.5L18.5,9H13Z"
-																				  Fill="{DynamicResource TextMutedBrush}"
-																				  Width="14"
-																				  Height="14"
-																				  Stretch="Uniform"
-																				  VerticalAlignment="Center"/>
-																			<StackPanel Grid.Column="1"
-																						Spacing="1"
-																						MinWidth="0">
-																				<TextBlock Text="{Binding FileName}"
-																						   FontSize="11"
-																						   FontWeight="SemiBold"
-																						   Foreground="{DynamicResource TextPrimaryBrush}"
-																						   TextTrimming="CharacterEllipsis"/>
-																				<TextBlock Text="{Binding DisplayPath}"
-																						   FontSize="10"
-																						   Foreground="{DynamicResource TextMutedBrush}"
-																						   TextTrimming="CharacterEllipsis"/>
-																			</StackPanel>
-																			<Button Grid.Column="2"
-																					Classes="IconButton CompactIconButton"
-																					Background="Transparent"
-																					BorderThickness="0"
-																					ToolTip.Tip="Remove file"
-																					Command="{Binding $parent[Window].DataContext.RemoveComposerAttachmentCommand}"
-																					CommandParameter="{Binding}">
-																				<Path Data="M18.3,5.71L12,12L5.7,5.71L4.29,7.12L10.59,13.41L4.29,19.71L5.7,21.12L12,14.83L18.3,21.12L19.71,19.71L13.41,13.41L19.71,7.12Z"
-																					  Fill="{DynamicResource TextMutedBrush}"
-																					  Width="11"
-																					  Height="11"
-																					  Stretch="Uniform"/>
-																			</Button>
-																		</Grid>
-																	</Border>
-																</DataTemplate>
-															</ItemsControl.ItemTemplate>
-														</ItemsControl>
-													</Grid>
-												</Border>
-
-												<Border Grid.Row="1"
-														Background="{DynamicResource CardBgHoverBrush}"
-														BorderBrush="{DynamicResource BorderSubtleBrush}"
-														BorderThickness="1"
-														CornerRadius="10"
-														Padding="10,7">
-													<Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
-														<Button Grid.Column="0"
-																Classes="IconButton"
-																Width="30"
-																Height="30"
-																Background="Transparent"
-																BorderBrush="{DynamicResource BorderSubtleBrush}"
-																BorderThickness="1"
-																CornerRadius="6"
-																Padding="0"
-																Cursor="Hand"
-																ToolTip.Tip="Attach files"
-																Click="OnAttachFilesClick">
-															<Path Data="M16.5,6V17.5A4.5,4.5 0 0,1 12,22A4.5,4.5 0 0,1 7.5,17.5V5A3,3 0 0,1 10.5,2A3,3 0 0,1 13.5,5V16.5A1.5,1.5 0 0,1 12,18A1.5,1.5 0 0,1 10.5,16.5V6H12V16.5H12V5A1.5,1.5 0 0,0 10.5,3.5A1.5,1.5 0 0,0 9,5V17.5A3,3 0 0,0 12,20.5A3,3 0 0,0 15,17.5V6H16.5Z"
-																  Fill="{DynamicResource TextMutedBrush}"
-																  Width="15"
-																  Height="15"
-																  Stretch="Uniform"/>
-														</Button>
-														<TextBlock Grid.Column="1"
-																   Text=">"
-																   FontSize="12"
-																   FontFamily="Consolas"
-																   Foreground="{DynamicResource TextMutedBrush}"
-																   VerticalAlignment="Center"
-																   Margin="8,0,8,0"/>
-														<TextBox Grid.Column="2"
-																 x:Name="WorkbenchPromptInput"
-																 PlaceholderText="Ask Kam to inspect, edit, test, or plan..."
-																 FontSize="13"
-																 FontFamily="Segoe UI, Arial, sans-serif"
-																 Background="Transparent"
-																 BorderThickness="0"
-																 Foreground="{DynamicResource TextSecondaryBrush}"
-																 VerticalAlignment="Center"
-																 AcceptsReturn="False"
-																 TextWrapping="NoWrap"
-																 Text="{Binding CommandInputText, Mode=TwoWay}"
-																 KeyDown="OnPromptKeyDown"/>
-														<StackPanel Grid.Column="3"
-																	Orientation="Horizontal"
-																	VerticalAlignment="Center"
-																	Margin="8,0"
-																	IsVisible="{Binding IsVoiceEnabled}">
-															<Ellipse Width="6"
-																	 Height="6"
-																	 Fill="{Binding VoiceStatusColor}"
-																	 Margin="0,0,4,0"
-																	 VerticalAlignment="Center"/>
-															<TextBlock Text="{Binding VoiceStatusText}"
-																	   FontSize="10"
-																	   Foreground="{Binding VoiceStatusColor}"
-																	   VerticalAlignment="Center"/>
+																	   Foreground="{DynamicResource AccentBrush}"/>
+															<TextBlock Text="·" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+															<TextBlock Text="{Binding MessageCountText}"
+																	   FontSize="11"
+																	   Foreground="{DynamicResource TextMutedBrush}"/>
 														</StackPanel>
-														<Button Grid.Column="4"
-																Classes="IconButton"
-																Width="30"
-																Height="30"
-																Margin="8,0,0,0"
-																Background="Transparent"
-																BorderThickness="0"
-																Cursor="Hand"
-																ToolTip.Tip="Toggle Voice Control"
-																Command="{Binding ToggleVoiceCommand}">
-															<Path Data="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"
-																  Fill="{Binding VoiceStatusColor}"
-																  Width="16"
-																  Height="16"
-																  Stretch="Uniform"
-																  HorizontalAlignment="Center"
-																  VerticalAlignment="Center"/>
-														</Button>
 													</Grid>
 												</Border>
-											</Grid>
-										</Grid>
-									</Border>
-								</Grid>
-							</Grid>
-						</Border>
-
-						<Border Background="{DynamicResource SurfaceBgBrush}"
-								BorderBrush="{DynamicResource BorderSubtleBrush}"
-								BorderThickness="1"
-								CornerRadius="8"
-								ClipToBounds="True"
-								IsVisible="{Binding IsPageHostVisible}">
-						<ContentControl Content="{Binding CurrentViewModel}" Margin="20">
-							<ContentControl.DataTemplates>
-								<DataTemplate DataType="pagevm:CoordinatorViewModel">
-									<local:CoordinatorView/>
-								</DataTemplate>
-
-								<DataTemplate DataType="pagevm:PluginsViewModel">
-									<local:PluginsView/>
-								</DataTemplate>
-
-								<DataTemplate DataType="pagevm:RuntimeDiagnosticsViewModel">
-									<local:RuntimeDiagnosticsView/>
-								</DataTemplate>
-
-								<DataTemplate DataType="pagevm:IntegrationsViewModel">
-									<local:IntegrationsView/>
-								</DataTemplate>
-
-								<DataTemplate DataType="pagevm:SettingsViewModel">
-									<local:SettingsView/>
-								</DataTemplate>
-							</ContentControl.DataTemplates>
-						</ContentControl>
-						</Border>
-					</Grid>
-				</Grid>
-			</Border>
-
-			<!-- Right Panel - Activity Log -->
-			<Border Grid.Row="1" Grid.Column="2"
-					Background="{DynamicResource SurfaceBgBrush}"
-					BorderBrush="{DynamicResource BorderSubtleBrush}"
-					BorderThickness="1,0,0,0"
-					IsVisible="{Binding Source={StaticResource WindowStateManager}, Path=IsLogPanelVisible}">
-				<Grid RowDefinitions="92, Auto, Auto, Auto, Auto, *, Auto">
-
-					<!-- Activity Header -->
-					<Border Grid.Row="0"
-							Background="{DynamicResource CardBgBrush}"
-							BorderBrush="{DynamicResource BorderSubtleBrush}"
-							BorderThickness="0,0,0,1">
-						<Grid RowDefinitions="Auto,Auto"
-							  RowSpacing="10"
-							  Margin="18,12">
-							<Grid Grid.Row="0"
-								  ColumnDefinitions="*, Auto">
-								<StackPanel Grid.Column="0"
-											Spacing="2"
-											VerticalAlignment="Center">
-									<TextBlock Text="Activity"
-											   FontSize="15"
-											   FontWeight="SemiBold"
-											   Foreground="{DynamicResource TextPrimaryBrush}"/>
-									<TextBlock Text="Session"
-											   FontSize="11"
-											   Foreground="{DynamicResource TextMutedBrush}"/>
-								</StackPanel>
-								<Border Grid.Column="1"
-										VerticalAlignment="Center">
-									<StackPanel Orientation="Horizontal" Spacing="6">
-										<Ellipse Width="6"
-												 Height="6"
-												 Fill="{DynamicResource AccentGreenBrush}"
-												 VerticalAlignment="Center"/>
-										<TextBlock Text="Live"
-												   FontSize="11"
-												   FontWeight="Medium"
-												   Foreground="{DynamicResource AccentGreenBrush}"/>
-									</StackPanel>
-								</Border>
-							</Grid>
-							<Grid Grid.Row="1"
-								  ColumnDefinitions="*,*,*"
-								  ColumnSpacing="6">
-								<Button Grid.Column="0"
-										Classes="DrawerTab"
-										Content="Agent runs"
-										Command="{Binding ShowRunsCommand}"/>
-								<Button Grid.Column="1"
-										Classes="DrawerTab"
-										Content="Context"
-										Command="{Binding ShowContextCommand}"/>
-								<Button Grid.Column="2"
-										Classes="DrawerTab"
-										Content="Event stream"
-										Command="{Binding ShowEventsCommand}"/>
-							</Grid>
+											</Button>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+							</ScrollViewer>
 						</Grid>
 					</Border>
 
-					<!-- Pending Skill Confirmations -->
-					<Border Grid.Row="1"
-							Background="{DynamicResource CardBgHoverBrush}"
-							BorderBrush="{DynamicResource AccentCyanDimBrush}"
-							BorderThickness="0,0,0,1"
-							Padding="16,12"
-							IsVisible="{Binding HasPendingSkillConfirmations}">
-						<StackPanel Spacing="8">
-							<StackPanel Orientation="Horizontal" Spacing="8">
-								<Path Data="M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16"
-									  Fill="{DynamicResource AccentCyanBrush}"
-									  Width="14" Height="14"
-									  Stretch="Uniform"
-									  VerticalAlignment="Center"/>
-								<TextBlock Text="Approval needed"
-										   FontSize="12"
-										   FontWeight="SemiBold"
-										   Foreground="{DynamicResource AccentCyanBrush}"
-										   VerticalAlignment="Center"/>
-							</StackPanel>
-
-							<ItemsControl ItemsSource="{Binding PendingSkillConfirmations}">
-								<ItemsControl.ItemTemplate>
-									<DataTemplate>
-										<Border Background="{DynamicResource CardBgBrush}"
-												BorderBrush="{DynamicResource BorderSubtleBrush}"
-												BorderThickness="1"
-												CornerRadius="8"
-												Padding="10"
-												Margin="0,0,0,6">
-											<Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto, Auto, Auto">
-												<TextBlock Grid.Row="0" Grid.Column="0"
-														   Text="{Binding SkillId}"
-														   Foreground="{DynamicResource TextPrimaryBrush}"
-														   FontSize="12"
-														   FontFamily="Consolas"
-														   FontWeight="SemiBold"
-														   TextWrapping="Wrap"/>
-												<TextBlock Grid.Row="1" Grid.Column="0"
-														   Text="{Binding UserCommand}"
-														   Foreground="{DynamicResource TextSecondaryBrush}"
-														   FontSize="11"
-														   TextWrapping="Wrap"
-														   Margin="0,4,12,0"/>
-												<TextBlock Grid.Row="2" Grid.Column="0"
-														   Text="{Binding Reason}"
-														   Foreground="{DynamicResource TextMutedBrush}"
-														   FontSize="10"
-														   TextWrapping="Wrap"
-														   Margin="0,4,12,0"/>
-												<Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
-														Background="{DynamicResource CardBgHoverBrush}"
-														BorderBrush="{DynamicResource BorderSubtleBrush}"
-														BorderThickness="1"
-														CornerRadius="6"
-														Padding="8"
-														Margin="0,8,0,0"
-														IsVisible="{Binding HasPreview}">
-													<ScrollViewer MaxHeight="180"
-																  HorizontalScrollBarVisibility="Auto"
-																  VerticalScrollBarVisibility="Auto">
-														<TextBlock Text="{Binding Preview}"
-																   Foreground="{DynamicResource TextSecondaryBrush}"
-																   FontSize="10"
-																   FontFamily="Consolas, Cascadia Code, monospace"
-																   TextWrapping="NoWrap"/>
-													</ScrollViewer>
-												</Border>
-												<StackPanel Grid.Row="0" Grid.RowSpan="3" Grid.Column="1"
-															Orientation="Horizontal"
-															VerticalAlignment="Top"
-															Spacing="6">
-													<Button Classes="IconButton"
-															Width="28" Height="28"
-															Background="Transparent"
-															BorderBrush="{DynamicResource AccentGreenBrush}"
-															BorderThickness="1"
-															CornerRadius="6"
-															Padding="0"
-															Cursor="Hand"
-															ToolTip.Tip="Approve"
-															Command="{Binding ApproveCommand}">
-														<Path Data="M9,16.17L4.83,12L3.41,13.41L9,19L21,7L19.59,5.59L9,16.17Z"
-															  Fill="{DynamicResource AccentGreenBrush}"
-															  Width="15" Height="15"
-															  Stretch="Uniform"/>
-													</Button>
-													<Button Classes="IconButton"
-															Width="28" Height="28"
-															Background="Transparent"
-															BorderBrush="{DynamicResource AccentErrorBrush}"
-															BorderThickness="1"
-															CornerRadius="6"
-															Padding="0"
-															Cursor="Hand"
-															ToolTip.Tip="Reject"
-															Command="{Binding RejectCommand}">
-														<Path Data="M18.3,5.71L12,12L5.7,5.71L4.29,7.12L10.59,13.41L4.29,19.71L5.7,21.12L12,14.83L18.3,21.12L19.71,19.71L13.41,13.41L19.71,7.12Z"
-															  Fill="{DynamicResource AccentErrorBrush}"
-															  Width="14" Height="14"
-															  Stretch="Uniform"/>
-													</Button>
-												</StackPanel>
-											</Grid>
-										</Border>
-									</DataTemplate>
-								</ItemsControl.ItemTemplate>
-							</ItemsControl>
-						</StackPanel>
-					</Border>
-
-					<!-- Runtime Agents -->
-					<Border Grid.Row="2"
-							Background="{DynamicResource CardBgBrush}"
-							BorderBrush="{DynamicResource BorderSubtleBrush}"
-							BorderThickness="0,0,0,1"
-							Padding="16,12"
-							IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Runs}}">
-						<StackPanel Spacing="8">
-							<StackPanel Orientation="Horizontal"
-										Spacing="8">
-								<Path Data="M12,2A7,7 0 0,1 19,9C19,11.38 17.81,13.47 16,14.74V17A1,1 0 0,1 15,18H9A1,1 0 0,1 8,17V14.74C6.19,13.47 5,11.38 5,9A7,7 0 0,1 12,2M9,20H15V22H9V20Z"
-									  Fill="{DynamicResource AccentCyanBrush}"
-									  Width="14" Height="14"
-									  Stretch="Uniform"
-									  VerticalAlignment="Center"/>
-								<TextBlock Text="Agent runs"
-										   FontSize="12"
-										   FontWeight="SemiBold"
-										   Foreground="{DynamicResource TextMutedBrush}"
-										   VerticalAlignment="Center"/>
-							</StackPanel>
-							<ItemsControl ItemsSource="{Binding RuntimeAgentActivities}">
-								<ItemsControl.ItemTemplate>
-									<DataTemplate DataType="vm:RuntimeAgentActivityViewModel">
-										<Button Command="{Binding $parent[Window].DataContext.ShowRuntimeAgentRunDetailCommand}"
-												CommandParameter="{Binding}"
-												Background="Transparent"
-												BorderThickness="0"
-												Padding="0"
-												HorizontalContentAlignment="Stretch">
-											<Border Background="{DynamicResource CardBgHoverBrush}"
-													BorderBrush="{DynamicResource BorderSubtleBrush}"
-													BorderThickness="1"
-													CornerRadius="8"
-													Padding="10"
-													Margin="0,0,0,6">
-												<Grid ColumnDefinitions="Auto, *, Auto"
-													  RowDefinitions="Auto, Auto"
-													  ColumnSpacing="8">
-													<Border Grid.Row="0"
-															Grid.RowSpan="2"
-															Width="2"
-															Background="{Binding StatusBrush}"
-															CornerRadius="2"/>
-													<TextBlock Grid.Row="0"
-															   Grid.Column="1"
-															   Text="{Binding DisplayName}"
-															   FontSize="12"
-															   FontWeight="SemiBold"
-															   Foreground="{DynamicResource TextPrimaryBrush}"
-															   TextTrimming="CharacterEllipsis"/>
-													<TextBlock Grid.Row="0"
-															   Grid.Column="2"
-															   Text="{Binding StatusText}"
-															   FontSize="10"
-															   FontWeight="SemiBold"
-															   Foreground="{Binding StatusBrush}"/>
-													<TextBlock Grid.Row="1"
-															   Grid.Column="1"
-															   Text="{Binding LastMessage}"
-															   FontSize="11"
-															   Foreground="{DynamicResource TextSecondaryBrush}"
-															   TextTrimming="CharacterEllipsis"
-															   MaxLines="1"
-															   Margin="0,4,8,0"/>
-													<TextBlock Grid.Row="1"
-															   Grid.Column="2"
-															   Text="{Binding UpdatedText}"
-															   FontSize="10"
-															   FontFamily="Consolas, Cascadia Code, monospace"
-															   Foreground="{DynamicResource TextMutedBrush}"
-															   Margin="0,4,0,0"/>
-												</Grid>
-											</Border>
-										</Button>
-									</DataTemplate>
-								</ItemsControl.ItemTemplate>
-							</ItemsControl>
-							<TextBlock Text="No agent runs yet."
-									   FontSize="12"
-									   Foreground="{DynamicResource TextMutedBrush}"
-									   Margin="2,2,0,0"
-									   IsVisible="{Binding !HasRuntimeAgentActivities}"/>
-							<Border Background="{DynamicResource CardBgHoverBrush}"
-									BorderBrush="{DynamicResource AccentCyanBrush}"
-									BorderThickness="1"
-									CornerRadius="8"
-									Padding="12"
-									IsVisible="{Binding HasSelectedRuntimeAgentRun}">
-								<StackPanel Spacing="8">
-									<Grid ColumnDefinitions="*, Auto">
-										<TextBlock Grid.Column="0"
-												   Text="Run detail"
-												   FontSize="12"
-												   FontWeight="SemiBold"
-												   Foreground="{DynamicResource TextPrimaryBrush}"/>
-										<TextBlock Grid.Column="1"
-												   Text="{Binding SelectedRuntimeAgentRun.StatusText}"
-												   FontSize="10"
-												   FontWeight="SemiBold"
-												   Foreground="{DynamicResource AccentCyanBrush}"/>
-									</Grid>
-									<TextBlock Text="{Binding SelectedRuntimeAgentRun.DisplayName}"
-											   FontSize="12"
-											   Foreground="{DynamicResource TextPrimaryBrush}"
+					<!-- Conversation -->
+					<Grid Grid.Column="1" RowDefinitions="Auto,*,Auto">
+						<Border Grid.Row="0"
+								BorderBrush="{DynamicResource BorderSubtleBrush}"
+								BorderThickness="0,0,0,1"
+								Padding="24,14">
+							<Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+								<StackPanel Grid.Column="0" Spacing="2">
+									<TextBlock Text="{Binding SelectedAgentChatSession.Title}"
+											   Classes="SectionTitle"
 											   TextTrimming="CharacterEllipsis"/>
-									<Grid ColumnDefinitions="Auto, *"
-										  RowDefinitions="Auto, Auto"
-										  ColumnSpacing="10"
-										  RowSpacing="4">
-										<TextBlock Grid.Row="0"
-												   Grid.Column="0"
-												   Text="Model"
-												   FontSize="10"
-												   Foreground="{DynamicResource TextMutedBrush}"/>
-										<TextBlock Grid.Row="0"
-												   Grid.Column="1"
-												   Text="{Binding SelectedRuntimeAgentRun.ModelIdText}"
-												   FontSize="10"
-												   Foreground="{DynamicResource TextSecondaryBrush}"
-												   TextTrimming="CharacterEllipsis"/>
-										<TextBlock Grid.Row="1"
-												   Grid.Column="0"
-												   Text="Duration"
-												   FontSize="10"
-												   Foreground="{DynamicResource TextMutedBrush}"/>
-										<TextBlock Grid.Row="1"
-												   Grid.Column="1"
-												   Text="{Binding SelectedRuntimeAgentRun.DurationText}"
-												   FontSize="10"
-												   Foreground="{DynamicResource TextSecondaryBrush}"/>
-									</Grid>
-									<TextBlock Text="{Binding SelectedRuntimeAgentRun.TaskText}"
-											   FontSize="11"
-											   Foreground="{DynamicResource TextSecondaryBrush}"
-											   TextWrapping="Wrap"
-											   MaxLines="3"/>
-									<ItemsControl ItemsSource="{Binding SelectedRuntimeAgentRun.Observations}"
-												  IsVisible="{Binding SelectedRuntimeAgentRun.HasObservations}">
-										<ItemsControl.ItemTemplate>
-											<DataTemplate DataType="vm:RuntimeAgentObservationDetailViewModel">
-												<Grid ColumnDefinitions="Auto, *, Auto"
-													  RowDefinitions="Auto, Auto"
-													  ColumnSpacing="8"
-													  Margin="0,2">
-													<TextBlock Grid.Row="0"
-															   Grid.Column="0"
-															   Text="Context"
-															   FontSize="10"
-															   Foreground="{DynamicResource TextMutedBrush}"/>
-													<TextBlock Grid.Row="0"
-															   Grid.Column="1"
-															   Text="{Binding DisplayName}"
-															   FontSize="10"
-															   Foreground="{DynamicResource TextSecondaryBrush}"
-															   TextTrimming="CharacterEllipsis"/>
-													<TextBlock Grid.Row="0"
-															   Grid.Column="2"
-															   Text="{Binding StatusText}"
-															   FontSize="10"
-															   Foreground="{DynamicResource TextMutedBrush}"/>
-													<TextBlock Grid.Row="1"
-															   Grid.Column="1"
-															   Grid.ColumnSpan="2"
-															   Text="{Binding SummaryText}"
-															   FontSize="10"
-															   Foreground="{DynamicResource TextMutedBrush}"
-															   TextTrimming="CharacterEllipsis"
-															   MaxLines="1"/>
-												</Grid>
-											</DataTemplate>
-										</ItemsControl.ItemTemplate>
-									</ItemsControl>
-									<TextBlock Text="{Binding SelectedRuntimeAgentRun.ResponseText}"
-											   FontSize="11"
-											   Foreground="{DynamicResource TextSecondaryBrush}"
-											   TextWrapping="Wrap"
-											   MaxLines="4"
-											   IsVisible="{Binding SelectedRuntimeAgentRun.HasResponse}"/>
-									<TextBlock Text="{Binding SelectedRuntimeAgentRun.ErrorText}"
-											   FontSize="11"
-											   Foreground="{DynamicResource AccentErrorBrush}"
-											   TextWrapping="Wrap"
-											   MaxLines="3"
-											   IsVisible="{Binding SelectedRuntimeAgentRun.HasError}"/>
+									<TextBlock Text="Conversation timeline" Classes="Caption"/>
 								</StackPanel>
-							</Border>
-						</StackPanel>
-					</Border>
-
-					<!-- Planner Trace -->
-					<Border Grid.Row="3"
-							Background="{DynamicResource CardBgBrush}"
-							BorderBrush="{DynamicResource BorderSubtleBrush}"
-							BorderThickness="0,0,0,1"
-							Padding="16,12"
-							IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Context}}">
-						<StackPanel Spacing="8">
-							<Grid ColumnDefinitions="*, Auto">
-								<StackPanel Grid.Column="0"
-											Orientation="Horizontal"
-											Spacing="8">
-									<Path Data="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M7,13H9V11H7V13M11,17H13V7H11V17M15,13H17V11H15V13Z"
-										  Fill="{DynamicResource TextMutedBrush}"
-										  Width="14" Height="14"
-										  Stretch="Uniform"
-										  VerticalAlignment="Center"/>
-									<TextBlock Text="Plan trace"
-											   FontSize="12"
-											   FontWeight="SemiBold"
-											   Foreground="{DynamicResource TextMutedBrush}"
-											   VerticalAlignment="Center"/>
-								</StackPanel>
-								<Button Grid.Column="1"
-										Classes="IconButton CompactIconButton"
-										Background="Transparent"
-										BorderBrush="{DynamicResource BorderSubtleBrush}"
-										BorderThickness="1"
-										CornerRadius="6"
-										Padding="0"
-										Cursor="Hand"
-										ToolTip.Tip="Clear planner trace"
-										Command="{Binding ClearSkillPlannerTraceCommand}">
-									<Path Data="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"
-										  Fill="{DynamicResource TextMutedBrush}"
-										  Width="13" Height="13"
-										  Stretch="Uniform"/>
-								</Button>
+								<Border Grid.Column="1" Classes="Pill">
+									<TextBlock Text="{Binding SelectedAgentChatMessageCountText}"/>
+								</Border>
+								<Border Grid.Column="2" Classes="Pill Accent">
+									<TextBlock Text="Model follows Settings"/>
+								</Border>
 							</Grid>
+						</Border>
 
-							<ScrollViewer MaxHeight="220"
-										  VerticalScrollBarVisibility="Auto">
-								<ItemsControl ItemsSource="{Binding SkillPlannerTraces}">
-									<ItemsControl.ItemTemplate>
-										<DataTemplate>
-											<Border Background="{DynamicResource CardBgHoverBrush}"
-													BorderBrush="{DynamicResource BorderSubtleBrush}"
-													BorderThickness="1"
-													CornerRadius="8"
-													Padding="10"
-													Margin="0,0,0,8">
-												<Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto">
-													<StackPanel Grid.Row="0"
-																Orientation="Horizontal"
-																Spacing="8">
-														<TextBlock Text="{Binding SkillIdText}"
-																   Foreground="{DynamicResource TextPrimaryBrush}"
-																   FontSize="11"
-																   FontFamily="Consolas"
-																   FontWeight="SemiBold"/>
-														<TextBlock Text="{Binding StatusText}"
-																   Foreground="{DynamicResource AccentCyanBrush}"
-																   FontSize="10"
-																   FontFamily="Consolas"/>
-														<TextBlock Text="{Binding ConfidenceText}"
-																   Foreground="{DynamicResource TextMutedBrush}"
-																   FontSize="10"
-																   FontFamily="Consolas"/>
-														<TextBlock Text="{Binding DurationText}"
-																   Foreground="{DynamicResource TextMutedBrush}"
-																   FontSize="10"
-																   FontFamily="Consolas"/>
-													</StackPanel>
-													<TextBlock Grid.Row="1"
-															   Text="{Binding UserRequestText}"
-															   Foreground="{DynamicResource TextSecondaryBrush}"
-															   FontSize="10"
-															   TextWrapping="Wrap"
-															   MaxLines="2"
-															   Margin="0,6,0,0"/>
-													<TextBlock Grid.Row="2"
-															   Text="{Binding ReasoningText}"
-															   Foreground="{DynamicResource TextMutedBrush}"
-															   FontSize="10"
-															   TextWrapping="Wrap"
-															   MaxLines="2"
-															   IsVisible="{Binding HasReasoning}"
-															   Margin="0,4,0,0"/>
-													<TextBlock Grid.Row="3"
-															   Text="{Binding ErrorText}"
-															   Foreground="{DynamicResource AccentErrorBrush}"
-															   FontSize="10"
-															   TextWrapping="Wrap"
-															   MaxLines="2"
-															   IsVisible="{Binding HasError}"
-															   Margin="0,4,0,0"/>
-													<TextBlock Grid.Row="4"
-															   Text="{Binding RawResponseText}"
-															   Foreground="{DynamicResource TextMutedBrush}"
-															   FontSize="10"
-															   FontFamily="Consolas, Cascadia Code, monospace"
-															   TextWrapping="Wrap"
-															   MaxLines="4"
-															   IsVisible="{Binding HasRawResponse}"
-															   Margin="0,6,0,0"/>
-												</Grid>
-											</Border>
-										</DataTemplate>
-									</ItemsControl.ItemTemplate>
-								</ItemsControl>
-							</ScrollViewer>
-						</StackPanel>
-					</Border>
-
-					<!-- Skill Execution History -->
-					<Border Grid.Row="4"
-							Background="{DynamicResource CardBgBrush}"
-							BorderBrush="{DynamicResource BorderSubtleBrush}"
-							BorderThickness="0,0,0,1"
-							Padding="16,12"
-							IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Context}}">
-						<StackPanel Spacing="8">
-							<Grid ColumnDefinitions="*, Auto">
-								<StackPanel Grid.Column="0"
-											Orientation="Horizontal"
-											Spacing="8">
-									<Path Data="M13 3C8.03 3 4 7.03 4 12H1L5 16L9 12H6C6 8.13 9.13 5 13 5C16.87 5 20 8.13 20 12C20 15.87 16.87 19 13 19C11.07 19 9.32 18.22 8.05 16.95L6.64 18.36C8.27 19.99 10.52 21 13 21C17.97 21 22 16.97 22 12C22 7.03 17.97 3 13 3M12 7V13L17 16L18 14.27L14 11.9V7H12Z"
-										  Fill="{DynamicResource TextMutedBrush}"
-										  Width="14" Height="14"
-										  Stretch="Uniform"
-										  VerticalAlignment="Center"/>
-									<TextBlock Text="Skill results"
-											   FontSize="12"
-											   FontWeight="SemiBold"
-											   Foreground="{DynamicResource TextMutedBrush}"
-											   VerticalAlignment="Center"/>
-								</StackPanel>
-								<Button Grid.Column="1"
-										Classes="IconButton CompactIconButton"
-										Background="Transparent"
-										BorderBrush="{DynamicResource BorderSubtleBrush}"
-										BorderThickness="1"
-										CornerRadius="6"
-										Padding="0"
-										Cursor="Hand"
-										ToolTip.Tip="Clear result history"
-										Command="{Binding ClearSkillExecutionHistoryCommand}">
-									<Path Data="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"
-										  Fill="{DynamicResource TextMutedBrush}"
-										  Width="13" Height="13"
-										  Stretch="Uniform"/>
-								</Button>
-							</Grid>
-
-							<Grid ColumnDefinitions="*, 132, Auto"
-								  RowDefinitions="Auto, Auto"
-								  ColumnSpacing="8"
-								  RowSpacing="6"
-								  Margin="0,10,0,10">
-								<TextBox Grid.Row="0" Grid.Column="0"
-										 Text="{Binding SkillExecutionHistoryFilterText, Mode=TwoWay}"
-										 PlaceholderText="Filter result history..."
-										 FontSize="11"
-										 FontFamily="Consolas"
-										 Background="{DynamicResource CardBgBrush}"
-										 BorderBrush="{DynamicResource BorderSubtleBrush}"
-										 BorderThickness="1"
-										 CornerRadius="6"
-										 Padding="8,5"/>
-								<ComboBox Grid.Row="0" Grid.Column="1"
-										  ItemsSource="{Binding SkillExecutionHistoryStatusFilters}"
-										  SelectedItem="{Binding SkillExecutionHistoryStatusFilter, Mode=TwoWay}"
-										  Height="30"
-										  FontSize="11"
-										  FontFamily="Consolas"
-										  Background="{DynamicResource CardBgBrush}"
-										  BorderBrush="{DynamicResource BorderSubtleBrush}"
-										  BorderThickness="1"
-										  Padding="8,3"/>
-								<Button Grid.Row="0" Grid.Column="2"
-										Classes="IconButton"
-										Width="30" Height="30"
-										Background="Transparent"
-										BorderBrush="{DynamicResource BorderSubtleBrush}"
-										BorderThickness="1"
-										CornerRadius="6"
-										Padding="0"
-										Cursor="Hand"
-										ToolTip.Tip="Clear filters"
-										Command="{Binding ClearSkillExecutionHistoryFiltersCommand}"
-										IsVisible="{Binding HasSkillExecutionHistoryFilter}">
-									<Path Data="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
-										  Fill="{DynamicResource TextMutedBrush}"
-										  Width="12" Height="12"
-										  Stretch="Uniform"/>
-								</Button>
-								<TextBlock Grid.Row="1" Grid.ColumnSpan="3"
-										   Text="{Binding SkillExecutionHistorySummaryText}"
-										   Foreground="{DynamicResource TextMutedBrush}"
-										   FontSize="10"
-										   FontFamily="Consolas"/>
-							</Grid>
-
-							<TextBlock Text="No matching executions"
-									   Foreground="{DynamicResource TextMutedBrush}"
-									   FontSize="10"
-									   FontFamily="Consolas"
-									   Margin="0,0,0,8"
-									   IsVisible="{Binding HasNoSkillExecutionHistoryMatches}"/>
-
-							<ScrollViewer MaxHeight="280"
-										  VerticalScrollBarVisibility="Auto">
-								<ItemsControl ItemsSource="{Binding SkillExecutionHistory}">
-									<ItemsControl.ItemTemplate>
-										<DataTemplate>
-											<Border Background="{DynamicResource CardBgHoverBrush}"
-													BorderBrush="{DynamicResource BorderSubtleBrush}"
-													BorderThickness="1"
-													CornerRadius="8"
-													Padding="10"
-													Margin="0,0,0,8">
-												<Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto"
-													  ColumnDefinitions="*, Auto">
-													<TextBlock Grid.Row="0" Grid.Column="0"
-															   Text="{Binding SkillId}"
-															   Foreground="{DynamicResource TextPrimaryBrush}"
-															   FontSize="12"
-															   FontFamily="Consolas"
-															   FontWeight="SemiBold"
-															   TextWrapping="Wrap"/>
-													<StackPanel Grid.Row="0" Grid.Column="1"
-																Orientation="Horizontal"
-																Spacing="6"
-																VerticalAlignment="Top">
-														<TextBlock Text="{Binding StatusText}"
-																   Foreground="{DynamicResource AccentCyanBrush}"
-																   FontSize="10"
-																   FontFamily="Consolas"
-																   FontWeight="SemiBold"/>
-														<TextBlock Text="{Binding DurationText}"
-																   Foreground="{DynamicResource TextMutedBrush}"
-																   FontSize="10"
-																   FontFamily="Consolas"/>
-													</StackPanel>
-													<StackPanel Grid.Row="1" Grid.ColumnSpan="2"
-																Orientation="Horizontal"
-																Spacing="8"
-																Margin="0,4,0,0">
-														<TextBlock Text="{Binding TimestampText}"
-																   Foreground="{DynamicResource TextMutedBrush}"
-																   FontSize="10"
-																   FontFamily="Consolas"/>
-														<TextBlock Text="{Binding ExitCodeText}"
-																   Foreground="{DynamicResource TextMutedBrush}"
-																   FontSize="10"
-																   FontFamily="Consolas"
-																   IsVisible="{Binding HasExitCode}"/>
-														<TextBlock Text="{Binding RuntimeFlagsText}"
-																   Foreground="{DynamicResource AccentErrorBrush}"
-																   FontSize="10"
-																   FontFamily="Consolas"
-																   IsVisible="{Binding HasRuntimeFlags}"/>
-													</StackPanel>
-													<StackPanel Grid.Row="2" Grid.ColumnSpan="2"
-																Orientation="Horizontal"
-																Spacing="6"
-																Margin="0,8,0,0">
-														<Button Classes="IconButton CompactIconButton"
-																Background="Transparent"
-																BorderBrush="{DynamicResource BorderSubtleBrush}"
-																BorderThickness="1"
-																CornerRadius="6"
-																Padding="0"
-																Cursor="Hand"
-																ToolTip.Tip="Copy result"
-																Command="{Binding CopyResultCommand}">
-															<Path Data="M19,21H8A2,2 0 0,1 6,19V7H8V19H19V21M16,3H4A2,2 0 0,0 2,5V17H4V5H16V3M20,7H10A2,2 0 0,0 8,9V17A2,2 0 0,0 10,19H20A2,2 0 0,0 22,17V9A2,2 0 0,0 20,7Z"
-																  Fill="{DynamicResource TextMutedBrush}"
-																  Width="13" Height="13"
-																  Stretch="Uniform"/>
-														</Button>
-														<Button Classes="IconButton CompactIconButton"
-																Background="Transparent"
-																BorderBrush="{DynamicResource BorderSubtleBrush}"
-																BorderThickness="1"
-																CornerRadius="6"
-																Padding="0"
-																Cursor="Hand"
-																ToolTip.Tip="Copy stdout"
-																Command="{Binding CopyStdOutCommand}"
-																IsVisible="{Binding HasStdOut}">
-															<Path Data="M5,3H19A2,2 0 0,1 21,5V19A2,2 0 0,1 19,21H5A2,2 0 0,1 3,19V5A2,2 0 0,1 5,3M5,7V19H19V7H5M7,9H17V11H7V9M7,13H15V15H7V13Z"
-																  Fill="{DynamicResource TextSecondaryBrush}"
-																  Width="13" Height="13"
-																  Stretch="Uniform"/>
-														</Button>
-														<Button Classes="IconButton CompactIconButton"
-																Background="Transparent"
-																BorderBrush="{DynamicResource AccentErrorBrush}"
-																BorderThickness="1"
-																CornerRadius="6"
-																Padding="0"
-																Cursor="Hand"
-																ToolTip.Tip="Copy stderr"
-																Command="{Binding CopyStdErrCommand}"
-																IsVisible="{Binding HasStdErr}">
-															<Path Data="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
-																  Fill="{DynamicResource AccentErrorBrush}"
-																  Width="13" Height="13"
-																  Stretch="Uniform"/>
-														</Button>
-														<Button Classes="IconButton CompactIconButton"
-																Background="Transparent"
-																BorderBrush="{DynamicResource AccentCyanDimBrush}"
-																BorderThickness="1"
-																CornerRadius="6"
-																Padding="0"
-																Cursor="Hand"
-																ToolTip.Tip="Rerun skill"
-																Command="{Binding RerunCommand}"
-																IsVisible="{Binding CanRerun}">
-															<Path Data="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.82,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"
-																  Fill="{DynamicResource AccentCyanBrush}"
-																  Width="13" Height="13"
-																  Stretch="Uniform"/>
-														</Button>
-													</StackPanel>
-													<TextBlock Grid.Row="3" Grid.ColumnSpan="2"
-															   Text="{Binding DetailText}"
-															   Foreground="{DynamicResource TextSecondaryBrush}"
-															   FontSize="10"
-															   FontFamily="Consolas, Cascadia Code, monospace"
-															   TextWrapping="Wrap"
-															   MaxLines="5"
-															   Margin="0,6,0,0"
-															   IsVisible="{Binding HasDetailText}"/>
-													<Border Grid.Row="4" Grid.ColumnSpan="2"
-															Background="{DynamicResource CardBgBrush}"
-															BorderBrush="{DynamicResource BorderSubtleBrush}"
-															BorderThickness="1"
-															CornerRadius="6"
-															Padding="8"
-															Margin="0,8,0,0"
-															IsVisible="{Binding HasStdOut}">
-														<ScrollViewer MaxHeight="72"
-																	  HorizontalScrollBarVisibility="Auto"
-																	  VerticalScrollBarVisibility="Auto">
-															<TextBlock Text="{Binding StdOut}"
-																	   Foreground="{DynamicResource TextSecondaryBrush}"
-																	   FontSize="10"
-																	   FontFamily="Consolas, Cascadia Code, monospace"
-																	   TextWrapping="NoWrap"/>
-														</ScrollViewer>
-													</Border>
-													<Border Grid.Row="5" Grid.ColumnSpan="2"
-															Background="{DynamicResource CardBgBrush}"
-															BorderBrush="{DynamicResource AccentErrorBrush}"
-															BorderThickness="1"
-															CornerRadius="6"
-															Padding="8"
-															Margin="0,8,0,0"
-															IsVisible="{Binding HasStdErr}">
-														<ScrollViewer MaxHeight="72"
-																	  HorizontalScrollBarVisibility="Auto"
-																	  VerticalScrollBarVisibility="Auto">
-															<TextBlock Text="{Binding StdErr}"
-																	   Foreground="{DynamicResource AccentErrorBrush}"
-																	   FontSize="10"
-																	   FontFamily="Consolas, Cascadia Code, monospace"
-																	   TextWrapping="NoWrap"/>
-														</ScrollViewer>
-													</Border>
-												</Grid>
-											</Border>
-										</DataTemplate>
-									</ItemsControl.ItemTemplate>
-								</ItemsControl>
-							</ScrollViewer>
-						</StackPanel>
-					</Border>
-
-					<!-- Log Content -->
-					<ScrollViewer x:Name="LogScrollViewer" Grid.Row="5"
-								  VerticalScrollBarVisibility="Auto"
-								  Margin="18,10,18,0"
-								  IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Events}}">
-						<ItemsControl ItemsSource="{Binding ActivityLogEntries}">
-							<ItemsControl.ItemTemplate>
-								<DataTemplate DataType="vm:ActivityLogEntryViewModel">
-									<Border Classes="ActivityLogItem">
-										<Grid ColumnDefinitions="Auto, *"
-											  RowDefinitions="Auto, Auto"
-											  ColumnSpacing="9">
-											<Border Grid.Row="0"
-													Grid.RowSpan="2"
-													Width="2"
-													Background="{Binding AccentBrush}"
-													CornerRadius="2"/>
-											<Grid Grid.Row="0"
-												  Grid.Column="1"
-												  ColumnDefinitions="Auto, Auto, *"
-												  ColumnSpacing="7">
-												<TextBlock Grid.Column="0"
-														   Text="{Binding CategoryText}"
-														   Classes="ActivityMeta"
-														   Foreground="{Binding AccentBrush}"/>
-												<TextBlock Grid.Column="1"
-														   Text="{Binding TimeText}"
-														   Classes="ActivityMeta"
-														   FontFamily="Consolas, Cascadia Code, monospace"/>
-												<TextBlock Grid.Column="2"
-														   Text="{Binding SourceText}"
-														   Classes="ActivityMeta"
-														   TextTrimming="CharacterEllipsis"
-														   IsVisible="{Binding HasSourceText}"/>
-											</Grid>
-											<TextBlock Grid.Row="1"
-													   Grid.Column="1"
-													   Text="{Binding MessageText}"
-													   Classes="ActivityMessage"
-													   MaxLines="4"
-													   Margin="0,4,0,0"/>
-										</Grid>
+						<ScrollViewer Grid.Row="1"
+									  VerticalScrollBarVisibility="Auto"
+									  HorizontalScrollBarVisibility="Disabled">
+							<Grid MaxWidth="820" Margin="32,28,32,12">
+								<!-- Empty state -->
+								<StackPanel Spacing="22"
+											VerticalAlignment="Center"
+											Margin="0,48,0,0"
+											IsVisible="{Binding !HasAgentChatMessages}">
+									<Border Width="48" Height="48"
+											CornerRadius="14"
+											HorizontalAlignment="Center"
+											Background="{DynamicResource BrandGradientBrush}">
+										<Viewbox Width="24" Height="24"><Path Classes="Icon" Data="{StaticResource IconSparkles}" Stroke="White"/></Viewbox>
 									</Border>
-								</DataTemplate>
-							</ItemsControl.ItemTemplate>
-						</ItemsControl>
-					</ScrollViewer>
+									<StackPanel Spacing="6" HorizontalAlignment="Center">
+										<TextBlock Text="Start a focused agent task"
+												   FontSize="22"
+												   FontWeight="SemiBold"
+												   LetterSpacing="-0.3"
+												   HorizontalAlignment="Center"
+												   Foreground="{DynamicResource TextPrimaryBrush}"/>
+										<TextBlock Text="Pick a thread, attach files, or send the next task from the composer."
+												   Classes="Caption"
+												   FontSize="13"
+												   TextAlignment="Center"
+												   HorizontalAlignment="Center"/>
+									</StackPanel>
+									<Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+										<Button Grid.Column="0"
+												Classes="SuggestionCard"
+												Command="{Binding UseComposerSuggestionCommand}"
+												CommandParameter="Review the current workspace and summarize what needs attention.">
+											<StackPanel Spacing="6">
+												<Viewbox Width="16" Height="16" HorizontalAlignment="Left"><Path Classes="Icon" Data="{StaticResource IconSearch}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
+												<TextBlock Text="Review current workspace" FontWeight="SemiBold" TextWrapping="Wrap"/>
+												<TextBlock Text="Summarize what needs attention" Classes="Caption"/>
+											</StackPanel>
+										</Button>
+										<Button Grid.Column="1"
+												Classes="SuggestionCard"
+												Command="{Binding UseComposerSuggestionCommand}"
+												CommandParameter="Inspect the failing tests and explain the root cause.">
+											<StackPanel Spacing="6">
+												<Viewbox Width="16" Height="16" HorizontalAlignment="Left"><Path Classes="Icon" Data="{StaticResource IconAlert}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
+												<TextBlock Text="Inspect failing tests" FontWeight="SemiBold" TextWrapping="Wrap"/>
+												<TextBlock Text="Find the root cause" Classes="Caption"/>
+											</StackPanel>
+										</Button>
+										<Button Grid.Column="2"
+												Classes="SuggestionCard"
+												Command="{Binding UseComposerSuggestionCommand}"
+												CommandParameter="Plan the next implementation step for this project.">
+											<StackPanel Spacing="6">
+												<Viewbox Width="16" Height="16" HorizontalAlignment="Left"><Path Classes="Icon" Data="{StaticResource IconSparkles}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
+												<TextBlock Text="Plan next implementation" FontWeight="SemiBold" TextWrapping="Wrap"/>
+												<TextBlock Text="Break work into steps" Classes="Caption"/>
+											</StackPanel>
+										</Button>
+									</Grid>
+								</StackPanel>
 
-					<!-- Input Prompt with Voice Controls -->
-					<Border Grid.Row="6"
-							Background="{DynamicResource CardBgBrush}"
-							BorderBrush="{DynamicResource BorderSubtleBrush}"
-							BorderThickness="0,1,0,0"
-							Padding="16,10"
-							IsVisible="{Binding IsPageHostVisible}">
-						<Grid RowDefinitions="Auto, Auto, Auto, Auto">
-							<TextBlock Grid.Row="0"
-									   Text="Command prompt"
-									   FontSize="11"
-									   FontWeight="SemiBold"
-									   Foreground="{DynamicResource TextMutedBrush}"
-									   Margin="2,0,0,8"/>
-							<Border Grid.Row="1"
-									Background="{DynamicResource SurfaceBgBrush}"
-									BorderBrush="{DynamicResource BorderSubtleBrush}"
+								<!-- Messages -->
+								<ItemsControl ItemsSource="{Binding SelectedAgentChatSession.Messages}">
+									<ItemsControl.ItemTemplate>
+										<DataTemplate DataType="vm:AgentChatMessageViewModel">
+											<Border Classes="ChatMessage">
+												<Panel>
+													<!-- Outgoing (user) -->
+													<StackPanel Spacing="4"
+																HorizontalAlignment="Right"
+																IsVisible="{Binding IsUser}">
+														<Border Classes="UserBubble">
+															<SelectableTextBlock Text="{Binding Content}"
+																				 FontSize="14"
+																				 LineHeight="22"
+																				 Foreground="{DynamicResource TextPrimaryBrush}"
+																				 TextWrapping="Wrap"/>
+														</Border>
+														<TextBlock Text="{Binding TimeText}"
+																   FontSize="11"
+																   Foreground="{DynamicResource TextMutedBrush}"
+																   HorizontalAlignment="Right"/>
+													</StackPanel>
+
+													<!-- Incoming (agent / system) -->
+													<Grid ColumnDefinitions="Auto,*"
+														  ColumnSpacing="12"
+														  IsVisible="{Binding IsAgent}">
+														<Border Grid.Column="0" Classes="AgentAvatar">
+															<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconSparkles}" Stroke="White"/></Viewbox>
+														</Border>
+														<StackPanel Grid.Column="1" Spacing="4">
+															<StackPanel Orientation="Horizontal" Spacing="8">
+																<TextBlock Text="{Binding Role}"
+																		   FontSize="13"
+																		   FontWeight="SemiBold"
+																		   Foreground="{DynamicResource TextPrimaryBrush}"/>
+																<TextBlock Text="{Binding TimeText}"
+																		   FontSize="11"
+																		   Foreground="{DynamicResource TextMutedBrush}"
+																		   VerticalAlignment="Center"/>
+															</StackPanel>
+															<SelectableTextBlock Text="{Binding Content}"
+																				 FontSize="14"
+																				 LineHeight="22"
+																				 Foreground="{DynamicResource TextSecondaryBrush}"
+																				 TextWrapping="Wrap"/>
+														</StackPanel>
+													</Grid>
+												</Panel>
+											</Border>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+							</Grid>
+						</ScrollViewer>
+
+						<!-- Composer -->
+						<StackPanel Grid.Row="2"
+									MaxWidth="820"
+									Margin="32,0,32,18"
+									Spacing="8">
+
+							<!-- Slash command palette -->
+							<Border Background="{DynamicResource SurfaceBgElevatedBrush}"
+									BorderBrush="{DynamicResource BorderMutedBrush}"
 									BorderThickness="1"
-									CornerRadius="8"
+									CornerRadius="10"
 									Padding="4"
-									Margin="0,0,0,8"
 									ClipToBounds="True"
+									BoxShadow="0 8 24 0 #1F000000"
 									IsVisible="{Binding IsSlashCommandPaletteVisible}">
 								<ItemsControl ItemsSource="{Binding SlashCommandSuggestions}"
 											  HorizontalAlignment="Stretch">
@@ -1956,14 +745,13 @@
 														HorizontalAlignment="Stretch">
 													<Grid ColumnDefinitions="Auto, *, Auto"
 														  RowDefinitions="Auto, Auto"
-														  ColumnSpacing="0"
 														  RowSpacing="2">
 														<Border Grid.Column="0"
 																Grid.Row="0"
 																Grid.RowSpan="2"
 																Width="2"
 																Height="24"
-																Background="{DynamicResource AccentCyanBrush}"
+																Background="{DynamicResource AccentBrush}"
 																CornerRadius="2"
 																Opacity="{Binding IsSelected, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter='1|0'}"
 																VerticalAlignment="Center"
@@ -1972,14 +760,13 @@
 																   Grid.Row="0"
 																   Text="{Binding Name}"
 																   FontSize="12"
-																   FontFamily="Consolas"
+																   FontFamily="{StaticResource MonoFontFamily}"
 																   FontWeight="SemiBold"
-																   Foreground="{DynamicResource AccentCyanBrush}"/>
+																   Foreground="{DynamicResource AccentBrush}"/>
 														<TextBlock Grid.Column="2"
 																   Grid.Row="0"
 																   Text="{Binding Category}"
-																   FontSize="10"
-																   FontFamily="Consolas"
+																   FontSize="11"
 																   Foreground="{DynamicResource TextMutedBrush}"
 																   VerticalAlignment="Center"
 																   Margin="12,0,0,0"/>
@@ -1987,7 +774,7 @@
 																   Grid.ColumnSpan="2"
 																   Grid.Row="1"
 																   Text="{Binding Summary}"
-																   FontSize="11"
+																   FontSize="12"
 																   Foreground="{DynamicResource TextSecondaryBrush}"
 																   TextTrimming="CharacterEllipsis"/>
 													</Grid>
@@ -1998,37 +785,1000 @@
 								</ItemsControl>
 							</Border>
 
-							<Border Grid.Row="2"
-									Background="{DynamicResource CardBgHoverBrush}"
-									BorderBrush="{DynamicResource BorderSubtleBrush}"
-									BorderThickness="1"
-									CornerRadius="8"
-									Padding="8"
-									Margin="0,0,0,8"
-									IsVisible="{Binding HasComposerAttachments}">
-								<Grid RowDefinitions="Auto,Auto"
-									  RowSpacing="8">
+							<Border Classes="ComposerSurface">
+								<Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
+
+									<!-- Context files -->
 									<Grid Grid.Row="0"
-										  ColumnDefinitions="*,Auto">
-										<TextBlock Grid.Column="0"
-												   Text="Context files"
-												   FontSize="11"
-												   FontWeight="SemiBold"
-												   Foreground="{DynamicResource TextSecondaryBrush}"/>
-										<Button Grid.Column="1"
-												Classes="CompactAction"
-												Height="24"
+										  RowDefinitions="Auto,Auto"
+										  RowSpacing="6"
+										  IsVisible="{Binding HasComposerAttachments}">
+										<Grid ColumnDefinitions="*,Auto">
+											<TextBlock Text="Context files" Classes="Overline"/>
+											<Button Grid.Column="1"
+													Classes="CompactAction"
+													ToolTip.Tip="Clear context files"
+													Command="{Binding ClearComposerAttachmentsCommand}">
+												<TextBlock Text="Clear context" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+											</Button>
+										</Grid>
+										<ItemsControl Grid.Row="1" ItemsSource="{Binding ComposerAttachments}">
+											<ItemsControl.ItemsPanel>
+												<ItemsPanelTemplate>
+													<WrapPanel/>
+												</ItemsPanelTemplate>
+											</ItemsControl.ItemsPanel>
+											<ItemsControl.ItemTemplate>
+												<DataTemplate DataType="vm:ComposerAttachmentViewModel">
+													<Border Classes="AttachmentChip">
+														<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+															<Viewbox Grid.Column="0" Width="14" Height="14" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconFile}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
+															<StackPanel Grid.Column="1" Spacing="1" MinWidth="0">
+																<TextBlock Text="{Binding FileName}"
+																		   FontSize="12"
+																		   FontWeight="SemiBold"
+																		   Foreground="{DynamicResource TextPrimaryBrush}"
+																		   TextTrimming="CharacterEllipsis"/>
+																<TextBlock Text="{Binding DisplayPath}"
+																		   FontSize="11"
+																		   Foreground="{DynamicResource TextMutedBrush}"
+																		   TextTrimming="CharacterEllipsis"/>
+															</StackPanel>
+															<Button Grid.Column="2"
+																	Classes="IconButton CompactIconButton"
+																	Background="Transparent"
+																	BorderThickness="0"
+																	ToolTip.Tip="Remove file"
+																	Command="{Binding $parent[Window].DataContext.RemoveComposerAttachmentCommand}"
+																	CommandParameter="{Binding}">
+																<Viewbox Width="12" Height="12"><Path Classes="Icon" Data="{StaticResource IconX}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
+															</Button>
+														</Grid>
+													</Border>
+												</DataTemplate>
+											</ItemsControl.ItemTemplate>
+										</ItemsControl>
+									</Grid>
+
+									<!-- Prompt -->
+									<TextBox Grid.Row="1"
+											 x:Name="WorkbenchPromptInput"
+											 Classes="BareInput"
+											 PlaceholderText="Ask Kam to inspect, edit, test, or plan..."
+											 FontSize="14"
+											 Foreground="{DynamicResource TextPrimaryBrush}"
+											 AcceptsReturn="False"
+											 TextWrapping="Wrap"
+											 MaxHeight="160"
+											 Text="{Binding CommandInputText, Mode=TwoWay}"
+											 KeyDown="OnPromptKeyDown"/>
+
+									<!-- Toolbar -->
+									<Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
+										<Button Grid.Column="0"
+												Classes="IconButton"
+												Width="32" Height="32"
+												CornerRadius="16"
 												Background="Transparent"
 												BorderThickness="0"
-												ToolTip.Tip="Clear context files"
-												Command="{Binding ClearComposerAttachmentsCommand}">
-											<TextBlock Text="Clear context"
-													   FontSize="10"
-													   Foreground="{DynamicResource TextMutedBrush}"/>
+												ToolTip.Tip="Attach files"
+												Click="OnAttachFilesClick">
+											<Viewbox Width="17" Height="17"><Path Classes="Icon" Data="{StaticResource IconPaperclip}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
+										</Button>
+										<TextBlock Grid.Column="1"
+												   Text="{Binding ActiveComposerContextText}"
+												   FontSize="12"
+												   Foreground="{DynamicResource TextMutedBrush}"
+												   VerticalAlignment="Center"
+												   TextTrimming="CharacterEllipsis"/>
+										<StackPanel Grid.Column="2"
+													Orientation="Horizontal"
+													Spacing="5"
+													VerticalAlignment="Center"
+													Margin="0,0,4,0"
+													IsVisible="{Binding IsVoiceEnabled}">
+											<Ellipse Width="6" Height="6" Fill="{Binding VoiceStatusColor}" VerticalAlignment="Center"/>
+											<TextBlock Text="{Binding VoiceStatusText}"
+													   FontSize="11"
+													   Foreground="{Binding VoiceStatusColor}"
+													   VerticalAlignment="Center"/>
+										</StackPanel>
+										<Button Grid.Column="3"
+												Classes="IconButton"
+												Width="32" Height="32"
+												CornerRadius="16"
+												Background="Transparent"
+												BorderThickness="0"
+												ToolTip.Tip="Toggle Voice Control"
+												Command="{Binding ToggleVoiceCommand}">
+											<Viewbox Width="17" Height="17"><Path Classes="Icon" Data="{StaticResource IconMic}" Stroke="{Binding VoiceStatusColor}"/></Viewbox>
+										</Button>
+										<Button Grid.Column="4"
+												Classes="SendButton"
+												ToolTip.Tip="Send (Enter)"
+												Command="{Binding SubmitCommand}">
+											<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconArrowUp}"/></Viewbox>
 										</Button>
 									</Grid>
-									<ItemsControl Grid.Row="1"
-												  ItemsSource="{Binding ComposerAttachments}">
+								</Grid>
+							</Border>
+
+							<TextBlock Text="Type / for commands  ·  Enter to send"
+									   FontSize="11"
+									   Foreground="{DynamicResource TextMutedBrush}"
+									   HorizontalAlignment="Center"/>
+						</StackPanel>
+					</Grid>
+				</Grid>
+
+				<!-- Page host -->
+				<ContentControl Content="{Binding CurrentViewModel}"
+								Grid.Column="0"
+								IsVisible="{Binding IsPageHostVisible}">
+					<ContentControl.DataTemplates>
+						<DataTemplate DataType="pagevm:PluginsViewModel">
+							<local:PluginsView/>
+						</DataTemplate>
+
+						<DataTemplate DataType="pagevm:RuntimeDiagnosticsViewModel">
+							<local:RuntimeDiagnosticsView/>
+						</DataTemplate>
+
+						<DataTemplate DataType="pagevm:IntegrationsViewModel">
+							<local:IntegrationsView/>
+						</DataTemplate>
+
+						<DataTemplate DataType="pagevm:SettingsViewModel">
+							<local:SettingsView/>
+						</DataTemplate>
+					</ContentControl.DataTemplates>
+				</ContentControl>
+
+				<!-- ========================= -->
+				<!-- ACTIVITY PANEL -->
+				<!-- ========================= -->
+				<Border Grid.Column="1"
+						Background="{DynamicResource PanelBgBrush}"
+						BorderBrush="{DynamicResource BorderSubtleBrush}"
+						BorderThickness="1,0,0,0"
+						IsVisible="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsLogPanelVisible}">
+					<Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, *, Auto">
+
+						<!-- Activity Header -->
+						<Border Grid.Row="0"
+								BorderBrush="{DynamicResource BorderSubtleBrush}"
+								BorderThickness="0,0,0,1">
+							<Grid RowDefinitions="Auto,Auto"
+								  RowSpacing="12"
+								  Margin="16,14,16,12">
+								<Grid Grid.Row="0" ColumnDefinitions="*, Auto">
+									<StackPanel Grid.Column="0" Spacing="1" VerticalAlignment="Center">
+										<TextBlock Text="Activity" Classes="SectionTitle"/>
+										<TextBlock Text="Session" Classes="Caption"/>
+									</StackPanel>
+									<Border Grid.Column="1" Classes="Pill Success">
+										<StackPanel Orientation="Horizontal" Spacing="6">
+											<Ellipse Width="6" Height="6"
+													 Fill="{DynamicResource AccentGreenBrush}"
+													 VerticalAlignment="Center"/>
+											<TextBlock Text="Live"/>
+										</StackPanel>
+									</Border>
+								</Grid>
+								<Border Grid.Row="1" Classes="Segmented">
+									<Grid ColumnDefinitions="*,*,*" ColumnSpacing="2">
+										<Button Grid.Column="0"
+												Classes="DrawerTab"
+												Classes.Selected="{Binding IsActivityRunsPanelVisible}"
+												Content="Agent runs"
+												Command="{Binding ShowRunsCommand}"/>
+										<Button Grid.Column="1"
+												Classes="DrawerTab"
+												Classes.Selected="{Binding IsActivityContextPanelVisible}"
+												Content="Context"
+												Command="{Binding ShowContextCommand}"/>
+										<Button Grid.Column="2"
+												Classes="DrawerTab"
+												Classes.Selected="{Binding IsActivityEventsPanelVisible}"
+												Content="Event stream"
+												Command="{Binding ShowEventsCommand}"/>
+									</Grid>
+								</Border>
+							</Grid>
+						</Border>
+
+						<!-- Pending Skill Confirmations -->
+						<Border Grid.Row="1"
+								Background="{DynamicResource CardBgHoverBrush}"
+								BorderBrush="{DynamicResource AccentStrongBrush}"
+								BorderThickness="0,0,0,1"
+								Padding="16,12"
+								IsVisible="{Binding HasPendingSkillConfirmations}">
+							<StackPanel Spacing="8">
+								<StackPanel Orientation="Horizontal" Spacing="8">
+									<Path Data="M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16"
+										  Fill="{DynamicResource AccentBrush}"
+										  Width="14" Height="14"
+										  Stretch="Uniform"
+										  VerticalAlignment="Center"/>
+									<TextBlock Text="Approval needed"
+											   FontSize="12"
+											   FontWeight="SemiBold"
+											   Foreground="{DynamicResource AccentBrush}"
+											   VerticalAlignment="Center"/>
+								</StackPanel>
+
+								<ItemsControl ItemsSource="{Binding PendingSkillConfirmations}">
+									<ItemsControl.ItemTemplate>
+										<DataTemplate>
+											<Border Background="{DynamicResource CardBgBrush}"
+													BorderBrush="{DynamicResource BorderSubtleBrush}"
+													BorderThickness="1"
+													CornerRadius="8"
+													Padding="10"
+													Margin="0,0,0,6">
+												<Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto, Auto, Auto">
+													<TextBlock Grid.Row="0" Grid.Column="0"
+															   Text="{Binding SkillId}"
+															   Foreground="{DynamicResource TextPrimaryBrush}"
+															   FontSize="12"
+															   FontFamily="{StaticResource MonoFontFamily}"
+															   FontWeight="SemiBold"
+															   TextWrapping="Wrap"/>
+													<TextBlock Grid.Row="1" Grid.Column="0"
+															   Text="{Binding UserCommand}"
+															   Foreground="{DynamicResource TextSecondaryBrush}"
+															   FontSize="11"
+															   TextWrapping="Wrap"
+															   Margin="0,4,12,0"/>
+													<TextBlock Grid.Row="2" Grid.Column="0"
+															   Text="{Binding Reason}"
+															   Foreground="{DynamicResource TextMutedBrush}"
+															   FontSize="10"
+															   TextWrapping="Wrap"
+															   Margin="0,4,12,0"/>
+													<Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+															Background="{DynamicResource CardBgHoverBrush}"
+															BorderBrush="{DynamicResource BorderSubtleBrush}"
+															BorderThickness="1"
+															CornerRadius="6"
+															Padding="8"
+															Margin="0,8,0,0"
+															IsVisible="{Binding HasPreview}">
+														<ScrollViewer MaxHeight="180"
+																	  HorizontalScrollBarVisibility="Auto"
+																	  VerticalScrollBarVisibility="Auto">
+															<TextBlock Text="{Binding Preview}"
+																	   Foreground="{DynamicResource TextSecondaryBrush}"
+																	   FontSize="10"
+																	   FontFamily="{StaticResource MonoFontFamily}"
+																	   TextWrapping="NoWrap"/>
+														</ScrollViewer>
+													</Border>
+													<StackPanel Grid.Row="0" Grid.RowSpan="3" Grid.Column="1"
+																Orientation="Horizontal"
+																VerticalAlignment="Top"
+																Spacing="6">
+														<Button Classes="IconButton"
+																Width="28" Height="28"
+																Background="Transparent"
+																BorderBrush="{DynamicResource AccentGreenBrush}"
+																BorderThickness="1"
+																CornerRadius="6"
+																Padding="0"
+																Cursor="Hand"
+																ToolTip.Tip="Approve"
+																Command="{Binding ApproveCommand}">
+															<Path Data="M9,16.17L4.83,12L3.41,13.41L9,19L21,7L19.59,5.59L9,16.17Z"
+																  Fill="{DynamicResource AccentGreenBrush}"
+																  Width="15" Height="15"
+																  Stretch="Uniform"/>
+														</Button>
+														<Button Classes="IconButton"
+																Width="28" Height="28"
+																Background="Transparent"
+																BorderBrush="{DynamicResource AccentErrorBrush}"
+																BorderThickness="1"
+																CornerRadius="6"
+																Padding="0"
+																Cursor="Hand"
+																ToolTip.Tip="Reject"
+																Command="{Binding RejectCommand}">
+															<Path Data="M18.3,5.71L12,12L5.7,5.71L4.29,7.12L10.59,13.41L4.29,19.71L5.7,21.12L12,14.83L18.3,21.12L19.71,19.71L13.41,13.41L19.71,7.12Z"
+																  Fill="{DynamicResource AccentErrorBrush}"
+																  Width="14" Height="14"
+																  Stretch="Uniform"/>
+														</Button>
+													</StackPanel>
+												</Grid>
+											</Border>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+							</StackPanel>
+						</Border>
+
+						<!-- Runtime Agents -->
+						<Border Grid.Row="2"
+								Background="Transparent"
+								BorderBrush="{DynamicResource BorderSubtleBrush}"
+								BorderThickness="0,0,0,1"
+								Padding="16,12"
+								IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Runs}}">
+							<StackPanel Spacing="8">
+								<StackPanel Orientation="Horizontal"
+											Spacing="8">
+									<Path Data="M12,2A7,7 0 0,1 19,9C19,11.38 17.81,13.47 16,14.74V17A1,1 0 0,1 15,18H9A1,1 0 0,1 8,17V14.74C6.19,13.47 5,11.38 5,9A7,7 0 0,1 12,2M9,20H15V22H9V20Z"
+										  Fill="{DynamicResource AccentBrush}"
+										  Width="14" Height="14"
+										  Stretch="Uniform"
+										  VerticalAlignment="Center"/>
+									<TextBlock Text="Agent runs"
+											   FontSize="12"
+											   FontWeight="SemiBold"
+											   Foreground="{DynamicResource TextMutedBrush}"
+											   VerticalAlignment="Center"/>
+								</StackPanel>
+								<ItemsControl ItemsSource="{Binding RuntimeAgentActivities}">
+									<ItemsControl.ItemTemplate>
+										<DataTemplate DataType="vm:RuntimeAgentActivityViewModel">
+											<Button Command="{Binding $parent[Window].DataContext.ShowRuntimeAgentRunDetailCommand}"
+													CommandParameter="{Binding}"
+													Background="Transparent"
+													BorderThickness="0"
+													Padding="0"
+													HorizontalContentAlignment="Stretch">
+												<Border Background="{DynamicResource CardBgHoverBrush}"
+														BorderBrush="{DynamicResource BorderSubtleBrush}"
+														BorderThickness="1"
+														CornerRadius="8"
+														Padding="10"
+														Margin="0,0,0,6">
+													<Grid ColumnDefinitions="Auto, *, Auto"
+														  RowDefinitions="Auto, Auto"
+														  ColumnSpacing="8">
+														<Border Grid.Row="0"
+																Grid.RowSpan="2"
+																Width="2"
+																Background="{Binding StatusBrush}"
+																CornerRadius="2"/>
+														<TextBlock Grid.Row="0"
+																   Grid.Column="1"
+																   Text="{Binding DisplayName}"
+																   FontSize="12"
+																   FontWeight="SemiBold"
+																   Foreground="{DynamicResource TextPrimaryBrush}"
+																   TextTrimming="CharacterEllipsis"/>
+														<TextBlock Grid.Row="0"
+																   Grid.Column="2"
+																   Text="{Binding StatusText}"
+																   FontSize="10"
+																   FontWeight="SemiBold"
+																   Foreground="{Binding StatusBrush}"/>
+														<TextBlock Grid.Row="1"
+																   Grid.Column="1"
+																   Text="{Binding LastMessage}"
+																   FontSize="11"
+																   Foreground="{DynamicResource TextSecondaryBrush}"
+																   TextTrimming="CharacterEllipsis"
+																   MaxLines="1"
+																   Margin="0,4,8,0"/>
+														<TextBlock Grid.Row="1"
+																   Grid.Column="2"
+																   Text="{Binding UpdatedText}"
+																   FontSize="10"
+																   FontFamily="{StaticResource MonoFontFamily}"
+																   Foreground="{DynamicResource TextMutedBrush}"
+																   Margin="0,4,0,0"/>
+													</Grid>
+												</Border>
+											</Button>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+								<TextBlock Text="No agent runs yet."
+										   FontSize="12"
+										   Foreground="{DynamicResource TextMutedBrush}"
+										   Margin="2,2,0,0"
+										   IsVisible="{Binding !HasRuntimeAgentActivities}"/>
+								<Border Background="{DynamicResource CardBgHoverBrush}"
+										BorderBrush="{DynamicResource AccentBrush}"
+										BorderThickness="1"
+										CornerRadius="8"
+										Padding="12"
+										IsVisible="{Binding HasSelectedRuntimeAgentRun}">
+									<StackPanel Spacing="8">
+										<Grid ColumnDefinitions="*, Auto">
+											<TextBlock Grid.Column="0"
+													   Text="Run detail"
+													   FontSize="12"
+													   FontWeight="SemiBold"
+													   Foreground="{DynamicResource TextPrimaryBrush}"/>
+											<TextBlock Grid.Column="1"
+													   Text="{Binding SelectedRuntimeAgentRun.StatusText}"
+													   FontSize="10"
+													   FontWeight="SemiBold"
+													   Foreground="{DynamicResource AccentBrush}"/>
+										</Grid>
+										<TextBlock Text="{Binding SelectedRuntimeAgentRun.DisplayName}"
+												   FontSize="12"
+												   Foreground="{DynamicResource TextPrimaryBrush}"
+												   TextTrimming="CharacterEllipsis"/>
+										<Grid ColumnDefinitions="Auto, *"
+											  RowDefinitions="Auto, Auto"
+											  ColumnSpacing="10"
+											  RowSpacing="4">
+											<TextBlock Grid.Row="0"
+													   Grid.Column="0"
+													   Text="Model"
+													   FontSize="10"
+													   Foreground="{DynamicResource TextMutedBrush}"/>
+											<TextBlock Grid.Row="0"
+													   Grid.Column="1"
+													   Text="{Binding SelectedRuntimeAgentRun.ModelIdText}"
+													   FontSize="10"
+													   Foreground="{DynamicResource TextSecondaryBrush}"
+													   TextTrimming="CharacterEllipsis"/>
+											<TextBlock Grid.Row="1"
+													   Grid.Column="0"
+													   Text="Duration"
+													   FontSize="10"
+													   Foreground="{DynamicResource TextMutedBrush}"/>
+											<TextBlock Grid.Row="1"
+													   Grid.Column="1"
+													   Text="{Binding SelectedRuntimeAgentRun.DurationText}"
+													   FontSize="10"
+													   Foreground="{DynamicResource TextSecondaryBrush}"/>
+										</Grid>
+										<TextBlock Text="{Binding SelectedRuntimeAgentRun.TaskText}"
+												   FontSize="11"
+												   Foreground="{DynamicResource TextSecondaryBrush}"
+												   TextWrapping="Wrap"
+												   MaxLines="3"/>
+										<ItemsControl ItemsSource="{Binding SelectedRuntimeAgentRun.Observations}"
+													  IsVisible="{Binding SelectedRuntimeAgentRun.HasObservations}">
+											<ItemsControl.ItemTemplate>
+												<DataTemplate DataType="vm:RuntimeAgentObservationDetailViewModel">
+													<Grid ColumnDefinitions="Auto, *, Auto"
+														  RowDefinitions="Auto, Auto"
+														  ColumnSpacing="8"
+														  Margin="0,2">
+														<TextBlock Grid.Row="0"
+																   Grid.Column="0"
+																   Text="Context"
+																   FontSize="10"
+																   Foreground="{DynamicResource TextMutedBrush}"/>
+														<TextBlock Grid.Row="0"
+																   Grid.Column="1"
+																   Text="{Binding DisplayName}"
+																   FontSize="10"
+																   Foreground="{DynamicResource TextSecondaryBrush}"
+																   TextTrimming="CharacterEllipsis"/>
+														<TextBlock Grid.Row="0"
+																   Grid.Column="2"
+																   Text="{Binding StatusText}"
+																   FontSize="10"
+																   Foreground="{DynamicResource TextMutedBrush}"/>
+														<TextBlock Grid.Row="1"
+																   Grid.Column="1"
+																   Grid.ColumnSpan="2"
+																   Text="{Binding SummaryText}"
+																   FontSize="10"
+																   Foreground="{DynamicResource TextMutedBrush}"
+																   TextTrimming="CharacterEllipsis"
+																   MaxLines="1"/>
+													</Grid>
+												</DataTemplate>
+											</ItemsControl.ItemTemplate>
+										</ItemsControl>
+										<TextBlock Text="{Binding SelectedRuntimeAgentRun.ResponseText}"
+												   FontSize="11"
+												   Foreground="{DynamicResource TextSecondaryBrush}"
+												   TextWrapping="Wrap"
+												   MaxLines="4"
+												   IsVisible="{Binding SelectedRuntimeAgentRun.HasResponse}"/>
+										<TextBlock Text="{Binding SelectedRuntimeAgentRun.ErrorText}"
+												   FontSize="11"
+												   Foreground="{DynamicResource AccentErrorBrush}"
+												   TextWrapping="Wrap"
+												   MaxLines="3"
+												   IsVisible="{Binding SelectedRuntimeAgentRun.HasError}"/>
+									</StackPanel>
+								</Border>
+							</StackPanel>
+						</Border>
+
+						<!-- Planner Trace -->
+						<Border Grid.Row="3"
+								Background="{DynamicResource CardBgBrush}"
+								BorderBrush="{DynamicResource BorderSubtleBrush}"
+								BorderThickness="0,0,0,1"
+								Padding="16,12"
+								IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Context}}">
+							<StackPanel Spacing="8">
+								<Grid ColumnDefinitions="*, Auto">
+									<StackPanel Grid.Column="0"
+												Orientation="Horizontal"
+												Spacing="8">
+										<Path Data="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M7,13H9V11H7V13M11,17H13V7H11V17M15,13H17V11H15V13Z"
+											  Fill="{DynamicResource TextMutedBrush}"
+											  Width="14" Height="14"
+											  Stretch="Uniform"
+											  VerticalAlignment="Center"/>
+										<TextBlock Text="Plan trace"
+												   FontSize="12"
+												   FontWeight="SemiBold"
+												   Foreground="{DynamicResource TextMutedBrush}"
+												   VerticalAlignment="Center"/>
+									</StackPanel>
+									<Button Grid.Column="1"
+											Classes="IconButton CompactIconButton"
+											Background="Transparent"
+											BorderBrush="{DynamicResource BorderSubtleBrush}"
+											BorderThickness="1"
+											CornerRadius="6"
+											Padding="0"
+											Cursor="Hand"
+											ToolTip.Tip="Clear planner trace"
+											Command="{Binding ClearSkillPlannerTraceCommand}">
+										<Path Data="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"
+											  Fill="{DynamicResource TextMutedBrush}"
+											  Width="13" Height="13"
+											  Stretch="Uniform"/>
+									</Button>
+								</Grid>
+
+								<ScrollViewer MaxHeight="220"
+											  VerticalScrollBarVisibility="Auto">
+									<ItemsControl ItemsSource="{Binding SkillPlannerTraces}">
+										<ItemsControl.ItemTemplate>
+											<DataTemplate>
+												<Border Background="{DynamicResource CardBgHoverBrush}"
+														BorderBrush="{DynamicResource BorderSubtleBrush}"
+														BorderThickness="1"
+														CornerRadius="8"
+														Padding="10"
+														Margin="0,0,0,8">
+													<Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto">
+														<StackPanel Grid.Row="0"
+																	Orientation="Horizontal"
+																	Spacing="8">
+															<TextBlock Text="{Binding SkillIdText}"
+																	   Foreground="{DynamicResource TextPrimaryBrush}"
+																	   FontSize="11"
+																	   FontFamily="{StaticResource MonoFontFamily}"
+																	   FontWeight="SemiBold"/>
+															<TextBlock Text="{Binding StatusText}"
+																	   Foreground="{DynamicResource AccentBrush}"
+																	   FontSize="10"
+																	   FontFamily="{StaticResource MonoFontFamily}"/>
+															<TextBlock Text="{Binding ConfidenceText}"
+																	   Foreground="{DynamicResource TextMutedBrush}"
+																	   FontSize="10"
+																	   FontFamily="{StaticResource MonoFontFamily}"/>
+															<TextBlock Text="{Binding DurationText}"
+																	   Foreground="{DynamicResource TextMutedBrush}"
+																	   FontSize="10"
+																	   FontFamily="{StaticResource MonoFontFamily}"/>
+														</StackPanel>
+														<TextBlock Grid.Row="1"
+																   Text="{Binding UserRequestText}"
+																   Foreground="{DynamicResource TextSecondaryBrush}"
+																   FontSize="10"
+																   TextWrapping="Wrap"
+																   MaxLines="2"
+																   Margin="0,6,0,0"/>
+														<TextBlock Grid.Row="2"
+																   Text="{Binding ReasoningText}"
+																   Foreground="{DynamicResource TextMutedBrush}"
+																   FontSize="10"
+																   TextWrapping="Wrap"
+																   MaxLines="2"
+																   IsVisible="{Binding HasReasoning}"
+																   Margin="0,4,0,0"/>
+														<TextBlock Grid.Row="3"
+																   Text="{Binding ErrorText}"
+																   Foreground="{DynamicResource AccentErrorBrush}"
+																   FontSize="10"
+																   TextWrapping="Wrap"
+																   MaxLines="2"
+																   IsVisible="{Binding HasError}"
+																   Margin="0,4,0,0"/>
+														<TextBlock Grid.Row="4"
+																   Text="{Binding RawResponseText}"
+																   Foreground="{DynamicResource TextMutedBrush}"
+																   FontSize="10"
+																   FontFamily="{StaticResource MonoFontFamily}"
+																   TextWrapping="Wrap"
+																   MaxLines="4"
+																   IsVisible="{Binding HasRawResponse}"
+																   Margin="0,6,0,0"/>
+													</Grid>
+												</Border>
+											</DataTemplate>
+										</ItemsControl.ItemTemplate>
+									</ItemsControl>
+								</ScrollViewer>
+							</StackPanel>
+						</Border>
+
+						<!-- Skill Execution History -->
+						<Border Grid.Row="4"
+								Background="{DynamicResource CardBgBrush}"
+								BorderBrush="{DynamicResource BorderSubtleBrush}"
+								BorderThickness="0,0,0,1"
+								Padding="16,12"
+								IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Context}}">
+							<StackPanel Spacing="8">
+								<Grid ColumnDefinitions="*, Auto">
+									<StackPanel Grid.Column="0"
+												Orientation="Horizontal"
+												Spacing="8">
+										<Path Data="M13 3C8.03 3 4 7.03 4 12H1L5 16L9 12H6C6 8.13 9.13 5 13 5C16.87 5 20 8.13 20 12C20 15.87 16.87 19 13 19C11.07 19 9.32 18.22 8.05 16.95L6.64 18.36C8.27 19.99 10.52 21 13 21C17.97 21 22 16.97 22 12C22 7.03 17.97 3 13 3M12 7V13L17 16L18 14.27L14 11.9V7H12Z"
+											  Fill="{DynamicResource TextMutedBrush}"
+											  Width="14" Height="14"
+											  Stretch="Uniform"
+											  VerticalAlignment="Center"/>
+										<TextBlock Text="Skill results"
+												   FontSize="12"
+												   FontWeight="SemiBold"
+												   Foreground="{DynamicResource TextMutedBrush}"
+												   VerticalAlignment="Center"/>
+									</StackPanel>
+									<Button Grid.Column="1"
+											Classes="IconButton CompactIconButton"
+											Background="Transparent"
+											BorderBrush="{DynamicResource BorderSubtleBrush}"
+											BorderThickness="1"
+											CornerRadius="6"
+											Padding="0"
+											Cursor="Hand"
+											ToolTip.Tip="Clear result history"
+											Command="{Binding ClearSkillExecutionHistoryCommand}">
+										<Path Data="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"
+											  Fill="{DynamicResource TextMutedBrush}"
+											  Width="13" Height="13"
+											  Stretch="Uniform"/>
+									</Button>
+								</Grid>
+
+								<Grid ColumnDefinitions="*, 132, Auto"
+									  RowDefinitions="Auto, Auto"
+									  ColumnSpacing="8"
+									  RowSpacing="6"
+									  Margin="0,10,0,10">
+									<TextBox Grid.Row="0" Grid.Column="0"
+											 Text="{Binding SkillExecutionHistoryFilterText, Mode=TwoWay}"
+											 PlaceholderText="Filter result history..."
+											 FontSize="11"
+											 FontFamily="{StaticResource MonoFontFamily}"
+											 Background="{DynamicResource CardBgBrush}"
+											 BorderBrush="{DynamicResource BorderSubtleBrush}"
+											 BorderThickness="1"
+											 CornerRadius="6"
+											 Padding="8,5"/>
+									<ComboBox Grid.Row="0" Grid.Column="1"
+											  ItemsSource="{Binding SkillExecutionHistoryStatusFilters}"
+											  SelectedItem="{Binding SkillExecutionHistoryStatusFilter, Mode=TwoWay}"
+											  Height="30"
+											  FontSize="11"
+											  FontFamily="{StaticResource MonoFontFamily}"
+											  Background="{DynamicResource CardBgBrush}"
+											  BorderBrush="{DynamicResource BorderSubtleBrush}"
+											  BorderThickness="1"
+											  Padding="8,3"/>
+									<Button Grid.Row="0" Grid.Column="2"
+											Classes="IconButton"
+											Width="30" Height="30"
+											Background="Transparent"
+											BorderBrush="{DynamicResource BorderSubtleBrush}"
+											BorderThickness="1"
+											CornerRadius="6"
+											Padding="0"
+											Cursor="Hand"
+											ToolTip.Tip="Clear filters"
+											Command="{Binding ClearSkillExecutionHistoryFiltersCommand}"
+											IsVisible="{Binding HasSkillExecutionHistoryFilter}">
+										<Path Data="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
+											  Fill="{DynamicResource TextMutedBrush}"
+											  Width="12" Height="12"
+											  Stretch="Uniform"/>
+									</Button>
+									<TextBlock Grid.Row="1" Grid.ColumnSpan="3"
+											   Text="{Binding SkillExecutionHistorySummaryText}"
+											   Foreground="{DynamicResource TextMutedBrush}"
+											   FontSize="10"
+											   FontFamily="{StaticResource MonoFontFamily}"/>
+								</Grid>
+
+								<TextBlock Text="No matching executions"
+										   Foreground="{DynamicResource TextMutedBrush}"
+										   FontSize="10"
+										   FontFamily="{StaticResource MonoFontFamily}"
+										   Margin="0,0,0,8"
+										   IsVisible="{Binding HasNoSkillExecutionHistoryMatches}"/>
+
+								<ScrollViewer MaxHeight="280"
+											  VerticalScrollBarVisibility="Auto">
+									<ItemsControl ItemsSource="{Binding SkillExecutionHistory}">
+										<ItemsControl.ItemTemplate>
+											<DataTemplate>
+												<Border Background="{DynamicResource CardBgHoverBrush}"
+														BorderBrush="{DynamicResource BorderSubtleBrush}"
+														BorderThickness="1"
+														CornerRadius="8"
+														Padding="10"
+														Margin="0,0,0,8">
+													<Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto"
+														  ColumnDefinitions="*, Auto">
+														<TextBlock Grid.Row="0" Grid.Column="0"
+																   Text="{Binding SkillId}"
+																   Foreground="{DynamicResource TextPrimaryBrush}"
+																   FontSize="12"
+																   FontFamily="{StaticResource MonoFontFamily}"
+																   FontWeight="SemiBold"
+																   TextWrapping="Wrap"/>
+														<StackPanel Grid.Row="0" Grid.Column="1"
+																	Orientation="Horizontal"
+																	Spacing="6"
+																	VerticalAlignment="Top">
+															<TextBlock Text="{Binding StatusText}"
+																	   Foreground="{DynamicResource AccentBrush}"
+																	   FontSize="10"
+																	   FontFamily="{StaticResource MonoFontFamily}"
+																	   FontWeight="SemiBold"/>
+															<TextBlock Text="{Binding DurationText}"
+																	   Foreground="{DynamicResource TextMutedBrush}"
+																	   FontSize="10"
+																	   FontFamily="{StaticResource MonoFontFamily}"/>
+														</StackPanel>
+														<StackPanel Grid.Row="1" Grid.ColumnSpan="2"
+																	Orientation="Horizontal"
+																	Spacing="8"
+																	Margin="0,4,0,0">
+															<TextBlock Text="{Binding TimestampText}"
+																	   Foreground="{DynamicResource TextMutedBrush}"
+																	   FontSize="10"
+																	   FontFamily="{StaticResource MonoFontFamily}"/>
+															<TextBlock Text="{Binding ExitCodeText}"
+																	   Foreground="{DynamicResource TextMutedBrush}"
+																	   FontSize="10"
+																	   FontFamily="{StaticResource MonoFontFamily}"
+																	   IsVisible="{Binding HasExitCode}"/>
+															<TextBlock Text="{Binding RuntimeFlagsText}"
+																	   Foreground="{DynamicResource AccentErrorBrush}"
+																	   FontSize="10"
+																	   FontFamily="{StaticResource MonoFontFamily}"
+																	   IsVisible="{Binding HasRuntimeFlags}"/>
+														</StackPanel>
+														<StackPanel Grid.Row="2" Grid.ColumnSpan="2"
+																	Orientation="Horizontal"
+																	Spacing="6"
+																	Margin="0,8,0,0">
+															<Button Classes="IconButton CompactIconButton"
+																	Background="Transparent"
+																	BorderBrush="{DynamicResource BorderSubtleBrush}"
+																	BorderThickness="1"
+																	CornerRadius="6"
+																	Padding="0"
+																	Cursor="Hand"
+																	ToolTip.Tip="Copy result"
+																	Command="{Binding CopyResultCommand}">
+																<Path Data="M19,21H8A2,2 0 0,1 6,19V7H8V19H19V21M16,3H4A2,2 0 0,0 2,5V17H4V5H16V3M20,7H10A2,2 0 0,0 8,9V17A2,2 0 0,0 10,19H20A2,2 0 0,0 22,17V9A2,2 0 0,0 20,7Z"
+																	  Fill="{DynamicResource TextMutedBrush}"
+																	  Width="13" Height="13"
+																	  Stretch="Uniform"/>
+															</Button>
+															<Button Classes="IconButton CompactIconButton"
+																	Background="Transparent"
+																	BorderBrush="{DynamicResource BorderSubtleBrush}"
+																	BorderThickness="1"
+																	CornerRadius="6"
+																	Padding="0"
+																	Cursor="Hand"
+																	ToolTip.Tip="Copy stdout"
+																	Command="{Binding CopyStdOutCommand}"
+																	IsVisible="{Binding HasStdOut}">
+																<Path Data="M5,3H19A2,2 0 0,1 21,5V19A2,2 0 0,1 19,21H5A2,2 0 0,1 3,19V5A2,2 0 0,1 5,3M5,7V19H19V7H5M7,9H17V11H7V9M7,13H15V15H7V13Z"
+																	  Fill="{DynamicResource TextSecondaryBrush}"
+																	  Width="13" Height="13"
+																	  Stretch="Uniform"/>
+															</Button>
+															<Button Classes="IconButton CompactIconButton"
+																	Background="Transparent"
+																	BorderBrush="{DynamicResource AccentErrorBrush}"
+																	BorderThickness="1"
+																	CornerRadius="6"
+																	Padding="0"
+																	Cursor="Hand"
+																	ToolTip.Tip="Copy stderr"
+																	Command="{Binding CopyStdErrCommand}"
+																	IsVisible="{Binding HasStdErr}">
+																<Path Data="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
+																	  Fill="{DynamicResource AccentErrorBrush}"
+																	  Width="13" Height="13"
+																	  Stretch="Uniform"/>
+															</Button>
+															<Button Classes="IconButton CompactIconButton"
+																	Background="Transparent"
+																	BorderBrush="{DynamicResource AccentStrongBrush}"
+																	BorderThickness="1"
+																	CornerRadius="6"
+																	Padding="0"
+																	Cursor="Hand"
+																	ToolTip.Tip="Rerun skill"
+																	Command="{Binding RerunCommand}"
+																	IsVisible="{Binding CanRerun}">
+																<Path Data="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.82,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"
+																	  Fill="{DynamicResource AccentBrush}"
+																	  Width="13" Height="13"
+																	  Stretch="Uniform"/>
+															</Button>
+														</StackPanel>
+														<TextBlock Grid.Row="3" Grid.ColumnSpan="2"
+																   Text="{Binding DetailText}"
+																   Foreground="{DynamicResource TextSecondaryBrush}"
+																   FontSize="10"
+																   FontFamily="{StaticResource MonoFontFamily}"
+																   TextWrapping="Wrap"
+																   MaxLines="5"
+																   Margin="0,6,0,0"
+																   IsVisible="{Binding HasDetailText}"/>
+														<Border Grid.Row="4" Grid.ColumnSpan="2"
+																Background="{DynamicResource CardBgBrush}"
+																BorderBrush="{DynamicResource BorderSubtleBrush}"
+																BorderThickness="1"
+																CornerRadius="6"
+																Padding="8"
+																Margin="0,8,0,0"
+																IsVisible="{Binding HasStdOut}">
+															<ScrollViewer MaxHeight="72"
+																		  HorizontalScrollBarVisibility="Auto"
+																		  VerticalScrollBarVisibility="Auto">
+																<TextBlock Text="{Binding StdOut}"
+																		   Foreground="{DynamicResource TextSecondaryBrush}"
+																		   FontSize="10"
+																		   FontFamily="{StaticResource MonoFontFamily}"
+																		   TextWrapping="NoWrap"/>
+															</ScrollViewer>
+														</Border>
+														<Border Grid.Row="5" Grid.ColumnSpan="2"
+																Background="{DynamicResource CardBgBrush}"
+																BorderBrush="{DynamicResource AccentErrorBrush}"
+																BorderThickness="1"
+																CornerRadius="6"
+																Padding="8"
+																Margin="0,8,0,0"
+																IsVisible="{Binding HasStdErr}">
+															<ScrollViewer MaxHeight="72"
+																		  HorizontalScrollBarVisibility="Auto"
+																		  VerticalScrollBarVisibility="Auto">
+																<TextBlock Text="{Binding StdErr}"
+																		   Foreground="{DynamicResource AccentErrorBrush}"
+																		   FontSize="10"
+																		   FontFamily="{StaticResource MonoFontFamily}"
+																		   TextWrapping="NoWrap"/>
+															</ScrollViewer>
+														</Border>
+													</Grid>
+												</Border>
+											</DataTemplate>
+										</ItemsControl.ItemTemplate>
+									</ItemsControl>
+								</ScrollViewer>
+							</StackPanel>
+						</Border>
+
+						<!-- Log Content -->
+						<ScrollViewer x:Name="LogScrollViewer" Grid.Row="5"
+									  VerticalScrollBarVisibility="Auto"
+									  Margin="18,10,18,0"
+									  IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Events}}">
+							<ItemsControl ItemsSource="{Binding ActivityLogEntries}">
+								<ItemsControl.ItemTemplate>
+									<DataTemplate DataType="vm:ActivityLogEntryViewModel">
+										<Border Classes="ActivityLogItem">
+											<Grid ColumnDefinitions="Auto, *"
+												  RowDefinitions="Auto, Auto"
+												  ColumnSpacing="9">
+												<Border Grid.Row="0"
+														Grid.RowSpan="2"
+														Width="2"
+														Background="{Binding AccentBrush}"
+														CornerRadius="2"/>
+												<Grid Grid.Row="0"
+													  Grid.Column="1"
+													  ColumnDefinitions="Auto, Auto, *"
+													  ColumnSpacing="7">
+													<TextBlock Grid.Column="0"
+															   Text="{Binding CategoryText}"
+															   Classes="ActivityMeta"
+															   Foreground="{Binding AccentBrush}"/>
+													<TextBlock Grid.Column="1"
+															   Text="{Binding TimeText}"
+															   Classes="ActivityMeta"
+															   FontFamily="{StaticResource MonoFontFamily}"/>
+													<TextBlock Grid.Column="2"
+															   Text="{Binding SourceText}"
+															   Classes="ActivityMeta"
+															   TextTrimming="CharacterEllipsis"
+															   IsVisible="{Binding HasSourceText}"/>
+												</Grid>
+												<TextBlock Grid.Row="1"
+														   Grid.Column="1"
+														   Text="{Binding MessageText}"
+														   Classes="ActivityMessage"
+														   MaxLines="4"
+														   Margin="0,4,0,0"/>
+											</Grid>
+										</Border>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+						</ScrollViewer>
+
+						<!-- Command prompt (shown on pages that hide the chat composer) -->
+						<Border Grid.Row="6"
+								BorderBrush="{DynamicResource BorderSubtleBrush}"
+								BorderThickness="0,1,0,0"
+								Padding="14,12"
+								IsVisible="{Binding IsPageHostVisible}">
+							<Grid RowDefinitions="Auto, Auto, Auto, Auto" RowSpacing="8">
+								<TextBlock Grid.Row="0" Text="Message" Classes="Overline"/>
+
+								<Border Grid.Row="1"
+										Background="{DynamicResource SurfaceBgElevatedBrush}"
+										BorderBrush="{DynamicResource BorderMutedBrush}"
+										BorderThickness="1"
+										CornerRadius="10"
+										Padding="4"
+										IsVisible="{Binding IsSlashCommandPaletteVisible}">
+									<ItemsControl ItemsSource="{Binding SlashCommandSuggestions}"
+												  HorizontalAlignment="Stretch">
+										<ItemsControl.ItemTemplate>
+											<DataTemplate DataType="vm:SlashCommandSuggestionViewModel">
+												<Button Command="{Binding $parent[Window].DataContext.SelectSlashCommandCommand}"
+														CommandParameter="{Binding}"
+														Classes="SlashCommandItem"
+														HorizontalAlignment="Stretch">
+													<Border Background="{Binding IsSelected, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='CardBgHoverBrush|TransparentBrush'}"
+															BorderBrush="Transparent"
+															BorderThickness="0"
+															CornerRadius="6"
+															Padding="8,6"
+															HorizontalAlignment="Stretch">
+														<Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto, Auto" RowSpacing="2">
+															<Border Grid.Column="0"
+																	Grid.RowSpan="2"
+																	Width="2"
+																	Height="22"
+																	Background="{DynamicResource AccentBrush}"
+																	CornerRadius="2"
+																	Opacity="{Binding IsSelected, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter='1|0'}"
+																	VerticalAlignment="Center"
+																	Margin="0,0,8,0"/>
+															<TextBlock Grid.Column="1"
+																	   Text="{Binding Name}"
+																	   FontSize="12"
+																	   FontFamily="{StaticResource MonoFontFamily}"
+																	   FontWeight="SemiBold"
+																	   Foreground="{DynamicResource AccentBrush}"/>
+															<TextBlock Grid.Column="1"
+																	   Grid.Row="1"
+																	   Text="{Binding Summary}"
+																	   FontSize="11"
+																	   Foreground="{DynamicResource TextSecondaryBrush}"
+																	   TextTrimming="CharacterEllipsis"/>
+														</Grid>
+													</Border>
+												</Button>
+											</DataTemplate>
+										</ItemsControl.ItemTemplate>
+									</ItemsControl>
+								</Border>
+
+								<WrapPanel Grid.Row="2" IsVisible="{Binding HasComposerAttachments}">
+									<ItemsControl ItemsSource="{Binding ComposerAttachments}">
 										<ItemsControl.ItemsPanel>
 											<ItemsPanelTemplate>
 												<WrapPanel/>
@@ -2037,140 +1787,80 @@
 										<ItemsControl.ItemTemplate>
 											<DataTemplate DataType="vm:ComposerAttachmentViewModel">
 												<Border Classes="AttachmentChip">
-													<Grid ColumnDefinitions="Auto,*,Auto"
-														  ColumnSpacing="8">
-														<Path Grid.Column="0"
-															  Data="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M13,9V3.5L18.5,9H13Z"
-															  Fill="{DynamicResource TextMutedBrush}"
-															  Width="14"
-															  Height="14"
-															  Stretch="Uniform"
-															  VerticalAlignment="Center"/>
-														<StackPanel Grid.Column="1"
-																	Spacing="1"
-																	MinWidth="0">
-															<TextBlock Text="{Binding FileName}"
-																	   FontSize="11"
-																	   FontWeight="SemiBold"
-																	   Foreground="{DynamicResource TextPrimaryBrush}"
-																	   TextTrimming="CharacterEllipsis"/>
-															<TextBlock Text="{Binding DisplayPath}"
-																	   FontSize="10"
-																	   Foreground="{DynamicResource TextMutedBrush}"
-																	   TextTrimming="CharacterEllipsis"/>
-														</StackPanel>
-														<Button Grid.Column="2"
-																Classes="IconButton CompactIconButton"
+													<StackPanel Orientation="Horizontal" Spacing="6">
+														<TextBlock Text="{Binding FileName}"
+																   FontSize="11"
+																   FontWeight="SemiBold"
+																   MaxWidth="160"
+																   TextTrimming="CharacterEllipsis"
+																   VerticalAlignment="Center"/>
+														<Button Classes="IconButton CompactIconButton"
 																Background="Transparent"
 																BorderThickness="0"
 																ToolTip.Tip="Remove file"
 																Command="{Binding $parent[Window].DataContext.RemoveComposerAttachmentCommand}"
 																CommandParameter="{Binding}">
-															<Path Data="M18.3,5.71L12,12L5.7,5.71L4.29,7.12L10.59,13.41L4.29,19.71L5.7,21.12L12,14.83L18.3,21.12L19.71,19.71L13.41,13.41L19.71,7.12Z"
-																  Fill="{DynamicResource TextMutedBrush}"
-																  Width="11"
-																  Height="11"
-																  Stretch="Uniform"/>
+															<Viewbox Width="10" Height="10"><Path Classes="Icon" Data="{StaticResource IconX}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
 														</Button>
-													</Grid>
+													</StackPanel>
 												</Border>
 											</DataTemplate>
 										</ItemsControl.ItemTemplate>
 									</ItemsControl>
-								</Grid>
-							</Border>
+								</WrapPanel>
 
-							<Border Grid.Row="3"
-									Background="{DynamicResource CardBgHoverBrush}"
-									BorderBrush="{DynamicResource BorderSubtleBrush}"
-									BorderThickness="1"
-									CornerRadius="10"
-									Padding="10,7">
-								<Grid ColumnDefinitions="Auto, Auto, *, Auto, Auto">
-								<Button Grid.Column="0"
-										Classes="IconButton"
-										Width="28" Height="28"
-										Background="Transparent"
-										BorderBrush="{DynamicResource BorderSubtleBrush}"
+								<Border Grid.Row="3"
+										Background="{DynamicResource CardBgBrush}"
+										BorderBrush="{DynamicResource BorderMutedBrush}"
 										BorderThickness="1"
-										CornerRadius="6"
-										Padding="0"
-										Cursor="Hand"
-										ToolTip.Tip="Attach files"
-										Click="OnAttachFilesClick">
-									<Path Data="M16.5,6V17.5A4.5,4.5 0 0,1 12,22A4.5,4.5 0 0,1 7.5,17.5V5A3,3 0 0,1 10.5,2A3,3 0 0,1 13.5,5V16.5A1.5,1.5 0 0,1 12,18A1.5,1.5 0 0,1 10.5,16.5V6H12V16.5H12V5A1.5,1.5 0 0,0 10.5,3.5A1.5,1.5 0 0,0 9,5V17.5A3,3 0 0,0 12,20.5A3,3 0 0,0 15,17.5V6H16.5Z"
-										  Fill="{DynamicResource TextMutedBrush}"
-										  Width="15"
-										  Height="15"
-										  Stretch="Uniform"/>
-								</Button>
-								<!-- Prompt character -->
-								<TextBlock Grid.Column="1"
-										   Text=">"
-										   FontSize="12"
-										   FontFamily="Consolas"
-										   Foreground="{DynamicResource TextMutedBrush}"
-										   VerticalAlignment="Center"
-										   Margin="8,0,8,0"/>
-
-								<!-- Text Input -->
-								<TextBox Grid.Column="2"
-										 x:Name="PromptInput"
-										 PlaceholderText="Type / for commands..."
-										 FontSize="12"
-										 FontFamily="Segoe UI, Arial, sans-serif"
-										 Background="Transparent"
-										 BorderThickness="0"
-										 Foreground="{DynamicResource TextSecondaryBrush}"
-										 VerticalAlignment="Center"
-										 AcceptsReturn="False"
-										 TextWrapping="NoWrap"
-										 Text="{Binding CommandInputText, Mode=TwoWay}"
-										 KeyDown="OnPromptKeyDown"/>
-
-								<!-- Voice Status Indicator -->
-								<StackPanel Grid.Column="3"
-											Orientation="Horizontal"
-											VerticalAlignment="Center"
-											Margin="8,0"
-											IsVisible="{Binding IsVoiceEnabled}">
-									<Ellipse Width="6" Height="6"
-											 Fill="{Binding VoiceStatusColor}"
-											 Margin="0,0,4,0"
-											 VerticalAlignment="Center">
-										<Ellipse.Effect>
-											<BlurEffect Radius="2"/>
-										</Ellipse.Effect>
-									</Ellipse>
-									<TextBlock Text="{Binding VoiceStatusText}"
-											   FontSize="10"
-											   Foreground="{Binding VoiceStatusColor}"
-											   VerticalAlignment="Center"/>
-								</StackPanel>
-
-								<!-- Mic Button -->
-								<Button Grid.Column="4"
-										Classes="IconButton"
-										Width="28" Height="28"
-										Margin="8,0,0,0"
-										Background="Transparent"
-										BorderThickness="0"
-										Cursor="Hand"
-										ToolTip.Tip="Toggle Voice Control (Say 'Hey Kam')"
-										Command="{Binding ToggleVoiceCommand}">
-										<Path Data="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"
-										  Fill="{Binding VoiceStatusColor}"
-										  Width="16" Height="16"
-										  Stretch="Uniform"
-										  HorizontalAlignment="Center"
-										  VerticalAlignment="Center"/>
-								</Button>
+										CornerRadius="10"
+										Padding="6,4">
+									<Grid ColumnDefinitions="Auto, *, Auto, Auto" ColumnSpacing="4">
+										<Button Grid.Column="0"
+												Classes="IconButton"
+												Width="28" Height="28"
+												CornerRadius="14"
+												Background="Transparent"
+												BorderThickness="0"
+												ToolTip.Tip="Attach files"
+												Click="OnAttachFilesClick">
+											<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconPaperclip}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
+										</Button>
+										<TextBox Grid.Column="1"
+												 x:Name="PromptInput"
+												 Classes="BareInput"
+												 PlaceholderText="Type / for commands..."
+												 FontSize="13"
+												 VerticalAlignment="Center"
+												 AcceptsReturn="False"
+												 TextWrapping="NoWrap"
+												 Text="{Binding CommandInputText, Mode=TwoWay}"
+												 KeyDown="OnPromptKeyDown"/>
+										<Button Grid.Column="2"
+												Classes="IconButton"
+												Width="28" Height="28"
+												CornerRadius="14"
+												Background="Transparent"
+												BorderThickness="0"
+												ToolTip.Tip="Toggle Voice Control (Say 'Hey Kam')"
+												Command="{Binding ToggleVoiceCommand}">
+											<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconMic}" Stroke="{Binding VoiceStatusColor}"/></Viewbox>
+										</Button>
+										<Button Grid.Column="3"
+												Classes="SendButton"
+												Width="28" Height="28"
+												CornerRadius="14"
+												ToolTip.Tip="Send (Enter)"
+												Command="{Binding SubmitCommand}">
+											<Viewbox Width="13" Height="13"><Path Classes="Icon" Data="{StaticResource IconArrowUp}"/></Viewbox>
+										</Button>
+									</Grid>
+								</Border>
 							</Grid>
-							</Border>
-						</Grid>
-					</Border>
-				</Grid>
-			</Border>
-		</Grid>
-	</Panel>
+						</Border>
+					</Grid>
+				</Border>
+			</Grid>
+		</Border>
+	</Grid>
 </Window>

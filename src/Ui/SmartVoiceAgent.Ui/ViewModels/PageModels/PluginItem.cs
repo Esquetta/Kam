@@ -144,8 +144,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public bool HasExecutionHistory => ExecutionHistory.Count > 0;
 
         // Color properties for the new design - use theme-aware colors
-        public IBrush IconColor { get; set; } = Brush.Parse("#06B6D4");
-        public IBrush GlowColor { get; set; } = Brush.Parse("#1606B6D4");
+        public IBrush IconColor { get; set; } = Brush.Parse("#8B7CFF");
+        public IBrush GlowColor { get; set; } = Brush.Parse("#248B7CFF");
         // TextColor is now dynamic - returns TextPrimaryBrush for active plugins
         public IBrush TextColor => IsActive ? GetThemeTextBrush() : Brush.Parse("#71717A");
         public IBrush StatusColor { get; set; } = Brush.Parse("#10B981");
@@ -1009,7 +1009,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 ? skillId
                 : displayName;
 
-            return name.ToUpperInvariant();
+            return name.Trim();
         }
 
         private static string FormatStatus(SkillHealthStatus status)
@@ -1252,7 +1252,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             return status switch
             {
-                SkillHealthStatus.Healthy => ("#22D3EE", "#2006B6D4", "#10B981"),
+                SkillHealthStatus.Healthy => ("#8B7CFF", "#248B7CFF", "#10B981"),
                 SkillHealthStatus.MissingExecutor => ("#F59E0B", "#20F59E0B", "#F59E0B"),
                 SkillHealthStatus.ReviewRequired => ("#F59E0B", "#20F59E0B", "#F59E0B"),
                 SkillHealthStatus.PermissionDenied => ("#EF4444", "#20EF4444", "#EF4444"),

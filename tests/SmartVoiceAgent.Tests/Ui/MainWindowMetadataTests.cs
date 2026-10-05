@@ -46,16 +46,18 @@ public sealed class MainWindowMetadataTests
     {
         var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
 
-        mainWindowText.Should().Contain("Kam Workbench");
-        mainWindowText.Should().Contain("Agent Workbench");
-        mainWindowText.Should().Contain("Parallel task threads and context");
-        mainWindowText.Should().Contain("Model and agents follow Settings");
-        mainWindowText.Should().Contain("WorkbenchMetric");
+        mainWindowText.Should().Contain("Agent workspace");
+        mainWindowText.Should().Contain("Border.Sidebar");
+        mainWindowText.Should().Contain("Button.NavBtn");
+        mainWindowText.Should().Contain("ActivePageTitle");
+        mainWindowText.Should().Contain("BrandGradientBrush");
+        mainWindowText.Should().Contain("Model follows Settings");
         mainWindowText.Should().Contain("ComposerSurface");
-        mainWindowText.Should().Contain("SurfaceBgElevatedBrush");
+        mainWindowText.Should().Contain("UseComposerSuggestionCommand");
+        mainWindowText.Should().Contain("WindowStateManager.Instance");
         mainWindowText.Should().Contain("ContentControl Content=\"{Binding CurrentViewModel}\"");
         mainWindowText.Should().NotContain("BlurEffect Radius=\"120\"");
-        mainWindowText.Should().NotContain("AccentCyanGlowBrush}\"\r\n\t\t\t\t\t\t\t Opacity=\"0.3\"");
+        mainWindowText.Should().NotContain("AccentCyan");
         mainWindowText.Should().NotContain("Command Center");
     }
 
@@ -262,7 +264,7 @@ public sealed class MainWindowMetadataTests
             .Where(key => !string.IsNullOrWhiteSpace(key))
             .ToArray();
 
-        brushKeys.Should().Contain("AccentCyanBrush");
+        brushKeys.Should().Contain("AccentBrush");
         brushKeys.Should().Contain("TransparentBrush");
         brushKeys.Should().Contain("CardBgHoverBrush");
         brushKeys.Should().Contain("CardBgBrush");
@@ -279,7 +281,7 @@ public sealed class MainWindowMetadataTests
             .Single(element =>
                 element.Name.LocalName == "StackPanel"
                 && AttributeValue(element, "Grid.Row") == "2"
-                && AttributeValue(element, "Margin") == "12,0");
+                && AttributeValue(element, "Classes") == "SidebarFooter");
 
         bottomNavigation
             .Descendants()

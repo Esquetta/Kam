@@ -20,7 +20,7 @@
 | Category | Technologies |
 |----------|-------------|
 | **Framework** | .NET 9.0 |
-| **UI Framework** | Avalonia UI 11.3.10 (cross-platform desktop) |
+| **UI Framework** | Avalonia UI 12.0.3 with ReactiveUI (cross-platform desktop) |
 | **AI/ML** | AutoGen 0.2.3, Microsoft.SemanticKernel 1.67.1, Microsoft.Agents.AI |
 | **MCP** | ModelContextProtocol 0.5.0-preview.1 |
 | **CQRS** | Cortex.Mediator 3.1.2 |
@@ -46,6 +46,7 @@ Kam.sln
 │   ├── SmartVoiceAgent.CrossCuttingConcerns/ # Logging, exceptions
 │   ├── SmartVoiceAgent.AgentHost.ConsoleApp/ # Console entry point
 │   ├── SmartVoiceAgent.Benchmarks/         # Performance benchmarks
+│   ├── SmartVoiceAgent.Mailing/            # Email/SMS services
 │   └── Ui/SmartVoiceAgent.Ui/              # Avalonia desktop UI
 ├── tests/
 │   └── SmartVoiceAgent.Tests/              # Unit & integration tests
@@ -96,16 +97,15 @@ Kam.sln
   - `DependencyInjection/` - Service registration
 
 #### 4. SmartVoiceAgent.CrossCuttingConcerns
-- **Purpose**: Logging infrastructure, exceptions, security utilities
+- **Purpose**: Logging infrastructure and exceptions
 - **Dependencies**: MongoDB.Driver, Serilog, Npgsql
 - **Key Components**:
   - `Logging/` - Serilog configuration and sinks
   - `Exceptions/` - Custom exception types
-  - `Security/` - SecurityUtilities class (path validation, command injection prevention)
 
 #### 5. SmartVoiceAgent.Ui (Presentation Layer)
 - **Purpose**: Avalonia-based desktop UI
-- **Dependencies**: Avalonia 11.3.10, ReactiveUI, Application, Infrastructure
+- **Dependencies**: Avalonia 12.0.3, ReactiveUI, Application, Infrastructure
 - **Key Folders**:
   - `Views/` - XAML views (MainWindow.axaml, etc.)
   - `ViewModels/` - ViewModels (MVVM pattern)
@@ -306,7 +306,7 @@ dotnet test tests/SmartVoiceAgent.Tests --filter "FullyQualifiedName~PlayMusicCo
 ## Security Considerations
 
 ### SecurityUtilities Class
-Located in `SmartVoiceAgent.CrossCuttingConcerns/Security/SecurityUtilities.cs`:
+Located in `SmartVoiceAgent.Infrastructure/Security/SecurityUtilities.cs`. Shell commands on Linux/macOS go through `PosixShell.Run`, and every interpolated value must be wrapped with `PosixShell.Quote`:
 
 ```csharp
 // Path validation - prevents path traversal
@@ -366,7 +366,7 @@ See `RESPONSIVE_DESIGN.md` for full details.
 
 ### Adding a New Agent
 1. Define agent tools in `SmartVoiceAgent.Infrastructure/Agent/Tools/`
-2. Add agent thread in `SmartVoiceAgent.Infrastructure/Agent/Thread/`
+2. Add the agent definition in `SmartVoiceAgent.Infrastructure/Agent/Agents/AgentFactory.cs`
 3. Register in `AgentRegistry`
 4. Update `SmartAgentOrchestrator` routing logic
 
@@ -401,7 +401,7 @@ See `RESPONSIVE_DESIGN.md` for full details.
 
 ---
 
-*Last Updated: 2026-01-29*
+*Last Updated: 2026-10-05*
 
 ## Current Project Status
 
@@ -418,20 +418,17 @@ See `RESPONSIVE_DESIGN.md` for full details.
 - **TaskAgentTools.cs**: Production-ready error handling with retry logic, timeout protection, thread safety
 - **AgentBuilder.cs**: Fixed reflection parameter count mismatch for InitializeAsync with CancellationToken
 
-#### UI Improvements
-- **Kernel Log Panel**: Increased width (320→420px, 450→600px) and font size (11→13px)
-- **Application Identity**: Changed display name to "Kam" in Task Manager, added embedded icon
-
-#### Testing Infrastructure
-- **Total Tests**: 179 (178 passing)
-- **Unit Tests**: 119 tests for optimized components
-- **Integration Tests**: 60 tests for voice pipeline, multi-agent orchestration, error handling
+#### UI Redesign (October 2026)
+- **Design system**: violet accent tokens (`Accent`, `AccentStrong`, `AccentSubtle`, `AccentOn`) in `Themes/Colors.*.axaml`, Lucide-style icon geometries (`Icon*`) and `MonoFontFamily` in `Themes/AppTheme.axaml`, shared control classes in `Themes/Controls.axaml` (`PrimaryAction`, `SecondaryAction`, `Pill`, `Card`, `PageTitle`, `SectionTitle`, `Overline`)
+- **Shell**: icon sidebar that collapses at compact width, per-page title bar, chat workbench with bubbles, suggestion cards and a floating composer
+- **WindowStateManager**: use `{x:Static services:WindowStateManager.Instance}` in XAML; never declare a new instance as a resource
+- **XAML metadata tests** in `tests/SmartVoiceAgent.Tests/Ui/` parse `.axaml` text and pin copy and structure, so update them together with markup changes
 
 ### Test Status
 ```
-Build: ✅ Success
-Tests: 178/179 passing (99.4%)
-Coverage: Unit + Integration tests for core components
+Build: ✅ Success (CI runs on windows-2025)
+Tests: 932 total; on Linux 13 fail because they assume Windows paths or tessdata
+Run locally on Linux: DOTNET_ROLL_FORWARD=Major dotnet test tests/SmartVoiceAgent.Tests -p:EnableWindowsTargeting=true
 ```
 
 ### Known Issues
