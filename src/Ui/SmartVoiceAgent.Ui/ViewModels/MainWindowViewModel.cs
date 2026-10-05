@@ -1042,9 +1042,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 ShowMainWindow();
             };
 
-            service.OpenSettingsRequested += (s, e) =>
+            service.NavigateRequested += (s, view) =>
             {
-                NavigateTo(NavView.Settings);
+                NavigateTo(view);
             };
 
             service.ToggleVoiceRequested += (s, e) =>

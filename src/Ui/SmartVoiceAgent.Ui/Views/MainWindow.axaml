@@ -352,12 +352,12 @@
 						<Border Width="30" Height="30"
 								CornerRadius="9"
 								Background="{DynamicResource BrandGradientBrush}">
-							<TextBlock Text="K"
-									   FontSize="15"
-									   FontWeight="Bold"
-									   Foreground="White"
-									   HorizontalAlignment="Center"
-									   VerticalAlignment="Center"/>
+							<Viewbox Width="18" Height="18">
+								<Path Classes="Icon"
+									  Data="{StaticResource IconBrandWave}"
+									  Stroke="White"
+									  StrokeThickness="2.6"/>
+							</Viewbox>
 						</Border>
 						<StackPanel VerticalAlignment="Center" Spacing="0">
 							<TextBlock Classes="NavLabel"
