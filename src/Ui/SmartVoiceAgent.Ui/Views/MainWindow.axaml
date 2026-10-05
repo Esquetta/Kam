@@ -255,6 +255,51 @@
 			<Setter Property="VerticalAlignment" Value="Top"/>
 		</Style>
 
+		<Style Selector="Border.ToolStep">
+			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="10"/>
+			<Setter Property="Padding" Value="12,10"/>
+			<Setter Property="Margin" Value="40,-10,0,0"/>
+		</Style>
+
+		<Style Selector="Border.ToolStep.Approval">
+			<Setter Property="BorderBrush" Value="{DynamicResource AccentOrangeBrush}"/>
+			<Setter Property="BoxShadow" Value="0 6 18 0 #14000000"/>
+		</Style>
+
+		<Style Selector="Border.ToolGlyph">
+			<Setter Property="Width" Value="26"/>
+			<Setter Property="Height" Value="26"/>
+			<Setter Property="CornerRadius" Value="7"/>
+			<Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+
+		<Style Selector="Border.ToolArguments">
+			<Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
+			<Setter Property="CornerRadius" Value="6"/>
+			<Setter Property="Padding" Value="10,7"/>
+		</Style>
+
+		<Style Selector="ComboBox.ApprovalModePicker">
+			<Setter Property="MinHeight" Value="26"/>
+			<Setter Property="Padding" Value="10,2,6,2"/>
+			<Setter Property="CornerRadius" Value="13"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+
+		<Style Selector="Ellipse.WorkingDot">
+			<Style.Animations>
+				<Animation Duration="0:0:1.2" IterationCount="Infinite">
+					<KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.25"/></KeyFrame>
+					<KeyFrame Cue="50%"><Setter Property="Opacity" Value="1"/></KeyFrame>
+					<KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.25"/></KeyFrame>
+				</Animation>
+			</Style.Animations>
+		</Style>
+
 		<Style Selector="Button.SuggestionCard">
 			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
 			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
@@ -597,6 +642,7 @@
 						</Border>
 
 						<ScrollViewer Grid.Row="1"
+									  x:Name="ChatScrollViewer"
 									  VerticalScrollBarVisibility="Auto"
 									  HorizontalScrollBarVisibility="Disabled">
 							<Grid MaxWidth="820" Margin="32,28,32,12">
@@ -659,6 +705,7 @@
 								</StackPanel>
 
 								<!-- Messages -->
+								<StackPanel IsVisible="{Binding HasAgentChatMessages}">
 								<ItemsControl ItemsSource="{Binding SelectedAgentChatSession.Messages}">
 									<ItemsControl.ItemTemplate>
 										<DataTemplate DataType="vm:AgentChatMessageViewModel">
@@ -706,11 +753,105 @@
 																				 TextWrapping="Wrap"/>
 														</StackPanel>
 													</Grid>
+
+													<!-- Tool step, with an approval card while it waits -->
+													<Border Classes="ToolStep"
+															Classes.Approval="{Binding IsAwaitingApproval}"
+															IsVisible="{Binding IsToolStep}">
+														<StackPanel Spacing="8">
+															<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+																<Border Grid.Column="0" Classes="ToolGlyph">
+																	<Viewbox Width="13" Height="13"><Path Classes="Icon" Data="{StaticResource IconWrench}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
+																</Border>
+																<StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+																	<TextBlock Text="{Binding ToolDisplayName}"
+																			   FontSize="13"
+																			   FontWeight="SemiBold"
+																			   Foreground="{DynamicResource TextPrimaryBrush}"
+																			   TextTrimming="CharacterEllipsis"/>
+																	<StackPanel Orientation="Horizontal" Spacing="6">
+																		<TextBlock Text="{Binding ToolName}"
+																				   FontSize="11"
+																				   FontFamily="{StaticResource MonoFontFamily}"
+																				   Foreground="{DynamicResource TextMutedBrush}"/>
+																		<TextBlock Text="·" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+																		<TextBlock Text="{Binding RiskText}"
+																				   FontSize="11"
+																				   Foreground="{DynamicResource TextMutedBrush}"/>
+																	</StackPanel>
+																</StackPanel>
+																<Border Grid.Column="2"
+																		Classes="Pill"
+																		Classes.Accent="{Binding IsToolRunning}"
+																		Classes.Warning="{Binding IsAwaitingApproval}"
+																		Classes.Success="{Binding IsToolSucceeded}"
+																		Classes.Danger="{Binding IsToolFailed}"
+																		VerticalAlignment="Center">
+																	<TextBlock Text="{Binding ToolStatusText}"/>
+																</Border>
+															</Grid>
+
+															<Border Classes="ToolArguments" IsVisible="{Binding HasArguments}">
+																<SelectableTextBlock Text="{Binding ArgumentsPreview}"
+																					 FontSize="12"
+																					 FontFamily="{StaticResource MonoFontFamily}"
+																					 Foreground="{DynamicResource TextSecondaryBrush}"
+																					 TextWrapping="Wrap"/>
+															</Border>
+
+															<SelectableTextBlock Text="{Binding ToolSummary}"
+																				 IsVisible="{Binding HasToolSummary}"
+																				 FontSize="12"
+																				 Foreground="{DynamicResource TextMutedBrush}"
+																				 TextWrapping="Wrap"/>
+
+															<Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+																  ColumnSpacing="8"
+																  IsVisible="{Binding IsAwaitingApproval}">
+																<Viewbox Grid.Column="0" Width="14" Height="14" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconShield}" Stroke="{DynamicResource AccentOrangeBrush}"/></Viewbox>
+																<TextBlock Grid.Column="1"
+																		   Text="Run this?"
+																		   FontSize="12"
+																		   FontWeight="SemiBold"
+																		   Foreground="{DynamicResource TextPrimaryBrush}"
+																		   VerticalAlignment="Center"/>
+																<Button Grid.Column="2"
+																		Classes="SecondaryAction"
+																		Content="Deny"
+																		Command="{Binding $parent[Window].DataContext.DenyToolCallCommand}"
+																		CommandParameter="{Binding}"/>
+																<Button Grid.Column="3"
+																		Classes="SecondaryAction"
+																		Content="Always allow"
+																		ToolTip.Tip="Run this tool without asking from now on"
+																		Command="{Binding $parent[Window].DataContext.AlwaysAllowToolCallCommand}"
+																		CommandParameter="{Binding}"/>
+																<Button Grid.Column="4"
+																		Classes="PrimaryAction"
+																		Content="Approve"
+																		Command="{Binding $parent[Window].DataContext.ApproveToolCallCommand}"
+																		CommandParameter="{Binding}"/>
+															</Grid>
+														</StackPanel>
+													</Border>
 												</Panel>
 											</Border>
 										</DataTemplate>
 									</ItemsControl.ItemTemplate>
 								</ItemsControl>
+
+								<!-- Working indicator -->
+								<StackPanel Orientation="Horizontal"
+											Spacing="8"
+											Margin="40,0,0,12"
+											IsVisible="{Binding IsAgentTurnRunning}">
+									<Ellipse Classes="WorkingDot" Width="6" Height="6" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+									<TextBlock Text="Kam is working"
+											   FontSize="12"
+											   Foreground="{DynamicResource TextMutedBrush}"
+											   VerticalAlignment="Center"/>
+								</StackPanel>
+								</StackPanel>
 							</Grid>
 						</ScrollViewer>
 
@@ -854,7 +995,7 @@
 											 KeyDown="OnPromptKeyDown"/>
 
 									<!-- Toolbar -->
-									<Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
+									<Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="6">
 										<Button Grid.Column="0"
 												Classes="IconButton"
 												Width="32" Height="32"
@@ -871,7 +1012,22 @@
 												   Foreground="{DynamicResource TextMutedBrush}"
 												   VerticalAlignment="Center"
 												   TextTrimming="CharacterEllipsis"/>
-										<StackPanel Grid.Column="2"
+										<ComboBox Grid.Column="2"
+												  Classes="ApprovalModePicker"
+												  ItemsSource="{x:Static vm:MainWindowViewModel.ApprovalModes}"
+												  SelectedItem="{Binding SelectedApprovalMode}"
+												  IsVisible="{Binding IsAgentRuntimeEnabled}"
+												  ToolTip.Tip="{Binding SelectedApprovalMode.Description}">
+											<ComboBox.ItemTemplate>
+												<DataTemplate DataType="vm:ApprovalModeOption">
+													<StackPanel Orientation="Horizontal" Spacing="6">
+														<Viewbox Width="12" Height="12" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconShield}" Stroke="{DynamicResource TextSecondaryBrush}"/></Viewbox>
+														<TextBlock Text="{Binding Label}" FontSize="12" VerticalAlignment="Center"/>
+													</StackPanel>
+												</DataTemplate>
+											</ComboBox.ItemTemplate>
+										</ComboBox>
+										<StackPanel Grid.Column="3"
 													Orientation="Horizontal"
 													Spacing="5"
 													VerticalAlignment="Center"
@@ -883,7 +1039,7 @@
 													   Foreground="{Binding VoiceStatusColor}"
 													   VerticalAlignment="Center"/>
 										</StackPanel>
-										<Button Grid.Column="3"
+										<Button Grid.Column="4"
 												Classes="IconButton"
 												Width="32" Height="32"
 												CornerRadius="16"
@@ -893,11 +1049,19 @@
 												Command="{Binding ToggleVoiceCommand}">
 											<Viewbox Width="17" Height="17"><Path Classes="Icon" Data="{StaticResource IconMic}" Stroke="{Binding VoiceStatusColor}"/></Viewbox>
 										</Button>
-										<Button Grid.Column="4"
+										<Button Grid.Column="5"
 												Classes="SendButton"
 												ToolTip.Tip="Send (Enter)"
+												IsVisible="{Binding IsSendVisible}"
 												Command="{Binding SubmitCommand}">
 											<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconArrowUp}"/></Viewbox>
+										</Button>
+										<Button Grid.Column="5"
+												Classes="SendButton"
+												ToolTip.Tip="Stop"
+												IsVisible="{Binding IsAgentTurnRunning}"
+												Command="{Binding StopAgentTurnCommand}">
+											<Viewbox Width="12" Height="12"><Path Classes="Icon" Data="{StaticResource IconStop}"/></Viewbox>
 										</Button>
 									</Grid>
 								</Grid>

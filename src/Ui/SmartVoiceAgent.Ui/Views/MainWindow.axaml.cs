@@ -14,6 +14,8 @@ namespace SmartVoiceAgent.Ui.Views
     {
         private MainWindowViewModel? _viewModel;
         private ScrollViewer? _logScrollViewer;
+        private ScrollViewer? _chatScrollViewer;
+        private bool _chatFollowsLatest = true;
 
         public MainWindow()
         {
@@ -21,6 +23,11 @@ namespace SmartVoiceAgent.Ui.Views
 
             // Get reference to ScrollViewer after initialization
             _logScrollViewer = this.FindControl<ScrollViewer>("LogScrollViewer");
+            _chatScrollViewer = this.FindControl<ScrollViewer>("ChatScrollViewer");
+            if (_chatScrollViewer is not null)
+            {
+                _chatScrollViewer.ScrollChanged += OnChatScrollChanged;
+            }
 
             this.Closing += MainWindow_Closed;
             this.DataContextChanged += OnDataContextChanged;
@@ -60,6 +67,28 @@ namespace SmartVoiceAgent.Ui.Views
                     _logScrollViewer.ScrollToEnd();
                 });
             }
+        }
+
+        /// <summary>
+        /// Keeps the chat pinned to the newest message while the agent streams, unless the user scrolled up to read.
+        /// </summary>
+        private void OnChatScrollChanged(object? sender, ScrollChangedEventArgs e)
+        {
+            if (_chatScrollViewer is null)
+            {
+                return;
+            }
+
+            if (e.ExtentDelta.Y > 0 && _chatFollowsLatest)
+            {
+                _chatScrollViewer.ScrollToEnd();
+                return;
+            }
+
+            var distanceFromBottom = _chatScrollViewer.Extent.Height
+                - _chatScrollViewer.Viewport.Height
+                - _chatScrollViewer.Offset.Y;
+            _chatFollowsLatest = distanceFromBottom <= 48;
         }
 
         private void OnHeaderPointerPressed(object? sender, PointerPressedEventArgs e)

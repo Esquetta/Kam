@@ -418,6 +418,12 @@ See `RESPONSIVE_DESIGN.md` for full details.
 - **TaskAgentTools.cs**: Production-ready error handling with retry logic, timeout protection, thread safety
 - **AgentBuilder.cs**: Fixed reflection parameter count mismatch for InitializeAsync with CancellationToken
 
+#### Agent Runtime (October 2026)
+- **Chat runs a tool-calling agent loop**: `IAgentRuntime` (`Infrastructure/Agent/Runtime/AgentRuntime.cs`) streams `AgentEvent`s; the model calls built-in skills natively through `SkillToolProvider`, and every call passes `IToolPermissionService` (Ask / Auto-edit / Full auto plus "always allow" rules)
+- **Threads persist** as `%AppData%/Kam/sessions/<id>.json` via `IAgentSessionStore`
+- **Fallback**: `AgentRuntime:Enabled=false` keeps the legacy single-skill planner; voice still uses it
+- **Roadmap**: `docs/architecture/agent-platform.md` (MCP host, Agent Skills, plugins, coding mode, subagents)
+
 #### UI Redesign (October 2026)
 - **Design system**: violet accent tokens (`Accent`, `AccentStrong`, `AccentSubtle`, `AccentOn`) in `Themes/Colors.*.axaml`, Lucide-style icon geometries (`Icon*`) and `MonoFontFamily` in `Themes/AppTheme.axaml`, shared control classes in `Themes/Controls.axaml` (`PrimaryAction`, `SecondaryAction`, `Pill`, `Card`, `PageTitle`, `SectionTitle`, `Overline`)
 - **Shell**: icon sidebar that collapses at compact width, per-page title bar, chat workbench with bubbles, suggestion cards and a floating composer
