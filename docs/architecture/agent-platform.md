@@ -142,6 +142,8 @@ What happens today:
 | Approval modes and "always allow" rules | `Infrastructure/Agent/Runtime/ToolPermissionService.cs`, saved in `%AppData%/Kam/agent-permissions.json` |
 | Thread store | `Infrastructure/Agent/Runtime/JsonAgentSessionStore.cs` |
 | Contracts | `Core/Interfaces/IAgentRuntime.cs`, `IAgentToolProvider.cs`, `IToolPermissionService.cs`, `IAgentSessionStore.cs`; events in `Core/Models/Agents/AgentEvent.cs` |
+| Context budget and compaction | `Infrastructure/Agent/Runtime/AgentContextWindow.cs` |
+| Shell safety net | `Infrastructure/Skills/BuiltIn/AgentTools/ShellCommandGuard.cs` |
 | Chat UI | `Ui/ViewModels/MainWindowViewModel.AgentRuntime.cs`, `AgentChatMessageViewModel.cs` |
 
 - Skill ids become tool names by replacing characters providers reject, so `files.read_lines` is `files_read_lines`.
@@ -150,6 +152,8 @@ What happens today:
 - Tool calls still go through `ISkillExecutionPipeline`, so skill policy, granted permissions, argument validation, timeouts and execution history apply as before.
 - Chat uses the model in `AIService:Chat` when it is configured, otherwise the root `AIService` model.
 - `AgentRuntime:Enabled` set to `false` in configuration sends chat back to the legacy single-skill planner. Voice commands still use the legacy path until phase 2.
+- Context: every request is estimated at about four characters per token, tool definitions included. Over `AgentRuntime:ContextTokenBudget` (default 64000, 0 turns it off), the request first shortens all but the newest four tool results. If it is still over, the model summarizes everything before the last two user turns (or the last one, if two do not fit in half the budget). The summary is inserted into the saved thread as a system message, so the UI still shows every message while the model sees only the summary and what follows it. Typing `/compact` summarizes the whole thread on demand.
+- Shell: `shell.run` allows up to 10 minutes (default 2) and keeps the start and end of long output, where build and test summaries are. `ShellCommandGuard` blocks destructive commands such as `rm`, `del`, `Remove-Item`, `rimraf`, `git reset --hard` or `find -delete` only where they appear as a command, including behind `sudo`, `xargs`, `bash -c` or `cmd /c`, so words like `normal`, `Models` or `dotnet format` no longer trip it. It is a safety net behind the approval card, not a sandbox.
 
 ## Delivery plan
 

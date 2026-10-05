@@ -38,6 +38,16 @@ public sealed record AgentApprovalRequested(
     string ArgumentsJson,
     ToolRisk Risk) : AgentEvent(SessionId);
 
+/// <summary>
+/// Earlier messages were summarized so the conversation fits the context budget.
+/// The thread still holds them; the model now sees the summary instead.
+/// </summary>
+public sealed record AgentContextCompacted(
+    string SessionId,
+    int SummarizedMessageCount,
+    int TokensBefore,
+    int TokensAfter) : AgentEvent(SessionId);
+
 /// <summary>The turn ended with a final answer.</summary>
 public sealed record AgentTurnCompleted(
     string SessionId,

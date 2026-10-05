@@ -273,13 +273,142 @@ public sealed class AgentRuntimeTests : IDisposable
         history[3].Contents.OfType<FunctionResultContent>().Single().CallId.Should().Be("y");
     }
 
+    [Fact]
+    public async Task RunTurnAsync_OverContextBudget_SummarizesEarlierTurnsButKeepsThemInThread()
+    {
+        var store = new JsonAgentSessionStore(Path.Combine(_directory, "sessions"));
+        await store.SaveAsync("long", ThreeLongTurns(), TestContext.Current.CancellationToken);
+        var chat = new ScriptedChatClient([new TextContent("Still with you.")]) { Summary = "Goals: finish the report." };
+        var runtime = CreateRuntime(chat, [], store: store, contextTokenBudget: 6000);
+
+        var events = await CollectAsync(runtime, "long", "fourth");
+
+        var compacted = events.OfType<AgentContextCompacted>().Should().ContainSingle().Subject;
+        compacted.SummarizedMessageCount.Should().Be(4);
+        compacted.TokensAfter.Should().BeLessThan(compacted.TokensBefore);
+        events.Last().Should().BeOfType<AgentTurnCompleted>();
+
+        var summaryInput = chat.SummaryRequests.Should().ContainSingle().Subject.Last().Text;
+        summaryInput.Should().Contain("User: first").And.Contain("User: second").And.NotContain("User: third");
+
+        var request = chat.Requests.Should().ContainSingle().Subject;
+        request[0].Role.Should().Be(ChatRole.System);
+        request[0].Text.Should().Contain(AgentContextWindow.SummaryPrefix).And.Contain("Goals: finish the report.");
+        request.Where(m => m.Role == ChatRole.User).Select(m => m.Text).Should().Equal("third", "fourth");
+
+        var saved = await store.LoadAsync("long", TestContext.Current.CancellationToken);
+        saved.Select(m => m.Role).Should().Equal(
+            ChatRole.User, ChatRole.Assistant, ChatRole.User, ChatRole.Assistant,
+            ChatRole.System,
+            ChatRole.User, ChatRole.Assistant, ChatRole.User, ChatRole.Assistant);
+    }
+
+    [Fact]
+    public async Task RunTurnAsync_SlightlyOverBudget_ShortensOldToolResultsWithoutSummarizing()
+    {
+        var store = new JsonAgentSessionStore(Path.Combine(_directory, "sessions"));
+        var callIds = Enumerable.Range(1, 6).Select(i => $"r{i}").ToList();
+        await store.SaveAsync(
+            "tools",
+            [
+                new(ChatRole.User, "check everything"),
+                new(ChatRole.Assistant, callIds.Select(id => (AIContent)new FunctionCallContent(id, "files_read")).ToList()),
+                new(ChatRole.Tool, callIds.Select(id => (AIContent)new FunctionResultContent(id, new string('x', 3000))).ToList()),
+                new(ChatRole.Assistant, "All read.")
+            ],
+            TestContext.Current.CancellationToken);
+        var chat = new ScriptedChatClient([new TextContent("Done.")]) { Summary = "unused" };
+        var runtime = CreateRuntime(chat, [], store: store, contextTokenBudget: 4200);
+
+        var events = await CollectAsync(runtime, "tools", "again");
+
+        events.OfType<AgentContextCompacted>().Should().BeEmpty();
+        chat.SummaryRequests.Should().BeEmpty();
+        var results = chat.Requests.Single().SelectMany(m => m.Contents).OfType<FunctionResultContent>()
+            .ToDictionary(r => r.CallId, r => r.Result!.ToString()!);
+        results["r1"].Should().Contain("Older tool result shortened").And.HaveLength(results["r2"].Length);
+        results["r1"].Length.Should().BeLessThan(600);
+        results["r3"].Should().HaveLength(3000);
+        results["r6"].Should().HaveLength(3000);
+
+        var saved = await store.LoadAsync("tools", TestContext.Current.CancellationToken);
+        saved[2].Contents.OfType<FunctionResultContent>().First().Result!.ToString().Should().HaveLength(3000);
+    }
+
+    [Fact]
+    public async Task RunTurnAsync_SummaryCallFails_ContinuesWithoutCompacting()
+    {
+        var store = new JsonAgentSessionStore(Path.Combine(_directory, "sessions"));
+        await store.SaveAsync("long", ThreeLongTurns(), TestContext.Current.CancellationToken);
+        var chat = new ScriptedChatClient([new TextContent("Answer.")]) { SummaryFailure = new InvalidOperationException("rate limited") };
+        var runtime = CreateRuntime(chat, [], store: store, contextTokenBudget: 6000);
+
+        var events = await CollectAsync(runtime, "long", "fourth");
+
+        events.OfType<AgentContextCompacted>().Should().BeEmpty();
+        events.Last().Should().BeOfType<AgentTurnCompleted>().Which.FinalText.Should().Be("Answer.");
+        chat.Requests.Single().Where(m => m.Role == ChatRole.User).Select(m => m.Text)
+            .Should().Equal("first", "second", "third", "fourth");
+    }
+
+    [Fact]
+    public async Task RunTurnAsync_CompactCommand_SummarizesWholeThreadWithoutCallingTools()
+    {
+        var store = new JsonAgentSessionStore(Path.Combine(_directory, "sessions"));
+        await store.SaveAsync(
+            "short",
+            [new(ChatRole.User, "first"), new(ChatRole.Assistant, "hello")],
+            TestContext.Current.CancellationToken);
+        var chat = new ScriptedChatClient([new TextContent("Next answer.")]) { Summary = "User said first." };
+        var runtime = CreateRuntime(chat, [], store: store);
+
+        var events = await CollectAsync(runtime, "short", " /compact ");
+
+        events.OfType<AgentContextCompacted>().Should().ContainSingle().Which.SummarizedMessageCount.Should().Be(2);
+        events.Last().Should().BeOfType<AgentTurnCompleted>().Which.FinalText.Should().StartWith("Compacted");
+        chat.Requests.Should().BeEmpty();
+        (await store.LoadAsync("short", TestContext.Current.CancellationToken)).Select(m => m.Role)
+            .Should().Equal(ChatRole.User, ChatRole.Assistant, ChatRole.System);
+
+        await CollectAsync(runtime, "short", "next");
+
+        var request = chat.Requests.Single();
+        request.Select(m => m.Role).Should().Equal(ChatRole.System, ChatRole.User);
+        request[0].Text.Should().Contain("User said first.");
+        request[1].Text.Should().Be("next");
+    }
+
+    [Fact]
+    public async Task RunTurnAsync_CompactCommandOnEmptyThread_SaysThereIsNothingToCompact()
+    {
+        var chat = new ScriptedChatClient() { Summary = "unused" };
+        var runtime = CreateRuntime(chat, []);
+
+        var events = await CollectAsync(runtime, "empty", "/compact");
+
+        events.Should().ContainSingle().Which.Should().BeOfType<AgentTurnCompleted>()
+            .Which.FinalText.Should().Be("There is nothing to compact yet.");
+        chat.SummaryRequests.Should().BeEmpty();
+    }
+
+    private static List<ChatMessage> ThreeLongTurns() =>
+    [
+        new(ChatRole.User, "first"),
+        new(ChatRole.Assistant, new string('a', 8000)),
+        new(ChatRole.User, "second"),
+        new(ChatRole.Assistant, new string('b', 8000)),
+        new(ChatRole.User, "third"),
+        new(ChatRole.Assistant, new string('c', 8000))
+    ];
+
     private AgentRuntime CreateRuntime(
         IChatClient chat,
         IReadOnlyList<AgentToolDescriptor> tools,
         IToolPermissionService? permissions = null,
         IAgentSessionStore? store = null,
         int maxIterations = 24,
-        int maxResultCharacters = 16000)
+        int maxResultCharacters = 16000,
+        int contextTokenBudget = 64000)
     {
         var services = new ServiceCollection();
         services.AddScoped<IAgentToolProvider>(_ => new StaticToolProvider(tools));
@@ -290,7 +419,12 @@ public sealed class AgentRuntimeTests : IDisposable
             provider.GetRequiredService<IServiceScopeFactory>(),
             permissions ?? new ToolPermissionService(Path.Combine(_directory, "permissions.json")),
             store ?? new JsonAgentSessionStore(Path.Combine(_directory, "sessions")),
-            Options.Create(new AgentRuntimeOptions { MaxIterations = maxIterations, MaxToolResultCharacters = maxResultCharacters }),
+            Options.Create(new AgentRuntimeOptions
+            {
+                MaxIterations = maxIterations,
+                MaxToolResultCharacters = maxResultCharacters,
+                ContextTokenBudget = contextTokenBudget
+            }),
             NullLogger<AgentRuntime>.Instance,
             () => new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero));
     }
@@ -335,11 +469,27 @@ public sealed class AgentRuntimeTests : IDisposable
 
         public Exception? Failure { get; init; }
 
+        public string? Summary { get; init; }
+
+        public Exception? SummaryFailure { get; init; }
+
+        public List<List<ChatMessage>> SummaryRequests { get; } = [];
+
         public Task<ChatResponse> GetResponseAsync(
             IEnumerable<ChatMessage> messages,
             ChatOptions? options = null,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
+            CancellationToken cancellationToken = default)
+        {
+            SummaryRequests.Add(messages.ToList());
+            if (SummaryFailure is not null)
+            {
+                throw SummaryFailure;
+            }
+
+            return Summary is null
+                ? throw new NotSupportedException()
+                : Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, Summary)));
+        }
 
         public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
             IEnumerable<ChatMessage> messages,

@@ -30,6 +30,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
     public partial class MainWindowViewModel
     {
         private const int MaxSavedThreadsShown = 40;
+        private const string CompactedNotice = "Earlier messages were summarized to save context.";
 
         private IAgentRuntime? _agentRuntime;
         private IToolPermissionService? _toolPermissions;
@@ -190,6 +191,12 @@ namespace SmartVoiceAgent.Ui.ViewModels
                                 : $"TOOL_FAILED: {completed.ToolName} {completed.Summary}");
                             break;
 
+                        case AgentContextCompacted compacted:
+                            FinishStreaming(session, ref streaming);
+                            session.AddMessage(AgentChatMessageViewModel.System(CompactedNotice));
+                            AddLog($"CONTEXT_COMPACTED: {compacted.SummarizedMessageCount} messages, ~{compacted.TokensBefore} to ~{compacted.TokensAfter} tokens");
+                            break;
+
                         case AgentTurnCompleted done:
                             FinishStreaming(session, ref streaming);
                             if (!wroteText && !string.IsNullOrWhiteSpace(done.FinalText))
@@ -336,6 +343,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             foreach (var message in history)
             {
+                // The runtime only saves system messages for compaction summaries.
+                if (message.Role == ChatRole.System)
+                {
+                    items.Add(AgentChatMessageViewModel.System(CompactedNotice));
+                    continue;
+                }
+
                 if (message.Role == ChatRole.User)
                 {
                     if (!string.IsNullOrWhiteSpace(message.Text))

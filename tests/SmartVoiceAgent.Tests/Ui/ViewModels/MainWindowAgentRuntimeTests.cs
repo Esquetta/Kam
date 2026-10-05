@@ -208,6 +208,64 @@ public sealed class MainWindowAgentRuntimeTests
         timeline[3].ToolSummary.Should().Be("Error (Failed): missing file");
     }
 
+    [Fact]
+    public async Task RunAgentTurnAsync_ContextCompacted_ShowsNoticeInThread()
+    {
+        var runtime = new ScriptedRuntime();
+        var viewModel = CreateViewModel(runtime);
+        var session = viewModel.SelectedAgentChatSession!;
+        var sid = session.SessionId;
+        runtime.Script(
+            new AgentContextCompacted(sid, 12, 70000, 9000),
+            new AgentTextDelta(sid, "Continuing."),
+            new AgentTurnCompleted(sid, "Continuing.", 0, 0, 0));
+        runtime.Finish();
+
+        await viewModel.RunAgentTurnAsync(session, "keep going");
+
+        session.Messages.Select(m => $"{m.Role}:{m.Content}").Should().Equal(
+            "System:Earlier messages were summarized to save context.",
+            "Kam:Continuing.");
+    }
+
+    [Fact]
+    public async Task SubmitCommandInputAsync_CompactCommand_GoesToAgentRuntime()
+    {
+        var runtime = new ScriptedRuntime();
+        var viewModel = CreateViewModel(runtime);
+        var session = viewModel.SelectedAgentChatSession!;
+        runtime.Script(new AgentTurnCompleted(session.SessionId, "There is nothing to compact yet.", 0, 0, 0));
+        runtime.Finish();
+        viewModel.CommandInputText = "/compact";
+
+        await viewModel.SubmitCommandInputAsync();
+
+        runtime.Messages.Should().Equal("/compact");
+        session.Messages.Select(m => $"{m.Role}:{m.Content}").Should().Equal(
+            "You:/compact",
+            "Kam:There is nothing to compact yet.");
+    }
+
+    [Fact]
+    public void BuildTimeline_ShowsWhereEarlierMessagesWereSummarized()
+    {
+        List<ChatMessage> history =
+        [
+            new(ChatRole.User, "first"),
+            new(ChatRole.Assistant, "hello"),
+            new(ChatRole.System, "Summary of the earlier conversation (older messages were compacted to save context):\nfirst"),
+            new(ChatRole.User, "next")
+        ];
+
+        var timeline = MainWindowViewModel.BuildTimeline(history);
+
+        timeline.Select(m => $"{m.Role}:{m.Content}").Should().Equal(
+            "You:first",
+            "Kam:hello",
+            "System:Earlier messages were summarized to save context.",
+            "You:next");
+    }
+
     [Theory]
     [InlineData(0, "now")]
     [InlineData(5, "5m")]

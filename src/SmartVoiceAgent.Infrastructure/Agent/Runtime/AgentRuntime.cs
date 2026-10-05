@@ -120,9 +120,30 @@ public sealed class AgentRuntime : IAgentRuntime
 
             history = (await _sessionStore.LoadAsync(sessionId, cancellationToken)).ToList();
             CloseDanglingToolCalls(history);
-            history.Add(new ChatMessage(ChatRole.User, userMessage));
 
             var chatClient = _chatClientFactory();
+            var systemPrompt = AgentSystemPrompt.Build(_clock(), tools.Count);
+            var toolTokens = AgentContextWindow.EstimateTokens(tools);
+            var usage = new TurnUsage();
+
+            if (IsCompactCommand(userMessage))
+            {
+                var cut = AgentContextWindow.FindCompactionCut(history, keepUserTurns: 0);
+                var compacted = cut is not null
+                    && await CompactAsync(sessionId, history, cut.Value, systemPrompt, toolTokens, chatClient, usage, events, cancellationToken);
+                await events.WriteAsync(
+                    new AgentTurnCompleted(
+                        sessionId,
+                        compacted ? "Compacted the conversation. I'll continue from the summary." : "There is nothing to compact yet.",
+                        0,
+                        usage.InputTokens,
+                        usage.OutputTokens),
+                    CancellationToken.None);
+                return;
+            }
+
+            history.Add(new ChatMessage(ChatRole.User, userMessage));
+
             var chatOptions = new ChatOptions
             {
                 Tools = tools.Select(tool => (AITool)tool.Function).ToList(),
@@ -130,18 +151,12 @@ public sealed class AgentRuntime : IAgentRuntime
                 AllowMultipleToolCalls = true
             };
 
-            var systemPrompt = AgentSystemPrompt.Build(_clock(), tools.Count);
             var toolCallCount = 0;
-            long inputTokens = 0;
-            long outputTokens = 0;
 
             for (var iteration = 0; iteration < Math.Max(1, _options.MaxIterations); iteration++)
             {
-                var modelMessages = new List<ChatMessage>(history.Count + 1)
-                {
-                    new(ChatRole.System, systemPrompt)
-                };
-                modelMessages.AddRange(history);
+                var modelMessages = await PrepareModelMessagesAsync(
+                    sessionId, history, systemPrompt, toolTokens, chatClient, usage, events, cancellationToken);
 
                 var updates = new List<ChatResponseUpdate>();
                 await foreach (var update in chatClient.GetStreamingResponseAsync(modelMessages, chatOptions, cancellationToken))
@@ -155,8 +170,7 @@ public sealed class AgentRuntime : IAgentRuntime
                 }
 
                 var response = updates.ToChatResponse();
-                inputTokens += response.Usage?.InputTokenCount ?? 0;
-                outputTokens += response.Usage?.OutputTokenCount ?? 0;
+                usage.Add(response.Usage);
                 history.AddRange(response.Messages);
 
                 var calls = response.Messages
@@ -168,7 +182,7 @@ public sealed class AgentRuntime : IAgentRuntime
                 {
                     await _sessionStore.SaveAsync(sessionId, history, CancellationToken.None);
                     await events.WriteAsync(
-                        new AgentTurnCompleted(sessionId, response.Text, toolCallCount, inputTokens, outputTokens),
+                        new AgentTurnCompleted(sessionId, response.Text, toolCallCount, usage.InputTokens, usage.OutputTokens),
                         CancellationToken.None);
                     return;
                 }
@@ -215,6 +229,118 @@ public sealed class AgentRuntime : IAgentRuntime
             events.TryComplete();
         }
     }
+
+    /// <summary>
+    /// Fits the request into the context budget: first by shortening older tool results in the request only,
+    /// then by summarizing earlier turns into the thread.
+    /// </summary>
+    private async Task<List<ChatMessage>> PrepareModelMessagesAsync(
+        string sessionId,
+        List<ChatMessage> history,
+        string systemPrompt,
+        int toolTokens,
+        IChatClient chatClient,
+        TurnUsage usage,
+        ChannelWriter<AgentEvent> events,
+        CancellationToken cancellationToken)
+    {
+        var budget = _options.ContextTokenBudget;
+        var messages = AgentContextWindow.BuildModelMessages(systemPrompt, history, shortenOldToolResults: false);
+        if (budget <= 0 || toolTokens + AgentContextWindow.EstimateTokens(messages) <= budget)
+        {
+            return messages;
+        }
+
+        messages = AgentContextWindow.BuildModelMessages(systemPrompt, history, shortenOldToolResults: true);
+        if (toolTokens + AgentContextWindow.EstimateTokens(messages) <= budget)
+        {
+            return messages;
+        }
+
+        // Keep the last two user turns when they fit in half the budget, otherwise only the current one.
+        var cut = AgentContextWindow.FindCompactionCut(history, keepUserTurns: 2);
+        if (cut is null || EstimateKeptTokens(history, cut.Value, systemPrompt) > budget / 2)
+        {
+            cut = AgentContextWindow.FindCompactionCut(history, keepUserTurns: 1) ?? cut;
+        }
+
+        if (cut is not null
+            && await CompactAsync(sessionId, history, cut.Value, systemPrompt, toolTokens, chatClient, usage, events, cancellationToken))
+        {
+            messages = AgentContextWindow.BuildModelMessages(systemPrompt, history, shortenOldToolResults: true);
+        }
+
+        return messages;
+    }
+
+    private async Task<bool> CompactAsync(
+        string sessionId,
+        List<ChatMessage> history,
+        int cut,
+        string systemPrompt,
+        int toolTokens,
+        IChatClient chatClient,
+        TurnUsage usage,
+        ChannelWriter<AgentEvent> events,
+        CancellationToken cancellationToken)
+    {
+        var start = AgentContextWindow.FindActiveStart(history);
+        var tokensBefore = toolTokens + AgentContextWindow.EstimateTokens(
+            AgentContextWindow.BuildModelMessages(systemPrompt, history, shortenOldToolResults: false));
+        var maxTranscriptCharacters = Math.Max(8000, _options.ContextTokenBudget * 3);
+
+        string summary;
+        try
+        {
+            var response = await chatClient.GetResponseAsync(
+                [
+                    new ChatMessage(ChatRole.System, AgentContextWindow.SummaryInstructions),
+                    new ChatMessage(
+                        ChatRole.User,
+                        "Summarize this conversation:\n\n" + AgentContextWindow.RenderTranscript(history, cut, maxTranscriptCharacters))
+                ],
+                new ChatOptions { MaxOutputTokens = 2000 },
+                cancellationToken);
+            usage.Add(response.Usage);
+            summary = response.Text;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Could not compact agent session {SessionId}", sessionId);
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(summary))
+        {
+            return false;
+        }
+
+        history.Insert(cut, AgentContextWindow.CreateSummaryMessage(summary));
+        await _sessionStore.SaveAsync(sessionId, history, CancellationToken.None);
+
+        var tokensAfter = toolTokens + AgentContextWindow.EstimateTokens(
+            AgentContextWindow.BuildModelMessages(systemPrompt, history, shortenOldToolResults: false));
+        _logger.LogInformation(
+            "Compacted {Count} messages in agent session {SessionId}: ~{Before} to ~{After} tokens",
+            cut - start,
+            sessionId,
+            tokensBefore,
+            tokensAfter);
+        await events.WriteAsync(
+            new AgentContextCompacted(sessionId, cut - start, tokensBefore, tokensAfter),
+            cancellationToken);
+        return true;
+    }
+
+    private static int EstimateKeptTokens(IReadOnlyList<ChatMessage> history, int cut, string systemPrompt)
+    {
+        var kept = history.Skip(cut).ToList();
+        return AgentContextWindow.EstimateTokens(
+            AgentContextWindow.BuildModelMessages(systemPrompt, kept, shortenOldToolResults: true));
+    }
+
+    private static bool IsCompactCommand(string message) =>
+        message.Trim().Equals("/compact", StringComparison.OrdinalIgnoreCase);
 
     private async Task<AIContent> RunToolCallAsync(
         string sessionId,
@@ -442,4 +568,17 @@ public sealed class AgentRuntime : IAgentRuntime
     }
 
     private readonly record struct ApprovalAnswer(bool Approved, bool AlwaysAllow);
+
+    private sealed class TurnUsage
+    {
+        public long InputTokens { get; private set; }
+
+        public long OutputTokens { get; private set; }
+
+        public void Add(UsageDetails? usage)
+        {
+            InputTokens += usage?.InputTokenCount ?? 0;
+            OutputTokens += usage?.OutputTokenCount ?? 0;
+        }
+    }
 }

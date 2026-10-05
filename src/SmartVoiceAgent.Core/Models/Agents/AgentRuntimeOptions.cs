@@ -19,4 +19,10 @@ public sealed class AgentRuntimeOptions
 
     /// <summary>Gets or sets the longest tool result, in characters, sent back to the model.</summary>
     public int MaxToolResultCharacters { get; set; } = 16000;
+
+    /// <summary>
+    /// Gets or sets the estimated tokens a request may use before older tool results are shortened and
+    /// earlier turns are summarized. 0 turns compaction off.
+    /// </summary>
+    public int ContextTokenBudget { get; set; } = 64000;
 }

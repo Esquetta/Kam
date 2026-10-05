@@ -1183,6 +1183,18 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 return;
             }
 
+            // /compact belongs to the agent runtime, which summarizes the selected thread.
+            if (_agentRuntime is not null
+                && SelectedAgentChatSession is not null
+                && input.Equals("/compact", StringComparison.OrdinalIgnoreCase))
+            {
+                CommandInputText = string.Empty;
+                SlashCommandSuggestions.Clear();
+                IsSlashCommandPaletteVisible = false;
+                await RunAgentTurnAsync(SelectedAgentChatSession, input);
+                return;
+            }
+
             if (_slashCommandService?.IsSlashCommand(input) == true)
             {
                 var slashResult = await _slashCommandService.ExecuteAsync(input);
