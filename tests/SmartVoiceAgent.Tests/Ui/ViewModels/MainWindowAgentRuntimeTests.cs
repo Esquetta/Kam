@@ -286,6 +286,84 @@ public sealed class MainWindowAgentRuntimeTests
         MainWindowViewModel.FormatRelativeTime(now.AddDays(-3), now).Should().Be("Oct 2");
     }
 
+    [Fact]
+    public async Task SubmitCommandInputAsync_MarkdownCommand_SendsExpandedPromptAsAgentTurn()
+    {
+        var runtime = new ScriptedRuntime();
+        var viewModel = new MainWindowViewModel();
+        viewModel.SetAgentRuntime(runtime, new FakePermissions(), new EmptySessionStore(), new FakeCommands());
+        var session = viewModel.SelectedAgentChatSession!;
+        runtime.Script(new AgentTurnCompleted(session.SessionId, "Looks good.", 0, 0, 0));
+        runtime.Finish();
+        viewModel.CommandInputText = "/review src/App.cs";
+
+        await viewModel.SubmitCommandInputAsync();
+
+        runtime.Messages.Should().Equal("Review src/App.cs for bugs.");
+        session.Messages.First().Content.Should().Be("/review src/App.cs", "the thread shows what was typed");
+    }
+
+    [Fact]
+    public async Task SubmitVoiceCommandAsync_RunsTurnInSelectedChat()
+    {
+        var runtime = new ScriptedRuntime();
+        var commandInput = new RecordingCommandInput();
+        var viewModel = CreateViewModel(runtime);
+        viewModel.SetCommandInputService(commandInput);
+        var session = viewModel.SelectedAgentChatSession!;
+        runtime.Script(new AgentTurnCompleted(session.SessionId, "Opened Spotify.", 1, 0, 0));
+        runtime.Finish();
+
+        await viewModel.SubmitVoiceCommandAsync("open spotify");
+
+        runtime.Messages.Should().Equal("open spotify");
+        runtime.SessionIds.Should().Equal(session.SessionId);
+        commandInput.Submitted.Should().BeEmpty();
+        session.Messages.Select(m => $"{m.Role}:{m.Content}").Should().Equal("You:open spotify", "Kam:Opened Spotify.");
+    }
+
+    [Fact]
+    public async Task SubmitVoiceCommandAsync_WhileTurnRunning_DoesNotStartAnother()
+    {
+        var runtime = new ScriptedRuntime();
+        var viewModel = CreateViewModel(runtime);
+        var session = viewModel.SelectedAgentChatSession!;
+        runtime.Script(
+            new AgentToolCallStarted(session.SessionId, "c1", "shell_run", "Run Shell Command", "{}", ToolRisk.Execute),
+            new AgentApprovalRequested(session.SessionId, "req-1", "c1", "shell_run", "Run Shell Command", "{}", ToolRisk.Execute));
+        viewModel.CommandInputText = "build it";
+        var turn = viewModel.SubmitCommandInputAsync();
+        await WaitForAsync(() => session.Messages.FirstOrDefault(m => m.IsAwaitingApproval));
+
+        await viewModel.SubmitVoiceCommandAsync("open spotify");
+
+        runtime.Messages.Should().Equal("build it");
+        session.Messages.Last().Content.Should().Contain("still working").And.Contain("open spotify");
+
+        viewModel.StopAgentTurnCommand.Execute(null);
+        runtime.Finish();
+        await turn;
+    }
+
+    [Fact]
+    public void RouteVoiceCommand_WithoutAgentRuntime_LeavesCommandToLegacyPlanner()
+    {
+        new MainWindowViewModel().RouteVoiceCommand("open spotify").Should().BeFalse();
+    }
+
+    [Fact]
+    public void StartNewTask_OpensNewSelectedChat()
+    {
+        var viewModel = CreateViewModel(new ScriptedRuntime());
+        var previous = viewModel.SelectedAgentChatSession;
+
+        viewModel.StartNewTask();
+
+        viewModel.SelectedAgentChatSession.Should().NotBeSameAs(previous);
+        viewModel.SelectedAgentChatSession!.Title.Should().Be("New chat");
+        viewModel.AgentChatSessions.First().Should().BeSameAs(viewModel.SelectedAgentChatSession);
+    }
+
     private static MainWindowViewModel CreateViewModel(ScriptedRuntime runtime)
     {
         var viewModel = new MainWindowViewModel();
@@ -416,6 +494,21 @@ public sealed class MainWindowAgentRuntimeTests
                 .ToList());
 
         public Task DeleteAsync(string sessionId, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
+    private sealed class FakeCommands : IAgentCommandCatalog
+    {
+        public string UserCommandsDirectory => "commands";
+
+        public IReadOnlyList<SmartVoiceAgent.Core.Models.Agents.Extensions.AgentCommandInfo> GetCommands() => [];
+
+        public bool TryExpand(string input, out string prompt)
+        {
+            prompt = input.StartsWith("/review ", StringComparison.Ordinal)
+                ? $"Review {input["/review ".Length..]} for bugs."
+                : string.Empty;
+            return prompt.Length > 0;
+        }
     }
 
     private sealed class RecordingCommandInput : ICommandInputService

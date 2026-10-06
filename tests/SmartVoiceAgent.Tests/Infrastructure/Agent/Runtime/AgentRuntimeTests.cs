@@ -53,6 +53,23 @@ public sealed class AgentRuntimeTests : IDisposable
     }
 
     [Fact]
+    public async Task RunTurnAsync_PromptContributors_AppendSectionsToSystemPrompt()
+    {
+        var chat = new ScriptedChatClient([new TextContent("ok")]);
+        var runtime = CreateRuntime(chat, [], contributors:
+        [
+            new FixedPromptContributor("Skills:\n- pdf: Extract PDF text"),
+            new FixedPromptContributor(null),
+            new FixedPromptContributor(throws: true)
+        ]);
+
+        var events = await CollectAsync(runtime, "s1", "hi");
+
+        events.Last().Should().BeOfType<AgentTurnCompleted>();
+        chat.Requests.Single()[0].Text.Should().EndWith("Skills:\n- pdf: Extract PDF text");
+    }
+
+    [Fact]
     public async Task RunTurnAsync_RiskyToolInAskMode_WaitsForApprovalBeforeRunning()
     {
         var written = 0;
@@ -408,10 +425,15 @@ public sealed class AgentRuntimeTests : IDisposable
         IAgentSessionStore? store = null,
         int maxIterations = 24,
         int maxResultCharacters = 16000,
-        int contextTokenBudget = 64000)
+        int contextTokenBudget = 64000,
+        IReadOnlyList<IAgentPromptContributor>? contributors = null)
     {
         var services = new ServiceCollection();
         services.AddScoped<IAgentToolProvider>(_ => new StaticToolProvider(tools));
+        foreach (var contributor in contributors ?? [])
+        {
+            services.AddScoped(_ => contributor);
+        }
         var provider = services.BuildServiceProvider();
 
         return new AgentRuntime(
@@ -454,6 +476,11 @@ public sealed class AgentRuntimeTests : IDisposable
 
     private static AIContent Call(string callId, string name, params (string Key, object? Value)[] arguments) =>
         new FunctionCallContent(callId, name, arguments.ToDictionary(a => a.Key, a => a.Value));
+
+    private sealed class FixedPromptContributor(string? section = null, bool throws = false) : IAgentPromptContributor
+    {
+        public string? GetPromptSection() => throws ? throw new InvalidOperationException("broken") : section;
+    }
 
     private sealed class StaticToolProvider(IReadOnlyList<AgentToolDescriptor> tools) : IAgentToolProvider
     {

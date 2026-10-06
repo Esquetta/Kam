@@ -102,9 +102,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public void SetAgentRuntime(
             IAgentRuntime agentRuntime,
             IToolPermissionService toolPermissions,
-            IAgentSessionStore sessionStore)
+            IAgentSessionStore sessionStore,
+            IAgentCommandCatalog? agentCommands = null)
         {
             _agentRuntime = agentRuntime;
+            _agentCommands = agentCommands;
             _toolPermissions = toolPermissions;
             _agentSessionStore = sessionStore;
             _selectedApprovalMode = ApprovalModes.FirstOrDefault(option => option.Mode == toolPermissions.Mode) ?? ApprovalModes[0];

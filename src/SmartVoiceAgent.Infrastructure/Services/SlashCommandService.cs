@@ -102,6 +102,7 @@ public sealed class SlashCommandService : ISlashCommandService
     private readonly ISkillExecutionPipeline? _skillExecutionPipeline;
     private readonly IRuntimeAgentRunStore? _runtimeAgentRunStore;
     private readonly IApplicationSessionContextStore? _applicationSessionContextStore;
+    private readonly IAgentCommandCatalog? _agentCommands;
     private string? _activeGitHubRepositoryFullName;
     private GitHubWorkflowRunSummary? _activeGitHubWorkflowRun;
     private GitHubPullRequestSummary? _activeGitHubPullRequest;
@@ -122,8 +123,10 @@ public sealed class SlashCommandService : ISlashCommandService
         IOptions<AIServiceConfiguration>? aiServiceOptions = null,
         ISkillExecutionPipeline? skillExecutionPipeline = null,
         IRuntimeAgentRunStore? runtimeAgentRunStore = null,
-        IApplicationSessionContextStore? applicationSessionContextStore = null)
+        IApplicationSessionContextStore? applicationSessionContextStore = null,
+        IAgentCommandCatalog? agentCommands = null)
     {
+        _agentCommands = agentCommands;
         _hostControl = hostControl;
         _skillHealthService = skillHealthService;
         _skillTestService = skillTestService;
@@ -156,7 +159,7 @@ public sealed class SlashCommandService : ISlashCommandService
         }
 
         var filter = GetCommandToken(input).TrimStart('/');
-        return Definitions
+        return GetAllDefinitions()
             .Where(command => string.IsNullOrWhiteSpace(filter)
                 || command.Name.TrimStart('/').Contains(filter, StringComparison.OrdinalIgnoreCase)
                 || command.Aliases.Any(alias => alias.TrimStart('/').Contains(filter, StringComparison.OrdinalIgnoreCase))
@@ -1843,10 +1846,45 @@ public sealed class SlashCommandService : ISlashCommandService
         return builder.ToString().TrimEnd();
     }
 
+    /// <summary>
+    /// Returns the built-in commands followed by Markdown commands from the user, the workspace and plugins.
+    /// A Markdown command cannot replace a built-in one.
+    /// </summary>
+    private IReadOnlyList<SlashCommandDefinition> GetAllDefinitions()
+    {
+        if (_agentCommands is null)
+        {
+            return Definitions;
+        }
+
+        var builtIn = Definitions
+            .SelectMany(definition => definition.Aliases.Prepend(definition.Name))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        IReadOnlyList<SlashCommandDefinition> custom;
+        try
+        {
+            custom = _agentCommands.GetCommands()
+                .Where(command => !builtIn.Contains("/" + command.Name))
+                .Select(command => new SlashCommandDefinition(
+                    "/" + command.Name,
+                    command.Description,
+                    string.IsNullOrWhiteSpace(command.ArgumentHint) ? "/" + command.Name : $"/{command.Name} {command.ArgumentHint}",
+                    command.Source.StartsWith("plugin:", StringComparison.Ordinal) ? "Plugin" : "Custom"))
+                .ToArray();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            custom = [];
+        }
+
+        return [.. Definitions, .. custom];
+    }
+
     private string FormatCommandList(string? filter)
     {
         var commands = string.IsNullOrWhiteSpace(filter)
-            ? Definitions
+            ? GetAllDefinitions()
             : GetSuggestions("/" + filter).ToArray();
 
         var builder = new StringBuilder()

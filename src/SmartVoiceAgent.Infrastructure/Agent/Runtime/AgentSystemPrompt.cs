@@ -13,13 +13,18 @@ public static class AgentSystemPrompt
     /// <param name="now">Current local time.</param>
     /// <param name="toolCount">Number of tools offered this turn.</param>
     /// <param name="workspaceRoot">Optional workspace folder the user is working in.</param>
-    public static string Build(DateTimeOffset now, int toolCount, string? workspaceRoot = null)
+    /// <param name="sections">Extra sections, such as the list of skills, appended in order.</param>
+    public static string Build(
+        DateTimeOffset now,
+        int toolCount,
+        string? workspaceRoot = null,
+        IEnumerable<string>? sections = null)
     {
         var workspaceLine = string.IsNullOrWhiteSpace(workspaceRoot)
             ? "No workspace folder is selected; ask for a path when a task needs one."
             : $"The user's workspace folder is {workspaceRoot}. Resolve relative paths against it.";
 
-        return $"""
+        var prompt = $"""
             You are Kam, a desktop AI agent running on the user's computer ({RuntimeInformation.OSDescription}).
             The current local time is {now:yyyy-MM-dd HH:mm} ({TimeZoneInfo.Local.DisplayName}).
             You have {toolCount} tools for files, applications, the shell, the web, the clipboard, windows and messaging.
@@ -36,5 +41,15 @@ public static class AgentSystemPrompt
             - Reply in the user's language, briefly. Lead with the result.
             - Say what you changed and anything that failed. Do not paste large tool outputs back; summarise them.
             """;
+
+        foreach (var section in sections ?? [])
+        {
+            if (!string.IsNullOrWhiteSpace(section))
+            {
+                prompt += "\n\n" + section.Trim();
+            }
+        }
+
+        return prompt;
     }
 }

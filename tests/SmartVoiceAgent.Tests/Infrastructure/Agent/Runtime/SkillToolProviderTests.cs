@@ -85,6 +85,21 @@ public sealed class SkillToolProviderTests
     }
 
     [Fact]
+    public async Task GetToolsAsync_ImportedSkillMdSkills_AreLeftToLoadSkill()
+    {
+        var registry = new InMemorySkillRegistry();
+        registry.Register(Manifest("apps.open"));
+        var imported = Manifest("local.pdf");
+        imported.ExecutorType = "local";
+        registry.Register(imported);
+        var provider = new SkillToolProvider(registry, new RecordingPipeline(), [new PrefixExecutor("apps."), new PrefixExecutor("local.")]);
+
+        var tools = await provider.GetToolsAsync(TestContext.Current.CancellationToken);
+
+        tools.Select(t => t.Name).Should().Equal("apps_open");
+    }
+
+    [Fact]
     public async Task InvokedTool_RunsPipelineWithConfirmedPlanAndJsonArguments()
     {
         var registry = new InMemorySkillRegistry();

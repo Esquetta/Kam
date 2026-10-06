@@ -125,7 +125,7 @@ public sealed class AgentRuntime : IAgentRuntime
             CloseDanglingToolCalls(history);
 
             var chatClient = _chatClientFactory();
-            var systemPrompt = AgentSystemPrompt.Build(_clock(), tools.Count);
+            var systemPrompt = AgentSystemPrompt.Build(_clock(), tools.Count, sections: CollectPromptSections(scope.ServiceProvider));
             var toolTokens = AgentContextWindow.EstimateTokens(tools);
             var usage = new TurnUsage();
 
@@ -457,6 +457,27 @@ public sealed class AgentRuntime : IAgentRuntime
         {
             _pendingApprovals.TryRemove(requestId, out _);
         }
+    }
+
+    private List<string> CollectPromptSections(IServiceProvider services)
+    {
+        var sections = new List<string>();
+        foreach (var contributor in services.GetServices<IAgentPromptContributor>())
+        {
+            try
+            {
+                if (contributor.GetPromptSection() is { Length: > 0 } section)
+                {
+                    sections.Add(section);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Prompt section from {Contributor} failed", contributor.GetType().Name);
+            }
+        }
+
+        return sections;
     }
 
     private static async Task<List<AgentToolDescriptor>> CollectToolsAsync(

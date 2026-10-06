@@ -156,7 +156,8 @@ namespace SmartVoiceAgent.Ui
                     _mainViewModel.SetAgentRuntime(
                         services.GetRequiredService<IAgentRuntime>(),
                         services.GetRequiredService<IToolPermissionService>(),
-                        services.GetRequiredService<IAgentSessionStore>());
+                        services.GetRequiredService<IAgentSessionStore>(),
+                        services.GetService<IAgentCommandCatalog>());
                 }
 
                 // Setup Voice Command Service

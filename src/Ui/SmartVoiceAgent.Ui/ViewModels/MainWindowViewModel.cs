@@ -52,6 +52,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private ISkillExecutionPipeline? _skillExecutionPipeline;
         private ISkillPlannerTraceStore? _skillPlannerTraceStore;
         private ISlashCommandService? _slashCommandService;
+        private IAgentCommandCatalog? _agentCommands;
         private IRuntimeAgentRunStore? _runtimeAgentRunStore;
         private IApplicationUpdateService? _applicationUpdateService;
         private IApplicationRestartPlanner? _applicationRestartPlanner;
@@ -1056,6 +1057,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 ToggleVoiceEnabled();
             };
 
+            service.NewTaskRequested += (s, e) => StartNewTask();
+
             service.AboutRequested += (s, e) =>
             {
                 // Show about info in coordinator or log
@@ -1195,6 +1198,20 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 return;
             }
 
+            // Markdown commands from the user, the workspace and plugins run as agent turns.
+            if (_agentRuntime is not null
+                && SelectedAgentChatSession is not null
+                && _agentCommands is not null
+                && !IsBuiltInSlashCommand(input)
+                && _agentCommands.TryExpand(input, out var commandPrompt))
+            {
+                CommandInputText = string.Empty;
+                SlashCommandSuggestions.Clear();
+                IsSlashCommandPaletteVisible = false;
+                await RunAgentTurnAsync(SelectedAgentChatSession, commandPrompt);
+                return;
+            }
+
             if (_slashCommandService?.IsSlashCommand(input) == true)
             {
                 var slashResult = await _slashCommandService.ExecuteAsync(input);
@@ -1297,6 +1314,14 @@ namespace SmartVoiceAgent.Ui.ViewModels
             };
             lines.AddRange(attachments.Select(attachment => $"- {attachment.FullPath}"));
             return string.Join(Environment.NewLine, lines);
+        }
+
+        private bool IsBuiltInSlashCommand(string input)
+        {
+            var token = input.TrimStart().Split((char[]?)null, 2, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
+            return _slashCommandService?.GetCommands().Any(command =>
+                command.Name.Equals(token, StringComparison.OrdinalIgnoreCase)
+                || command.Aliases.Any(alias => alias.Equals(token, StringComparison.OrdinalIgnoreCase))) == true;
         }
 
         private void RefreshSlashCommandSuggestions()
@@ -1916,6 +1941,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _voiceCommandService.StatusChanged += OnVoiceStatusChanged;
             _voiceCommandService.OnTranscriptionResult += OnVoiceTranscriptionResult;
             _voiceCommandService.OnError += OnVoiceError;
+            _voiceCommandService.CommandRouter = RouteVoiceCommand;
 
             IsVoiceEnabled = false;
             IsListeningForWakeWord = false;
@@ -1958,6 +1984,53 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 AddLog($"🎤 Voice: '{text}'");
             });
+        }
+
+        /// <summary>
+        /// Sends a transcribed voice command to the agent chat when the agent runtime is on.
+        /// </summary>
+        /// <param name="text">The transcribed command.</param>
+        /// <returns><c>true</c> when the agent chat takes the command.</returns>
+        public bool RouteVoiceCommand(string text)
+        {
+            if (_agentRuntime is null || string.IsNullOrWhiteSpace(text))
+            {
+                return false;
+            }
+
+            Dispatcher.UIThread.Post(() => _ = SubmitVoiceCommandAsync(text.Trim()));
+            return true;
+        }
+
+        /// <summary>
+        /// Runs a voice command as a turn in the selected chat, starting a chat when none is open.
+        /// </summary>
+        /// <param name="text">The transcribed command.</param>
+        public async Task SubmitVoiceCommandAsync(string text)
+        {
+            if (SelectedAgentChatSession is null)
+            {
+                CreateNewAgentChat();
+            }
+
+            var session = SelectedAgentChatSession!;
+            if (IsAgentTurnRunning)
+            {
+                AddAgentChatMessage("Kam", $"I'm still working on the last request, so I didn't start \"{text}\". Say it again when I'm done.");
+                return;
+            }
+
+            AddAgentChatMessage("You", text);
+            await RunAgentTurnAsync(session, text);
+        }
+
+        /// <summary>
+        /// Opens a new agent chat on the chat page, as the tray's "New task" does.
+        /// </summary>
+        public void StartNewTask()
+        {
+            NavigateTo(NavView.Coordinator);
+            CreateNewAgentChat();
         }
 
         private void OnVoiceError(object? sender, string error)
