@@ -1,4 +1,5 @@
 ﻿using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Styling;
 using ReactiveUI;
 using SolidColorBrush = Avalonia.Media.SolidColorBrush;
@@ -18,18 +19,19 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /* ========================= */
         /* CACHED BRUSHES */
         /* ========================= */
-        // Static brushes to avoid repeated allocations and color parsing
-        private static readonly IBrush OnlineStatusColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#10B981"));
-        private static readonly IBrush OfflineStatusColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
-        private static readonly IBrush OnlineOrbColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#06B6D4"));
-        private static readonly IBrush OfflineOrbColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
-        private static readonly IBrush OnlineOrbGlowColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#4006B6D4"));
-        private static readonly IBrush OfflineOrbGlowColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#40EF4444"));
-        private static readonly IBrush ResearchOnlineColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#A855F7"));
-        private static readonly IBrush AnalyzerOnlineColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#10B981"));
-        private static readonly IBrush TasksOnlineColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#F97316"));
-        private static readonly IBrush DarkThemeTextColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#FAFAFA"));
-        private static readonly IBrush LightThemeTextColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#18181B"));
+        // Static brushes to avoid repeated allocations and color parsing.
+        // Immutable, because a shared mutable brush belongs to the thread that first loads this class.
+        private static readonly IBrush OnlineStatusColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#10B981"));
+        private static readonly IBrush OfflineStatusColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
+        private static readonly IBrush OnlineOrbColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#06B6D4"));
+        private static readonly IBrush OfflineOrbColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
+        private static readonly IBrush OnlineOrbGlowColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#4006B6D4"));
+        private static readonly IBrush OfflineOrbGlowColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#40EF4444"));
+        private static readonly IBrush ResearchOnlineColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#A855F7"));
+        private static readonly IBrush AnalyzerOnlineColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#10B981"));
+        private static readonly IBrush TasksOnlineColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#F97316"));
+        private static readonly IBrush DarkThemeTextColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#FAFAFA"));
+        private static readonly IBrush LightThemeTextColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#18181B"));
 
         /* ========================= */
         /* ONLINE/OFFLINE STATE */

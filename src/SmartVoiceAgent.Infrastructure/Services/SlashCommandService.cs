@@ -21,6 +21,7 @@ public sealed class SlashCommandService : ISlashCommandService
         new("/commands", "List slash commands, optionally filtered.", "/commands [filter]", "General", ["/help"]),
         new("/settings", "Open the settings screen.", "/settings", "Navigation"),
         new("/integrations", "Open integration settings.", "/integrations", "Navigation"),
+        new("/extensions", "Open MCP servers, skills, plugins and commands.", "/extensions", "Navigation"),
         new("/diagnostics", "Open runtime diagnostics.", "/diagnostics", "Navigation", ["/runtime"]),
         new("/coordinator", "Open the coordinator workspace.", "/coordinator", "Navigation", ["/home"]),
         new("/theme", "Toggle the active theme.", "/theme", "General"),
@@ -103,6 +104,7 @@ public sealed class SlashCommandService : ISlashCommandService
     private readonly IRuntimeAgentRunStore? _runtimeAgentRunStore;
     private readonly IApplicationSessionContextStore? _applicationSessionContextStore;
     private readonly IAgentCommandCatalog? _agentCommands;
+    private readonly IMcpHost? _mcpHost;
     private string? _activeGitHubRepositoryFullName;
     private GitHubWorkflowRunSummary? _activeGitHubWorkflowRun;
     private GitHubPullRequestSummary? _activeGitHubPullRequest;
@@ -124,9 +126,11 @@ public sealed class SlashCommandService : ISlashCommandService
         ISkillExecutionPipeline? skillExecutionPipeline = null,
         IRuntimeAgentRunStore? runtimeAgentRunStore = null,
         IApplicationSessionContextStore? applicationSessionContextStore = null,
-        IAgentCommandCatalog? agentCommands = null)
+        IAgentCommandCatalog? agentCommands = null,
+        IMcpHost? mcpHost = null)
     {
         _agentCommands = agentCommands;
+        _mcpHost = mcpHost;
         _hostControl = hostControl;
         _skillHealthService = skillHealthService;
         _skillTestService = skillTestService;
@@ -205,6 +209,7 @@ public sealed class SlashCommandService : ISlashCommandService
             "/permissions" => SlashCommandResult.Succeeded("/permissions", FormatPermissions()),
             "/settings" => SlashCommandResult.Succeeded("/settings", "Opening Settings."),
             "/integrations" => SlashCommandResult.Succeeded("/integrations", "Opening Integrations."),
+            "/extensions" => SlashCommandResult.Succeeded("/extensions", "Opening Extensions."),
             "/diagnostics" => SlashCommandResult.Succeeded("/diagnostics", "Opening Runtime Diagnostics."),
             "/coordinator" => SlashCommandResult.Succeeded("/coordinator", "Opening Coordinator."),
             "/theme" => SlashCommandResult.Succeeded("/theme", "Theme toggled."),
@@ -738,12 +743,38 @@ public sealed class SlashCommandService : ISlashCommandService
 
     private string FormatMcp()
     {
-        return string.Join(Environment.NewLine, [
-            "Kam MCP status:",
-            $"  Todoist endpoint: {FormatConfiguredValue(_mcpOptions.TodoistServerLink)}",
-            $"  Todoist API key: {FormatSecretStatus(_mcpOptions.TodoistApiKey)}",
-            "  MCP commands in chat are status-only"
-        ]);
+        if (_mcpHost is null)
+        {
+            return string.Join(Environment.NewLine, [
+                "Kam MCP status:",
+                $"  Todoist endpoint: {FormatConfiguredValue(_mcpOptions.TodoistServerLink)}",
+                $"  Todoist API key: {FormatSecretStatus(_mcpOptions.TodoistApiKey)}",
+                "  MCP commands in chat are status-only"
+            ]);
+        }
+
+        var builder = new StringBuilder()
+            .AppendLine($"Kam MCP servers ({_mcpHost.UserConfigPath}; manage them in /extensions):");
+        var servers = _mcpHost.Servers;
+        if (servers.Count == 0)
+        {
+            builder.AppendLine("  None configured.");
+        }
+
+        foreach (var server in servers)
+        {
+            var status = server.Status switch
+            {
+                SmartVoiceAgent.Core.Models.Agents.Extensions.McpServerStatus.Ready => $"ready, {server.ToolCount} tools",
+                SmartVoiceAgent.Core.Models.Agents.Extensions.McpServerStatus.Failed => $"failed: {server.Error}",
+                SmartVoiceAgent.Core.Models.Agents.Extensions.McpServerStatus.Disabled => "off",
+                SmartVoiceAgent.Core.Models.Agents.Extensions.McpServerStatus.Connecting => "starting",
+                _ => "starts on first use"
+            };
+            builder.AppendLine($"  {server.Definition.Name} ({server.Definition.Source}): {status}");
+        }
+
+        return builder.ToString().TrimEnd();
     }
 
     private async Task<SlashCommandResult> RunAgentCommandAsync(

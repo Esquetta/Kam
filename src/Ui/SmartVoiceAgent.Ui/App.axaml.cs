@@ -158,6 +158,11 @@ namespace SmartVoiceAgent.Ui
                         services.GetRequiredService<IToolPermissionService>(),
                         services.GetRequiredService<IAgentSessionStore>(),
                         services.GetService<IAgentCommandCatalog>());
+                    _mainViewModel.SetExtensionServices(
+                        services.GetService<IMcpHost>(),
+                        services.GetService<IAgentPluginCatalog>(),
+                        services.GetService<IAgentSkillCatalog>(),
+                        services.GetService<IAgentCommandCatalog>());
                 }
 
                 // Setup Voice Command Service

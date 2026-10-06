@@ -53,6 +53,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private ISkillPlannerTraceStore? _skillPlannerTraceStore;
         private ISlashCommandService? _slashCommandService;
         private IAgentCommandCatalog? _agentCommands;
+        private IMcpHost? _mcpHost;
+        private IAgentPluginCatalog? _pluginCatalog;
+        private IAgentSkillCatalog? _skillCatalog;
         private IRuntimeAgentRunStore? _runtimeAgentRunStore;
         private IApplicationUpdateService? _applicationUpdateService;
         private IApplicationRestartPlanner? _applicationRestartPlanner;
@@ -194,6 +197,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public ICommand NavigateToCoordinatorCommand { get; }
         public ICommand NavigateToDiagnosticsCommand { get; }
         public ICommand NavigateToPluginsCommand { get; }
+        public ICommand NavigateToExtensionsCommand { get; }
         public ICommand NavigateToIntegrationsCommand { get; }
         public ICommand NavigateToSettingsCommand { get; }
         public ICommand ToggleThemeCommand { get; }
@@ -657,6 +661,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             NavigateToCoordinatorCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Coordinator));
             NavigateToDiagnosticsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Diagnostics));
             NavigateToPluginsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Plugins));
+            NavigateToExtensionsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Extensions));
             NavigateToIntegrationsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Integrations));
             NavigateToSettingsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Settings));
             ToggleThemeCommand = ReactiveCommand.Create(ToggleTheme);
@@ -924,6 +929,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     _applicationUpdateSession,
                     CopyRuntimeDiagnosticsText),
                 NavView.Plugins => CreatePluginsViewModel(),
+                NavView.Extensions => new ExtensionsViewModel(_mcpHost, _pluginCatalog, _skillCatalog, _agentCommands),
                 NavView.Integrations => new IntegrationsViewModel(
                     _pageSettingsService,
                     _githubAppClientFactory),
@@ -1036,6 +1042,22 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /* ========================= */
         /* TRAY ICON */
         /* ========================= */
+
+        /// <summary>
+        /// Supplies the services the Extensions page manages.
+        /// </summary>
+        public void SetExtensionServices(
+            IMcpHost? mcpHost,
+            IAgentPluginCatalog? plugins,
+            IAgentSkillCatalog? skills,
+            IAgentCommandCatalog? commands)
+        {
+            _mcpHost = mcpHost;
+            _pluginCatalog = plugins;
+            _skillCatalog = skills;
+            _agentCommands ??= commands;
+            _viewModelCache.Remove(NavView.Extensions);
+        }
 
         public void SetTrayIconService(TrayIconService service)
         {
@@ -1433,6 +1455,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     return true;
                 case "/integrations":
                     NavigateTo(NavView.Integrations);
+                    return true;
+                case "/extensions":
+                    NavigateTo(NavView.Extensions);
                     return true;
                 case "/diagnostics":
                     NavigateTo(NavView.Diagnostics);

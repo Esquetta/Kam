@@ -83,6 +83,7 @@ public sealed class UiDesignSystemMetadataTests
     [InlineData("SettingsView.axaml")]
     [InlineData("IntegrationsView.axaml")]
     [InlineData("PluginsView.axaml")]
+    [InlineData("ExtensionsView.axaml")]
     [InlineData("RuntimeDiagnosticsView.axaml")]
     public void PrimaryPages_OptIntoSharedWorkbenchChrome(string viewFileName)
     {
@@ -98,6 +99,7 @@ public sealed class UiDesignSystemMetadataTests
     [InlineData("PluginsView.axaml")]
     [InlineData("RuntimeDiagnosticsView.axaml")]
     [InlineData("SettingsView.axaml")]
+    [InlineData("ExtensionsView.axaml")]
     public void PrimaryPages_UseSharedActionAndIconLanguage(string viewFileName)
     {
         var viewText = File.ReadAllText(FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Views", viewFileName));

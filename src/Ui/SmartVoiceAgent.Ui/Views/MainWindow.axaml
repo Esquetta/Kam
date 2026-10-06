@@ -452,6 +452,15 @@
 						</StackPanel>
 					</Button>
 					<Button Classes.NavBtn="True"
+							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Extensions}}"
+							Command="{Binding NavigateToExtensionsCommand}"
+							ToolTip.Tip="Extensions">
+						<StackPanel Orientation="Horizontal" Spacing="12">
+							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconPuzzle}"/></Viewbox>
+							<TextBlock Classes="NavLabel" Text="Extensions"/>
+						</StackPanel>
+					</Button>
+					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Integrations}}"
 							Command="{Binding NavigateToIntegrationsCommand}"
 							ToolTip.Tip="Integrations">
@@ -1090,6 +1099,10 @@
 
 						<DataTemplate DataType="pagevm:IntegrationsViewModel">
 							<local:IntegrationsView/>
+						</DataTemplate>
+
+						<DataTemplate DataType="pagevm:ExtensionsViewModel">
+							<local:ExtensionsView/>
 						</DataTemplate>
 
 						<DataTemplate DataType="pagevm:SettingsViewModel">

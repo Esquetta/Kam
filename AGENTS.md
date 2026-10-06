@@ -423,7 +423,11 @@ See `RESPONSIVE_DESIGN.md` for full details.
 - **Threads persist** as `%AppData%/Kam/sessions/<id>.json` via `IAgentSessionStore`
 - **Context**: `AgentContextWindow` keeps requests under `AgentRuntime:ContextTokenBudget` by shortening old tool results, then inserting a summary message into the thread (`/compact` forces it); the model sees only the newest summary and what follows
 - **Shell**: `ShellCommandGuard` matches destructive commands by command position, not substring; `shell.run` timeout is up to 10 minutes
-- **Fallback**: `AgentRuntime:Enabled=false` keeps the legacy single-skill planner; voice still uses it
+- **Fallback**: `AgentRuntime:Enabled=false` keeps the legacy single-skill planner for chat and voice
+- **Permission rules**: `shell_run(git status:*)`, `files_write(*/docs/*)`, `mcp__github__*`; deny rules win, and allow rules never match chained shell commands (`ToolPermissionRule`)
+- **MCP host**: `%AppData%/Kam/mcp.json` (Claude Desktop format) plus plugin `.mcp.json` and Todoist; servers start on the first turn and their tools are `mcp__{server}__{tool}` (`Infrastructure/Agent/Mcp`)
+- **Extensions** (`Infrastructure/Agent/Extensions`): Agent Skills (`SKILL.md`, loaded on demand with `load_skill`), Claude Code layout plugins in `%AppData%/Kam/plugins`, and Markdown slash commands; managed on the Extensions page
+- **Voice and tray**: voice commands and the tray's "New task" run in the agent chat
 - **Roadmap**: `docs/architecture/agent-platform.md` (MCP host, Agent Skills, plugins, coding mode, subagents)
 
 #### UI Redesign (October 2026)

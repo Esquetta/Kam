@@ -123,6 +123,18 @@ public sealed class MainWindowMetadataTests
     }
 
     [Fact]
+    public void MainWindow_SidebarAndPageHost_IncludeExtensions()
+    {
+        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+
+        mainWindowText.Should().Contain("Command=\"{Binding NavigateToExtensionsCommand}\"");
+        mainWindowText.Should().Contain("ConverterParameter={x:Static vm:NavView.Extensions}");
+        mainWindowText.Should().Contain("<DataTemplate DataType=\"pagevm:ExtensionsViewModel\">");
+        mainWindowText.Should().Contain("<local:ExtensionsView/>");
+        mainWindowText.Should().Contain("Data=\"{StaticResource IconPuzzle}\"");
+    }
+
+    [Fact]
     public void MainWindow_ChatRendersAgentToolStepsAndApprovalCards()
     {
         var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());

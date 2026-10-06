@@ -137,6 +137,7 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
 
             _menu.Add(new NativeMenuItemSeparator());
 
+            _menu.Add(CreateItem("Extensions", (_, _) => NavigateAndShow(NavView.Extensions)));
             _menu.Add(CreateItem("Skills", (_, _) => NavigateAndShow(NavView.Plugins)));
             _menu.Add(CreateItem("Diagnostics", (_, _) => NavigateAndShow(NavView.Diagnostics)));
             _menu.Add(CreateItem("Integrations", (_, _) => NavigateAndShow(NavView.Integrations)));
