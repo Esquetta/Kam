@@ -1,11 +1,12 @@
+using System.Runtime.InteropServices;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
 namespace SmartVoiceAgent.Infrastructure.Services.Voice;
 
 /// <summary>
-/// Records on Windows: the microphone chosen in Settings through WASAPI, converted to 16 kHz mono, or the
-/// default microphone through WaveIn when none is chosen or the chosen one can't be opened.
+/// Records on Windows through WASAPI, converted to 16 kHz mono: the microphone chosen in Settings, or the
+/// Windows default microphone when none is chosen. Falls back to WaveIn's default device when WASAPI can't open it.
 /// </summary>
 public sealed class WindowsVoiceRecognitionService : VoiceRecognitionServiceBase
 {
@@ -28,19 +29,39 @@ public sealed class WindowsVoiceRecognitionService : VoiceRecognitionServiceBase
     /// <inheritdoc />
     protected override void StartListeningInternal()
     {
-        _capture = (IWaveIn?)TryCreateWasapiCapture() ?? new WaveInEvent
+        if (TryCreateWasapiCapture() is { } wasapi)
         {
+            try
+            {
+                Start(wasapi);
+                return;
+            }
+            catch (Exception ex) when (ex is COMException or ArgumentException or InvalidOperationException)
+            {
+                // Some devices refuse WASAPI shared capture; WaveIn usually still works.
+                CleanupPlatformResources();
+            }
+        }
+
+        Start(new WaveInEvent
+        {
+            // -1 is WAVE_MAPPER, the Windows default microphone; device 0 is merely the first one installed.
+            DeviceNumber = -1,
             WaveFormat = new WaveFormat(WaveAudio.SampleRate, 16, 1),
             BufferMilliseconds = 50
-        };
+        });
+    }
 
-        var format = _capture.WaveFormat;
+    private void Start(IWaveIn capture)
+    {
+        _capture = capture;
+        var format = capture.WaveFormat;
         var isFloat = format.Encoding == WaveFormatEncoding.IeeeFloat
             || (format is WaveFormatExtensible extensible && extensible.SubFormat == IeeeFloatSubFormat);
         _converter = new PcmConverter(format.SampleRate, format.Channels, format.BitsPerSample, isFloat, WaveAudio.SampleRate);
-        _capture.DataAvailable += OnDataAvailable;
-        _capture.RecordingStopped += OnRecordingStopped;
-        _capture.StartRecording();
+        capture.DataAvailable += OnDataAvailable;
+        capture.RecordingStopped += OnRecordingStopped;
+        capture.StartRecording();
     }
 
     /// <inheritdoc />
@@ -72,15 +93,12 @@ public sealed class WindowsVoiceRecognitionService : VoiceRecognitionServiceBase
 
     private WasapiCapture? TryCreateWasapiCapture()
     {
-        if (string.IsNullOrWhiteSpace(_deviceId))
-        {
-            return null;
-        }
-
         try
         {
             using var enumerator = new MMDeviceEnumerator();
-            var device = enumerator.GetDevice(_deviceId);
+            var device = string.IsNullOrWhiteSpace(_deviceId)
+                ? enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Console)
+                : enumerator.GetDevice(_deviceId);
             if (device.State != DeviceState.Active)
             {
                 device.Dispose();
@@ -90,9 +108,10 @@ public sealed class WindowsVoiceRecognitionService : VoiceRecognitionServiceBase
             _device = device;
             return new WasapiCapture(device, true, 50);
         }
-        catch (Exception ex) when (ex is global::System.Runtime.InteropServices.COMException or ArgumentException or InvalidOperationException)
+        catch (Exception ex) when (ex is COMException or ArgumentException or InvalidOperationException)
         {
-            InvokeOnError(new InvalidOperationException($"The chosen microphone can't be opened; using the default one. {ex.Message}", ex));
+            // The chosen microphone is gone, or there is no default one: record with WaveIn instead. Raising
+            // OnError here would end the recording that is just starting.
             _device?.Dispose();
             _device = null;
             return null;

@@ -138,6 +138,22 @@ public sealed class VoiceAssistantTests
     }
 
     [Fact]
+    public async Task RecorderError_WhileStarting_DoesNotShowListening()
+    {
+        var fakes = new VoiceFakes();
+        fakes.Recorders.ErrorWhileStarting = new InvalidOperationException("device busy");
+        using var voice = fakes.CreateAssistant();
+        var events = Track(voice);
+
+        await voice.ToggleTalkAsync();
+
+        voice.State.Should().Be(VoiceState.Ready);
+        Snapshot(events).Should().NotContain(e => e.State == VoiceState.Listening);
+        Last(events).Problem.Should().Be(VoiceProblem.MicrophoneUnavailable);
+        Last(events).Detail.Should().Be("device busy");
+    }
+
+    [Fact]
     public async Task RecorderError_WhileListening_ReportsMicrophoneUnavailable()
     {
         var fakes = new VoiceFakes();
@@ -329,8 +345,52 @@ public sealed class VoiceAssistantTests
         await Task.Delay(50);
 
         voice.State.Should().Be(VoiceState.Ready);
-        recorder.IsDisposed.Should().BeTrue();
+        await VoiceFakes.WaitUntilAsync(() => recorder.IsDisposed, "the recorder is released");
         routed.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ToggleTalkAsync_WhenTheMicrophoneWontStop_StopsListeningAnyway()
+    {
+        var fakes = new VoiceFakes();
+        using var stuck = new ManualResetEventSlim(false);
+        fakes.Recorders.StopGate = stuck;
+        using var voice = fakes.CreateAssistant();
+        voice.StopTimeout = TimeSpan.FromMilliseconds(100);
+        var events = Track(voice);
+        var routed = Route(voice);
+
+        await voice.ToggleTalkAsync();
+        var recorder = fakes.Recorders.Last;
+        await voice.ToggleTalkAsync();
+
+        voice.State.Should().Be(VoiceState.Ready);
+        Last(events).Problem.Should().Be(VoiceProblem.MicrophoneUnavailable);
+
+        stuck.Set();
+        await VoiceFakes.WaitUntilAsync(() => recorder.IsDisposed, "the recorder is released once it stops");
+        routed.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ToggleTalkAsync_WhenStoppingFails_ReportsItAndCanTalkAgain()
+    {
+        var fakes = new VoiceFakes();
+        fakes.Recorders.StopFailure = new InvalidOperationException("driver error");
+        using var voice = fakes.CreateAssistant();
+        var events = Track(voice);
+
+        await voice.ToggleTalkAsync();
+        await voice.ToggleTalkAsync();
+
+        voice.State.Should().Be(VoiceState.Ready);
+        Last(events).Problem.Should().Be(VoiceProblem.MicrophoneUnavailable);
+        Last(events).Detail.Should().Be("driver error");
+
+        fakes.Recorders.StopFailure = null;
+        await voice.ToggleTalkAsync();
+
+        voice.State.Should().Be(VoiceState.Listening);
     }
 
     [Fact]

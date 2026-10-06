@@ -161,6 +161,12 @@ public sealed class VoiceAssistant : IDisposable
     public bool UseNoiseSuppression { get; set; }
 
     /// <summary>Gets what the assistant is doing.</summary>
+    /// <summary>
+    /// Gets or sets how long stopping the microphone may take. Some audio drivers never return from stopping;
+    /// after this long Kam stops listening anyway and reports the microphone as unavailable.
+    /// </summary>
+    public TimeSpan StopTimeout { get; set; } = TimeSpan.FromSeconds(3);
+
     public VoiceState State { get; private set; } = VoiceState.Ready;
 
     /// <summary>Gets whether the wake phrase listener is on.</summary>
@@ -206,8 +212,10 @@ public sealed class VoiceAssistant : IDisposable
         if (recorder is not null)
         {
             Detach(recorder);
-            recorder.Dispose();
             Rest();
+
+            // Releasing the device can block in the audio driver; never do it on the caller's (UI) thread.
+            ThreadPool.QueueUserWorkItem(_ => DisposeQuietly(recorder));
         }
 
         _speech.Stop();
@@ -303,11 +311,18 @@ public sealed class VoiceAssistant : IDisposable
             recorder.OnVoiceCaptured += OnCommandCaptured;
             recorder.OnAudioLevel += OnLevel;
             recorder.OnError += OnRecorderError;
+            IVoiceRecognitionService? previous;
             lock (_gate)
             {
-                _recorder?.Dispose();
+                previous = _recorder;
                 _recorder = recorder;
                 _heardSpeech = false;
+            }
+
+            if (previous is not null)
+            {
+                Detach(previous);
+                ThreadPool.QueueUserWorkItem(_ => DisposeQuietly(previous));
             }
 
             recorder.StartListening();
@@ -323,13 +338,21 @@ public sealed class VoiceAssistant : IDisposable
             return;
         }
 
-        SetState(VoiceState.Listening);
         var timeout = new CancellationTokenSource();
         lock (_gate)
         {
+            if (!ReferenceEquals(_recorder, recorder))
+            {
+                // The recorder failed while starting and was already reported; showing it as listening would
+                // leave a recording on screen that nothing can stop.
+                return;
+            }
+
             _listenTimeout?.Cancel();
             _listenTimeout = timeout;
         }
+
+        SetState(VoiceState.Listening);
 
         _ = StopIfSilentAsync(recorder, timeout.Token);
     }
@@ -363,25 +386,72 @@ public sealed class VoiceAssistant : IDisposable
         lock (_gate)
         {
             recorder = _recorder;
+            _listenTimeout?.Cancel();
         }
 
-        // Stopping delivers speech still in progress through OnCommandCaptured.
-        recorder?.StopListening();
+        if (recorder is null)
+        {
+            return;
+        }
 
-        bool nothing;
+        // Stopping delivers speech still in progress through OnCommandCaptured. It runs off this thread with a
+        // time limit, because a driver that fails or never returns must not leave Kam listening for good.
+        var stopping = Task.Run(recorder.StopListening);
+        Exception? failure;
+        try
+        {
+            failure = stopping.Wait(StopTimeout)
+                ? null
+                : new TimeoutException("The microphone did not stop recording.");
+        }
+        catch (AggregateException ex)
+        {
+            failure = ex.InnerException ?? ex;
+        }
+
+        bool stillRecording;
         lock (_gate)
         {
-            nothing = ReferenceEquals(_recorder, recorder) && recorder is not null;
-            if (nothing)
+            stillRecording = ReferenceEquals(_recorder, recorder);
+            if (stillRecording)
             {
                 _recorder = null;
             }
         }
 
-        if (nothing)
+        if (!stillRecording)
         {
-            Detach(recorder!);
+            // The recording ended with speech, which is being transcribed.
+            return;
+        }
+
+        Detach(recorder);
+        stopping.ContinueWith(
+            finished =>
+            {
+                _ = finished.Exception;
+                DisposeQuietly(recorder);
+            },
+            TaskScheduler.Default);
+        if (failure is null)
+        {
             Rest(VoiceProblem.NothingHeard);
+            return;
+        }
+
+        _log?.Log($"Stopping the microphone failed: {failure.Message}", LogLevel.Warning);
+        Rest(VoiceProblem.MicrophoneUnavailable, failure.Message);
+    }
+
+    private void DisposeQuietly(IVoiceRecognitionService recorder)
+    {
+        try
+        {
+            recorder.Dispose();
+        }
+        catch (Exception ex)
+        {
+            _log?.Log($"Releasing the microphone failed: {ex.Message}", LogLevel.Warning);
         }
     }
 
@@ -417,7 +487,7 @@ public sealed class VoiceAssistant : IDisposable
         Detach(recorder!);
         ThreadPool.QueueUserWorkItem(_ =>
         {
-            recorder!.Dispose();
+            DisposeQuietly(recorder!);
             _ = TranscribeAndRouteAsync(audio, wakePhraseFirst: false);
         });
     }
@@ -437,7 +507,7 @@ public sealed class VoiceAssistant : IDisposable
         if (sender is IVoiceRecognitionService recorder)
         {
             Detach(recorder);
-            ThreadPool.QueueUserWorkItem(_ => recorder.Dispose());
+            ThreadPool.QueueUserWorkItem(_ => DisposeQuietly(recorder));
         }
 
         Rest(VoiceProblem.MicrophoneUnavailable, error.Message);

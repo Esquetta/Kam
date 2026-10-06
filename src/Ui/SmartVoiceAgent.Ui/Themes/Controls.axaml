@@ -308,9 +308,18 @@
         <Setter Property="Stretch" Value="Uniform" />
     </Style>
 
-    <!-- Talk button: red while recording a command. -->
+    <!-- Talk button: the whole round button turns red while recording a command, not just the icon's box. -->
+    <Style Selector="Button.TalkButton /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+    </Style>
+
     <Style Selector="Button.TalkButton.listening /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource AccentErrorBrush}" />
+    </Style>
+
+    <Style Selector="Button.TalkButton.listening:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentErrorDimBrush}" />
     </Style>
 
     <Style Selector="Button.TalkButton.listening Path.Icon">

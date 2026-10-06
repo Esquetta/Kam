@@ -63,6 +63,21 @@ internal sealed class FakeRecorderFactory : IVoiceRecognitionFactory
     /// </summary>
     public byte[]? AudioOnStop { get; set; }
 
+    /// <summary>
+    /// Raised through <see cref="FakeRecorder.OnError"/> while starting, as a device that fails to open does.
+    /// </summary>
+    public Exception? ErrorWhileStarting { get; set; }
+
+    /// <summary>
+    /// Makes <see cref="FakeRecorder.StopListening"/> throw, as a failing audio driver does.
+    /// </summary>
+    public Exception? StopFailure { get; set; }
+
+    /// <summary>
+    /// Makes <see cref="FakeRecorder.StopListening"/> wait until this is set, as a driver that hangs does.
+    /// </summary>
+    public ManualResetEventSlim? StopGate { get; set; }
+
     public FakeRecorder Last => Created[^1];
 
     public IVoiceRecognitionService Create()
@@ -97,6 +112,11 @@ internal sealed class FakeRecorder(FakeRecorderFactory factory) : IVoiceRecognit
         }
 
         IsListening = true;
+        if (factory.ErrorWhileStarting is { } error)
+        {
+            OnError?.Invoke(this, error);
+        }
+
         OnListeningStarted?.Invoke(this, EventArgs.Empty);
     }
 
@@ -107,6 +127,13 @@ internal sealed class FakeRecorder(FakeRecorderFactory factory) : IVoiceRecognit
             return;
         }
 
+        if (factory.StopFailure is { } failure)
+        {
+            IsListening = false;
+            throw failure;
+        }
+
+        factory.StopGate?.Wait();
         IsListening = false;
         if (factory.AudioOnStop is { } audio)
         {
