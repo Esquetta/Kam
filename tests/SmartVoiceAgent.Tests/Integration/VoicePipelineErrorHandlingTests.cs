@@ -17,13 +17,11 @@ namespace SmartVoiceAgent.Tests.Integration
     public class VoicePipelineErrorHandlingTests
     {
         private readonly Mock<ISpeechToTextService> _mockSttService;
-        private readonly Mock<IIntentDetectionService> _mockIntentService;
         private readonly Mock<IMediator> _mockMediator;
 
         public VoicePipelineErrorHandlingTests()
         {
             _mockSttService = new Mock<ISpeechToTextService>();
-            _mockIntentService = new Mock<IIntentDetectionService>();
             _mockMediator = new Mock<IMediator>();
         }
 
@@ -50,29 +48,6 @@ namespace SmartVoiceAgent.Tests.Integration
             caughtException.Should().NotBeNull();
             caughtException.Should().BeOfType<InvalidOperationException>();
             caughtException!.Message.Should().Contain("STT service unavailable");
-        }
-
-        [Fact]
-        public async Task Pipeline_IntentDetectionException_ReturnsError()
-        {
-            // Arrange
-            _mockIntentService
-                .Setup(s => s.DetectIntentAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ThrowsAsync(new NullReferenceException("Logger not initialized"));
-
-            // Act
-            Exception? caughtException = null;
-            try
-            {
-                await _mockIntentService.Object.DetectIntentAsync("test command", "tr", CancellationToken.None);
-            }
-            catch (Exception ex)
-            {
-                caughtException = ex;
-            }
-
-            // Assert
-            caughtException.Should().NotBeNull();
         }
 
         [Fact]

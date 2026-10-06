@@ -1,5 +1,3 @@
-using AgentFrameworkToolkit.Tools;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Application.Notifications;
@@ -46,7 +44,6 @@ public class CommunicationAgentTools
     /// <summary>
     /// Send an email to a recipient
     /// </summary>
-    [AITool("send_email_async", "Sends an email to a specified recipient. Use when user wants to send an email message.")]
     public async Task<string> SendEmailAsync(
         [Description("Recipient email address")]
         string to,
@@ -98,7 +95,6 @@ public class CommunicationAgentTools
     /// <summary>
     /// Send an email using a template
     /// </summary>
-    [AITool("send_email_template_async", "Sends a templated email. Available templates: welcome, notification, password-reset.")]
     public async Task<string> SendEmailTemplateAsync(
         [Description("Recipient email address")]
         string to,
@@ -144,7 +140,6 @@ public class CommunicationAgentTools
     /// <summary>
     /// Validate an email address format
     /// </summary>
-    [AITool("validate_email_async", "Validates an email address format.")]
     public string ValidateEmail(
         [Description("Email address to validate")]
         string email)
@@ -179,7 +174,6 @@ public class CommunicationAgentTools
     /// <summary>
     /// Send an SMS message
     /// </summary>
-    [AITool("send_sms_async", "Sends an SMS message to a phone number. Phone number must include country code (e.g., +90 for Turkey, +1 for USA).")]
     public async Task<string> SendSmsAsync(
         [Description("Recipient phone number with country code (e.g., +905551234567, +14155552671)")]
         string to,
@@ -218,7 +212,6 @@ public class CommunicationAgentTools
     /// <summary>
     /// Validate a phone number
     /// </summary>
-    [AITool("validate_phone_async", "Validates a phone number format (E.164).")]
     public string ValidatePhoneNumber(
         [Description("Phone number to validate (with country code)")]
         string phoneNumber)
@@ -255,7 +248,6 @@ public class CommunicationAgentTools
     /// <summary>
     /// Check SMS service connection status
     /// </summary>
-    [AITool("check_sms_connection_async", "Checks if SMS service is connected and working.")]
     public async Task<string> CheckSmsConnectionAsync()
     {
         if (_smsService == null)

@@ -7,23 +7,17 @@ namespace SmartVoiceAgent.Infrastructure.Services
     public class VoiceAgentHostedService : BackgroundService
     {
         private readonly ICommandRuntimeService _commandRuntime;
-        private readonly IAgentRegistry _registry;
-        private readonly IAgentFactory _factory;
         private readonly ILogger<VoiceAgentHostedService> _logger;
         private readonly ICommandInputService _commandInput;
         private readonly VoiceAgentHostControlService _hostControl;
 
         public VoiceAgentHostedService(
             ICommandRuntimeService commandRuntime,
-            IAgentRegistry registry,
-            IAgentFactory factory,
             ILogger<VoiceAgentHostedService> logger,
             ICommandInputService commandInput,
             VoiceAgentHostControlService hostControl)
         {
             _commandRuntime = commandRuntime;
-            _registry = registry;
-            _factory = factory;
             _logger = logger;
             _commandInput = commandInput;
             _hostControl = hostControl;
@@ -35,8 +29,6 @@ namespace SmartVoiceAgent.Infrastructure.Services
 
             try
             {
-                await InitializeAgentsAsync();
-
                 _logger.LogInformation("Ready for commands...");
 
                 while (!stoppingToken.IsCancellationRequested)
@@ -94,61 +86,6 @@ namespace SmartVoiceAgent.Infrastructure.Services
             {
                 _logger.LogCritical(ex, "Fatal error");
                 throw;
-            }
-        }
-
-        private async Task InitializeAgentsAsync()
-        {
-            _logger.LogInformation("Initializing agents...");
-
-            var registeredCount = 0;
-            registeredCount += TryRegisterAgent("Coordinator", () => _factory.CreateCoordinatorAgent()) ? 1 : 0;
-            registeredCount += TryRegisterAgent("SystemAgent", () => _factory.CreateSystemAgent()) ? 1 : 0;
-            registeredCount += await TryRegisterAgentAsync("TaskAgent", token => _factory.CreateTaskAgentAsync(token)) ? 1 : 0;
-            registeredCount += TryRegisterAgent("ResearchAgent", () => _factory.CreateResearchAgent()) ? 1 : 0;
-            registeredCount += TryRegisterAgent("CommunicationAgent", () => _factory.CreateCommunicationAgent()) ? 1 : 0;
-
-            if (registeredCount == 0)
-            {
-                _logger.LogWarning("Legacy agents are unavailable. Skill-first command runtime remains active.");
-            }
-            else
-            {
-                _logger.LogInformation("{RegisteredCount} legacy agents ready", registeredCount);
-            }
-
-            await Task.CompletedTask;
-        }
-
-        private bool TryRegisterAgent(string name, Func<Microsoft.Agents.AI.AIAgent> createAgent)
-        {
-            try
-            {
-                _registry.RegisterAgent(name, createAgent());
-                _logger.LogInformation("Agent registered: {AgentName}", name);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Skipping legacy agent {AgentName}; command runtime will continue.", name);
-                return false;
-            }
-        }
-
-        private async Task<bool> TryRegisterAgentAsync(
-            string name,
-            Func<CancellationToken, Task<Microsoft.Agents.AI.AIAgent>> createAgent)
-        {
-            try
-            {
-                _registry.RegisterAgent(name, await createAgent(CancellationToken.None));
-                _logger.LogInformation("Agent registered: {AgentName}", name);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Skipping legacy agent {AgentName}; command runtime will continue.", name);
-                return false;
             }
         }
     }

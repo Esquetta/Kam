@@ -17,12 +17,10 @@ namespace SmartVoiceAgent.Tests.Integration
     public class VoicePipelineIntegrationTests
     {
         private readonly Mock<ISpeechToTextService> _mockSttService;
-        private readonly Mock<IIntentDetectionService> _mockIntentService;
 
         public VoicePipelineIntegrationTests()
         {
             _mockSttService = new Mock<ISpeechToTextService>();
-            _mockIntentService = new Mock<IIntentDetectionService>();
 
             SetupMockBehaviors();
         }
@@ -52,44 +50,6 @@ namespace SmartVoiceAgent.Tests.Integration
                         ProcessingTime = TimeSpan.FromMilliseconds(150)
                     };
                 });
-
-            // Mock intent detection
-            _mockIntentService
-                .Setup(s => s.DetectIntentAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((string text, string lang, CancellationToken ct) =>
-                {
-                    var intent = text.ToLower() switch
-                    {
-                        var t when t.Contains("aç") || t.Contains("open") => CommandType.OpenApplication,
-                        var t when t.Contains("çal") || t.Contains("play") => CommandType.PlayMusic,
-                        var t when t.Contains("kapat") || t.Contains("close") || t.Contains("ışık") => CommandType.ControlDevice,
-                        _ => CommandType.Unknown
-                    };
-
-                    return new IntentResult
-                    {
-                        Intent = intent,
-                        Confidence = 0.92f,
-                        OriginalText = text,
-                        Language = lang,
-                        Entities = ExtractEntities(text)
-                    };
-                });
-        }
-
-        private Dictionary<string, object> ExtractEntities(string text)
-        {
-            var entities = new Dictionary<string, object>();
-            var lower = text.ToLower();
-
-            if (lower.Contains("chrome"))
-                entities["applicationName"] = "chrome";
-            if (lower.Contains("spotify"))
-                entities["applicationName"] = "spotify";
-            if (lower.Contains("ışık"))
-                entities["deviceName"] = "lights";
-
-            return entities;
         }
 
         [Fact]
@@ -100,13 +60,10 @@ namespace SmartVoiceAgent.Tests.Integration
 
             // Act - Execute pipeline steps
             var speechResult = await _mockSttService.Object.ConvertToTextAsync(audioData, CancellationToken.None);
-            var intentResult = await _mockIntentService.Object.DetectIntentAsync(speechResult.Text, "tr", CancellationToken.None);
 
             // Assert
             speechResult.Text.Should().Be("chrome aç");
             speechResult.Confidence.Should().BeGreaterThan(0.9f);
-            intentResult.Intent.Should().Be(CommandType.OpenApplication);
-            intentResult.Entities.Should().ContainKey("applicationName");
         }
 
         [Fact]
@@ -117,11 +74,9 @@ namespace SmartVoiceAgent.Tests.Integration
 
             // Act
             var speechResult = await _mockSttService.Object.ConvertToTextAsync(audioData, CancellationToken.None);
-            var intentResult = await _mockIntentService.Object.DetectIntentAsync(speechResult.Text, "tr", CancellationToken.None);
 
             // Assert
             speechResult.Text.Should().Be("spotify çal");
-            intentResult.Intent.Should().Be(CommandType.PlayMusic);
         }
 
         [Fact]
@@ -132,12 +87,9 @@ namespace SmartVoiceAgent.Tests.Integration
 
             // Act
             var speechResult = await _mockSttService.Object.ConvertToTextAsync(audioData, CancellationToken.None);
-            var intentResult = await _mockIntentService.Object.DetectIntentAsync(speechResult.Text, "tr", CancellationToken.None);
 
             // Assert
             speechResult.Text.Should().Be("ışıkları kapat");
-            intentResult.Intent.Should().Be(CommandType.ControlDevice);
-            intentResult.Entities.Should().ContainKey("deviceName");
         }
 
         [Fact]
@@ -157,27 +109,6 @@ namespace SmartVoiceAgent.Tests.Integration
         }
 
         [Fact]
-        public async Task VoicePipeline_LowConfidenceIntent_HandledGracefully()
-        {
-            // Arrange
-            _mockIntentService
-                .Setup(s => s.DetectIntentAsync("garbled text", "tr", It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new IntentResult
-                {
-                    Intent = CommandType.Unknown,
-                    Confidence = 0.3f,
-                    OriginalText = "garbled text"
-                });
-
-            // Act
-            var result = await _mockIntentService.Object.DetectIntentAsync("garbled text", "tr", CancellationToken.None);
-
-            // Assert
-            result.Intent.Should().Be(CommandType.Unknown);
-            result.Confidence.Should().BeLessThan(0.5f);
-        }
-
-        [Fact]
         public async Task VoicePipeline_MultipleCommands_SequentialExecution()
         {
             // Arrange
@@ -192,10 +123,8 @@ namespace SmartVoiceAgent.Tests.Integration
             foreach (var (audio, expectedText) in commands)
             {
                 var speechResult = await _mockSttService.Object.ConvertToTextAsync(audio, CancellationToken.None);
-                var intentResult = await _mockIntentService.Object.DetectIntentAsync(speechResult.Text, "tr", CancellationToken.None);
 
                 speechResult.Text.Should().Be(expectedText);
-                intentResult.Confidence.Should().BeGreaterThan(0.5f);
             }
         }
 

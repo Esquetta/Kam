@@ -5,7 +5,6 @@ using SmartVoiceAgent.Core.Entities;
 using SmartVoiceAgent.Core.EventArgs;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
-using SmartVoiceAgent.Core.Models.Intent;
 
 namespace SmartVoiceAgent.Tests.Core;
 
@@ -31,19 +30,6 @@ public class CoreModelDefaultsTests
         pipelineError.Stage.Should().BeEmpty();
         pipelineError.Context.Should().BeEmpty();
 
-        var availableCommand = new AvailableCommand();
-        availableCommand.Intent.Should().BeEmpty();
-        availableCommand.Description.Should().BeEmpty();
-        availableCommand.Examples.Should().BeEmpty();
-        availableCommand.Category.Should().BeEmpty();
-
-        var dynamicRequest = new DynamicCommandRequest();
-        dynamicRequest.Intent.Should().BeEmpty();
-        dynamicRequest.Entities.Should().BeEmpty();
-        dynamicRequest.OriginalText.Should().BeEmpty();
-        dynamicRequest.Language.Should().BeEmpty();
-        dynamicRequest.Context.Should().BeEmpty();
-
         var commandResult = new CommandResult();
         commandResult.Message.Should().BeEmpty();
         commandResult.Data.Should().NotBeNull();
@@ -61,11 +47,6 @@ public class CoreModelDefaultsTests
         var frame = new ScreenCaptureFrame();
         frame.PngImage.Should().BeEmpty();
         frame.DeviceName.Should().BeEmpty();
-
-        var intentResponse = new AiIntentResponse();
-        intentResponse.Intent.Should().BeEmpty();
-        intentResponse.Entities.Should().BeEmpty();
-        intentResponse.Reasoning.Should().BeEmpty();
 
         var healthChanged = new ProviderHealthChangedEventArgs();
         healthChanged.OldStatus.Should().NotBeNull();

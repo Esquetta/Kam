@@ -4,14 +4,13 @@
 
 ## Project Overview
 
-**Smart Voice Agent** (also known as KAM Neural Core) is an advanced AI-powered voice assistant with multi-agent collaboration, system control, and intelligent task management capabilities. It supports voice recognition, natural language processing, and can control system applications and devices.
+**Smart Voice Agent** (also known as KAM Neural Core) is an advanced AI-powered voice assistant with a tool-calling agent, system control, and intelligent task management capabilities. It supports voice recognition, natural language processing, and can control system applications and devices.
 
 ### Key Features
 - **Voice Recognition & Processing**: Multi-platform voice input with STT (Speech-to-Text) providers (HuggingFace, OpenAI Whisper, Ollama)
-- **Multi-Agent AI System**: Coordinator, SystemAgent, TaskAgent, WebSearchAgent, and AnalyticsAgent
+- **Agent Runtime**: one tool-calling agent loop over built-in skills, MCP servers, Agent Skills and plugins
 - **System Control**: Application management, device control (volume, brightness, WiFi, Bluetooth), power management
 - **Task Management**: Todoist integration via MCP (Model Context Protocol)
-- **Hybrid Intent Detection**: AI-based + Semantic + Context-aware + Pattern-based detection
 
 ---
 
@@ -21,13 +20,13 @@
 |----------|-------------|
 | **Framework** | .NET 9.0 |
 | **UI Framework** | Avalonia UI 12.0.3 with ReactiveUI (cross-platform desktop) |
-| **AI/ML** | AutoGen 0.2.3, Microsoft.SemanticKernel 1.67.1, Microsoft.Agents.AI |
+| **AI/ML** | Microsoft.Extensions.AI 10.5 (OpenAI-compatible and Anthropic chat clients) |
 | **MCP** | ModelContextProtocol 1.4.0 |
 | **CQRS** | Cortex.Mediator 3.1.2 |
 | **Validation** | FluentValidation 12.1.1 |
 | **Audio** | NAudio 2.2.1, Whisper.net 1.9.0 |
 | **OCR** | Tesseract 5.2.0 |
-| **Logging** | Serilog 4.3.0 with MongoDB, Elasticsearch, PostgreSQL sinks |
+| **Logging** | Serilog 4.3 with a local file sink; MongoDB when configured |
 | **Testing** | xUnit 2.9.3, Moq 4.20.72, FluentAssertions 8.8.0 |
 | **Benchmarking** | BenchmarkDotNet 0.15.8 |
 
@@ -57,7 +56,7 @@ Kam.sln
 
 #### 1. SmartVoiceAgent.Core (Domain Layer)
 - **Purpose**: Domain entities, interfaces, DTOs, enums, models
-- **Dependencies**: Minimal (AutoGen.Core, Cortex.Mediator, Microsoft.Agents.AI)
+- **Dependencies**: Minimal (Cortex.Mediator, Microsoft.Extensions.AI.Abstractions)
 - **Key Folders**:
   - `Entities/` - Domain entities (CommandResult, AppInfo, etc.)
   - `Dtos/` - Data transfer objects
@@ -69,7 +68,7 @@ Kam.sln
 
 #### 2. SmartVoiceAgent.Application (Application Layer)
 - **Purpose**: CQRS commands, queries, handlers, pipelines, validators
-- **Dependencies**: Core, CrossCuttingConcerns, Cortex.Mediator, FluentValidation, AutoGen
+- **Dependencies**: Core, CrossCuttingConcerns, Cortex.Mediator, FluentValidation
 - **Key Folders**:
   - `Commands/` - Command records (e.g., `OpenApplicationCommand`)
   - `Handlers/CommandHandlers/` - Command handlers
@@ -87,10 +86,12 @@ Kam.sln
 - **Purpose**: External services, AI agents, platform-specific implementations
 - **Dependencies**: Core, Application
 - **Key Folders**:
-  - `Agent/` - Multi-agent AI system
-    - `Agents/` - Agent builders, factories, orchestrators
-    - `Tools/` - Agent tools (SystemAgentTools, TaskAgentTools, WebSearchAgentTools)
-    - `Thread/` - Agent thread implementations
+  - `Agent/` - Agent runtime
+    - `Runtime/` - Agent loop, tool permissions, sessions and context window
+    - `Mcp/` - MCP host and server sources
+    - `Extensions/` - Agent Skills, plugins and Markdown commands
+    - `Agents/` - Task subagents (`RuntimeAgentFactory`)
+    - `Tools/` - Tool classes behind the built-in skills (SystemAgentTools, FileAgentTools, WebSearchAgentTools)
   - `Services/` - Service implementations
   - `Helpers/` - Helper classes (CircularAudioBuffer, AudioProcessingService)
   - `Factories/` - Factory pattern implementations
@@ -98,7 +99,7 @@ Kam.sln
 
 #### 4. SmartVoiceAgent.CrossCuttingConcerns
 - **Purpose**: Logging infrastructure and exceptions
-- **Dependencies**: MongoDB.Driver, Serilog, Npgsql
+- **Dependencies**: Serilog, MongoDB.Driver
 - **Key Components**:
   - `Logging/` - Serilog configuration and sinks
   - `Exceptions/` - Custom exception types
@@ -154,20 +155,17 @@ services.AddSingleton<IApplicationService>(sp =>
     sp.GetRequiredService<IApplicationServiceFactory>().Create());
 ```
 
-### 4. Multi-Agent System
-AI agents are orchestrated through `SmartAgentOrchestrator`:
+### 4. Agent Runtime
+Chat, voice and the tray's "New task" run through `IAgentRuntime`:
 
 ```
-User Input → Coordinator Agent → [SystemAgent | TaskAgent | ResearchAgent] → Response
-                    ↓
-            AnalyticsAgent (monitoring)
+User Input → AgentRuntime → model ⇄ tools (IAgentToolProvider) → Response
+                                      ├─ built-in skills (SkillToolProvider)
+                                      ├─ MCP servers (McpToolProvider)
+                                      └─ Agent Skills (AgentSkillToolProvider)
 ```
 
-Agents:
-- **CoordinatorAgent** - Routes requests to appropriate agents
-- **SystemAgent** - Application control, system operations
-- **TaskAgent** - Task management (Todoist via MCP)
-- **ResearchAgent** - Web research and information retrieval
+Every tool call passes `IToolPermissionService`. With `AgentRuntime:Enabled=false`, commands go through `ICommandRuntimeService` (the single-skill planner) instead.
 
 ---
 
@@ -364,11 +362,9 @@ See `RESPONSIVE_DESIGN.md` for full details.
 3. Register in `ServiceRegistration.cs`
 4. Add tests in `tests/SmartVoiceAgent.Tests/`
 
-### Adding a New Agent
-1. Define agent tools in `SmartVoiceAgent.Infrastructure/Agent/Tools/`
-2. Add the agent definition in `SmartVoiceAgent.Infrastructure/Agent/Agents/AgentFactory.cs`
-3. Register in `AgentRegistry`
-4. Update `SmartAgentOrchestrator` routing logic
+### Adding a New Agent Tool
+1. Add a built-in skill: a manifest in `BuiltInSkillManifestCatalog` and an `ISkillExecutor`; `SkillToolProvider` exposes it to the model
+2. Or implement `IAgentToolProvider` and register it as scoped in `ServiceCollectionExtensions.cs`
 
 ---
 
@@ -383,7 +379,7 @@ See `RESPONSIVE_DESIGN.md` for full details.
 **API Connection Issues**
 - Verify API keys in User Secrets: `dotnet user-secrets list`
 - Check network connectivity
-- Review logs in MongoDB or console output
+- Review logs in `%LocalAppData%/Kam/Logs` (MongoDB when `MongoDbConfiguration:ConnectionString` is set)
 
 **Build Errors**
 - Ensure .NET 9.0 SDK is installed: `dotnet --version`
@@ -413,11 +409,6 @@ See `RESPONSIVE_DESIGN.md` for full details.
 - **DynamicAppExtractionService**: Optimized Levenshtein distance (two-row algorithm)
 - **PerformanceBehavior**: Fixed thread-safety bug (shared Stopwatch → per-request)
 
-#### Agent System Improvements
-- **AgentFactory.cs**: Optimized instructions for reliable function calling with explicit examples
-- **TaskAgentTools.cs**: Production-ready error handling with retry logic, timeout protection, thread safety
-- **AgentBuilder.cs**: Fixed reflection parameter count mismatch for InitializeAsync with CancellationToken
-
 #### Agent Runtime (October 2026)
 - **Chat runs a tool-calling agent loop**: `IAgentRuntime` (`Infrastructure/Agent/Runtime/AgentRuntime.cs`) streams `AgentEvent`s; the model calls built-in skills natively through `SkillToolProvider`, and every call passes `IToolPermissionService` (Ask / Auto-edit / Full auto plus "always allow" rules)
 - **Threads persist** as `%AppData%/Kam/sessions/<id>.json` via `IAgentSessionStore`
@@ -431,10 +422,15 @@ See `RESPONSIVE_DESIGN.md` for full details.
 - **Roadmap**: `docs/architecture/agent-platform.md` (MCP host, Agent Skills, plugins, coding mode, subagents)
 
 #### Reliability and performance (October 2026)
-- **Missing config never breaks startup**: `LoggerServiceBase` is MongoDB only when `MongoDbConfiguration:ConnectionString` is set, otherwise `LocalFileLogger` (`%LocalAppData%/Kam/Logs/pipeline-*.log`); web search, HuggingFace and intent services report missing keys when used. `CompositionRootTests` resolves every registered service, so a throwing constructor fails CI
+- **Missing config never breaks startup**: `LoggerServiceBase` is MongoDB only when `MongoDbConfiguration:ConnectionString` is set, otherwise `LocalFileLogger` (`%LocalAppData%/Kam/Logs/pipeline-*.log`); web search and HuggingFace services report missing keys when used. `CompositionRootTests` resolves every registered service, so a throwing constructor fails CI
 - **Chat**: messages sent during a turn queue (`QueuedAgentMessages`) and run after it; streamed text refreshes at most every 50 ms; the message list uses `VirtualizingStackPanel`
 - **Startup**: MCP servers warm up in the background and a turn waits at most 5 s for them (`McpHost` `turnWait`); Whisper loads on first transcription
 - **JSONL stores** read from the end with `JsonLinesFile.ReadLinesNewestFirst`
+
+#### Dependency cleanup (October 2026)
+- **One AI stack**: AutoGen, Semantic Kernel, Microsoft.Agents.AI and AgentFrameworkToolkit are gone; the OpenAI-compatible client comes from `Microsoft.Extensions.AI.OpenAI`, referenced directly
+- **Removed dead code**: the legacy agents (`AgentFactory`, `AgentRegistry`, `SmartAgentOrchestrator`), intent detection services, `CommandHandlerService`, unused system CQRS commands and the Elasticsearch, Graylog, SQL Server, PostgreSQL and RabbitMQ log sinks
+- **Output**: `SatelliteResourceLanguages=en;tr` in the UI and console projects; the installer publishes ReadyToRun without single-file compression
 
 #### UI Redesign (October 2026)
 - **Design system**: violet accent tokens (`Accent`, `AccentStrong`, `AccentSubtle`, `AccentOn`) in `Themes/Colors.*.axaml`, Lucide-style icon geometries (`Icon*`) and `MonoFontFamily` in `Themes/AppTheme.axaml`, shared control classes in `Themes/Controls.axaml` (`PrimaryAction`, `SecondaryAction`, `Pill`, `Card`, `PageTitle`, `SectionTitle`, `Overline`)
@@ -445,7 +441,7 @@ See `RESPONSIVE_DESIGN.md` for full details.
 ### Test Status
 ```
 Build: ✅ Success (CI runs on windows-2025)
-Tests: 1208 total; on Linux 13 fail because they assume Windows paths or tessdata
+Tests: 1181 total; on Linux 13 fail because they assume Windows paths or tessdata
 Run locally on Linux: DOTNET_ROLL_FORWARD=Major dotnet test tests/SmartVoiceAgent.Tests -p:EnableWindowsTargeting=true
 ```
 

@@ -83,7 +83,8 @@ if (-not $SkipBuild) {
         "--self-contained", "true"
         "-p:PublishSingleFile=true"
         "-p:IncludeNativeLibrariesForSelfExtract=true"
-        "-p:EnableCompressionInSingleFile=true"
+        "-p:EnableCompressionInSingleFile=false"
+        "-p:PublishReadyToRun=true"
         "-p:DebugType=None"
         "-p:DebugSymbols=false"
         "-o", $publishDir

@@ -42,7 +42,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ConversationContextManager>();
 
         // Configuration options
-        services.Configure<GroupChatOptions>(configuration.GetSection("GroupChat"));
         services.Configure<CodingAgentOptions>(configuration.GetSection(CodingAgentOptions.SectionName));
         services.Configure<GitHubAppOptions>(configuration.GetSection(GitHubAppOptions.SectionName));
 
@@ -67,18 +66,6 @@ public static class ServiceCollectionExtensions
             return CreateObservedChatClient(sp, config);
         });
 
-        services.AddSingleton<IAgentFactory>(sp =>
-        {
-            var agentConfig = ResolveAgentModelConfiguration(configuration);
-            var chatClient = IsUsableAiConfiguration(agentConfig)
-                ? CreateObservedChatClient(sp, agentConfig!)
-                : sp.GetRequiredService<IChatClient>();
-
-            return new AgentFactory(
-                chatClient,
-                sp,
-                sp.GetRequiredService<ILogger<AgentFactory>>());
-        });
         services.AddSingleton<IRuntimeAgentFactory>(sp =>
         {
             var agentConfig = ResolveAgentModelConfiguration(configuration);
@@ -97,18 +84,8 @@ public static class ServiceCollectionExtensions
         });
         services.AddSingleton<IRuntimeAgentRunStore, InMemoryRuntimeAgentRunStore>();
         services.AddSingleton<IRuntimeAgentReadOnlyToolService, FileRuntimeAgentReadOnlyToolService>();
-        services.AddSingleton<IAgentRegistry, AgentRegistry>();
-
-        services.AddSingleton<IAgentOrchestrator>(sp =>
-        {
-            var registry = sp.GetRequiredService<IAgentRegistry>();
-            var logger = sp.GetRequiredService<ILogger<SmartAgentOrchestrator>>();
-            var uiLogService = sp.GetRequiredService<IUiLogService>();
-            return new SmartAgentOrchestrator(registry, logger, uiLogService);
-        });
 
         services.AddScoped<SystemAgentTools>();
-        services.AddSingleton<TaskAgentTools>();
         services.AddScoped<WebSearchAgentTools>();
         services.AddSingleton(sp =>
         {
@@ -233,16 +210,6 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    /// <summary>
-    /// Adds additional agent function services
-    /// </summary>
-    public static IServiceCollection AddAgentFunctions<T>(this IServiceCollection services)
-        where T : class, IAgentFunctions
-    {
-        services.AddScoped<T>();
-        Console.WriteLine($"✅ Agent function service {typeof(T).Name} registered");
-        return services;
-    }
     static IChatClient CreateChatClient(AIServiceConfiguration config)
     {
         return config.Provider switch

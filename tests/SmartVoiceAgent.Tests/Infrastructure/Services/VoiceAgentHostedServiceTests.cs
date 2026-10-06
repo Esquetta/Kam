@@ -1,5 +1,4 @@
 using FluentAssertions;
-using Microsoft.Agents.AI;
 using Microsoft.Extensions.Logging.Abstractions;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Commands;
@@ -11,7 +10,7 @@ namespace SmartVoiceAgent.Tests.Infrastructure.Services;
 public sealed class VoiceAgentHostedServiceTests
 {
     [Fact]
-    public async Task ExecuteAsync_LegacyAgentToolFailure_DoesNotBlockCommandRuntime()
+    public async Task ExecuteAsync_SubmittedCommand_RunsCommandRuntimeAndPublishesResult()
     {
         var commandInput = new CommandInputService();
         var runtime = new RecordingCommandRuntime(new CommandRuntimeResult(true, "apps.list completed")
@@ -25,8 +24,6 @@ public sealed class VoiceAgentHostedServiceTests
 
         var service = new VoiceAgentHostedService(
             runtime,
-            new NoOpAgentRegistry(),
-            new ThrowingAgentFactory(),
             NullLogger<VoiceAgentHostedService>.Instance,
             commandInput,
             new VoiceAgentHostControlService());
@@ -64,8 +61,6 @@ public sealed class VoiceAgentHostedServiceTests
 
         var service = new VoiceAgentHostedService(
             runtime,
-            new NoOpAgentRegistry(),
-            new ThrowingAgentFactory(),
             NullLogger<VoiceAgentHostedService>.Instance,
             commandInput,
             new VoiceAgentHostControlService());
@@ -105,38 +100,5 @@ public sealed class VoiceAgentHostedServiceTests
             Commands.Add(command);
             return Task.FromResult(_result);
         }
-    }
-
-    private sealed class ThrowingAgentFactory : IAgentFactory
-    {
-        public AIAgent CreateSystemAgent() => throw CreateFailure();
-
-        public Task<AIAgent> CreateTaskAgentAsync(CancellationToken cancellationToken = default) =>
-            Task.FromException<AIAgent>(CreateFailure());
-
-        public AIAgent CreateResearchAgent() => throw CreateFailure();
-
-        public AIAgent CreateCommunicationAgent() => throw CreateFailure();
-
-        public AIAgent CreateCoordinatorAgent() => throw CreateFailure();
-
-        public IAgentBuilder CreateCustomAgent() => throw CreateFailure();
-
-        private static InvalidOperationException CreateFailure() =>
-            new("legacy tools unavailable");
-    }
-
-    private sealed class NoOpAgentRegistry : IAgentRegistry
-    {
-        public AIAgent GetAgent(string name) =>
-            throw new KeyNotFoundException(name);
-
-        public IEnumerable<string> GetAllAgentNames() => [];
-
-        public void RegisterAgent(string name, AIAgent agent)
-        {
-        }
-
-        public bool IsAgentAvailable(string name) => false;
     }
 }

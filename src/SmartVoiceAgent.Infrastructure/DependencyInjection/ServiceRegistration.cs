@@ -26,7 +26,6 @@ using SmartVoiceAgent.Infrastructure.Skills.Planning;
 using SmartVoiceAgent.Infrastructure.Services;
 using SmartVoiceAgent.Infrastructure.Skills.Policy;
 using SmartVoiceAgent.Infrastructure.Services.ApplicationScanner;
-using SmartVoiceAgent.Infrastructure.Services.Intent;
 using SmartVoiceAgent.Infrastructure.Services.Language;
 using SmartVoiceAgent.Infrastructure.Services.Stt;
 using SmartVoiceAgent.Infrastructure.Services.System;
@@ -67,20 +66,13 @@ public static class ServiceRegistration
             sp.GetRequiredService<IApplicationServiceFactory>().Create());
         services.AddSingleton<IMusicService>(sp => 
             sp.GetRequiredService<IMusicServiceFactory>().Create());
-        services.AddSingleton<ICommandLearningService, CommandLearningService>();
         services.AddScoped<IWebResearchService, AiWebResearchService>();
-        services.AddScoped<ICommandHandlerService, CommandHandlerService>();
         services.AddHttpClient();
         services.AddSingleton<OllamaSTTService>();
         services.AddSingleton<WhisperSTTService>();
         services.AddSingleton<HuggingFaceSTTService>();
 
         services.AddSingleton<ISystemControlServiceFactory, SystemControlServiceFactory>();
-
-        services.AddScoped<IntentDetectorService>(); // Original pattern-based service
-        services.AddScoped<AiIntentDetectionService>();
-        services.AddScoped<SemanticIntentDetectionService>();
-
 
         services.AddScoped<IOcrService, OcrService>();
         services.AddScoped<IActiveWindowService, ActiveWindowService>();
@@ -93,13 +85,6 @@ public static class ServiceRegistration
         {
             services.AddScoped<IScreenContextService, UnsupportedScreenContextService>();
         }
-
-
-        // Register context-aware service with proper dependencies
-        services.AddScoped<ContextAwareIntentDetectionService>();
-
-        // Register the hybrid service as the main implementation
-        services.AddScoped<IIntentDetectionService, HybridIntentDetectionService>();
 
         // Register UI Log Service (must be set externally by UI)
         services.AddSingleton<IUiLogService>(sp => 

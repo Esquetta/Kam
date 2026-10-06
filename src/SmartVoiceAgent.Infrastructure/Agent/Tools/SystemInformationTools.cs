@@ -1,5 +1,3 @@
-using AgentFrameworkToolkit.Tools;
-using Microsoft.Extensions.AI;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -32,7 +30,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         /// <summary>
         /// Gets comprehensive system information including CPU, memory, and disk.
         /// </summary>
-        [AITool("get_system_info", "Gets comprehensive system information including CPU, memory, and disk usage.")]
         public Task<string> GetSystemInfoAsync()
         {
             try
@@ -69,7 +66,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         /// <summary>
         /// Gets CPU usage and information.
         /// </summary>
-        [AITool("get_cpu_info", "Gets CPU usage percentage and core information.")]
         public Task<string> GetCpuInfoAsync()
         {
             try
@@ -85,7 +81,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         /// <summary>
         /// Gets memory usage information.
         /// </summary>
-        [AITool("get_memory_info", "Gets RAM usage and availability.")]
         public Task<string> GetMemoryInfoAsync()
         {
             try
@@ -101,7 +96,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         /// <summary>
         /// Gets disk space information for all drives.
         /// </summary>
-        [AITool("get_disk_info", "Gets disk space usage for all drives.")]
         public Task<string> GetDiskInfoAsync()
         {
             try
@@ -117,7 +111,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         /// <summary>
         /// Gets battery status for laptops.
         /// </summary>
-        [AITool("get_battery_status", "Gets battery status including charge level and power source.")]
         public Task<string> GetBatteryStatusAsync()
         {
             try
@@ -148,7 +141,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         /// <summary>
         /// Gets the list of running processes.
         /// </summary>
-        [AITool("list_processes", "Lists the top running processes by CPU or memory usage.")]
         public Task<string> ListProcessesAsync(
             [Description("Sort by: 'cpu' or 'memory'")] string sortBy = "memory",
             [Description("Number of processes to return")] int count = 10)
@@ -218,7 +210,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         /// <summary>
         /// Kills a process by name or ID.
         /// </summary>
-        [AITool("kill_process", "Terminates a process by name or ID.")]
         public Task<string> KillProcessAsync(
             [Description("Process name or ID to kill")] string processNameOrId,
             [Description("Force kill immediately")] bool force = false)
@@ -501,19 +492,5 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         }
 
         #endregion
-
-        public IEnumerable<AIFunction> GetTools()
-        {
-            return
-            [
-                AIFunctionFactory.Create(GetSystemInfoAsync),
-                AIFunctionFactory.Create(GetCpuInfoAsync),
-                AIFunctionFactory.Create(GetMemoryInfoAsync),
-                AIFunctionFactory.Create(GetDiskInfoAsync),
-                AIFunctionFactory.Create(GetBatteryStatusAsync),
-                AIFunctionFactory.Create(ListProcessesAsync),
-                AIFunctionFactory.Create(KillProcessAsync)
-            ];
-        }
     }
 }

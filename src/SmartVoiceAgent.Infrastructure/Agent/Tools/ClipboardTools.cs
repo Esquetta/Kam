@@ -1,5 +1,3 @@
-using AgentFrameworkToolkit.Tools;
-using Microsoft.Extensions.AI;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -44,7 +42,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         /// <summary>
         /// Gets the current text content from the clipboard.
         /// </summary>
-        [AITool("get_clipboard", "Gets the current text content from the clipboard.")]
         public Task<string> GetClipboardAsync(
             [Description("Maximum characters to return (0 for all)")]
             int maxLength = 0)
@@ -91,7 +88,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         /// <summary>
         /// Sets the clipboard text content.
         /// </summary>
-        [AITool("set_clipboard", "Sets the clipboard text content.")]
         public Task<string> SetClipboardAsync(
             [Description("Text content to set in the clipboard")]
             string content)
@@ -141,7 +137,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         /// <summary>
         /// Clears the clipboard content.
         /// </summary>
-        [AITool("clear_clipboard", "Clears the clipboard content.")]
         public Task<string> ClearClipboardAsync()
         {
             try
@@ -347,15 +342,5 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         }
 
         #endregion
-
-        public IEnumerable<AIFunction> GetTools()
-        {
-            return
-            [
-                AIFunctionFactory.Create(GetClipboardAsync),
-                AIFunctionFactory.Create(SetClipboardAsync),
-                AIFunctionFactory.Create(ClearClipboardAsync)
-            ];
-        }
     }
 }
