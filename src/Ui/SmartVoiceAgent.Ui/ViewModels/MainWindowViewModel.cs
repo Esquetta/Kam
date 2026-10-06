@@ -287,17 +287,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /* ========================= */
-        /* LANGUAGE */
-        /* ========================= */
-
-        private int _selectedLanguageIndex;
-        public int SelectedLanguageIndex
-        {
-            get => _selectedLanguageIndex;
-            set => this.RaiseAndSetIfChanged(ref _selectedLanguageIndex, value);
-        }
-
-        /* ========================= */
         /* COMMAND INPUT */
         /* ========================= */
 

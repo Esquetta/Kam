@@ -159,6 +159,77 @@ public interface ISettingsService
     /// </summary>
     bool IsNoiseSuppressionEnabled { get; set; }
 
+    /// <summary>
+    /// Gets or sets the spoken language: empty follows the interface language, <c>auto</c> detects it,
+    /// otherwise a two-letter code such as <c>tr</c>.
+    /// </summary>
+    string VoiceLanguage { get; set; }
+
+    /// <summary>
+    /// Gets or sets where speech is turned into text: <c>Local</c> (Whisper on this computer) or <c>OpenAI</c>
+    /// (an OpenAI-compatible transcription API).
+    /// </summary>
+    string SpeechEngine { get; set; }
+
+    /// <summary>
+    /// Gets or sets the local Whisper model: <c>base</c>, <c>small</c> or <c>large-v3-turbo</c>.
+    /// </summary>
+    string LocalSpeechModel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the base URL of the OpenAI-compatible transcription API.
+    /// </summary>
+    string SpeechApiEndpoint { get; set; }
+
+    /// <summary>
+    /// Gets or sets the transcription model of the OpenAI-compatible API.
+    /// </summary>
+    string SpeechApiModel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the API key of the OpenAI-compatible transcription API. Stored in the secret store.
+    /// </summary>
+    string SpeechApiKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether Kam listens for the wake word.
+    /// </summary>
+    bool WakeWordEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the wake phrase, such as <c>Hey Kam</c>.
+    /// </summary>
+    string WakeWord { get; set; }
+
+    /// <summary>
+    /// Gets or sets the system-wide shortcut that starts and stops talking, such as <c>Ctrl+Alt+Space</c>.
+    /// </summary>
+    string TalkShortcut { get; set; }
+
+    /// <summary>
+    /// Gets or sets which replies are read aloud: <c>Off</c>, <c>Voice</c> (replies to voice commands) or <c>All</c>.
+    /// </summary>
+    string SpokenReplies { get; set; }
+
+    /// <summary>
+    /// Gets or sets the voice replies are read in; empty picks one for the spoken language.
+    /// </summary>
+    string SpeechVoice { get; set; }
+
+    /// <summary>
+    /// Gets or sets the speaking rate from -5 (slow) to 5 (fast).
+    /// </summary>
+    int SpeechRate { get; set; }
+
+    #endregion
+
+    #region Interface Settings
+
+    /// <summary>
+    /// Gets or sets the interface language as a culture name such as <c>tr-TR</c>; empty follows the system.
+    /// </summary>
+    string Language { get; set; }
+
     #endregion
 
     #region AI Runtime Settings

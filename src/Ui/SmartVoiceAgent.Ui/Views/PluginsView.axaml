@@ -177,9 +177,9 @@
 
             <!-- Title Section -->
             <StackPanel Grid.Row="0" Spacing="6" Margin="8,0,8,24">
-                <TextBlock Text="{DynamicResource Lang.Plugins.Title}"
+                <TextBlock Text="{DynamicResource Lang.Skills.Title}"
                            Classes="PageTitle"/>
-                <TextBlock Text="{DynamicResource Lang.Plugins.Subtitle}"
+                <TextBlock Text="{DynamicResource Lang.Skills.Subtitle}"
                            Classes="PageSubtitle"/>
             </StackPanel>
 

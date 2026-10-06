@@ -8,7 +8,7 @@ public sealed class SettingsViewMetadataTests
     [Fact]
     public void SettingsView_DoesNotExposeModelProviderEndpoints()
     {
-        var view = XDocument.Load(FindSettingsViewXamlPath()).Root;
+        var view = XDocument.Parse(LocalizedXaml.ReadAllText(FindSettingsViewXamlPath())).Root;
 
         view.Should().NotBeNull();
         view!
@@ -26,7 +26,7 @@ public sealed class SettingsViewMetadataTests
     [Fact]
     public void SettingsView_PlannerConnectionButtonAlignsWithApiKeyInput()
     {
-        var view = XDocument.Load(FindSettingsViewXamlPath()).Root;
+        var view = XDocument.Parse(LocalizedXaml.ReadAllText(FindSettingsViewXamlPath())).Root;
 
         var testConnectionButton = view!
             .Descendants()

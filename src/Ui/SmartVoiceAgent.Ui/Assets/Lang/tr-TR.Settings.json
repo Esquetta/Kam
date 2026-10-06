@@ -1,0 +1,19 @@
+{
+  "App.Name": "Kam",
+  "App.Description": "Modüler yeteneklere sahip, platformlar arası yapay zekâ çalışma asistanı",
+
+  "Settings.Title": "Ayarlar",
+  "Settings.Subtitle": "Ajan çalışma alanınızı ve tercihlerinizi yönetin.",
+  "Settings.Appearance": "GÖRÜNÜM",
+  "Settings.Startup": "Başlangıç davranışı",
+  "Settings.StartupDesc": "Sistem açılırken ajan çalışma alanını başlat",
+  "Settings.Interface": "ARAYÜZ",
+  "Settings.ReducedMotion": "Azaltılmış hareket",
+  "Settings.ReducedMotionDesc": "Gelişmiş parçacık efektlerini kapat",
+  "Settings.Language": "Dil",
+  "Settings.LanguageDesc": "Arayüz dilini seçin",
+  "Settings.System": "SİSTEM",
+  "Settings.RuntimeVersion": "Çalışma zamanı sürümü",
+  "Settings.RuntimeVersionValue": "v1.0.0 // Ajan çalışma alanı hazır",
+  "Settings.About": "HAKKINDA"
+}

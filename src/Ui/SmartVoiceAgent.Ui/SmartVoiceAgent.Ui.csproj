@@ -22,7 +22,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <AvaloniaResource Include="Assets\**" />
+    <AvaloniaResource Include="Assets\**" Exclude="Assets\Lang\*.json" />
+    <EmbeddedResource Include="Assets\Lang\*.json" LogicalName="Kam.Lang.%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

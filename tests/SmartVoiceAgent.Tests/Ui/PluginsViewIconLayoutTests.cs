@@ -8,7 +8,7 @@ public sealed class PluginsViewIconLayoutTests
     [Fact]
     public void PluginCards_CenterStatusGlyphsInsideIconBadge()
     {
-        var pluginsView = XDocument.Load(FindPluginsViewXamlPath()).Root;
+        var pluginsView = XDocument.Parse(LocalizedXaml.ReadAllText(FindPluginsViewXamlPath())).Root;
 
         var iconBadge = pluginsView!
             .Descendants()
@@ -33,7 +33,7 @@ public sealed class PluginsViewIconLayoutTests
     [Fact]
     public void PluginCards_UseSharedIconButtonLayoutForActions()
     {
-        var pluginsView = XDocument.Load(FindPluginsViewXamlPath()).Root;
+        var pluginsView = XDocument.Parse(LocalizedXaml.ReadAllText(FindPluginsViewXamlPath())).Root;
 
         var actionBar = pluginsView!
             .Descendants()
@@ -77,7 +77,7 @@ public sealed class PluginsViewIconLayoutTests
     [Fact]
     public void PluginCards_KeepActionButtonsInStableFooter()
     {
-        var pluginsView = XDocument.Load(FindPluginsViewXamlPath()).Root;
+        var pluginsView = XDocument.Parse(LocalizedXaml.ReadAllText(FindPluginsViewXamlPath())).Root;
 
         var actionBar = pluginsView!
             .Descendants()
@@ -95,7 +95,7 @@ public sealed class PluginsViewIconLayoutTests
     [Fact]
     public void PluginCards_ConstrainLabelsForResponsiveCards()
     {
-        var pluginsView = XDocument.Load(FindPluginsViewXamlPath()).Root;
+        var pluginsView = XDocument.Parse(LocalizedXaml.ReadAllText(FindPluginsViewXamlPath())).Root;
 
         var statusBadge = pluginsView!
             .Descendants()
@@ -178,7 +178,7 @@ public sealed class PluginsViewIconLayoutTests
     [Fact]
     public void PluginActionButtonStyle_RendersFlatAcrossInteractiveStates()
     {
-        var pluginsView = XDocument.Load(FindPluginsViewXamlPath()).Root;
+        var pluginsView = XDocument.Parse(LocalizedXaml.ReadAllText(FindPluginsViewXamlPath())).Root;
 
         var flatStyle = pluginsView!
             .Descendants()
@@ -228,7 +228,7 @@ public sealed class PluginsViewIconLayoutTests
     [Fact]
     public void PluginCards_ReserveEnoughHeightForHealthAndActionContent()
     {
-        var pluginsView = XDocument.Load(FindPluginsViewXamlPath()).Root;
+        var pluginsView = XDocument.Parse(LocalizedXaml.ReadAllText(FindPluginsViewXamlPath())).Root;
 
         var cardStyles = pluginsView!
             .Descendants()

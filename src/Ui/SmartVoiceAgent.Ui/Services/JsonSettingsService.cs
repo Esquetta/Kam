@@ -209,6 +209,88 @@ public class JsonSettingsService : ISettingsService, IDisposable
         set => SetProperty(nameof(IsNoiseSuppressionEnabled), value, v => _data.IsNoiseSuppressionEnabled = v);
     }
 
+    public string VoiceLanguage
+    {
+        get => _data.VoiceLanguage ?? string.Empty;
+        set => SetProperty(nameof(VoiceLanguage), value, v => _data.VoiceLanguage = v);
+    }
+
+    public string SpeechEngine
+    {
+        get => string.IsNullOrWhiteSpace(_data.SpeechEngine) ? "Local" : _data.SpeechEngine;
+        set => SetProperty(nameof(SpeechEngine), value, v => _data.SpeechEngine = v);
+    }
+
+    public string LocalSpeechModel
+    {
+        get => string.IsNullOrWhiteSpace(_data.LocalSpeechModel) ? "base" : _data.LocalSpeechModel;
+        set => SetProperty(nameof(LocalSpeechModel), value, v => _data.LocalSpeechModel = v);
+    }
+
+    public string SpeechApiEndpoint
+    {
+        get => _data.SpeechApiEndpoint ?? string.Empty;
+        set => SetProperty(nameof(SpeechApiEndpoint), value, v => _data.SpeechApiEndpoint = v);
+    }
+
+    public string SpeechApiModel
+    {
+        get => _data.SpeechApiModel ?? string.Empty;
+        set => SetProperty(nameof(SpeechApiModel), value, v => _data.SpeechApiModel = v);
+    }
+
+    public string SpeechApiKey
+    {
+        get => _data.SpeechApiKey ?? string.Empty;
+        set => SetProperty(nameof(SpeechApiKey), value, v => _data.SpeechApiKey = v);
+    }
+
+    public bool WakeWordEnabled
+    {
+        get => _data.WakeWordEnabled;
+        set => SetProperty(nameof(WakeWordEnabled), value, v => _data.WakeWordEnabled = v);
+    }
+
+    public string WakeWord
+    {
+        get => string.IsNullOrWhiteSpace(_data.WakeWord) ? "Hey Kam" : _data.WakeWord;
+        set => SetProperty(nameof(WakeWord), value, v => _data.WakeWord = v);
+    }
+
+    public string TalkShortcut
+    {
+        get => _data.TalkShortcut ?? "Ctrl+Alt+Space";
+        set => SetProperty(nameof(TalkShortcut), value, v => _data.TalkShortcut = v);
+    }
+
+    public string SpokenReplies
+    {
+        get => string.IsNullOrWhiteSpace(_data.SpokenReplies) ? "Voice" : _data.SpokenReplies;
+        set => SetProperty(nameof(SpokenReplies), value, v => _data.SpokenReplies = v);
+    }
+
+    public string SpeechVoice
+    {
+        get => _data.SpeechVoice ?? string.Empty;
+        set => SetProperty(nameof(SpeechVoice), value, v => _data.SpeechVoice = v);
+    }
+
+    public int SpeechRate
+    {
+        get => _data.SpeechRate;
+        set => SetProperty(nameof(SpeechRate), Math.Clamp(value, -5, 5), v => _data.SpeechRate = v);
+    }
+
+    #endregion
+
+    #region Interface Settings
+
+    public string Language
+    {
+        get => _data.Language ?? string.Empty;
+        set => SetProperty(nameof(Language), value, v => _data.Language = v);
+    }
+
     #endregion
 
     #endregion
@@ -349,6 +431,24 @@ public class JsonSettingsService : ISettingsService, IDisposable
             nameof(TwilioAuthToken) => (T?)(object?)_data.TwilioAuthToken,
             nameof(TwilioPhoneNumber) => (T?)(object?)_data.TwilioPhoneNumber,
             nameof(SmsEnabled) => (T?)(object?)_data.SmsEnabled,
+            nameof(SelectedInputDeviceId) => (T?)(object?)_data.SelectedInputDeviceId,
+            nameof(SelectedOutputDeviceId) => (T?)(object?)_data.SelectedOutputDeviceId,
+            nameof(InputVolume) => (T?)(object?)_data.InputVolume,
+            nameof(OutputVolume) => (T?)(object?)_data.OutputVolume,
+            nameof(IsNoiseSuppressionEnabled) => (T?)(object?)_data.IsNoiseSuppressionEnabled,
+            nameof(VoiceLanguage) => (T?)(object?)_data.VoiceLanguage,
+            nameof(SpeechEngine) => (T?)(object?)_data.SpeechEngine,
+            nameof(LocalSpeechModel) => (T?)(object?)_data.LocalSpeechModel,
+            nameof(SpeechApiEndpoint) => (T?)(object?)_data.SpeechApiEndpoint,
+            nameof(SpeechApiModel) => (T?)(object?)_data.SpeechApiModel,
+            nameof(SpeechApiKey) => (T?)(object?)_data.SpeechApiKey,
+            nameof(WakeWordEnabled) => (T?)(object?)_data.WakeWordEnabled,
+            nameof(WakeWord) => (T?)(object?)_data.WakeWord,
+            nameof(TalkShortcut) => (T?)(object?)_data.TalkShortcut,
+            nameof(SpokenReplies) => (T?)(object?)_data.SpokenReplies,
+            nameof(SpeechVoice) => (T?)(object?)_data.SpeechVoice,
+            nameof(SpeechRate) => (T?)(object?)_data.SpeechRate,
+            nameof(Language) => (T?)(object?)_data.Language,
             nameof(ModelProviderProfiles) => (T?)(object?)_data.ModelProviderProfiles.Select(CloneProfile).ToList().AsReadOnly(),
             nameof(ActivePlannerProfileId) => (T?)(object?)_data.ActivePlannerProfileId,
             nameof(ActiveChatProfileId) => (T?)(object?)_data.ActiveChatProfileId,
@@ -370,6 +470,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
             migrated |= MigratePlaintextSecret(root, nameof(SmtpPassword), value => _data.SmtpPassword = value);
             migrated |= MigratePlaintextSecret(root, nameof(TwilioAuthToken), value => _data.TwilioAuthToken = value);
             migrated |= MigratePlaintextSecret(root, nameof(WebSearchApiKey), value => _data.WebSearchApiKey = value);
+            migrated |= MigratePlaintextSecret(root, nameof(SpeechApiKey), value => _data.SpeechApiKey = value);
 
             if (root.TryGetProperty(nameof(SettingsData.ModelProviderProfiles), out var profilesElement)
                 && profilesElement.ValueKind == JsonValueKind.Array)
@@ -430,6 +531,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
         _data.SmtpPassword = _secretStore.GetSecret(nameof(SmtpPassword)) ?? _data.SmtpPassword;
         _data.TwilioAuthToken = _secretStore.GetSecret(nameof(TwilioAuthToken)) ?? _data.TwilioAuthToken;
         _data.WebSearchApiKey = _secretStore.GetSecret(nameof(WebSearchApiKey)) ?? _data.WebSearchApiKey;
+        _data.SpeechApiKey = _secretStore.GetSecret(nameof(SpeechApiKey)) ?? _data.SpeechApiKey;
 
         foreach (var profile in _data.ModelProviderProfiles)
         {
@@ -449,6 +551,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
         SaveSecret(nameof(SmtpPassword), _data.SmtpPassword);
         SaveSecret(nameof(TwilioAuthToken), _data.TwilioAuthToken);
         SaveSecret(nameof(WebSearchApiKey), _data.WebSearchApiKey);
+        SaveSecret(nameof(SpeechApiKey), _data.SpeechApiKey);
 
         var activeProfileSecretNames = new HashSet<string>(StringComparer.Ordinal);
         foreach (var profile in _data.ModelProviderProfiles.Where(p => !string.IsNullOrWhiteSpace(p.Id)))
@@ -485,6 +588,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
         data.SmtpPassword = null;
         data.TwilioAuthToken = null;
         data.WebSearchApiKey = null;
+        data.SpeechApiKey = null;
 
         foreach (var profile in data.ModelProviderProfiles)
         {
@@ -525,6 +629,19 @@ public class JsonSettingsService : ISettingsService, IDisposable
             InputVolume = source.InputVolume,
             OutputVolume = source.OutputVolume,
             IsNoiseSuppressionEnabled = source.IsNoiseSuppressionEnabled,
+            VoiceLanguage = source.VoiceLanguage,
+            SpeechEngine = source.SpeechEngine,
+            LocalSpeechModel = source.LocalSpeechModel,
+            SpeechApiEndpoint = source.SpeechApiEndpoint,
+            SpeechApiModel = source.SpeechApiModel,
+            SpeechApiKey = source.SpeechApiKey,
+            WakeWordEnabled = source.WakeWordEnabled,
+            WakeWord = source.WakeWord,
+            TalkShortcut = source.TalkShortcut,
+            SpokenReplies = source.SpokenReplies,
+            SpeechVoice = source.SpeechVoice,
+            SpeechRate = source.SpeechRate,
+            Language = source.Language,
             ModelProviderProfiles = source.ModelProviderProfiles.Select(CloneProfile).ToList(),
             ActivePlannerProfileId = source.ActivePlannerProfileId,
             ActiveChatProfileId = source.ActiveChatProfileId,
@@ -654,6 +771,21 @@ public class JsonSettingsService : ISettingsService, IDisposable
         public float InputVolume { get; set; } = 1.0f;
         public float OutputVolume { get; set; } = 1.0f;
         public bool IsNoiseSuppressionEnabled { get; set; } = true;
+        public string? VoiceLanguage { get; set; }
+        public string? SpeechEngine { get; set; }
+        public string? LocalSpeechModel { get; set; }
+        public string? SpeechApiEndpoint { get; set; }
+        public string? SpeechApiModel { get; set; }
+        public string? SpeechApiKey { get; set; }
+        public bool WakeWordEnabled { get; set; }
+        public string? WakeWord { get; set; }
+        public string? TalkShortcut { get; set; }
+        public string? SpokenReplies { get; set; }
+        public string? SpeechVoice { get; set; }
+        public int SpeechRate { get; set; }
+
+        // Interface
+        public string? Language { get; set; }
 
         // AI Runtime Settings
         public List<ModelProviderProfile> ModelProviderProfiles { get; set; } = [];

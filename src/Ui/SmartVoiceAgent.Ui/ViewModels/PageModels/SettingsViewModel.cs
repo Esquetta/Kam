@@ -25,7 +25,6 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private readonly bool _ownsModelConnectionTestService;
         private readonly AudioDeviceService _audioDeviceService;
         private readonly VoiceTestService? _voiceTestService;
-        private int _selectedLanguageIndex;
         private CancellationTokenSource? _inputLevelCts;
 
         public ReactiveCommand<Unit, Unit> StartMicTestCommand { get; }
@@ -84,7 +83,6 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             _mainViewModel = mainViewModel;
             Title = "SETTINGS";
-            _selectedLanguageIndex = mainViewModel?.SelectedLanguageIndex ?? 0;
             _settingsService = settingsService;
             _modelCatalogService = modelCatalogService ?? CompositeModelCatalogService.CreateDefault();
             _modelConnectionTestService = modelConnectionTestService ?? new ModelConnectionTestService();
@@ -1324,40 +1322,32 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         #region Language
 
-        public int SelectedLanguageIndex
+        /// <summary>
+        /// Gets the languages the interface can be shown in.
+        /// </summary>
+        public IReadOnlyList<LanguageOption> Languages => LocalizationService.SupportedLanguages;
+
+        /// <summary>
+        /// Gets or sets the interface language. Changing it saves the choice and switches the text at once.
+        /// </summary>
+        public LanguageOption SelectedLanguage
         {
-            get => _selectedLanguageIndex;
+            get
+            {
+                var code = LocalizationService.Instance.CurrentLanguage;
+                return Languages.FirstOrDefault(language => language.Code == code) ?? Languages[0];
+            }
             set
             {
-                if (_selectedLanguageIndex != value)
+                if (value is null || value.Code == LocalizationService.Instance.CurrentLanguage)
                 {
-                    this.RaiseAndSetIfChanged(ref _selectedLanguageIndex, value);
-
-                    // Store in main view model for persistence
-                    if (_mainViewModel != null)
-                    {
-                        _mainViewModel.SelectedLanguageIndex = value;
-                    }
-
-                    UpdateLanguage();
+                    return;
                 }
-            }
-        }
 
-        private void UpdateLanguage()
-        {
-            string langCode = _selectedLanguageIndex switch
-            {
-                0 => "en-US",
-                1 => "es-ES",
-                2 => "fr-FR",
-                3 => "de-DE",
-                4 => "zh-CN",
-                5 => "ja-JP",
-                6 => "tr-TR",
-                _ => "en-US"
-            };
-            LocalizationService.Instance.SetLanguage(langCode);
+                _settingsService.Language = value.Code;
+                LocalizationService.Instance.SetLanguage(value.Code);
+                this.RaisePropertyChanged();
+            }
         }
 
         #endregion

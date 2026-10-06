@@ -25,6 +25,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration.Json;
 using System.Reflection;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace SmartVoiceAgent.Ui
 {
@@ -53,6 +54,7 @@ namespace SmartVoiceAgent.Ui
         public override void Initialize()
         {
             AvaloniaXamlLoader.Load(this);
+            LocalizationService.Instance.Attach(Resources);
         }
 
         public override void OnFrameworkInitializationCompleted()
@@ -72,7 +74,10 @@ namespace SmartVoiceAgent.Ui
 
                 // Load startup settings
                 var settingsService = new JsonSettingsService();
-                
+                LocalizationService.Instance.SetLanguage(string.IsNullOrWhiteSpace(settingsService.Language)
+                    ? LocalizationService.ResolveDefault(CultureInfo.CurrentUICulture)
+                    : settingsService.Language);
+
                 // Initialize ViewModel
                 _mainViewModel = new MainWindowViewModel();
                 desktop.MainWindow = new MainWindow

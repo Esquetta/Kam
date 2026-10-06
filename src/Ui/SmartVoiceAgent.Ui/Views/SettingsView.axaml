@@ -681,17 +681,10 @@
                             </StackPanel>
                         </Grid>
                         <ComboBox Grid.Row="1"
-                                  SelectedIndex="{Binding SelectedLanguageIndex}"
+                                  ItemsSource="{Binding Languages}"
+                                  SelectedItem="{Binding SelectedLanguage}"
                                   HorizontalAlignment="Stretch"
-                                  Margin="0,12,0,0">
-                            <ComboBoxItem>English</ComboBoxItem>
-                            <ComboBoxItem>Español</ComboBoxItem>
-                            <ComboBoxItem>Français</ComboBoxItem>
-                            <ComboBoxItem>Deutsch</ComboBoxItem>
-                            <ComboBoxItem>中文</ComboBoxItem>
-                            <ComboBoxItem>日本語</ComboBoxItem>
-                            <ComboBoxItem>Türkçe</ComboBoxItem>
-                        </ComboBox>
+                                  Margin="0,12,0,0"/>
                     </Grid>
                 </Border>
             </StackPanel>
@@ -710,11 +703,11 @@
                                   Stretch="Uniform"/>
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Lang.Settings.KernelVersion}"
+                            <TextBlock Text="{DynamicResource Lang.Settings.RuntimeVersion}"
                                        FontSize="13"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="{DynamicResource Lang.Settings.KernelVersionVal}"
+                            <TextBlock Text="{DynamicResource Lang.Settings.RuntimeVersionValue}"
                                        FontSize="11"
                                        FontFamily="{StaticResource MonoFontFamily}"
                                        Foreground="{DynamicResource TextMutedBrush}"
@@ -738,11 +731,11 @@
                                   Stretch="Uniform"/>
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Lang.AppName}"
+                            <TextBlock Text="{DynamicResource Lang.App.Name}"
                                        FontSize="13"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="{DynamicResource Lang.AppDesc}"
+                            <TextBlock Text="{DynamicResource Lang.App.Description}"
                                        FontSize="11"
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        TextWrapping="Wrap"

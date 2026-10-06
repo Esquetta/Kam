@@ -8,7 +8,7 @@ public sealed class ExtensionsViewMetadataTests
     [Fact]
     public void ExtensionsView_HasSectionForEachExtensionKind()
     {
-        var text = File.ReadAllText(FindViewPath());
+        var text = LocalizedXaml.ReadAllText(FindViewPath());
 
         text.Should().Contain("Text=\"MCP servers\"");
         text.Should().Contain("Text=\"Plugins\"");
@@ -23,7 +23,7 @@ public sealed class ExtensionsViewMetadataTests
     [Fact]
     public void ExtensionsView_ExposesManagementActions()
     {
-        var text = File.ReadAllText(FindViewPath());
+        var text = LocalizedXaml.ReadAllText(FindViewPath());
 
         foreach (var command in new[]
         {
@@ -41,7 +41,7 @@ public sealed class ExtensionsViewMetadataTests
     [Fact]
     public void ExtensionsView_StatusPillsUseSharedPillVariants()
     {
-        var view = XDocument.Load(FindViewPath()).Root!;
+        var view = XDocument.Parse(LocalizedXaml.ReadAllText(FindViewPath())).Root!;
 
         var pill = view.Descendants()
             .Single(element => element.Name.LocalName == "Border"

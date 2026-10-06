@@ -1,0 +1,19 @@
+{
+  "App.Name": "Kam",
+  "App.Description": "Cross-platform AI workstation assistant with modular skills",
+
+  "Settings.Title": "Settings",
+  "Settings.Subtitle": "Manage your agent workspace and preferences.",
+  "Settings.Appearance": "APPEARANCE",
+  "Settings.Startup": "Startup Behavior",
+  "Settings.StartupDesc": "Start the agent workspace when the system boots",
+  "Settings.Interface": "INTERFACE",
+  "Settings.ReducedMotion": "Reduced Motion",
+  "Settings.ReducedMotionDesc": "Disable advanced particle effects",
+  "Settings.Language": "Language",
+  "Settings.LanguageDesc": "Select interface language",
+  "Settings.System": "SYSTEM",
+  "Settings.RuntimeVersion": "Runtime Version",
+  "Settings.RuntimeVersionValue": "v1.0.0 // Agent Workspace Ready",
+  "Settings.About": "ABOUT"
+}
