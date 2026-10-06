@@ -83,11 +83,11 @@
                                   Stretch="Uniform"/>
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="Auto Start with Windows"
+                            <TextBlock Text="{DynamicResource Lang.Settings.AutoStart}"
                                        FontSize="13"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="Launch automatically when Windows starts"
+                            <TextBlock Text="{DynamicResource Lang.Settings.AutoStartDesc}"
                                        FontSize="12"
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        Margin="0,2,0,0"/>
@@ -109,11 +109,11 @@
                                   Stretch="Uniform"/>
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="Start Minimized"
+                            <TextBlock Text="{DynamicResource Lang.Settings.StartMinimized}"
                                        FontSize="13"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="Start minimized to system tray"
+                            <TextBlock Text="{DynamicResource Lang.Settings.StartMinimizedDesc}"
                                        FontSize="12"
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        Margin="0,2,0,0"/>
@@ -129,7 +129,7 @@
 
             <!-- AI Runtime Section -->
             <StackPanel Spacing="8" Margin="0,8,0,8">
-                <TextBlock Text="AI RUNTIME"
+                <TextBlock Text="{DynamicResource Lang.Settings.AiRuntime}"
                            Classes="Overline"
                            Margin="4,0,0,4"/>
 
@@ -142,7 +142,7 @@
                                       Stretch="Uniform"/>
                             </Border>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Planner Model"
+                                <TextBlock Text="{DynamicResource Lang.Settings.PlannerModel}"
                                            FontSize="13"
                                            FontWeight="Medium"
                                            Foreground="{DynamicResource TextSecondaryBrush}"/>
@@ -155,7 +155,7 @@
 
                         <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" ColumnSpacing="10" RowSpacing="10">
                             <StackPanel Grid.Row="0" Grid.Column="0" Spacing="6">
-                                <TextBlock Text="Provider"
+                                <TextBlock Text="{DynamicResource Lang.Settings.Provider}"
                                            FontSize="11"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
                                 <ComboBox ItemsSource="{Binding AiProviders}"
@@ -164,7 +164,7 @@
                             </StackPanel>
 
                             <StackPanel Grid.Row="0" Grid.Column="1" Spacing="6">
-                                <TextBlock Text="Model"
+                                <TextBlock Text="{DynamicResource Lang.Settings.Model}"
                                            FontSize="11"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
                                 <Grid ColumnDefinitions="*, Auto"
@@ -179,7 +179,7 @@
                                             IsEnabled="{Binding !IsRefreshingAiModels}"
                                             Classes="SecondaryAction"
                                             Padding="12,8">
-                                        <TextBlock Text="Refresh" FontSize="12" FontWeight="Medium"/>
+                                        <TextBlock Text="{DynamicResource Lang.Common.Refresh}" FontSize="12" FontWeight="Medium"/>
                                     </Button>
                                 </Grid>
                                 <TextBox Text="{Binding AiModelId, Mode=TwoWay}"
@@ -197,7 +197,7 @@
                                 <TextBlock Grid.Row="0"
                                            Grid.Column="0"
                                            Grid.ColumnSpan="2"
-                                           Text="API Key"
+                                           Text="{DynamicResource Lang.Settings.ApiKey}"
                                            FontSize="11"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
                                 <TextBox Grid.Row="1"
@@ -232,7 +232,7 @@
                                       Stretch="Uniform"/>
                             </Border>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Agent / Chat / Skill Execution Model"
+                                <TextBlock Text="{DynamicResource Lang.Settings.ChatModel}"
                                            FontSize="13"
                                            FontWeight="Medium"
                                            Foreground="{DynamicResource TextSecondaryBrush}"/>
@@ -245,7 +245,7 @@
 
                         <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" ColumnSpacing="10" RowSpacing="10">
                             <StackPanel Grid.Row="0" Grid.Column="0" Spacing="6">
-                                <TextBlock Text="Provider"
+                                <TextBlock Text="{DynamicResource Lang.Settings.Provider}"
                                            FontSize="11"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
                                 <ComboBox ItemsSource="{Binding AiProviders}"
@@ -254,7 +254,7 @@
                             </StackPanel>
 
                             <StackPanel Grid.Row="0" Grid.Column="1" Spacing="6">
-                                <TextBlock Text="Model"
+                                <TextBlock Text="{DynamicResource Lang.Settings.Model}"
                                            FontSize="11"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
                                 <Grid ColumnDefinitions="*, Auto"
@@ -269,7 +269,7 @@
                                             IsEnabled="{Binding !IsRefreshingChatModels}"
                                             Classes="SecondaryAction"
                                             Padding="12,8">
-                                        <TextBlock Text="Refresh" FontSize="12" FontWeight="Medium"/>
+                                        <TextBlock Text="{DynamicResource Lang.Common.Refresh}" FontSize="12" FontWeight="Medium"/>
                                     </Button>
                                 </Grid>
                                 <TextBox Text="{Binding ChatModelId, Mode=TwoWay}"
@@ -278,7 +278,7 @@
                             </StackPanel>
 
                             <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Spacing="6">
-                                <TextBlock Text="API Key"
+                                <TextBlock Text="{DynamicResource Lang.Settings.ApiKey}"
                                            FontSize="11"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
                                 <TextBox Text="{Binding ChatApiKey, Mode=TwoWay}"

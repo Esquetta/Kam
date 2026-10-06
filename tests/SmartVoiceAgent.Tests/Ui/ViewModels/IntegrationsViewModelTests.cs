@@ -60,6 +60,26 @@ public sealed class IntegrationsViewModelTests : IDisposable
     }
 
     [Fact]
+    public void SelectedEmailProviderOption_SavesTheProviderNameAndIgnoresAClearedPicker()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        using var viewModel = new IntegrationsViewModel(settingsService);
+
+        viewModel.EmailProviderOptions.Select(option => option.DisplayName)
+            .Should().Equal("Gmail", "Outlook", "Yahoo", "Custom");
+        viewModel.SelectedEmailProviderOption!.Id.Should().Be(viewModel.EmailProvider);
+
+        viewModel.SelectedEmailProviderOption = viewModel.EmailProviderOptions.Single(option => option.Id == "Outlook");
+
+        viewModel.EmailProvider.Should().Be("Outlook");
+        viewModel.SmtpHost.Should().Be("smtp.office365.com");
+
+        viewModel.SelectedEmailProviderOption = null;
+
+        viewModel.EmailProvider.Should().Be("Outlook", "the picker clears its selection while its list is rebuilt");
+    }
+
+    [Fact]
     public void Constructor_DefaultGitHubState_PresentsDirectConnectionBeforeAdvancedAppSettings()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);

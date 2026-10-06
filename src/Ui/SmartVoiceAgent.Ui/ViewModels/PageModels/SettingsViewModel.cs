@@ -82,7 +82,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             IAutoStartRegistrationService? autoStartRegistrationService)
         {
             _mainViewModel = mainViewModel;
-            Title = "SETTINGS";
+            Title = Loc.Get("Settings.Title");
             _settingsService = settingsService;
             _modelCatalogService = modelCatalogService ?? CompositeModelCatalogService.CreateDefault();
             _modelConnectionTestService = modelConnectionTestService ?? new ModelConnectionTestService();
@@ -110,7 +110,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _settingsService.Load();
             InitializeAiSettings();
             RefreshStartupSettings();
-            
+            LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
+
             // Subscribe to setting changes
             _settingsService.SettingChanged += (s, e) =>
             {
@@ -134,7 +135,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private string _chatModelId = "openai/gpt-4.1-mini";
         private string _chatApiKey = string.Empty;
         private string _activeChatProfileId = "openrouter-chat";
-        private string _aiProfileStatus = "Profile not tested.";
+        private Func<string> _aiProfileStatusText = static () => Loc.Get("Settings.Status.NotTested");
+        private string _aiProfileStatus = Loc.Get("Settings.Status.NotTested");
         private bool _isAiProfileValid;
         private IReadOnlyList<string> _aiModelOptions = CreateDefaultModelOptions("OpenRouter", "openai/gpt-4.1-mini");
         private IReadOnlyList<string> _chatModelOptions = CreateDefaultModelOptions("OpenRouter", "openai/gpt-4.1-mini");
@@ -339,8 +341,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         }
 
         public string AiConnectionTestButtonText => IsTestingAiConnection
-            ? "Testing..."
-            : "Test Connection";
+            ? Loc.Get("Settings.Testing")
+            : Loc.Get("Settings.TestConnection");
 
         public string ActiveChatProfileId
         {
@@ -359,6 +361,16 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             get => _aiProfileStatus;
             private set => this.RaiseAndSetIfChanged(ref _aiProfileStatus, value);
+        }
+
+        /// <summary>
+        /// Shows a profile status and keeps how it was built, so it can be shown again in another language.
+        /// </summary>
+        /// <param name="text">Builds the status text in the current language.</param>
+        private void SetAiProfileStatus(Func<string> text)
+        {
+            _aiProfileStatusText = text;
+            AiProfileStatus = text();
         }
 
         public bool IsAiProfileValid
@@ -442,13 +454,13 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             var chatProfile = CreateChatProfile();
             var targets = CreateConnectionTestTargets(profile, chatProfile);
             var validationErrors = targets
-                .SelectMany(target => ValidateProfileForConnectionTest(target.Label, target.Profile, target.Required))
+                .SelectMany(ValidateProfileForConnectionTest)
                 .ToArray();
 
             if (validationErrors.Length > 0)
             {
                 IsAiProfileValid = false;
-                AiProfileStatus = string.Join(" ", validationErrors);
+                SetAiProfileStatus(() => string.Join(" ", validationErrors.Select(error => error())));
                 SaveAiProfileSettings();
                 return;
             }
@@ -456,8 +468,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             try
             {
                 IsTestingAiConnection = true;
-                AiProfileStatus = $"Testing {profile.Provider} planner connection for {profile.ModelId}...";
-                var results = new List<string>();
+                var testedProvider = profile.Provider;
+                var testedModelId = profile.ModelId;
+                SetAiProfileStatus(() => Loc.Format("Settings.Status.Testing", testedProvider, testedModelId));
+                var results = new List<Func<string>>();
 
                 foreach (var target in targets.Where(target => target.Required || ShouldTestOptionalProfile(target.Profile)))
                 {
@@ -465,7 +479,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     if (!result.Success)
                     {
                         IsAiProfileValid = false;
-                        AiProfileStatus = FormatConnectionFailure(target, result);
+                        SetAiProfileStatus(FormatConnectionFailure(target, result));
                         SaveAiProfileSettings();
                         return;
                     }
@@ -474,7 +488,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 }
 
                 IsAiProfileValid = true;
-                AiProfileStatus = $"Connection verified and validated: {string.Join("; ", results)}. Changes apply to the next message.";
+                var verified = results.ToArray();
+                SetAiProfileStatus(() => Loc.Format(
+                    "Settings.Status.Verified",
+                    string.Join("; ", verified.Select(text => text()))));
                 SaveAiProfileSettings();
             }
             finally
@@ -502,7 +519,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 SetModelOptions(role, CreateDefaultModelOptions(profile.Provider.ToString(), profile.ModelId));
                 SetCatalogBacked(role, false);
-                AiProfileStatus = "Custom OpenAI-compatible providers keep manual model entry enabled.";
+                SetAiProfileStatus(static () => Loc.Get("Settings.Status.ManualModelEntry"));
                 return;
             }
 
@@ -517,15 +534,17 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     : CreateDefaultModelCatalogEntries(profile.Provider.ToString(), profile.ModelId));
 
                 var hasLiveAvailability = models.Any(model => model.IsAvailable);
-                AiProfileStatus = hasLiveAvailability
-                    ? $"{(isPlanner ? "Planner" : "Chat")} model list loaded from {profile.Provider}."
-                    : $"{(isPlanner ? "Planner" : "Chat")} model registry loaded. Add an API key to verify live availability.";
+                var provider = profile.Provider;
+                SetAiProfileStatus(hasLiveAvailability
+                    ? () => Loc.Format("Settings.Status.ModelListLoaded", GetRoleLabel(role), provider)
+                    : () => Loc.Format("Settings.Status.ModelRegistryLoaded", GetRoleLabel(role)));
                 SaveAiProfileSettings();
             }
             catch (Exception ex)
             {
                 SetModelOptions(role, CreateDefaultModelCatalogEntries(profile.Provider.ToString(), profile.ModelId));
-                AiProfileStatus = $"Model list could not be loaded: {SanitizeProviderMessage(ex.Message, profile)}";
+                var message = DescribeProviderMessage(ex.Message, profile);
+                SetAiProfileStatus(() => Loc.Format("Settings.Status.ModelListFailed", message()));
             }
             finally
             {
@@ -716,30 +735,59 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             return
             [
-                new ConnectionTestTarget("Planner", plannerProfile, Required: true),
-                new ConnectionTestTarget("Chat", chatProfile, Required: false)
+                new ConnectionTestTarget(ModelProviderRole.Planner, plannerProfile, Required: true),
+                new ConnectionTestTarget(ModelProviderRole.Chat, chatProfile, Required: false)
             ];
         }
 
-        private static IEnumerable<string> ValidateProfileForConnectionTest(
-            string label,
-            ModelProviderProfile profile,
-            bool required)
+        private static IEnumerable<Func<string>> ValidateProfileForConnectionTest(ConnectionTestTarget target)
         {
-            if (!required && !ShouldTestOptionalProfile(profile))
+            var profile = target.Profile;
+            if (!target.Required && !ShouldTestOptionalProfile(profile))
             {
                 yield break;
             }
 
             foreach (var error in profile.Validate().Errors)
             {
-                yield return $"{label}: {error}";
+                yield return () => Loc.Format(
+                    "Settings.Status.ProfileError",
+                    GetRoleLabel(target.Role),
+                    LocalizeProfileError(error));
             }
 
             if (profile.Provider != ModelProviderType.Ollama && string.IsNullOrWhiteSpace(profile.ApiKey))
             {
-                yield return $"{label}: API key is required to test this provider.";
+                yield return () => Loc.Format("Settings.Status.ApiKeyRequired", GetRoleLabel(target.Role));
             }
+        }
+
+        /// <summary>
+        /// Returns the name of a model role as the status messages show it.
+        /// </summary>
+        private static string GetRoleLabel(ModelProviderRole role)
+        {
+            return role == ModelProviderRole.Planner
+                ? Loc.Get("Settings.Role.Planner")
+                : Loc.Get("Settings.Role.Chat");
+        }
+
+        /// <summary>
+        /// Translates a known <see cref="ModelProviderProfile.Validate"/> error; any other message is shown as it is.
+        /// </summary>
+        private static string LocalizeProfileError(string error)
+        {
+            return error switch
+            {
+                "Profile id is required." => Loc.Get("Settings.ProfileError.IdRequired"),
+                "A valid endpoint is required." => Loc.Get("Settings.ProfileError.EndpointRequired"),
+                "API key is required for enabled profiles." => Loc.Get("Settings.ProfileError.ApiKeyRequired"),
+                "Model id is required." => Loc.Get("Settings.ProfileError.ModelRequired"),
+                "At least one model role is required." => Loc.Get("Settings.ProfileError.RoleRequired"),
+                "Max tokens must be greater than zero." => Loc.Get("Settings.ProfileError.MaxTokens"),
+                "Temperature must be between 0 and 2." => Loc.Get("Settings.ProfileError.Temperature"),
+                _ => error
+            };
         }
 
         private static bool ShouldTestOptionalProfile(ModelProviderProfile profile)
@@ -749,11 +797,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         }
 
         private sealed record ConnectionTestTarget(
-            string Label,
+            ModelProviderRole Role,
             ModelProviderProfile Profile,
             bool Required);
 
-        private static string FormatConnectionSuccess(
+        private static Func<string> FormatConnectionSuccess(
             ConnectionTestTarget target,
             ModelConnectionTestResult result)
         {
@@ -763,11 +811,17 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             var modelId = string.IsNullOrWhiteSpace(result.ModelId)
                 ? target.Profile.ModelId
                 : result.ModelId;
+            var liveModelCount = result.LiveModelCount;
 
-            return $"{target.Label} returned {result.LiveModelCount} live models; {provider} {modelId} validated";
+            return () => Loc.Format(
+                "Settings.Status.TargetVerified",
+                GetRoleLabel(target.Role),
+                liveModelCount,
+                provider,
+                modelId);
         }
 
-        private static string FormatConnectionFailure(
+        private static Func<string> FormatConnectionFailure(
             ConnectionTestTarget target,
             ModelConnectionTestResult result)
         {
@@ -777,28 +831,38 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             var modelId = string.IsNullOrWhiteSpace(result.ModelId)
                 ? target.Profile.ModelId
                 : result.ModelId;
-            var message = SanitizeProviderMessage(result.Message, target.Profile);
+            var message = DescribeProviderMessage(result.Message, target.Profile);
+            var failureCategory = result.FailureCategory;
 
-            if (string.Equals(result.FailureCategory, "Connection", StringComparison.OrdinalIgnoreCase)
+            if (string.Equals(failureCategory, "Connection", StringComparison.OrdinalIgnoreCase)
                 && result.Provider == ModelProviderType.OpenAICompatible
                 && string.IsNullOrWhiteSpace(result.ModelId))
             {
-                return $"{target.Label} connection failed: {message}";
+                return () => Loc.Format("Settings.Status.ConnectionFailed", GetRoleLabel(target.Role), message());
             }
 
-            return $"{target.Label} connection failed ({result.FailureCategory}): {provider} {modelId} - {message}";
+            return () => Loc.Format(
+                "Settings.Status.ConnectionFailedDetail",
+                GetRoleLabel(target.Role),
+                failureCategory,
+                provider,
+                modelId,
+                message());
         }
 
-        private static string SanitizeProviderMessage(string message, ModelProviderProfile profile)
+        /// <summary>
+        /// Removes the profile's API key and endpoint from a provider message; an empty message becomes a generic failure.
+        /// </summary>
+        private static Func<string> DescribeProviderMessage(string message, ModelProviderProfile profile)
         {
             if (string.IsNullOrWhiteSpace(message))
             {
-                return "Provider connection failed.";
+                return static () => Loc.Get("Settings.Status.ProviderFailed");
             }
 
             var sanitized = ReplaceIfPresent(message, profile.ApiKey);
             sanitized = ReplaceIfPresent(sanitized, profile.Endpoint);
-            return sanitized;
+            return () => sanitized;
         }
 
         private static string ReplaceIfPresent(string value, string secret)
@@ -1350,6 +1414,17 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
         }
 
+        /// <summary>
+        /// Rebuilds the text this view model writes in code when the interface language changes.
+        /// </summary>
+        private void OnLanguageChanged(object? sender, EventArgs e)
+        {
+            Title = Loc.Get("Settings.Title");
+            AiProfileStatus = _aiProfileStatusText();
+            this.RaisePropertyChanged(nameof(AiConnectionTestButtonText));
+            this.RaisePropertyChanged(nameof(SelectedLanguage));
+        }
+
         #endregion
 
         #region Startup Behavior
@@ -1533,6 +1608,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 disposableConnectionTestService.Dispose();
             }
+
+            LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
         }
     }
 }

@@ -15,9 +15,9 @@
 
             <!-- Header Section -->
             <StackPanel Grid.Row="0" Spacing="6" Margin="0,0,0,24">
-                <TextBlock Text="{Binding Title}"
+                <TextBlock Text="{DynamicResource Lang.Integrations.Title}"
                            Classes="PageTitle"/>
-                <TextBlock Text="Connect external services so agents can act on your tasks and repositories."
+                <TextBlock Text="{DynamicResource Lang.Integrations.Subtitle}"
                            Classes="PageSubtitle"/>
             </StackPanel>
 
@@ -49,7 +49,7 @@
                                            FontSize="16"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <TextBlock Text="Task Management"
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Todoist.Subtitle}"
                                            FontSize="12"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
                             </StackPanel>
@@ -80,7 +80,7 @@
                         
                         <!-- API Key Input Section -->
                         <StackPanel Grid.Row="2" Margin="0,24,0,0" Spacing="8">
-                            <TextBlock Text="API Key"
+                            <TextBlock Text="{DynamicResource Lang.Integrations.Todoist.ApiKey}"
                                        FontSize="12"
                                        FontWeight="Medium"
                                        Foreground="{DynamicResource TextMutedBrush}"/>
@@ -89,7 +89,7 @@
                             <Grid ColumnDefinitions="*,Auto">
                                 <TextBox Grid.Column="0"
                                          Text="{Binding TodoistApiKey, Mode=TwoWay}"
-                                         PlaceholderText="Enter your Todoist API key..."
+                                         PlaceholderText="{DynamicResource Lang.Integrations.Todoist.ApiKeyPlaceholder}"
                                          PasswordChar="●"
                                          Classes="IntegrationInput"
                                          Height="40"
@@ -110,7 +110,7 @@
                                                   Width="16"
                                                   Height="16"
                                                   Stretch="Uniform"/>
-                                            <TextBlock Text="Save"/>
+                                            <TextBlock Text="{DynamicResource Lang.Common.Save}"/>
                                         </StackPanel>
                                     </Button>
                                     
@@ -124,7 +124,7 @@
                                                   Width="16"
                                                   Height="16"
                                                   Stretch="Uniform"/>
-                                            <TextBlock Text="Clear"/>
+                                            <TextBlock Text="{DynamicResource Lang.Common.Clear}"/>
                                         </StackPanel>
                                     </Button>
                                 </StackPanel>
@@ -147,7 +147,7 @@
                             </Border>
 
                             <StackPanel Grid.Column="1" Margin="16,0,12,0" VerticalAlignment="Center">
-                                <TextBlock Text="Web search"
+                                <TextBlock Text="{DynamicResource Lang.Integrations.WebSearch.Title}"
                                            FontSize="16"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextPrimaryBrush}"/>
@@ -181,25 +181,25 @@
                               ColumnDefinitions="*,12,*"
                               RowDefinitions="Auto,8,Auto,16,Auto">
                             <TextBlock Grid.Row="0" Grid.Column="0"
-                                       Text="API key"
+                                       Text="{DynamicResource Lang.Integrations.WebSearch.ApiKey}"
                                        FontSize="12"
                                        FontWeight="Medium"
                                        Foreground="{DynamicResource TextMutedBrush}"/>
                             <TextBox Grid.Row="2" Grid.Column="0"
                                      Text="{Binding WebSearchApiKey, Mode=TwoWay}"
-                                     PlaceholderText="Custom Search JSON API key"
+                                     PlaceholderText="{DynamicResource Lang.Integrations.WebSearch.ApiKeyPlaceholder}"
                                      PasswordChar="●"
                                      Classes="IntegrationInput"
                                      Height="40"
                                      VerticalContentAlignment="Center"/>
                             <TextBlock Grid.Row="0" Grid.Column="2"
-                                       Text="Search engine ID"
+                                       Text="{DynamicResource Lang.Integrations.WebSearch.EngineId}"
                                        FontSize="12"
                                        FontWeight="Medium"
                                        Foreground="{DynamicResource TextMutedBrush}"/>
                             <TextBox Grid.Row="2" Grid.Column="2"
                                      Text="{Binding WebSearchEngineId, Mode=TwoWay}"
-                                     PlaceholderText="Engine ID (cx)"
+                                     PlaceholderText="{DynamicResource Lang.Integrations.WebSearch.EngineIdPlaceholder}"
                                      Classes="IntegrationInput"
                                      Height="40"
                                      VerticalContentAlignment="Center"/>
@@ -215,7 +215,7 @@
                                               Width="16"
                                               Height="16"
                                               Stretch="Uniform"/>
-                                        <TextBlock Text="Save"/>
+                                        <TextBlock Text="{DynamicResource Lang.Common.Save}"/>
                                     </StackPanel>
                                 </Button>
                                 <Button Command="{Binding ClearWebSearchCommand}"
@@ -227,7 +227,7 @@
                                               Width="16"
                                               Height="16"
                                               Stretch="Uniform"/>
-                                        <TextBlock Text="Clear"/>
+                                        <TextBlock Text="{DynamicResource Lang.Common.Clear}"/>
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
@@ -261,7 +261,7 @@
                                            FontSize="16"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <TextBlock Text="Repository Access"
+                                <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.Subtitle}"
                                            FontSize="12"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
                             </StackPanel>
@@ -323,7 +323,7 @@
                                               Width="16"
                                               Height="16"
                                               Stretch="Uniform"/>
-                                        <TextBlock Text="Connect GitHub"/>
+                                        <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.Connect}"/>
                                     </StackPanel>
                                 </Button>
 
@@ -336,13 +336,13 @@
                                               Width="16"
                                               Height="16"
                                               Stretch="Uniform"/>
-                                        <TextBlock Text="Refresh Repositories"/>
+                                        <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.RefreshRepositories}"/>
                                     </StackPanel>
                                 </Button>
 
                                 <Button Command="{Binding ToggleGitHubAppAdvancedSettingsCommand}"
                                         Classes="SecondaryAction">
-                                    <TextBlock Text="Advanced GitHub App"/>
+                                    <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.Advanced}"/>
                                 </Button>
                             </StackPanel>
 
@@ -350,7 +350,7 @@
                                         IsVisible="{Binding ShowGitHubAppAdvancedSettings}">
                             <StackPanel Spacing="10"
                                         IsVisible="{Binding HasGitHubAppSetupSteps}">
-                                <TextBlock Text="SETUP_CHECKLIST"
+                                <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.SetupChecklist}"
                                            FontSize="12"
                                            FontFamily="{StaticResource MonoFontFamily}"
                                            FontWeight="SemiBold"
@@ -406,7 +406,7 @@
 
                             <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
                                 <StackPanel Grid.Column="0" Spacing="8">
-                                    <TextBlock Text="App ID"
+                                    <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.AppId}"
                                                FontSize="12"
                                                FontWeight="Medium"
                                                Foreground="{DynamicResource TextMutedBrush}"/>
@@ -418,7 +418,7 @@
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="1" Spacing="8">
-                                    <TextBlock Text="Installation ID"
+                                    <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.InstallationId}"
                                                FontSize="12"
                                                FontWeight="Medium"
                                                Foreground="{DynamicResource TextMutedBrush}"/>
@@ -431,7 +431,7 @@
                             </Grid>
 
                             <StackPanel Spacing="8">
-                                <TextBlock Text="Private Key Path"
+                                <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.PrivateKeyPath}"
                                            FontSize="12"
                                            FontWeight="Medium"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
@@ -440,7 +440,7 @@
                                          Classes="IntegrationInput"
                                          Height="40"
                                          VerticalContentAlignment="Center"/>
-                                <TextBlock Text="Use a PEM file path only; never paste raw private key material."
+                                <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.PrivateKeyHint}"
                                            FontSize="11"
                                            Foreground="{DynamicResource TextMutedBrush}"
                                            TextWrapping="Wrap"/>
@@ -456,7 +456,7 @@
                                               Width="16"
                                               Height="16"
                                               Stretch="Uniform"/>
-                                        <TextBlock Text="Save"/>
+                                        <TextBlock Text="{DynamicResource Lang.Common.Save}"/>
                                     </StackPanel>
                                 </Button>
 
@@ -469,7 +469,7 @@
                                               Width="16"
                                               Height="16"
                                               Stretch="Uniform"/>
-                                        <TextBlock Text="Test Connection"/>
+                                        <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.TestConnection}"/>
                                     </StackPanel>
                                 </Button>
 
@@ -482,7 +482,7 @@
                                               Width="16"
                                               Height="16"
                                               Stretch="Uniform"/>
-                                        <TextBlock Text="List Repositories"/>
+                                        <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.ListRepositories}"/>
                                     </StackPanel>
                                 </Button>
 
@@ -496,7 +496,7 @@
                                               Width="16"
                                               Height="16"
                                               Stretch="Uniform"/>
-                                        <TextBlock Text="Clear"/>
+                                        <TextBlock Text="{DynamicResource Lang.Common.Clear}"/>
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
@@ -527,11 +527,11 @@
                             </Border>
                             
                             <StackPanel Grid.Column="1" Margin="16,0,12,0" VerticalAlignment="Center">
-                                <TextBlock Text="Email (SMTP)"
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Email.Title}"
                                            FontSize="16"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <TextBlock Text="Email Communication"
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Email.Subtitle}"
                                            FontSize="12"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
                             </StackPanel>
@@ -566,21 +566,21 @@
                             <!-- Provider Selection -->
                             <Grid ColumnDefinitions="Auto,*">
                                 <TextBlock Grid.Column="0" 
-                                           Text="Provider"
+                                           Text="{DynamicResource Lang.Integrations.Email.Provider}"
                                            FontSize="12"
                                            FontWeight="Medium"
                                            Foreground="{DynamicResource TextMutedBrush}"
                                            VerticalAlignment="Center"
                                            Margin="0,0,16,0"/>
                                 <ComboBox Grid.Column="1"
-                                          ItemsSource="{Binding EmailProviders}"
-                                          SelectedItem="{Binding EmailProvider, Mode=TwoWay}"
+                                          ItemsSource="{Binding EmailProviderOptions}"
+                                          SelectedItem="{Binding SelectedEmailProviderOption, Mode=TwoWay}"
                                           HorizontalAlignment="Stretch"/>
                             </Grid>
 
                             <!-- SMTP Username / Email -->
                             <StackPanel Spacing="8">
-                                <TextBlock Text="Email Address / Username"
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Email.Username}"
                                            FontSize="12"
                                            FontWeight="Medium"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
@@ -593,17 +593,17 @@
 
                             <!-- SMTP Password -->
                             <StackPanel Spacing="8">
-                                <TextBlock Text="Password / App Password"
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Email.Password}"
                                            FontSize="12"
                                            FontWeight="Medium"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
                                 <TextBox Text="{Binding SmtpPassword, Mode=TwoWay}"
-                                         PlaceholderText="Your app-specific password"
+                                         PlaceholderText="{DynamicResource Lang.Integrations.Email.PasswordPlaceholder}"
                                          PasswordChar="●"
                                          Classes="IntegrationInput"
                                          Height="40"
                                          VerticalContentAlignment="Center"/>
-                                <TextBlock Text="Tip: For Gmail, use an App Password instead of your regular password"
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Email.GmailTip}"
                                            FontSize="11"
                                            Foreground="{DynamicResource TextMutedBrush}"
                                            TextWrapping="Wrap"
@@ -612,12 +612,12 @@
 
                             <!-- Sender Email (Optional) -->
                             <StackPanel Spacing="8">
-                                <TextBlock Text="Sender Display Email (Optional)"
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Email.Sender}"
                                            FontSize="12"
                                            FontWeight="Medium"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
                                 <TextBox Text="{Binding SenderEmail, Mode=TwoWay}"
-                                         PlaceholderText="noreply@yourdomain.com (defaults to username if empty)"
+                                         PlaceholderText="{DynamicResource Lang.Integrations.Email.SenderPlaceholder}"
                                          Classes="IntegrationInput"
                                          Height="40"
                                          VerticalContentAlignment="Center"/>
@@ -625,7 +625,7 @@
 
                             <!-- Advanced Settings Toggle -->
                             <ToggleButton IsChecked="{Binding ShowEmailAdvanced, Mode=TwoWay}"
-                                          Content="Advanced Settings"
+                                          Content="{DynamicResource Lang.Integrations.Email.Advanced}"
                                           FontSize="12"
                                           Foreground="{DynamicResource AccentBrush}"
                                           HorizontalAlignment="Left"
@@ -636,7 +636,7 @@
                             <StackPanel IsVisible="{Binding ShowEmailAdvanced}" Spacing="16">
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                                     <StackPanel Grid.Column="0" Spacing="8">
-                                        <TextBlock Text="SMTP Host"
+                                        <TextBlock Text="{DynamicResource Lang.Integrations.Email.SmtpHost}"
                                                    FontSize="12"
                                                    FontWeight="Medium"
                                                    Foreground="{DynamicResource TextMutedBrush}"/>
@@ -647,7 +647,7 @@
                                                  VerticalContentAlignment="Center"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Spacing="8" Width="100">
-                                        <TextBlock Text="Port"
+                                        <TextBlock Text="{DynamicResource Lang.Integrations.Email.Port}"
                                                    FontSize="12"
                                                    FontWeight="Medium"
                                                    Foreground="{DynamicResource TextMutedBrush}"/>
@@ -662,7 +662,7 @@
                                 <!-- SSL Toggle -->
                                 <Grid ColumnDefinitions="*,Auto">
                                     <TextBlock Grid.Column="0"
-                                               Text="Enable SSL/TLS"
+                                               Text="{DynamicResource Lang.Integrations.Email.EnableSsl}"
                                                FontSize="12"
                                                FontWeight="Medium"
                                                Foreground="{DynamicResource TextSecondaryBrush}"
@@ -684,7 +684,7 @@
                                               Width="16"
                                               Height="16"
                                               Stretch="Uniform"/>
-                                        <TextBlock Text="Save"/>
+                                        <TextBlock Text="{DynamicResource Lang.Common.Save}"/>
                                     </StackPanel>
                                 </Button>
                                 
@@ -697,7 +697,7 @@
                                               Width="16"
                                               Height="16"
                                               Stretch="Uniform"/>
-                                        <TextBlock Text="Clear"/>
+                                        <TextBlock Text="{DynamicResource Lang.Common.Clear}"/>
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
@@ -731,7 +731,7 @@
                                            FontSize="16"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <TextBlock Text="SMS Messaging"
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Sms.Subtitle}"
                                            FontSize="12"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
                             </StackPanel>
@@ -765,7 +765,7 @@
                             
                             <!-- Account SID -->
                             <StackPanel Spacing="8">
-                                <TextBlock Text="Account SID"
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Sms.AccountSid}"
                                            FontSize="12"
                                            FontWeight="Medium"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
@@ -778,12 +778,12 @@
 
                             <!-- Auth Token -->
                             <StackPanel Spacing="8">
-                                <TextBlock Text="Auth Token"
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Sms.AuthToken}"
                                            FontSize="12"
                                            FontWeight="Medium"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
                                 <TextBox Text="{Binding TwilioAuthToken, Mode=TwoWay}"
-                                         PlaceholderText="Your Twilio Auth Token"
+                                         PlaceholderText="{DynamicResource Lang.Integrations.Sms.AuthTokenPlaceholder}"
                                          PasswordChar="●"
                                          Classes="IntegrationInput"
                                          Height="40"
@@ -792,7 +792,7 @@
 
                             <!-- Phone Number -->
                             <StackPanel Spacing="8">
-                                <TextBlock Text="Twilio Phone Number"
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Sms.PhoneNumber}"
                                            FontSize="12"
                                            FontWeight="Medium"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
@@ -801,7 +801,7 @@
                                          Classes="IntegrationInput"
                                          Height="40"
                                          VerticalContentAlignment="Center"/>
-                                <TextBlock Text="Format: +1234567890 (with country code)"
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Sms.PhoneNumberFormat}"
                                            FontSize="11"
                                            Foreground="{DynamicResource TextMutedBrush}"/>
                             </StackPanel>
@@ -816,7 +816,7 @@
                                               Width="16"
                                               Height="16"
                                               Stretch="Uniform"/>
-                                        <TextBlock Text="Save"/>
+                                        <TextBlock Text="{DynamicResource Lang.Common.Save}"/>
                                     </StackPanel>
                                 </Button>
                                 
@@ -829,7 +829,7 @@
                                               Width="16"
                                               Height="16"
                                               Stretch="Uniform"/>
-                                        <TextBlock Text="Clear"/>
+                                        <TextBlock Text="{DynamicResource Lang.Common.Clear}"/>
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
@@ -849,7 +849,7 @@
                               Margin="0,0,12,0"
                               VerticalAlignment="Top"/>
                         <TextBlock Grid.Column="1"
-                                   Text="Integrations allow the voice agent to interact with external services. Configure Email to send messages, SMS for text messaging, and Todoist for task management. Without API keys, the corresponding agents will not be created to keep the system modular."
+                                   Text="{DynamicResource Lang.Integrations.Info}"
                                    FontSize="13"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"/>
