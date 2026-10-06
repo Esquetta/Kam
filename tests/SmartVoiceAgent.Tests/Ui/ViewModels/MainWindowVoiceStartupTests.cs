@@ -99,6 +99,7 @@ public sealed class MainWindowVoiceStartupTests
         public event EventHandler<Exception>? OnError;
         public event EventHandler? OnListeningStarted;
         public event EventHandler? OnListeningStopped;
+        public event EventHandler<float>? OnAudioLevel;
 
         public void StartListening()
         {

@@ -1,3 +1,4 @@
+
 namespace SmartVoiceAgent.Core.Interfaces;
 
 /// <summary>
@@ -6,7 +7,7 @@ namespace SmartVoiceAgent.Core.Interfaces;
 public interface IVoiceRecognitionFactory
 {
     /// <summary>
-    /// Creates a new voice recognition service instance.
+    /// Creates a recorder for the microphone chosen in Settings.
     /// </summary>
     IVoiceRecognitionService Create();
 }

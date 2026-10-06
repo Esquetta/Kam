@@ -1,35 +1,39 @@
-using Core.CrossCuttingConcerns.Logging.Serilog;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Enums;
 using SmartVoiceAgent.Core.Interfaces;
-using SmartVoiceAgent.Core.Models.Audio;
+using SmartVoiceAgent.Infrastructure.Services.Voice;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 
 namespace SmartVoiceAgent.Infrastructure.Services.Stt;
 
 /// <summary>
-/// Multi-provider STT service with automatic fallback and health monitoring.
+/// Transcribes with the speech engine chosen in Settings and falls back to the other configured engines.
+/// Providers are picked on each call from <c>Voice:*</c>, so a Settings change applies to the next recording.
 /// </summary>
 public class MultiSTTService : IMultiSTTService
 {
     private readonly ILogger<MultiSTTService> _logger;
     private readonly IConfiguration _configuration;
     private readonly IServiceProvider _serviceProvider;
-    private readonly ConcurrentDictionary<STTProvider, ISpeechToTextService> _providers;
-    private readonly ConcurrentDictionary<STTProvider, ProviderHealthStatus> _healthStatus;
-    private readonly ConcurrentDictionary<STTProvider, STTProviderPriority> _providerPriorities;
-    private readonly ConcurrentQueue<ProviderMetrics> _metrics;
-    private readonly object _lock = new();
-    
-    private const int MaxMetricsSize = 100;
-    private const int HealthCheckIntervalSeconds = 60;
+    private readonly ConcurrentDictionary<STTProvider, ProviderHealthStatus> _healthStatus = new();
+    private readonly ConcurrentDictionary<STTProvider, STTProviderPriority> _priorityOverrides = new();
+    private readonly object _healthGate = new();
 
+    /// <inheritdoc />
     public event EventHandler<ProviderFallbackEventArgs>? OnProviderFallback;
+
+    /// <inheritdoc />
     public event EventHandler<ProviderHealthChangedEventArgs>? OnProviderHealthChanged;
 
+    /// <summary>
+    /// Creates the service. Nothing is loaded until the first transcription.
+    /// </summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="configuration">The configuration Settings write to.</param>
+    /// <param name="serviceProvider">Resolves the provider services.</param>
     public MultiSTTService(
         ILogger<MultiSTTService> logger,
         IConfiguration configuration,
@@ -38,389 +42,249 @@ public class MultiSTTService : IMultiSTTService
         _logger = logger;
         _configuration = configuration;
         _serviceProvider = serviceProvider;
-        _providers = new ConcurrentDictionary<STTProvider, ISpeechToTextService>();
-        _healthStatus = new ConcurrentDictionary<STTProvider, ProviderHealthStatus>();
-        _providerPriorities = new ConcurrentDictionary<STTProvider, STTProviderPriority>();
-        _metrics = new ConcurrentQueue<ProviderMetrics>();
-
-        InitializeProviders();
-        InitializeHealthStatus();
-        
-        _logger.LogInformation("MultiSTTService initialized with {Count} providers", _providers.Count);
     }
 
-    private void InitializeProviders()
+    /// <summary>
+    /// Returns the providers to try, best first, for the current Settings.
+    /// </summary>
+    public IReadOnlyList<STTProvider> GetProviderOrder()
     {
-        // Try to initialize each configured provider
-        TryInitializeProvider(STTProvider.Whisper, STTProviderPriority.Primary);
-        TryInitializeProvider(STTProvider.HuggingFace, STTProviderPriority.Secondary);
-        TryInitializeProvider(STTProvider.Ollama, STTProviderPriority.Tertiary);
-    }
+        var settings = VoiceSettings.Read(_configuration);
+        var whisperReady = _serviceProvider.GetService<WhisperSTTService>()?.ResolveModelPath() is not null;
+        var huggingFaceReady = !string.IsNullOrWhiteSpace(_configuration["HuggingFaceConfig:ApiKey"]);
 
-    private void TryInitializeProvider(STTProvider provider, STTProviderPriority priority)
-    {
-        try
+        var order = new List<STTProvider>();
+        if (settings.UsesApi)
         {
-            var service = CreateProviderService(provider);
-            if (service != null)
+            if (settings.HasApi)
             {
-                _providers[provider] = service;
-                _providerPriorities[provider] = priority;
-                _logger.LogDebug("Initialized {Provider} STT provider with priority {Priority}", provider, priority);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to initialize {Provider} STT provider", provider);
-        }
-    }
-
-    private ISpeechToTextService? CreateProviderService(STTProvider provider)
-    {
-        try
-        {
-            return provider switch
-            {
-                STTProvider.Whisper => TryCreateWhisperService(),
-                STTProvider.HuggingFace => TryCreateHuggingFaceService(),
-                STTProvider.Ollama => TryCreateOllamaService(),
-                _ => null
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to create {Provider} service", provider);
-            return null;
-        }
-    }
-
-    private ISpeechToTextService? TryCreateWhisperService()
-    {
-        try
-        {
-            var modelPath = _configuration["Whisper:ModelPath"] ?? "Models/ggml-base.bin";
-            if (!File.Exists(modelPath))
-            {
-                _logger.LogWarning("Whisper model not found at {Path}, skipping Whisper initialization", modelPath);
-                return null;
+                order.Add(STTProvider.OpenAI);
             }
 
-            // Use the DI-registered service
-            return _serviceProvider.GetRequiredService<WhisperSTTService>();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to create Whisper service");
-            return null;
-        }
-    }
-
-    private ISpeechToTextService? TryCreateHuggingFaceService()
-    {
-        try
-        {
-            var apiKey = _configuration["HuggingFaceConfig:ApiKey"];
-            if (string.IsNullOrEmpty(apiKey))
+            if (whisperReady)
             {
-                _logger.LogWarning("HuggingFace API key not configured, skipping HuggingFace initialization");
-                return null;
+                order.Add(STTProvider.Whisper);
+            }
+        }
+        else
+        {
+            if (whisperReady)
+            {
+                order.Add(STTProvider.Whisper);
             }
 
-            // Use the DI-registered service instead of creating a new one
-            return _serviceProvider.GetRequiredService<HuggingFaceSTTService>();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to create HuggingFace service");
-            return null;
-        }
-    }
-
-    private ISpeechToTextService? TryCreateOllamaService()
-    {
-        try
-        {
-            var endpoint = _configuration["Ollama:Endpoint"];
-            if (string.IsNullOrEmpty(endpoint))
+            if (settings.HasApi)
             {
-                _logger.LogWarning("Ollama endpoint not configured, skipping Ollama initialization");
-                return null;
+                order.Add(STTProvider.OpenAI);
             }
+        }
 
-            // Use the DI-registered service
-            return _serviceProvider.GetRequiredService<OllamaSTTService>();
-        }
-        catch (Exception ex)
+        if (huggingFaceReady)
         {
-            _logger.LogWarning(ex, "Failed to create Ollama service");
-            return null;
+            order.Add(STTProvider.HuggingFace);
         }
+
+        return order
+            .Select((provider, index) => (provider, index))
+            .OrderBy(item => _priorityOverrides.TryGetValue(item.provider, out var priority) ? (int)priority : int.MaxValue)
+            .ThenBy(item => item.index)
+            .Select(item => item.provider)
+            .ToList();
     }
 
-    private void InitializeHealthStatus()
-    {
-        foreach (var provider in _providers.Keys)
-        {
-            _healthStatus[provider] = new ProviderHealthStatus
-            {
-                Provider = provider,
-                IsHealthy = true,
-                LastChecked = DateTime.UtcNow
-            };
-        }
-    }
-
+    /// <inheritdoc />
     public async Task<MultiSTTResult> ConvertToTextAsync(
         byte[] audioData,
         STTProvider? preferredProvider = null,
         CancellationToken cancellationToken = default)
     {
         var stopwatch = Stopwatch.StartNew();
-        var providersTried = new List<STTProvider>();
-        
-        // Determine provider order
-        var providersToTry = GetProvidersInPriorityOrder(preferredProvider);
-        
-        if (!providersToTry.Any())
+        var order = GetProviderOrder().ToList();
+        if (preferredProvider is { } preferred && order.Remove(preferred))
+        {
+            order.Insert(0, preferred);
+        }
+
+        if (order.Count == 0)
         {
             return new MultiSTTResult
             {
-                ErrorMessage = "No STT providers available",
-                UsedProvider = STTProvider.HuggingFace, // Default value
+                ErrorMessage = "No speech engine is ready. Download the local model or set the transcription API in Settings.",
                 TotalProcessingTime = stopwatch.Elapsed
             };
         }
 
-        foreach (var provider in providersToTry)
+        var tried = new List<STTProvider>();
+        var lastError = string.Empty;
+        foreach (var provider in order)
         {
-            providersTried.Add(provider);
-            
-            try
+            tried.Add(provider);
+            var service = Resolve(provider);
+            if (service is null)
             {
-                _logger.LogDebug("Trying STT provider: {Provider}", provider);
-                
-                if (!_providers.TryGetValue(provider, out var service) || service == null)
-                {
-                    _logger.LogWarning("Provider {Provider} not available, skipping", provider);
-                    continue;
-                }
-
-                var result = await service.ConvertToTextAsync(audioData, cancellationToken);
-                
-                if (result.IsSuccess)
-                {
-                    // Update health status
-                    UpdateProviderHealth(provider, true, TimeSpan.Zero);
-                    
-                    stopwatch.Stop();
-                    
-                    var multiResult = new MultiSTTResult
-                    {
-                        Text = result.Text,
-                        Confidence = result.Confidence,
-                        ProcessingTime = result.ProcessingTime,
-                        ErrorMessage = string.Empty,
-                        UsedProvider = provider,
-                        WasFallbackUsed = providersTried.Count > 1,
-                        ProvidersTried = providersTried,
-                        TotalProcessingTime = stopwatch.Elapsed
-                    };
-
-                    if (multiResult.WasFallbackUsed)
-                    {
-                        InvokeOnProviderFallback(new ProviderFallbackEventArgs
-                        {
-                            FailedProvider = providersTried[0],
-                            FallbackProvider = provider,
-                            Reason = $"Failed after trying {providersTried.Count - 1} provider(s)"
-                        });
-                    }
-
-                    _logger.LogInformation("STT success with {Provider}: '{Text}' (Confidence: {Confidence:P0})",
-                        provider, result.Text, result.Confidence);
-
-                    return multiResult;
-                }
-                else
-                {
-                    _logger.LogWarning("Provider {Provider} returned error: {Error}", 
-                        provider, result.ErrorMessage);
-                    UpdateProviderHealth(provider, false, TimeSpan.Zero, result.ErrorMessage);
-                }
+                continue;
             }
-            catch (OperationCanceledException)
+
+            var attempt = Stopwatch.StartNew();
+            var result = await service.ConvertToTextAsync(audioData, cancellationToken).ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(result.Text))
             {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Provider {Provider} failed with exception", provider);
-                UpdateProviderHealth(provider, false, TimeSpan.Zero, ex.Message);
-                
-                // Invoke fallback event if this was the first provider
-                if (providersTried.Count == 1 && providersToTry.Count > 1)
+                UpdateHealth(provider, true, attempt.Elapsed);
+                if (tried.Count > 1)
                 {
-                    InvokeOnProviderFallback(new ProviderFallbackEventArgs
+                    RaiseFallback(new ProviderFallbackEventArgs
                     {
-                        FailedProvider = provider,
-                        FallbackProvider = providersToTry.Skip(1).First(),
-                        Reason = ex.Message
+                        FailedProvider = tried[0],
+                        FallbackProvider = provider,
+                        Reason = lastError
                     });
                 }
+
+                return new MultiSTTResult
+                {
+                    Text = result.Text,
+                    Confidence = result.Confidence,
+                    ProcessingTime = result.ProcessingTime,
+                    UsedProvider = provider,
+                    WasFallbackUsed = tried.Count > 1,
+                    ProvidersTried = tried,
+                    TotalProcessingTime = stopwatch.Elapsed
+                };
             }
+
+            lastError = result.ErrorMessage;
+            if (lastError == TranscriptCleaner.NoSpeechMessage)
+            {
+                // The engine worked and heard nothing; another engine won't hear more.
+                UpdateHealth(provider, true, attempt.Elapsed);
+                break;
+            }
+
+            _logger.LogWarning("Speech engine {Provider} failed: {Error}", provider, lastError);
+            UpdateHealth(provider, false, attempt.Elapsed, lastError);
         }
 
-        // All providers failed
-        stopwatch.Stop();
-        
-        _logger.LogError("All STT providers failed after trying {Count} provider(s)", providersTried.Count);
-        
         return new MultiSTTResult
         {
-            ErrorMessage = $"All STT providers failed. Tried: {string.Join(", ", providersTried)}",
-            UsedProvider = providersTried.LastOrDefault(),
-            WasFallbackUsed = true,
-            ProvidersTried = providersTried,
+            ErrorMessage = lastError,
+            UsedProvider = tried.LastOrDefault(),
+            WasFallbackUsed = tried.Count > 1,
+            ProvidersTried = tried,
             TotalProcessingTime = stopwatch.Elapsed
         };
     }
 
+    /// <inheritdoc />
     public Task<MultiSTTResult> ConvertToTextStreamingAsync(
         byte[] audioData,
         Action<string> onInterimResult,
         CancellationToken cancellationToken = default)
     {
-        // For now, delegate to non-streaming version
-        // Streaming implementation would require provider-specific streaming APIs
-        _logger.LogDebug("Streaming STT requested but not yet implemented, using standard conversion");
         return ConvertToTextAsync(audioData, null, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Dictionary<STTProvider, ProviderHealthStatus> GetProviderHealthStatus()
     {
-        return _healthStatus.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        return _healthStatus.ToDictionary(item => item.Key, item => item.Value);
     }
 
+    /// <inheritdoc />
     public void SetProviderPriority(STTProvider provider, STTProviderPriority priority)
     {
-        _providerPriorities[provider] = priority;
-        _logger.LogInformation("Set {Provider} priority to {Priority}", provider, priority);
+        _priorityOverrides[provider] = priority;
     }
 
+    /// <inheritdoc />
     public async Task<TestConnectionResult[]> TestAllProvidersAsync(CancellationToken cancellationToken = default)
     {
         var results = new List<TestConnectionResult>();
-        
-        foreach (var provider in _providers.Keys)
+        var settings = VoiceSettings.Read(_configuration);
+        foreach (var provider in GetProviderOrder())
         {
             var stopwatch = Stopwatch.StartNew();
-            bool isConnected = false;
-            string? errorMessage = null;
-            
+            string? error = null;
+            var connected = false;
             try
             {
-                // Create a simple test - try to access the provider
-                if (_providers.TryGetValue(provider, out var service) && service != null)
+                connected = provider switch
                 {
-                    // For HTTP-based services, try a simple health check
-                    isConnected = await TestProviderConnectionAsync(provider, cancellationToken);
-                }
+                    STTProvider.Whisper => true,
+                    STTProvider.OpenAI => await PingAsync(settings, cancellationToken).ConfigureAwait(false),
+                    STTProvider.HuggingFace => true,
+                    _ => false
+                };
             }
-            catch (Exception ex)
+            catch (HttpRequestException ex)
             {
-                errorMessage = ex.Message;
+                error = ex.Message;
             }
-            finally
-            {
-                stopwatch.Stop();
-            }
-            
+
             results.Add(new TestConnectionResult
             {
                 Provider = provider,
-                IsConnected = isConnected,
+                IsConnected = connected,
                 ResponseTime = stopwatch.Elapsed,
-                ErrorMessage = errorMessage
+                ErrorMessage = error
             });
-            
-            // Update health status
-            UpdateProviderHealth(provider, isConnected, stopwatch.Elapsed, errorMessage);
         }
-        
-        return results.ToArray();
+
+        return [.. results];
     }
 
-    private async Task<bool> TestProviderConnectionAsync(STTProvider provider, CancellationToken cancellationToken)
+    /// <inheritdoc />
+    public void Dispose()
     {
-        try
-        {
-            return provider switch
-            {
-                STTProvider.Whisper => File.Exists(_configuration["Whisper:ModelPath"] ?? "Models/ggml-base.bin"),
-                STTProvider.HuggingFace => await TestHttpEndpointAsync("https://api-inference.huggingface.co", cancellationToken),
-                STTProvider.Ollama => await TestHttpEndpointAsync(_configuration["Ollama:Endpoint"] ?? "", cancellationToken),
-                _ => false
-            };
-        }
-        catch
-        {
-            return false;
-        }
+        GC.SuppressFinalize(this);
     }
 
-    private async Task<bool> TestHttpEndpointAsync(string url, CancellationToken cancellationToken)
+    private ISpeechToTextService? Resolve(STTProvider provider)
     {
-        if (string.IsNullOrEmpty(url)) return false;
-        
-        try
+        return provider switch
         {
-            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-            var response = await client.GetAsync(url, cancellationToken);
-            return response.IsSuccessStatusCode || (int)response.StatusCode < 500;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private List<STTProvider> GetProvidersInPriorityOrder(STTProvider? preferredProvider)
-    {
-        var providers = _providers.Keys.ToList();
-        
-        // If preferred provider specified and available, try it first
-        if (preferredProvider.HasValue && providers.Contains(preferredProvider.Value))
-        {
-            providers.Remove(preferredProvider.Value);
-            providers.Insert(0, preferredProvider.Value);
-        }
-        
-        // Sort by priority
-        return providers
-            .OrderBy(p => _providerPriorities.GetValueOrDefault(p, STTProviderPriority.Fallback))
-            .ThenBy(p => !_healthStatus.GetValueOrDefault(p)?.IsHealthy ?? false) // Healthy providers first
-            .ToList();
-    }
-
-    private void UpdateProviderHealth(STTProvider provider, bool success, TimeSpan responseTime, string? error = null)
-    {
-        if (!_healthStatus.TryGetValue(provider, out var status))
-        {
-            status = new ProviderHealthStatus { Provider = provider };
-        }
-
-        var oldStatus = new ProviderHealthStatus
-        {
-            Provider = status.Provider,
-            IsHealthy = status.IsHealthy,
-            SuccessCount = status.SuccessCount,
-            FailureCount = status.FailureCount
+            STTProvider.Whisper => _serviceProvider.GetService<WhisperSTTService>(),
+            STTProvider.OpenAI => _serviceProvider.GetService<OpenAiTranscriptionService>(),
+            STTProvider.HuggingFace => _serviceProvider.GetService<HuggingFaceSTTService>(),
+            _ => null
         };
+    }
 
-        lock (_lock)
+    private async Task<bool> PingAsync(VoiceSettings settings, CancellationToken cancellationToken)
+    {
+        var transcriptions = OpenAiTranscriptionService.BuildRequestUri(settings.ApiEndpoint);
+        if (transcriptions is null)
         {
+            return false;
+        }
+
+        var models = new Uri(transcriptions, "../models");
+        using var request = new HttpRequestMessage(HttpMethod.Get, models);
+        if (settings.ApiKey is not null)
+        {
+            request.Headers.Authorization = new global::System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", settings.ApiKey);
+        }
+
+        var client = _serviceProvider.GetRequiredService<IHttpClientFactory>().CreateClient(OpenAiTranscriptionService.HttpClientName);
+        using var response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        return response.IsSuccessStatusCode;
+    }
+
+    private void UpdateHealth(STTProvider provider, bool success, TimeSpan elapsed, string? error = null)
+    {
+        ProviderHealthStatus before;
+        ProviderHealthStatus after;
+        lock (_healthGate)
+        {
+            var status = _healthStatus.GetOrAdd(provider, key => new ProviderHealthStatus { Provider = key, IsHealthy = true });
+            before = new ProviderHealthStatus
+            {
+                Provider = provider,
+                IsHealthy = status.IsHealthy,
+                SuccessCount = status.SuccessCount,
+                FailureCount = status.FailureCount
+            };
+
             status.LastChecked = DateTime.UtcNow;
-            
             if (success)
             {
                 status.SuccessCount++;
@@ -431,38 +295,27 @@ public class MultiSTTService : IMultiSTTService
             {
                 status.FailureCount++;
                 status.LastError = error;
-                // Mark as unhealthy if failure rate is high
-                if (status.SuccessRate < 0.5 && status.SuccessCount + status.FailureCount > 5)
-                {
-                    status.IsHealthy = false;
-                }
+                status.IsHealthy = status.SuccessRate >= 0.5 || status.SuccessCount + status.FailureCount <= 3;
             }
-            
-            // Update average response time
-            if (responseTime > TimeSpan.Zero)
-            {
-                var totalRequests = status.SuccessCount + status.FailureCount;
-                status.AverageResponseTime = TimeSpan.FromMilliseconds(
-                    (status.AverageResponseTime.TotalMilliseconds * (totalRequests - 1) + responseTime.TotalMilliseconds) / totalRequests
-                );
-            }
+
+            var total = status.SuccessCount + status.FailureCount;
+            status.AverageResponseTime = TimeSpan.FromMilliseconds(
+                (status.AverageResponseTime.TotalMilliseconds * (total - 1) + elapsed.TotalMilliseconds) / total);
+            after = status;
         }
 
-        _healthStatus[provider] = status;
-
-        // Check if health status changed
-        if (oldStatus.IsHealthy != status.IsHealthy)
+        if (before.IsHealthy != after.IsHealthy)
         {
-            InvokeOnProviderHealthChanged(new ProviderHealthChangedEventArgs
+            OnProviderHealthChanged?.Invoke(this, new ProviderHealthChangedEventArgs
             {
                 Provider = provider,
-                OldStatus = oldStatus,
-                NewStatus = status
+                OldStatus = before,
+                NewStatus = after
             });
         }
     }
 
-    private void InvokeOnProviderFallback(ProviderFallbackEventArgs args)
+    private void RaiseFallback(ProviderFallbackEventArgs args)
     {
         try
         {
@@ -470,47 +323,7 @@ public class MultiSTTService : IMultiSTTService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error in provider fallback event handler");
+            _logger.LogWarning(ex, "Speech engine fallback handler failed");
         }
-    }
-
-    private void InvokeOnProviderHealthChanged(ProviderHealthChangedEventArgs args)
-    {
-        try
-        {
-            OnProviderHealthChanged?.Invoke(this, args);
-            _logger.LogInformation("Provider {Provider} health changed: Healthy={IsHealthy}, SuccessRate={SuccessRate:P0}",
-                args.Provider, args.NewStatus.IsHealthy, args.NewStatus.SuccessRate);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error in provider health changed event handler");
-        }
-    }
-
-    public void Dispose()
-    {
-        foreach (var provider in _providers.Values)
-        {
-            try
-            {
-                provider?.Dispose();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error disposing STT provider");
-            }
-        }
-        
-        _providers.Clear();
-        _logger.LogDebug("MultiSTTService disposed");
-    }
-
-    private class ProviderMetrics
-    {
-        public STTProvider Provider { get; set; }
-        public bool Success { get; set; }
-        public TimeSpan ResponseTime { get; set; }
-        public DateTime Timestamp { get; set; }
     }
 }
