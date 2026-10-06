@@ -11,7 +11,12 @@ public static class AiRuntimeConfigurationMapper
     public const string DefaultTodoistMcpServerLink = "https://todoist.mcpverse.dev/mcp";
 
     /// <summary>
-    /// Creates every configuration value Settings own: model profiles and integrations.
+    /// The value of <c>Voice:Language</c> that lets speech recognition detect the spoken language.
+    /// </summary>
+    public const string AutoSpokenLanguage = "auto";
+
+    /// <summary>
+    /// Creates every configuration value Settings own: model profiles, integrations and voice.
     /// </summary>
     /// <param name="settings">The saved settings.</param>
     public static IReadOnlyDictionary<string, string?> CreateOverrides(ISettingsService settings)
@@ -32,7 +37,62 @@ public static class AiRuntimeConfigurationMapper
             overrides[item.Key] = item.Value;
         }
 
+        foreach (var item in CreateVoiceOverrides(settings))
+        {
+            overrides[item.Key] = item.Value;
+        }
+
         return overrides;
+    }
+
+    /// <summary>
+    /// Creates the <c>Voice:*</c> values the speech services read on each use: spoken language, speech engine,
+    /// local model, transcription API, audio devices, wake phrase and spoken reply voice and rate.
+    /// </summary>
+    /// <param name="settings">The saved settings.</param>
+    public static IReadOnlyDictionary<string, string?> CreateVoiceOverrides(ISettingsService settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        var overrides = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Voice:Language"] = ResolveSpokenLanguage(settings),
+            ["Voice:SpeechEngine"] = settings.SpeechEngine,
+            ["Voice:LocalModel"] = settings.LocalSpeechModel,
+            ["Voice:InputDeviceId"] = settings.SelectedInputDeviceId,
+            ["Voice:OutputDeviceId"] = settings.SelectedOutputDeviceId,
+            ["Voice:WakeWord"] = settings.WakeWord,
+            ["Voice:SpeechRate"] = settings.SpeechRate.ToString(CultureInfo.InvariantCulture)
+        };
+
+        AddIfNotBlank(overrides, "Voice:SpeechApi:Endpoint", settings.SpeechApiEndpoint?.Trim());
+        AddIfNotBlank(overrides, "Voice:SpeechApi:Model", settings.SpeechApiModel?.Trim());
+        AddIfNotBlank(overrides, "Voice:SpeechApi:ApiKey", settings.SpeechApiKey?.Trim());
+        AddIfNotBlank(overrides, "Voice:SpeechVoice", settings.SpeechVoice?.Trim());
+        return overrides;
+    }
+
+    /// <summary>
+    /// Returns the spoken language speech services use: the language chosen for voice (such as <c>tr</c> or
+    /// <c>auto</c>), or the two-letter code of the interface language when voice follows the interface.
+    /// </summary>
+    /// <param name="settings">The saved settings.</param>
+    public static string ResolveSpokenLanguage(ISettingsService settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        var voiceLanguage = settings.VoiceLanguage?.Trim();
+        if (!string.IsNullOrEmpty(voiceLanguage))
+        {
+            return voiceLanguage.Equals(AutoSpokenLanguage, StringComparison.OrdinalIgnoreCase)
+                ? AutoSpokenLanguage
+                : voiceLanguage.ToLowerInvariant();
+        }
+
+        var interfaceLanguage = string.IsNullOrWhiteSpace(settings.Language)
+            ? LocalizationService.ResolveDefault(CultureInfo.CurrentUICulture)
+            : LocalizationService.Normalize(settings.Language);
+        return interfaceLanguage.Split('-')[0].ToLowerInvariant();
     }
 
     public static IReadOnlyDictionary<string, string?> CreateAiServiceOverrides(
