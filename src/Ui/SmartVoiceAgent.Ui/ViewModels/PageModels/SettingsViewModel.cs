@@ -130,21 +130,21 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private bool _isInitializingAiSettings;
         private string _aiProvider = "OpenRouter";
         private string _aiEndpoint = "https://openrouter.ai/api/v1";
-        private string _aiModelId = "openai/gpt-4.1-mini";
+        private string _aiModelId = "openai/gpt-5.4-mini";
         private string _aiApiKey = string.Empty;
         private string _activePlannerProfileId = "openrouter-primary";
         private string _chatProvider = "OpenRouter";
         private string _chatEndpoint = "https://openrouter.ai/api/v1";
-        private string _chatModelId = "openai/gpt-4.1-mini";
+        private string _chatModelId = "openai/gpt-5.4-mini";
         private string _chatApiKey = string.Empty;
         private string _activeChatProfileId = "openrouter-chat";
         private Func<string> _aiProfileStatusText = static () => Loc.Get("Settings.Status.NotTested");
         private string _aiProfileStatus = Loc.Get("Settings.Status.NotTested");
         private bool _isAiProfileValid;
-        private IReadOnlyList<string> _aiModelOptions = CreateDefaultModelOptions("OpenRouter", "openai/gpt-4.1-mini");
-        private IReadOnlyList<string> _chatModelOptions = CreateDefaultModelOptions("OpenRouter", "openai/gpt-4.1-mini");
-        private IReadOnlyList<ModelCatalogEntry> _aiModelCatalogEntries = CreateDefaultModelCatalogEntries("OpenRouter", "openai/gpt-4.1-mini");
-        private IReadOnlyList<ModelCatalogEntry> _chatModelCatalogEntries = CreateDefaultModelCatalogEntries("OpenRouter", "openai/gpt-4.1-mini");
+        private IReadOnlyList<string> _aiModelOptions = CreateDefaultModelOptions("OpenRouter", "openai/gpt-5.4-mini");
+        private IReadOnlyList<string> _chatModelOptions = CreateDefaultModelOptions("OpenRouter", "openai/gpt-5.4-mini");
+        private IReadOnlyList<ModelCatalogEntry> _aiModelCatalogEntries = CreateDefaultModelCatalogEntries("OpenRouter", "openai/gpt-5.4-mini");
+        private IReadOnlyList<ModelCatalogEntry> _chatModelCatalogEntries = CreateDefaultModelCatalogEntries("OpenRouter", "openai/gpt-5.4-mini");
         private bool _isRefreshingAiModels;
         private bool _isRefreshingChatModels;
         private bool _isTestingAiConnection;
@@ -597,7 +597,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 Provider = ModelProviderType.OpenRouter,
                 DisplayName = "OpenRouter Planner",
                 Endpoint = "https://openrouter.ai/api/v1",
-                ModelId = "openai/gpt-4.1-mini",
+                ModelId = "openai/gpt-5.4-mini",
                 Roles = [ModelProviderRole.Planner],
                 Enabled = false
             };
@@ -611,7 +611,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 Provider = ModelProviderType.OpenRouter,
                 DisplayName = "OpenRouter Chat",
                 Endpoint = "https://openrouter.ai/api/v1",
-                ModelId = "openai/gpt-4.1-mini",
+                ModelId = "openai/gpt-5.4-mini",
                 Roles = [ModelProviderRole.Chat],
                 Enabled = false
             };
@@ -897,7 +897,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 }
 
                 return string.IsNullOrWhiteSpace(modelId) || modelId.Contains('/', StringComparison.Ordinal)
-                    ? "gpt-4.1-mini"
+                    ? "gpt-5.4-mini"
                     : modelId;
             }
 
@@ -909,19 +909,19 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 }
 
                 return string.IsNullOrWhiteSpace(modelId) || modelId.Contains('/', StringComparison.Ordinal)
-                    ? "claude-sonnet-4-6"
+                    ? "claude-sonnet-5-5"
                     : modelId;
             }
 
             if (provider == ModelProviderType.Ollama)
             {
                 return string.IsNullOrWhiteSpace(modelId) || modelId.Contains('/', StringComparison.Ordinal)
-                    ? "llama3.1"
+                    ? "qwen3"
                     : modelId;
             }
 
             return string.IsNullOrWhiteSpace(modelId)
-                ? "openai/gpt-4.1-mini"
+                ? "openai/gpt-5.4-mini"
                 : modelId;
         }
 

@@ -55,10 +55,12 @@ public class SettingsViewModelAiProfileTests : IDisposable
         viewModel.AiProvider = "OpenAI";
 
         viewModel.AiModelOptions.Should().ContainInOrder(
+            "gpt-6.1-sol",
+            "gpt-6-sol",
             "gpt-5.5",
-            "gpt-5.4",
             "gpt-5.4-mini",
             "gpt-5.4-nano");
+        viewModel.AiModelOptions.Should().NotContain("gpt-4.1-mini");
         viewModel.AiModelOptions.Should().NotContain("gpt-5.2");
         viewModel.AiModelOptions.Should().NotContain("gpt-5.1");
     }
@@ -70,15 +72,15 @@ public class SettingsViewModelAiProfileTests : IDisposable
         using var viewModel = new SettingsViewModel(settingsService);
 
         viewModel.AiModelOptions.Should().ContainInOrder(
+            "openai/gpt-6.1-sol",
+            "openai/gpt-6-sol",
             "openai/gpt-5.5",
-            "openai/gpt-5.4",
-            "openai/gpt-5.4-mini",
-            "openai/gpt-5.4-nano");
+            "openai/gpt-5.4-mini");
         viewModel.AiModelOptions.Should().ContainInOrder(
-            "anthropic/claude-opus-4-7",
-            "anthropic/claude-sonnet-4-6",
-            "anthropic/claude-haiku-4-5-20251001");
-        viewModel.ChatModelOptions.Should().Contain("anthropic/claude-sonnet-4-6");
+            "anthropic/claude-opus-5.5",
+            "anthropic/claude-sonnet-5.5",
+            "anthropic/claude-haiku-4.5");
+        viewModel.ChatModelOptions.Should().Contain("anthropic/claude-sonnet-5.5");
         viewModel.AiModelOptions.Should().NotContain("anthropic/claude-3.5-sonnet");
     }
 
@@ -92,17 +94,17 @@ public class SettingsViewModelAiProfileTests : IDisposable
 
         viewModel.AiProviders.Should().Contain("Anthropic");
         viewModel.AiEndpoint.Should().Be("https://api.anthropic.com");
-        viewModel.AiModelId.Should().Be("claude-sonnet-4-6");
+        viewModel.AiModelId.Should().Be("claude-sonnet-5-5");
         viewModel.AiModelOptions.Should().ContainInOrder(
-            "claude-opus-4-7",
-            "claude-sonnet-4-6",
+            "claude-opus-5-5",
+            "claude-sonnet-5-5",
             "claude-haiku-4-5-20251001");
         viewModel.AiModelOptions.Should().NotContain(model => model.StartsWith("anthropic/", StringComparison.OrdinalIgnoreCase));
         viewModel.IsPlannerModelCatalogBacked.Should().BeTrue();
         settingsService.ModelProviderProfiles.Should().ContainSingle(profile =>
             profile.Provider == ModelProviderType.Anthropic
             && profile.Endpoint == "https://api.anthropic.com"
-            && profile.ModelId == "claude-sonnet-4-6"
+            && profile.ModelId == "claude-sonnet-5-5"
             && profile.Roles.Contains(ModelProviderRole.Planner));
     }
 
@@ -312,8 +314,8 @@ public class SettingsViewModelAiProfileTests : IDisposable
                 {
                     Provider = ModelProviderType.OpenAI,
                     ProviderId = "openai",
-                    ModelId = "gpt-4.1-mini",
-                    DisplayName = "GPT-4.1 mini",
+                    ModelId = "gpt-5.4-mini",
+                    DisplayName = "GPT-5.4 mini",
                     Source = "provider-live+models.dev",
                     IsAvailable = true,
                     InputPricePerMillionTokens = 0.4m,
@@ -328,12 +330,12 @@ public class SettingsViewModelAiProfileTests : IDisposable
         await viewModel.RefreshPlannerModelsAsync();
 
         viewModel.AiEndpoint.Should().Be("https://api.openai.com/v1");
-        viewModel.AiModelOptions.Should().Equal("gpt-5.2", "gpt-4.1-mini");
+        viewModel.AiModelOptions.Should().Equal("gpt-5.2", "gpt-5.4-mini");
         viewModel.AiModelCatalogEntries.Should().ContainSingle(model =>
-            model.ModelId == "gpt-4.1-mini"
-            && model.DisplayName == "GPT-4.1 mini"
+            model.ModelId == "gpt-5.4-mini"
+            && model.DisplayName == "GPT-5.4 mini"
             && model.InputPricePerMillionTokens == 0.4m);
-        viewModel.AiModelId.Should().Be("gpt-4.1-mini");
+        viewModel.AiModelId.Should().Be("gpt-5.4-mini");
         viewModel.IsPlannerModelCatalogBacked.Should().BeTrue();
     }
 

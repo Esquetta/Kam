@@ -444,6 +444,7 @@ See `RESPONSIVE_DESIGN.md` for full details.
 - **Markdown**: agent replies render through `Controls/MarkdownView` (Markdig): headings, lists, task lists, code blocks with a copy button, tables and links. Links open only for http, https and mailto (`TryGetSafeLink`). Parsing happens during layout, and a block whose text did not change keeps its controls, so streaming rebuilds only the last block
 - **Threads**: search, rename (F2 or the row menu) and delete with an inline confirmation in the sidebar. `JsonAgentSessionStore` writes title, custom title, model and message count before `messages`, so listing reads only the first 8 KB of each file; older files are read in full once
 - **Model per thread**: the chat header picker saves `ModelId` with the thread (`IAgentSessionStore.SetModelAsync`); `AgentRuntime` reads it each turn and runs that model on the chat profile's connection (`ChatClientCache.WithModel`)
+- **Model lists**: `ModelCatalogDefaults` is the short per-provider list Settings shows before a live list loads, and the chat header picker's list; refreshed lists from the provider and models.dev sort newest first by release date (`ModelCatalogOrdering`)
 - **Settings without restart**: Settings and Integrations reload `SettingsConfigurationProvider` (debounced in `App`); `ConfiguredChatClient` resolves the client per request through `ChatClientCache`, so models, web search and Todoist apply to the next message. Email, SMS and GitHub App settings still apply after a restart
 - **Approvals**: when a tool call waits and its chat is not on screen, `ApprovalToastNotifier` shows a corner card and changes the tray tooltip
 - **Shortcuts**: Enter sends, Shift+Enter adds a line, Esc cancels voice or stops the turn, Ctrl+N new chat, Ctrl+K search chats, Ctrl+L composer, F2 rename, Ctrl+, Settings, Ctrl+Alt+Space talk (configurable)
@@ -463,7 +464,7 @@ See `RESPONSIVE_DESIGN.md` for full details.
 ### Test Status
 ```
 Build: ✅ Success (CI runs on windows-2025)
-Tests: 1446 total; on Linux 13 fail because they assume Windows paths or tessdata
+Tests: 1453 total; on Linux 13 fail because they assume Windows paths or tessdata
 Run locally on Linux: DOTNET_ROLL_FORWARD=Major dotnet test tests/SmartVoiceAgent.Tests -p:EnableWindowsTargeting=true
 ```
 
