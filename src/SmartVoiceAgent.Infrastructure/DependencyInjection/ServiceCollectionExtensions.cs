@@ -31,6 +31,8 @@ namespace SmartVoiceAgent.Infrastructure.Extensions;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
+    private const string NoModelMessage = "No AI model is set up. Add a model provider and API key in Settings.";
+
     /// <summary>
     /// Adds Smart Voice Agent services to the DI container
     /// </summary>
@@ -56,31 +58,25 @@ public static class ServiceCollectionExtensions
         services.Configure<AIServiceConfiguration>(
     configuration.GetSection("AIService"));
 
+        // Clients are built from the current configuration on each request, so Settings changes
+        // apply without a restart. Settings feed configuration through a reloadable provider.
+        services.AddSingleton(sp => new ChatClientCache(config => CreateObservedChatClient(sp, config)));
         services.AddSingleton<IChatClient>(sp =>
         {
-            var config = configuration
-                .GetSection("AIService")
-                .Get<AIServiceConfiguration>()
-                ?? throw new InvalidOperationException("AIService configuration is missing.");
-
-            return CreateObservedChatClient(sp, config);
+            var cache = sp.GetRequiredService<ChatClientCache>();
+            return new ConfiguredChatClient(() => cache.Get(ResolvePlannerModelConfiguration(configuration)));
         });
 
         services.AddSingleton<IRuntimeAgentFactory>(sp =>
         {
-            var agentConfig = ResolveAgentModelConfiguration(configuration);
-            var chatClient = new Lazy<IChatClient>(() =>
-                IsUsableAiConfiguration(agentConfig)
-                    ? CreateObservedChatClient(sp, agentConfig!)
-                    : sp.GetRequiredService<IChatClient>());
-
+            var cache = sp.GetRequiredService<ChatClientCache>();
             return new RuntimeAgentFactory(
-                () => chatClient.Value,
+                () => cache.Get(ResolveAgentModelConfiguration(configuration)),
                 sp.GetRequiredService<ILogger<RuntimeAgentFactory>>(),
                 sp.GetRequiredService<IRuntimeAgentRunStore>(),
                 sp.GetService<IRuntimeAgentReadOnlyToolService>(),
                 sp.GetService<IUiLogService>(),
-                agentConfig?.ModelId ?? string.Empty);
+                () => TryResolveAgentModelConfiguration(configuration)?.ModelId ?? string.Empty);
         });
         services.AddSingleton<IRuntimeAgentRunStore, InMemoryRuntimeAgentRunStore>();
         services.AddSingleton<IRuntimeAgentReadOnlyToolService, FileRuntimeAgentReadOnlyToolService>();
@@ -114,19 +110,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISkillExecutor>(sp =>
         {
             var registry = sp.GetRequiredService<ISkillRegistry>();
-            var chatClient = new Lazy<IChatClient>(() =>
-            {
-                var chatConfig = configuration
-                    .GetSection("AIService:Chat")
-                    .Get<AIServiceConfiguration>();
-
-                return IsUsableAiConfiguration(chatConfig)
-                    ? CreateObservedChatClient(sp, chatConfig!)
-                    : sp.GetRequiredService<IChatClient>();
-            });
+            var cache = sp.GetRequiredService<ChatClientCache>();
 
             return new ExternalSkillExecutor(
-                () => chatClient.Value,
+                () => cache.Get(ResolveChatModelConfiguration(configuration)),
                 registry,
                 () => sp.GetService<ISkillRuntimeContextProvider>(),
                 () => sp.GetService<ISkillActionExecutor>(),
@@ -180,19 +167,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAgentToolProvider, McpToolProvider>();
         services.AddSingleton<IAgentRuntime>(sp =>
         {
-            var chatClient = new Lazy<IChatClient>(() =>
-            {
-                var chatConfig = configuration
-                    .GetSection("AIService:Chat")
-                    .Get<AIServiceConfiguration>();
-
-                return IsUsableAiConfiguration(chatConfig)
-                    ? CreateObservedChatClient(sp, chatConfig!)
-                    : sp.GetRequiredService<IChatClient>();
-            });
+            var cache = sp.GetRequiredService<ChatClientCache>();
 
             return new AgentRuntime(
-                () => chatClient.Value,
+                modelId => cache.Get(ChatClientCache.WithModel(ResolveChatModelConfiguration(configuration), modelId)),
                 sp.GetRequiredService<IServiceScopeFactory>(),
                 sp.GetRequiredService<IToolPermissionService>(),
                 sp.GetRequiredService<IAgentSessionStore>(),
@@ -286,30 +264,29 @@ public static class ServiceCollectionExtensions
 
     private static string ResolveExternalSkillModelId(IConfiguration configuration)
     {
-        var chatConfig = configuration
-            .GetSection("AIService:Chat")
-            .Get<AIServiceConfiguration>();
-        if (IsUsableAiConfiguration(chatConfig))
-        {
-            return chatConfig!.ModelId;
-        }
-
-        return configuration
-            .GetSection("AIService")
-            .Get<AIServiceConfiguration>()
-            ?.ModelId ?? string.Empty;
+        return TryResolveChatModelConfiguration(configuration)?.ModelId ?? string.Empty;
     }
 
-    private static AIServiceConfiguration? ResolveAgentModelConfiguration(IConfiguration configuration)
+    /// <summary>
+    /// The planner model: the <c>AIService</c> section.
+    /// </summary>
+    private static AIServiceConfiguration ResolvePlannerModelConfiguration(IConfiguration configuration)
     {
-        var agentConfig = configuration
-            .GetSection("AIService:Agents")
-            .Get<AIServiceConfiguration>();
-        if (IsUsableAiConfiguration(agentConfig))
-        {
-            return agentConfig;
-        }
+        return configuration.GetSection("AIService").Get<AIServiceConfiguration>()
+            ?? throw new InvalidOperationException(NoModelMessage);
+    }
 
+    /// <summary>
+    /// The chat model: <c>AIService:Chat</c> when it is usable, otherwise the planner model.
+    /// </summary>
+    private static AIServiceConfiguration ResolveChatModelConfiguration(IConfiguration configuration)
+    {
+        return TryResolveChatModelConfiguration(configuration)
+            ?? throw new InvalidOperationException(NoModelMessage);
+    }
+
+    private static AIServiceConfiguration? TryResolveChatModelConfiguration(IConfiguration configuration)
+    {
         var chatConfig = configuration
             .GetSection("AIService:Chat")
             .Get<AIServiceConfiguration>();
@@ -321,6 +298,28 @@ public static class ServiceCollectionExtensions
         return configuration
             .GetSection("AIService")
             .Get<AIServiceConfiguration>();
+    }
+
+    /// <summary>
+    /// The task agent model: <c>AIService:Agents</c>, then the chat model, then the planner model.
+    /// </summary>
+    private static AIServiceConfiguration ResolveAgentModelConfiguration(IConfiguration configuration)
+    {
+        return TryResolveAgentModelConfiguration(configuration)
+            ?? throw new InvalidOperationException(NoModelMessage);
+    }
+
+    private static AIServiceConfiguration? TryResolveAgentModelConfiguration(IConfiguration configuration)
+    {
+        var agentConfig = configuration
+            .GetSection("AIService:Agents")
+            .Get<AIServiceConfiguration>();
+        if (IsUsableAiConfiguration(agentConfig))
+        {
+            return agentConfig;
+        }
+
+        return TryResolveChatModelConfiguration(configuration);
     }
 
     private static bool IsOllamaProvider(string provider)

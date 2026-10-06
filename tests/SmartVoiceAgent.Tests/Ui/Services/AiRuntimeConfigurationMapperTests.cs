@@ -287,4 +287,30 @@ public class AiRuntimeConfigurationMapperTests
             "kam-runtime-mapper-tests",
             Guid.NewGuid().ToString("N"));
     }
+
+    [Fact]
+    public void CreateOverrides_AddsWebSearchKeysOnlyWhenSet()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "kam-mapper-tests", Guid.NewGuid().ToString("N"));
+        try
+        {
+            using var settings = new JsonSettingsService(directory);
+            AiRuntimeConfigurationMapper.CreateOverrides(settings).Keys
+                .Should().NotContain(key => key.StartsWith("WebResearch:", StringComparison.Ordinal));
+
+            settings.WebSearchApiKey = " search-key ";
+            settings.WebSearchEngineId = "engine-1";
+
+            var overrides = AiRuntimeConfigurationMapper.CreateOverrides(settings);
+            overrides.Should().Contain("WebResearch:SearchApiKey", "search-key");
+            overrides.Should().Contain("WebResearch:SearchEngineId", "engine-1");
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+    }
 }

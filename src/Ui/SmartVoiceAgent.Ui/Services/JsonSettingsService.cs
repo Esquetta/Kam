@@ -91,6 +91,18 @@ public class JsonSettingsService : ISettingsService, IDisposable
         set => SetProperty(nameof(GitHubAppPrivateKeyPath), value, v => _data.GitHubAppPrivateKeyPath = v);
     }
 
+    public string WebSearchApiKey
+    {
+        get => _data.WebSearchApiKey ?? string.Empty;
+        set => SetProperty(nameof(WebSearchApiKey), value, v => _data.WebSearchApiKey = v);
+    }
+
+    public string WebSearchEngineId
+    {
+        get => _data.WebSearchEngineId ?? string.Empty;
+        set => SetProperty(nameof(WebSearchEngineId), value, v => _data.WebSearchEngineId = v);
+    }
+
     #region Email (SMTP) Properties
 
     public string SmtpHost
@@ -324,6 +336,8 @@ public class JsonSettingsService : ISettingsService, IDisposable
             nameof(GitHubAppId) => (T?)(object?)_data.GitHubAppId,
             nameof(GitHubAppInstallationId) => (T?)(object?)_data.GitHubAppInstallationId,
             nameof(GitHubAppPrivateKeyPath) => (T?)(object?)_data.GitHubAppPrivateKeyPath,
+            nameof(WebSearchApiKey) => (T?)(object?)_data.WebSearchApiKey,
+            nameof(WebSearchEngineId) => (T?)(object?)_data.WebSearchEngineId,
             nameof(SmtpHost) => (T?)(object?)_data.SmtpHost,
             nameof(SmtpPort) => (T?)(object?)_data.SmtpPort,
             nameof(SmtpUsername) => (T?)(object?)_data.SmtpUsername,
@@ -355,6 +369,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
             migrated |= MigratePlaintextSecret(root, nameof(GitHubAppPrivateKeyPath), value => _data.GitHubAppPrivateKeyPath = value);
             migrated |= MigratePlaintextSecret(root, nameof(SmtpPassword), value => _data.SmtpPassword = value);
             migrated |= MigratePlaintextSecret(root, nameof(TwilioAuthToken), value => _data.TwilioAuthToken = value);
+            migrated |= MigratePlaintextSecret(root, nameof(WebSearchApiKey), value => _data.WebSearchApiKey = value);
 
             if (root.TryGetProperty(nameof(SettingsData.ModelProviderProfiles), out var profilesElement)
                 && profilesElement.ValueKind == JsonValueKind.Array)
@@ -414,6 +429,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
         _data.GitHubAppPrivateKeyPath = _secretStore.GetSecret(nameof(GitHubAppPrivateKeyPath)) ?? _data.GitHubAppPrivateKeyPath;
         _data.SmtpPassword = _secretStore.GetSecret(nameof(SmtpPassword)) ?? _data.SmtpPassword;
         _data.TwilioAuthToken = _secretStore.GetSecret(nameof(TwilioAuthToken)) ?? _data.TwilioAuthToken;
+        _data.WebSearchApiKey = _secretStore.GetSecret(nameof(WebSearchApiKey)) ?? _data.WebSearchApiKey;
 
         foreach (var profile in _data.ModelProviderProfiles)
         {
@@ -432,6 +448,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
         SaveSecret(nameof(GitHubAppPrivateKeyPath), _data.GitHubAppPrivateKeyPath);
         SaveSecret(nameof(SmtpPassword), _data.SmtpPassword);
         SaveSecret(nameof(TwilioAuthToken), _data.TwilioAuthToken);
+        SaveSecret(nameof(WebSearchApiKey), _data.WebSearchApiKey);
 
         var activeProfileSecretNames = new HashSet<string>(StringComparer.Ordinal);
         foreach (var profile in _data.ModelProviderProfiles.Where(p => !string.IsNullOrWhiteSpace(p.Id)))
@@ -467,6 +484,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
         data.GitHubAppPrivateKeyPath = null;
         data.SmtpPassword = null;
         data.TwilioAuthToken = null;
+        data.WebSearchApiKey = null;
 
         foreach (var profile in data.ModelProviderProfiles)
         {
@@ -489,6 +507,8 @@ public class JsonSettingsService : ISettingsService, IDisposable
             GitHubAppId = source.GitHubAppId,
             GitHubAppInstallationId = source.GitHubAppInstallationId,
             GitHubAppPrivateKeyPath = source.GitHubAppPrivateKeyPath,
+            WebSearchApiKey = source.WebSearchApiKey,
+            WebSearchEngineId = source.WebSearchEngineId,
             SmtpHost = source.SmtpHost,
             SmtpPort = source.SmtpPort,
             SmtpUsername = source.SmtpUsername,
@@ -610,6 +630,8 @@ public class JsonSettingsService : ISettingsService, IDisposable
         public string? GitHubAppId { get; set; }
         public string? GitHubAppInstallationId { get; set; }
         public string? GitHubAppPrivateKeyPath { get; set; }
+        public string? WebSearchApiKey { get; set; }
+        public string? WebSearchEngineId { get; set; }
 
         // Email (SMTP)
         public string? SmtpHost { get; set; }

@@ -24,6 +24,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration.Json;
 using System.Reflection;
+using System.Collections.Generic;
 
 namespace SmartVoiceAgent.Ui
 {
@@ -35,6 +36,8 @@ namespace SmartVoiceAgent.Ui
         private IServiceScope? _applicationScope;
         private UiLogService? _uiLogService;
         private ErrorHandlingService? _errorHandlingService;
+        private SettingsConfigurationProvider? _settingsConfiguration;
+        private CancellationTokenSource? _settingsApplyDelay;
 
         /// <summary>
         /// Gets the service provider for dependency injection access from ViewModels
@@ -77,6 +80,9 @@ namespace SmartVoiceAgent.Ui
                     DataContext = _mainViewModel
                 };
 
+                // Settings and Integrations changes reach running services without a restart.
+                _mainViewModel.SettingsChanged += OnSettingsChanged;
+
                 // Set main window reference for error handling service
                 _errorHandlingService?.SetMainWindow(desktop.MainWindow);
                 _errorHandlingService?.LogInformation("Main window initialized");
@@ -85,6 +91,7 @@ namespace SmartVoiceAgent.Ui
                 _trayIconService = new TrayIconService();
                 _trayIconService.Initialize();
                 _mainViewModel.SetTrayIconService(_trayIconService);
+                _mainViewModel.SetApprovalNotifier(new ApprovalToastNotifier(desktop.MainWindow, _trayIconService));
 
                 // Connect UI Log Service to ViewModel
                 _uiLogService = (UiLogService?)services.GetService<IUiLogService>();
@@ -295,33 +302,90 @@ namespace SmartVoiceAgent.Ui
                 .Build();
         }
 
-        private static void AddUserRuntimeConfiguration(IConfigurationBuilder config)
+        private void AddUserRuntimeConfiguration(IConfigurationBuilder config)
         {
+            IReadOnlyDictionary<string, string?> values = new Dictionary<string, string?>();
             try
             {
                 using var settingsService = new JsonSettingsService();
-                var overrides = new System.Collections.Generic.Dictionary<string, string?>();
-                foreach (var item in AiRuntimeConfigurationMapper.CreateAiServiceOverrides(
-                             settingsService.ModelProviderProfiles,
-                             settingsService.ActivePlannerProfileId,
-                             settingsService.ActiveChatProfileId))
-                {
-                    overrides[item.Key] = item.Value;
-                }
-
-                foreach (var item in AiRuntimeConfigurationMapper.CreateIntegrationOverrides(settingsService))
-                {
-                    overrides[item.Key] = item.Value;
-                }
-
-                if (overrides.Count > 0)
-                {
-                    config.AddInMemoryCollection(overrides);
-                }
+                values = AiRuntimeConfigurationMapper.CreateOverrides(settingsService);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"AI runtime settings could not be loaded: {ex.Message}");
+            }
+
+            // Reloaded from the Settings page while the app runs; see ApplySettingsToRuntime.
+            var source = new SettingsConfigurationSource(values);
+            _settingsConfiguration = source.Provider;
+            config.Add(source);
+        }
+
+        private async void OnSettingsChanged(object? sender, EventArgs e)
+        {
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(() => OnSettingsChanged(sender, e));
+                return;
+            }
+
+            // Text fields save on every keystroke, so apply once typing pauses.
+            _settingsApplyDelay?.Cancel();
+            var delay = _settingsApplyDelay = new CancellationTokenSource();
+            try
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(400), delay.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            ApplySettingsToRuntime();
+        }
+
+        /// <summary>
+        /// Pushes saved Settings into configuration. Chat clients are rebuilt on their next request,
+        /// options monitors see the change, and MCP servers reload when the Todoist key changed.
+        /// </summary>
+        private void ApplySettingsToRuntime()
+        {
+            if (_settingsConfiguration is null || _mainViewModel is null)
+            {
+                return;
+            }
+
+            IReadOnlyList<string> changed;
+            try
+            {
+                changed = _settingsConfiguration.Reload(AiRuntimeConfigurationMapper.CreateOverrides(_mainViewModel.SettingsService));
+            }
+            catch (Exception ex)
+            {
+                _errorHandlingService?.LogError(ex, "Settings could not be applied");
+                return;
+            }
+
+            if (changed.Count == 0)
+            {
+                return;
+            }
+
+            _mainViewModel.OnRuntimeSettingsApplied(changed);
+            if (changed.Any(key => key.StartsWith("McpOptions:", StringComparison.OrdinalIgnoreCase))
+                && GetCurrentServiceProvider()?.GetService<IMcpHost>() is { } mcpHost)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await mcpHost.ReloadAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        _errorHandlingService?.LogError(ex, "MCP servers failed to reload after a Settings change");
+                    }
+                });
             }
         }
 

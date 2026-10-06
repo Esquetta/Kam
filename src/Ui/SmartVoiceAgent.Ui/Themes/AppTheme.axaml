@@ -61,6 +61,10 @@
     <StreamGeometry x:Key="IconStop">M7 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z</StreamGeometry>
     <StreamGeometry x:Key="IconSearch">M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14z M21 21l-4.3-4.3</StreamGeometry>
     <StreamGeometry x:Key="IconClock">M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z M12 6v6l4 2</StreamGeometry>
+    <StreamGeometry x:Key="IconPencil">M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z M15 5l4 4</StreamGeometry>
+    <StreamGeometry x:Key="IconMore">M5 12h.01 M12 12h.01 M19 12h.01</StreamGeometry>
+    <StreamGeometry x:Key="IconChevronDown">M6 9l6 6 6-6</StreamGeometry>
+    <StreamGeometry x:Key="IconCpu">M9 2v2 M15 2v2 M9 20v2 M15 20v2 M2 9h2 M2 15h2 M20 9h2 M20 15h2 M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M9 9h6v6H9z</StreamGeometry>
 
     <!-- SunIcon - Simplified for Avalonia -->
     <StreamGeometry x:Key="SunIconGeometry">

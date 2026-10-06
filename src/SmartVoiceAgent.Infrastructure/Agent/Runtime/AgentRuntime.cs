@@ -25,7 +25,7 @@ public sealed class AgentRuntime : IAgentRuntime
 
     private const string NotRunResult = "Not run: the turn was stopped before this call finished.";
 
-    private readonly Func<IChatClient> _chatClientFactory;
+    private readonly Func<string?, IChatClient> _chatClientFactory;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IToolPermissionService _permissions;
     private readonly IAgentSessionStore _sessionStore;
@@ -37,7 +37,7 @@ public sealed class AgentRuntime : IAgentRuntime
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _sessionLocks = new();
 
     /// <summary>
-    /// Creates the runtime.
+    /// Creates a runtime where every thread uses the same model.
     /// </summary>
     /// <param name="chatClientFactory">Returns the chat model client; resolved lazily so settings can change.</param>
     /// <param name="scopeFactory">Creates a scope per turn to resolve tool providers.</param>
@@ -49,6 +49,33 @@ public sealed class AgentRuntime : IAgentRuntime
     /// <param name="workspaceRoot">Returns the folder the user is working in, or null when none is selected.</param>
     public AgentRuntime(
         Func<IChatClient> chatClientFactory,
+        IServiceScopeFactory scopeFactory,
+        IToolPermissionService permissions,
+        IAgentSessionStore sessionStore,
+        IOptions<AgentRuntimeOptions> options,
+        ILogger<AgentRuntime> logger,
+        Func<DateTimeOffset>? clock = null,
+        Func<string?>? workspaceRoot = null)
+        : this(_ => chatClientFactory(), scopeFactory, permissions, sessionStore, options, logger, clock, workspaceRoot)
+    {
+    }
+
+    /// <summary>
+    /// Creates the runtime.
+    /// </summary>
+    /// <param name="chatClientFactory">
+    /// Returns the chat model client for a model id, or for the model chosen in Settings when the id is null.
+    /// Called at the start of each turn, so settings can change between turns.
+    /// </param>
+    /// <param name="scopeFactory">Creates a scope per turn to resolve tool providers.</param>
+    /// <param name="permissions">Approval mode and rules.</param>
+    /// <param name="sessionStore">Thread persistence.</param>
+    /// <param name="options">Runtime limits.</param>
+    /// <param name="logger">Logger.</param>
+    /// <param name="clock">Optional clock for tests.</param>
+    /// <param name="workspaceRoot">Returns the folder the user is working in, or null when none is selected.</param>
+    public AgentRuntime(
+        Func<string?, IChatClient> chatClientFactory,
         IServiceScopeFactory scopeFactory,
         IToolPermissionService permissions,
         IAgentSessionStore sessionStore,
@@ -128,7 +155,9 @@ public sealed class AgentRuntime : IAgentRuntime
             history = (await _sessionStore.LoadAsync(sessionId, cancellationToken)).ToList();
             CloseDanglingToolCalls(history);
 
-            var chatClient = _chatClientFactory();
+            // A thread can pick its own model; otherwise the model chosen in Settings runs it.
+            var session = await _sessionStore.GetSummaryAsync(sessionId, cancellationToken);
+            var chatClient = _chatClientFactory(session?.ModelId);
             var systemPrompt = AgentSystemPrompt.Build(
                 _clock(),
                 tools.Count,

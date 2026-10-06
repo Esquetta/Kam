@@ -31,6 +31,35 @@ public sealed class IntegrationsViewModelTests : IDisposable
     }
 
     [Fact]
+    public void SaveWebSearchCommand_StoresKeyAndEngineId_AndClearRemovesThem()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var viewModel = new IntegrationsViewModel(settingsService);
+
+        viewModel.IsWebSearchConfigured.Should().BeFalse();
+        viewModel.WebSearchStatusText.Should().Be("NOT CONFIGURED");
+        viewModel.WebSearchApiKey = " search-key ";
+        viewModel.CanSaveWebSearch.Should().BeFalse("both the key and the engine id are needed");
+        viewModel.WebSearchEngineId = "engine-1";
+        viewModel.SaveWebSearchCommand.Execute(null);
+
+        settingsService.WebSearchApiKey.Should().Be("search-key");
+        settingsService.WebSearchEngineId.Should().Be("engine-1");
+        viewModel.IsWebSearchConfigured.Should().BeTrue();
+        viewModel.WebSearchStatusText.Should().Be("ACTIVE");
+        using (var reloaded = new JsonSettingsService(_settingsDirectory))
+        {
+            new IntegrationsViewModel(reloaded).IsWebSearchConfigured.Should().BeTrue();
+        }
+
+        viewModel.ClearWebSearchCommand.Execute(null);
+
+        settingsService.WebSearchApiKey.Should().BeEmpty();
+        settingsService.WebSearchEngineId.Should().BeEmpty();
+        viewModel.IsWebSearchConfigured.Should().BeFalse();
+    }
+
+    [Fact]
     public void Constructor_DefaultGitHubState_PresentsDirectConnectionBeforeAdvancedAppSettings()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);

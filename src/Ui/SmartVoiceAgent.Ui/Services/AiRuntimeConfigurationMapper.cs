@@ -10,6 +10,31 @@ public static class AiRuntimeConfigurationMapper
 {
     public const string DefaultTodoistMcpServerLink = "https://todoist.mcpverse.dev/mcp";
 
+    /// <summary>
+    /// Creates every configuration value Settings own: model profiles and integrations.
+    /// </summary>
+    /// <param name="settings">The saved settings.</param>
+    public static IReadOnlyDictionary<string, string?> CreateOverrides(ISettingsService settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        var overrides = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in CreateAiServiceOverrides(
+                     settings.ModelProviderProfiles,
+                     settings.ActivePlannerProfileId,
+                     settings.ActiveChatProfileId))
+        {
+            overrides[item.Key] = item.Value;
+        }
+
+        foreach (var item in CreateIntegrationOverrides(settings))
+        {
+            overrides[item.Key] = item.Value;
+        }
+
+        return overrides;
+    }
+
     public static IReadOnlyDictionary<string, string?> CreateAiServiceOverrides(
         IReadOnlyList<ModelProviderProfile> profiles,
         string activePlannerProfileId,
@@ -41,6 +66,25 @@ public static class AiRuntimeConfigurationMapper
         return overrides;
     }
 
+    /// <summary>
+    /// Returns the profile chat runs on: the chat profile when it is usable, otherwise the planner profile,
+    /// or null when neither has what it needs.
+    /// </summary>
+    public static ModelProviderProfile? ResolveChatProfile(ISettingsService settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        var profiles = settings.ModelProviderProfiles;
+        var chatProfile = SelectProfile(profiles, settings.ActiveChatProfileId, ModelProviderRole.Chat);
+        if (IsUsableProfile(chatProfile))
+        {
+            return chatProfile;
+        }
+
+        var plannerProfile = SelectProfile(profiles, settings.ActivePlannerProfileId, ModelProviderRole.Planner);
+        return IsUsableProfile(plannerProfile) ? plannerProfile : null;
+    }
+
     private static bool IsUsableProfile([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] ModelProviderProfile? profile)
     {
         return profile is not null
@@ -59,6 +103,9 @@ public static class AiRuntimeConfigurationMapper
             overrides["McpOptions:TodoistApiKey"] = settings.TodoistApiKey;
             overrides["McpOptions:TodoistServerLink"] = DefaultTodoistMcpServerLink;
         }
+
+        AddIfNotBlank(overrides, "WebResearch:SearchApiKey", settings.WebSearchApiKey?.Trim());
+        AddIfNotBlank(overrides, "WebResearch:SearchEngineId", settings.WebSearchEngineId?.Trim());
 
         if (!string.IsNullOrWhiteSpace(settings.SmtpUsername)
             && !string.IsNullOrWhiteSpace(settings.SmtpPassword))

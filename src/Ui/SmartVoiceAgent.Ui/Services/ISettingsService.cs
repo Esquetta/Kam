@@ -57,6 +57,16 @@ public interface ISettingsService
     /// </summary>
     string GitHubAppPrivateKeyPath { get; set; }
 
+    /// <summary>
+    /// Gets or sets the Google Custom Search API key the web search tool uses.
+    /// </summary>
+    string WebSearchApiKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Google Programmable Search engine ID the web search tool uses.
+    /// </summary>
+    string WebSearchEngineId { get; set; }
+
     #region Email (SMTP) Settings
 
     /// <summary>

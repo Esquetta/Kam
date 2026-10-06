@@ -1,7 +1,9 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.ViewModels;
 using System;
@@ -15,6 +17,8 @@ namespace SmartVoiceAgent.Ui.Views
         private MainWindowViewModel? _viewModel;
         private ScrollViewer? _logScrollViewer;
         private ScrollViewer? _chatScrollViewer;
+        private TextBox? _workbenchPromptInput;
+        private TextBox? _chatSearchInput;
         private bool _chatFollowsLatest = true;
 
         public MainWindow()
@@ -29,6 +33,15 @@ namespace SmartVoiceAgent.Ui.Views
                 _chatScrollViewer.ScrollChanged += OnChatScrollChanged;
             }
 
+            _workbenchPromptInput = this.FindControl<TextBox>("WorkbenchPromptInput");
+            _chatSearchInput = this.FindControl<TextBox>("ChatSearchInput");
+
+            // Tunnel, so Enter sends before a multi-line TextBox turns it into a new line.
+            foreach (var prompt in new[] { _workbenchPromptInput, this.FindControl<TextBox>("PromptInput") })
+            {
+                prompt?.AddHandler(KeyDownEvent, OnPromptKeyDown, RoutingStrategies.Tunnel);
+            }
+
             this.Closing += MainWindow_Closed;
             this.DataContextChanged += OnDataContextChanged;
         }
@@ -36,9 +49,69 @@ namespace SmartVoiceAgent.Ui.Views
         protected override void OnOpened(EventArgs e)
         {
             base.OnOpened(e);
-            
+
             // Attach WindowStateManager for responsive design
             WindowStateManager.Instance.AttachToWindow(this);
+        }
+
+        /// <summary>
+        /// Window shortcuts: Ctrl+N new chat, Ctrl+K search chats, Ctrl+L composer, F2 rename,
+        /// Ctrl+, Settings, and Esc to stop the running turn.
+        /// </summary>
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
+            if (e.Handled || DataContext is not MainWindowViewModel vm)
+            {
+                return;
+            }
+
+            var command = global::Avalonia.Application.Current?.PlatformSettings?.HotkeyConfiguration.CommandModifiers
+                ?? KeyModifiers.Control;
+            if (e.KeyModifiers == command)
+            {
+                switch (e.Key)
+                {
+                    case Key.N:
+                        ShowChat(vm);
+                        vm.NewAgentChatCommand.Execute(null);
+                        FocusAfterLayout(_workbenchPromptInput, selectAll: false);
+                        e.Handled = true;
+                        break;
+                    case Key.K:
+                        ShowChat(vm);
+                        FocusAfterLayout(_chatSearchInput, selectAll: true);
+                        e.Handled = true;
+                        break;
+                    case Key.L:
+                        ShowChat(vm);
+                        FocusAfterLayout(_workbenchPromptInput, selectAll: false);
+                        e.Handled = true;
+                        break;
+                    case Key.OemComma:
+                        vm.NavigateToSettingsCommand.Execute(null);
+                        e.Handled = true;
+                        break;
+                }
+
+                return;
+            }
+
+            if (e.KeyModifiers != KeyModifiers.None)
+            {
+                return;
+            }
+
+            if (e.Key == Key.F2 && vm.IsChatWorkbenchVisible)
+            {
+                vm.RenameAgentChatCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape && vm.IsAgentTurnRunning)
+            {
+                vm.StopAgentTurnCommand.Execute(null);
+                e.Handled = true;
+            }
         }
 
         private void OnDataContextChanged(object? sender, EventArgs e)
@@ -133,13 +206,28 @@ namespace SmartVoiceAgent.Ui.Views
 
             if (e.Key == Key.Escape)
             {
-                vm.HideSlashCommandSuggestions();
-                e.Handled = true;
+                if (vm.IsSlashCommandPaletteVisible)
+                {
+                    vm.HideSlashCommandSuggestions();
+                    e.Handled = true;
+                }
+                else if (vm.IsAgentTurnRunning)
+                {
+                    vm.StopAgentTurnCommand.Execute(null);
+                    e.Handled = true;
+                }
+
                 return;
             }
 
             if (e.Key == Key.Enter)
             {
+                // Shift+Enter is left to the TextBox, which adds a line where it accepts returns.
+                if (e.KeyModifiers.HasFlag(KeyModifiers.Shift))
+                {
+                    return;
+                }
+
                 if (vm.IsSlashCommandPaletteVisible && vm.AcceptSelectedSlashCommandSuggestion())
                 {
                     e.Handled = true;
@@ -149,6 +237,104 @@ namespace SmartVoiceAgent.Ui.Views
                 vm.SubmitCommand.Execute(null);
                 e.Handled = true;
             }
+        }
+
+        private void OnChatSearchKeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Escape || DataContext is not MainWindowViewModel vm)
+            {
+                return;
+            }
+
+            // The first Esc clears the search; the next one goes back to the composer.
+            if (vm.IsAgentChatSearchActive)
+            {
+                vm.AgentChatSearchText = string.Empty;
+            }
+            else
+            {
+                FocusAfterLayout(_workbenchPromptInput, selectAll: false);
+            }
+
+            e.Handled = true;
+        }
+
+        private void OnRenameChatClick(object? sender, RoutedEventArgs e)
+        {
+            // Row menus pass their thread; the header menu passes none, which means the selected thread.
+            _viewModel?.RenameAgentChatCommand.Execute(ChatFrom(sender));
+        }
+
+        private void OnDeleteChatClick(object? sender, RoutedEventArgs e)
+        {
+            _viewModel?.DeleteAgentChatCommand.Execute(ChatFrom(sender));
+        }
+
+        private void OnRenameEditorPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+        {
+            if (e.Property == IsVisibleProperty
+                && e.NewValue is true
+                && sender is Border { Child: TextBox input })
+            {
+                FocusAfterLayout(input, selectAll: true);
+            }
+        }
+
+        private void OnRenameKeyDown(object? sender, KeyEventArgs e)
+        {
+            var chat = ChatFrom(sender);
+            if (e.Key == Key.Enter)
+            {
+                _viewModel?.CommitAgentChatRename(chat);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape)
+            {
+                _viewModel?.CancelAgentChatRename(chat);
+                e.Handled = true;
+            }
+        }
+
+        private void OnRenameLostFocus(object? sender, RoutedEventArgs e)
+        {
+            _viewModel?.CommitAgentChatRename(ChatFrom(sender));
+        }
+
+        private static AgentChatSessionViewModel? ChatFrom(object? sender)
+        {
+            return (sender as StyledElement)?.DataContext as AgentChatSessionViewModel;
+        }
+
+        private static void ShowChat(MainWindowViewModel vm)
+        {
+            if (!vm.IsChatWorkbenchVisible)
+            {
+                vm.NavigateToCoordinatorCommand.Execute(null);
+            }
+        }
+
+        /// <summary>
+        /// Focuses an input once the layout shows it, for example right after a page switch.
+        /// </summary>
+        private static void FocusAfterLayout(TextBox? input, bool selectAll)
+        {
+            if (input is null)
+            {
+                return;
+            }
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                input.Focus(NavigationMethod.Tab);
+                if (selectAll)
+                {
+                    input.SelectAll();
+                }
+                else
+                {
+                    input.CaretIndex = input.Text?.Length ?? 0;
+                }
+            }, DispatcherPriority.Background);
         }
 
         private async void OnAttachFilesClick(object? sender, RoutedEventArgs e)

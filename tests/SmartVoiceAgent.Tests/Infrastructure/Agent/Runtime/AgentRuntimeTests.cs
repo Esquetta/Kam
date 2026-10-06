@@ -53,6 +53,25 @@ public sealed class AgentRuntimeTests : IDisposable
     }
 
     [Fact]
+    public async Task RunTurnAsync_UsesTheModelChosenForTheThread()
+    {
+        var store = new JsonAgentSessionStore(Path.Combine(_directory, "sessions"));
+        var requestedModels = new List<string?>();
+        var chat = new ScriptedChatClient([new TextContent("one")], [new TextContent("two")]);
+        var runtime = CreateRuntime(chat, [], store: store, chatFactory: model =>
+        {
+            requestedModels.Add(model);
+            return chat;
+        });
+
+        await CollectAsync(runtime, "s1", "first");
+        await store.SetModelAsync("s1", "vendor/model-b", TestContext.Current.CancellationToken);
+        await CollectAsync(runtime, "s1", "second");
+
+        requestedModels.Distinct().Should().Equal(null, "vendor/model-b");
+    }
+
+    [Fact]
     public async Task RunTurnAsync_PromptContributors_AppendSectionsToSystemPrompt()
     {
         var chat = new ScriptedChatClient([new TextContent("ok")]);
@@ -440,7 +459,8 @@ public sealed class AgentRuntimeTests : IDisposable
         int maxResultCharacters = 16000,
         int contextTokenBudget = 64000,
         IReadOnlyList<IAgentPromptContributor>? contributors = null,
-        string? workspaceRoot = null)
+        string? workspaceRoot = null,
+        Func<string?, IChatClient>? chatFactory = null)
     {
         var services = new ServiceCollection();
         services.AddScoped<IAgentToolProvider>(_ => new StaticToolProvider(tools));
@@ -451,7 +471,7 @@ public sealed class AgentRuntimeTests : IDisposable
         var provider = services.BuildServiceProvider();
 
         return new AgentRuntime(
-            () => chat,
+            chatFactory ?? (_ => chat),
             provider.GetRequiredService<IServiceScopeFactory>(),
             permissions ?? new ToolPermissionService(Path.Combine(_directory, "permissions.json")),
             store ?? new JsonAgentSessionStore(Path.Combine(_directory, "sessions")),

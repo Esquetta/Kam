@@ -51,7 +51,7 @@ public sealed class MainWindowMetadataTests
         mainWindowText.Should().Contain("Button.NavBtn");
         mainWindowText.Should().Contain("ActivePageTitle");
         mainWindowText.Should().Contain("BrandGradientBrush");
-        mainWindowText.Should().Contain("Model follows Settings");
+        mainWindowText.Should().Contain("Classes=\"ModelPicker\"");
         mainWindowText.Should().Contain("ComposerSurface");
         mainWindowText.Should().Contain("UseComposerSuggestionCommand");
         mainWindowText.Should().Contain("WindowStateManager.Instance");
@@ -116,10 +116,65 @@ public sealed class MainWindowMetadataTests
         mainWindowText.Should().Contain("Agent threads");
         mainWindowText.Should().Contain("New task");
         mainWindowText.Should().Contain("Conversation timeline");
-        mainWindowText.Should().Contain("Model follows Settings");
+        mainWindowText.Should().NotContain("Model follows Settings");
         mainWindowText.Should().Contain("Start a focused agent task");
         mainWindowText.Should().Contain("Review current workspace");
         mainWindowText.Should().NotContain("Command Deck");
+    }
+
+    [Fact]
+    public void MainWindow_ThreadListSupportsSearchRenameAndDelete()
+    {
+        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+
+        mainWindowText.Should().Contain("x:Name=\"ChatSearchInput\"");
+        mainWindowText.Should().Contain("PlaceholderText=\"Search chats (Ctrl+K)\"");
+        mainWindowText.Should().Contain("Text=\"{Binding AgentChatSearchText, Mode=TwoWay}\"");
+        mainWindowText.Should().Contain("ClearAgentChatSearchCommand");
+        mainWindowText.Should().Contain("IsVisible=\"{Binding HasNoAgentChatSearchResults}\"");
+        mainWindowText.Should().Contain("No chats match");
+        mainWindowText.Should().Contain("IsVisible=\"{Binding IsVisibleInList}\"");
+        mainWindowText.Should().Contain("<MenuItem Header=\"Rename\" InputGesture=\"F2\" Click=\"OnRenameChatClick\"/>");
+        mainWindowText.Should().Contain("Click=\"OnDeleteChatClick\"");
+        mainWindowText.Should().Contain("Text=\"{Binding EditTitle, Mode=TwoWay}\"");
+        mainWindowText.Should().Contain("KeyDown=\"OnRenameKeyDown\"");
+        mainWindowText.Should().Contain("LostFocus=\"OnRenameLostFocus\"");
+        mainWindowText.Should().Contain("Delete this chat?");
+        mainWindowText.Should().Contain("ConfirmDeleteAgentChatCommand");
+        mainWindowText.Should().Contain("CancelDeleteAgentChatCommand");
+        mainWindowText.Should().Contain("ToolTip.Tip=\"New chat (Ctrl+N)\"");
+    }
+
+    [Fact]
+    public void MainWindow_ChatRendersMarkdownWithCopyButtonsAndAModelPicker()
+    {
+        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+
+        mainWindowText.Should().Contain("xmlns:controls=\"using:SmartVoiceAgent.Ui.Controls\"");
+        mainWindowText.Should().Contain("<controls:MarkdownView Markdown=\"{Binding Content}\"/>");
+        mainWindowText.Should().Contain("CopyAgentMessageCommand");
+        mainWindowText.Should().Contain("IsVisible=\"{Binding IsCopied}\"");
+        mainWindowText.Should().Contain("Header=\"Copy conversation\" Command=\"{Binding CopyAgentChatCommand}\"");
+        mainWindowText.Should().Contain("ItemsSource=\"{Binding AgentChatModelOptions}\"");
+        mainWindowText.Should().Contain("SelectedItem=\"{Binding SelectedAgentChatModel, Mode=TwoWay}\"");
+        mainWindowText.Should().Contain("ToolTip.Tip=\"{Binding AgentChatModelTip}\"");
+        mainWindowText.Should().Contain("<DataTemplate DataType=\"vm:AgentChatModelOption\">");
+    }
+
+    [Fact]
+    public void MainWindow_ComposerSendsOnEnterAndAddsLinesOnShiftEnter()
+    {
+        var mainWindow = XDocument.Load(FindMainWindowXamlPath()).Root;
+        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+
+        var prompt = mainWindow!
+            .Descendants()
+            .Single(element => AttributeValue(element, "Name") == "WorkbenchPromptInput");
+
+        AttributeValue(prompt, "AcceptsReturn").Should().Be("True");
+        AttributeValue(prompt, "KeyDown").Should().BeNull("MainWindow handles prompt keys before the TextBox adds a line");
+        mainWindowText.Should().Contain("Enter to send  ·  Shift+Enter for a new line  ·  Type / for commands");
+        mainWindowText.Should().Contain("ToolTip.Tip=\"Stop (Esc)\"");
     }
 
     [Fact]

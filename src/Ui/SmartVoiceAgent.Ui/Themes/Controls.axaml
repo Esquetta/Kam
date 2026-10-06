@@ -461,4 +461,122 @@
         <Setter Property="FontSize" Value="12" />
     </Style>
 
+    <!-- Markdown in chat replies (Controls/MarkdownView.cs) -->
+    <Style Selector="SelectableTextBlock.Markdown">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="LineHeight" Value="22" />
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <Style Selector="SelectableTextBlock.MarkdownHeading">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Margin" Value="0,6,0,0" />
+    </Style>
+
+    <Style Selector="SelectableTextBlock.MarkdownHeading.H1">
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="LineHeight" Value="28" />
+    </Style>
+
+    <Style Selector="SelectableTextBlock.MarkdownHeading.H2">
+        <Setter Property="FontSize" Value="17" />
+        <Setter Property="LineHeight" Value="25" />
+    </Style>
+
+    <Style Selector="SelectableTextBlock.MarkdownHeading.H3">
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="LineHeight" Value="22" />
+    </Style>
+
+    <Style Selector="TextBlock.MarkdownListMarker">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="LineHeight" Value="22" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="Margin" Value="2,0,8,0" />
+    </Style>
+
+    <Style Selector="Border.MarkdownQuote">
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}" />
+        <Setter Property="BorderThickness" Value="3,0,0,0" />
+        <Setter Property="Padding" Value="12,2,0,2" />
+    </Style>
+
+    <Style Selector="Border.MarkdownRule">
+        <Setter Property="Height" Value="1" />
+        <Setter Property="Margin" Value="0,4" />
+        <Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}" />
+    </Style>
+
+    <Style Selector="Border.MarkdownCodeBlock">
+        <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="ClipToBounds" Value="True" />
+    </Style>
+
+    <Style Selector="Grid.MarkdownCodeHeader">
+        <Setter Property="Margin" Value="12,5,5,0" />
+    </Style>
+
+    <Style Selector="TextBlock.MarkdownCodeLanguage">
+        <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="SelectableTextBlock.MarkdownCode">
+        <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="LineHeight" Value="19" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        <Setter Property="TextWrapping" Value="NoWrap" />
+        <Setter Property="Margin" Value="12,2,12,12" />
+    </Style>
+
+    <Style Selector="Button.MarkdownCopy">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="8,3" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style Selector="Button.MarkdownCopy:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+
+    <Style Selector="Button.MarkdownCopy Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}" />
+    </Style>
+
+    <Style Selector="Border.MarkdownTable">
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+        <Setter Property="BorderThickness" Value="1,1,0,0" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="ClipToBounds" Value="True" />
+    </Style>
+
+    <Style Selector="Border.MarkdownTableCell">
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+        <Setter Property="BorderThickness" Value="0,0,1,1" />
+        <Setter Property="Padding" Value="10,6" />
+    </Style>
+
+    <Style Selector="Border.MarkdownTableCell.Header">
+        <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
+    </Style>
+
+    <Style Selector="Border.MarkdownTableCell.Header SelectableTextBlock">
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+
 </Styles>
