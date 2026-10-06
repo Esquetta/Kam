@@ -21,8 +21,8 @@ public class HuggingFaceSTTService : ISpeechToTextService
         IConfiguration configuration)
     {
         this.logger = logger;
-        _config = configuration.GetSection("HuggingFaceConfig").Get<HuggingFaceConfig>()
-            ?? throw new NullReferenceException($"\" HuggingFaceConfig section cannot found in configuration."); ;
+        // Without a HuggingFaceConfig section the defaults apply; a missing key fails the request, not startup.
+        _config = configuration.GetSection("HuggingFaceConfig").Get<HuggingFaceConfig>() ?? new HuggingFaceConfig();
         _semaphore = new SemaphoreSlim(_config.MaxConcurrentRequests, _config.MaxConcurrentRequests);
         _httpClient = httpClient;
 

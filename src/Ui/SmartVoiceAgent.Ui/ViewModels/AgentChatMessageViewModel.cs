@@ -1,7 +1,10 @@
 using ReactiveUI;
 using SmartVoiceAgent.Core.Models.Agents;
 using System;
+using System.Text;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace SmartVoiceAgent.Ui.ViewModels
 {
@@ -35,6 +38,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
     /// </summary>
     public sealed class AgentChatMessageViewModel : ReactiveObject
     {
+        private const int StreamRefreshMilliseconds = 50;
+
+        private readonly StringBuilder _pendingContent = new();
+        private long _lastContentRefresh;
+        private bool _contentRefreshScheduled;
         private string _content;
         private bool _isStreaming;
         private AgentToolStepState _toolState;
@@ -99,7 +107,15 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public bool IsStreaming
         {
             get => _isStreaming;
-            set => this.RaiseAndSetIfChanged(ref _isStreaming, value);
+            set
+            {
+                if (!value)
+                {
+                    FlushContent();
+                }
+
+                this.RaiseAndSetIfChanged(ref _isStreaming, value);
+            }
         }
 
         public string CallId { get; } = string.Empty;
@@ -199,9 +215,51 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 DateTime.Now.ToString("HH:mm"));
         }
 
+        /// <summary>
+        /// Adds streamed text. While streaming on the UI thread the visible text refreshes at most
+        /// every 50 ms, so a long reply is not laid out again for every token.
+        /// </summary>
+        /// <param name="text">The new text.</param>
         public void AppendContent(string text)
         {
-            Content += text;
+            if (string.IsNullOrEmpty(text))
+            {
+                return;
+            }
+
+            _pendingContent.Append(text);
+            var elapsed = Environment.TickCount64 - _lastContentRefresh;
+            if (!IsStreaming || SynchronizationContext.Current is null || elapsed >= StreamRefreshMilliseconds)
+            {
+                FlushContent();
+                return;
+            }
+
+            if (!_contentRefreshScheduled)
+            {
+                _contentRefreshScheduled = true;
+                _ = FlushContentLaterAsync((int)(StreamRefreshMilliseconds - elapsed));
+            }
+        }
+
+        private async Task FlushContentLaterAsync(int delayMilliseconds)
+        {
+            // Resumes on the UI thread, which captured the context.
+            await Task.Delay(delayMilliseconds);
+            _contentRefreshScheduled = false;
+            FlushContent();
+        }
+
+        private void FlushContent()
+        {
+            if (_pendingContent.Length == 0)
+            {
+                return;
+            }
+
+            _lastContentRefresh = Environment.TickCount64;
+            Content = _content + _pendingContent;
+            _pendingContent.Clear();
         }
 
         /// <summary>Gets the tooltip for "Always allow", naming the rule it saves.</summary>

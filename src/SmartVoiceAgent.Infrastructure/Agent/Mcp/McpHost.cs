@@ -14,8 +14,9 @@ using SmartVoiceAgent.Core.Models.Agents.Extensions;
 namespace SmartVoiceAgent.Infrastructure.Agent.Mcp;
 
 /// <summary>
-/// Starts configured MCP servers on the first agent turn that needs tools and offers their tools as
-/// <c>mcp__{server}__{tool}</c>. A failed server stays failed until it is restarted or the configuration reloads.
+/// Starts configured MCP servers (at app start, or on the first agent turn that needs tools) and offers their
+/// tools as <c>mcp__{server}__{tool}</c>. A turn waits only briefly for servers that are still starting; their
+/// tools join a later turn. A failed server stays failed until it is restarted or the configuration reloads.
 /// </summary>
 public sealed class McpHost : IMcpHost, IAsyncDisposable, IDisposable
 {
@@ -28,7 +29,9 @@ public sealed class McpHost : IMcpHost, IAsyncDisposable, IDisposable
     private readonly ILogger _logger;
     private readonly Func<McpServerDefinition, IClientTransport> _transportFactory;
     private readonly TimeSpan _connectTimeout;
+    private readonly TimeSpan _turnWait;
     private readonly object _gate = new();
+    private readonly CancellationTokenSource _shutdown = new();
     private readonly Dictionary<string, ServerEntry> _servers = new(StringComparer.OrdinalIgnoreCase);
     private bool _loaded;
 
@@ -42,13 +45,15 @@ public sealed class McpHost : IMcpHost, IAsyncDisposable, IDisposable
     /// <param name="transportFactory">Creates the connection to a server whose references are already resolved;
     /// tests replace it.</param>
     /// <param name="connectTimeout">How long a server may take to start and list its tools.</param>
+    /// <param name="turnWait">How long <see cref="GetToolsAsync"/> waits for servers that are still starting.</param>
     public McpHost(
         IEnumerable<IMcpServerSource> sources,
         string userConfigPath,
         ISecretValueProvider? secrets = null,
         ILoggerFactory? loggerFactory = null,
         Func<McpServerDefinition, IClientTransport>? transportFactory = null,
-        TimeSpan? connectTimeout = null)
+        TimeSpan? connectTimeout = null,
+        TimeSpan? turnWait = null)
     {
         _sources = sources.ToList();
         UserConfigPath = userConfigPath;
@@ -57,6 +62,7 @@ public sealed class McpHost : IMcpHost, IAsyncDisposable, IDisposable
         _logger = _loggerFactory.CreateLogger<McpHost>();
         _transportFactory = transportFactory ?? CreateTransport;
         _connectTimeout = connectTimeout ?? TimeSpan.FromSeconds(30);
+        _turnWait = turnWait ?? TimeSpan.FromSeconds(5);
     }
 
     /// <inheritdoc />
@@ -103,8 +109,16 @@ public sealed class McpHost : IMcpHost, IAsyncDisposable, IDisposable
         if (pending.Count > 0)
         {
             RaiseStateChanged();
-            // Connecting runs on its own clock, so a stopped turn does not leave a server half-started.
-            await Task.WhenAll(pending).WaitAsync(cancellationToken);
+            // Connecting runs on its own clock, so a stopped turn does not leave a server half-started,
+            // and a slow server keeps starting after the turn stops waiting for it.
+            try
+            {
+                await Task.WhenAll(pending).WaitAsync(_turnWait, cancellationToken);
+            }
+            catch (TimeoutException)
+            {
+                _logger.LogInformation("Continuing without MCP servers that are still starting");
+            }
         }
 
         lock (_gate)
@@ -219,6 +233,12 @@ public sealed class McpHost : IMcpHost, IAsyncDisposable, IDisposable
         List<McpClient> clients;
         lock (_gate)
         {
+            if (_shutdown.IsCancellationRequested)
+            {
+                return;
+            }
+
+            _shutdown.Cancel();
             clients = _servers.Values.Where(entry => entry.Client is not null).Select(entry => entry.Client!).ToList();
             _servers.Clear();
         }
@@ -281,7 +301,8 @@ public sealed class McpHost : IMcpHost, IAsyncDisposable, IDisposable
         McpClient? client = null;
         try
         {
-            using var timeout = new CancellationTokenSource(_connectTimeout);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_shutdown.Token);
+            timeout.CancelAfter(_connectTimeout);
             var transport = _transportFactory(Resolve(entry.Definition));
             client = await McpClient.CreateAsync(
                 transport,
@@ -305,13 +326,27 @@ public sealed class McpHost : IMcpHost, IAsyncDisposable, IDisposable
                     $"{tool.ProtocolTool.Title ?? tool.ProtocolTool.Annotations?.Title ?? tool.ProtocolTool.Name} ({entry.Definition.Name})"))
                 .ToList();
 
+            bool current;
             lock (_gate)
             {
-                entry.Client = client;
-                entry.Tools = descriptors;
-                entry.Status = McpServerStatus.Ready;
-                entry.Error = null;
-                entry.Connecting = null;
+                // A reload or shutdown while the server started drops its entry; don't leave the process running.
+                current = !_shutdown.IsCancellationRequested
+                    && _servers.TryGetValue(entry.Definition.Name, out var registered)
+                    && ReferenceEquals(registered, entry);
+                if (current)
+                {
+                    entry.Client = client;
+                    entry.Tools = descriptors;
+                    entry.Status = McpServerStatus.Ready;
+                    entry.Error = null;
+                    entry.Connecting = null;
+                }
+            }
+
+            if (!current)
+            {
+                await DisposeClientAsync(client);
+                return;
             }
 
             _logger.LogInformation("MCP server {Server} ready with {Count} tools", entry.Definition.Name, descriptors.Count);
@@ -321,6 +356,11 @@ public sealed class McpHost : IMcpHost, IAsyncDisposable, IDisposable
             if (client is not null)
             {
                 await DisposeClientAsync(client);
+            }
+
+            if (_shutdown.IsCancellationRequested)
+            {
+                return;
             }
 
             var message = ex is OperationCanceledException

@@ -19,7 +19,9 @@ public interface IMcpHost
 
     /// <summary>
     /// Connects servers that have not been started yet and returns the tools of every ready server.
-    /// A server that fails stays failed until it is restarted or the configuration is reloaded.
+    /// It waits only briefly for servers that are still starting; they keep starting and their tools
+    /// are returned by a later call. A server that fails stays failed until it is restarted or the
+    /// configuration is reloaded.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<AgentToolDescriptor>> GetToolsAsync(CancellationToken cancellationToken = default);

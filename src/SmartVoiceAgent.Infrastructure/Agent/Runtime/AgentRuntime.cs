@@ -32,6 +32,7 @@ public sealed class AgentRuntime : IAgentRuntime
     private readonly AgentRuntimeOptions _options;
     private readonly ILogger<AgentRuntime> _logger;
     private readonly Func<DateTimeOffset> _clock;
+    private readonly Func<string?> _workspaceRoot;
     private readonly ConcurrentDictionary<string, TaskCompletionSource<ApprovalAnswer>> _pendingApprovals = new();
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _sessionLocks = new();
 
@@ -45,6 +46,7 @@ public sealed class AgentRuntime : IAgentRuntime
     /// <param name="options">Runtime limits.</param>
     /// <param name="logger">Logger.</param>
     /// <param name="clock">Optional clock for tests.</param>
+    /// <param name="workspaceRoot">Returns the folder the user is working in, or null when none is selected.</param>
     public AgentRuntime(
         Func<IChatClient> chatClientFactory,
         IServiceScopeFactory scopeFactory,
@@ -52,7 +54,8 @@ public sealed class AgentRuntime : IAgentRuntime
         IAgentSessionStore sessionStore,
         IOptions<AgentRuntimeOptions> options,
         ILogger<AgentRuntime> logger,
-        Func<DateTimeOffset>? clock = null)
+        Func<DateTimeOffset>? clock = null,
+        Func<string?>? workspaceRoot = null)
     {
         _chatClientFactory = chatClientFactory;
         _scopeFactory = scopeFactory;
@@ -61,6 +64,7 @@ public sealed class AgentRuntime : IAgentRuntime
         _options = options.Value;
         _logger = logger;
         _clock = clock ?? (() => DateTimeOffset.Now);
+        _workspaceRoot = workspaceRoot ?? (() => null);
     }
 
     /// <inheritdoc />
@@ -125,7 +129,11 @@ public sealed class AgentRuntime : IAgentRuntime
             CloseDanglingToolCalls(history);
 
             var chatClient = _chatClientFactory();
-            var systemPrompt = AgentSystemPrompt.Build(_clock(), tools.Count, sections: CollectPromptSections(scope.ServiceProvider));
+            var systemPrompt = AgentSystemPrompt.Build(
+                _clock(),
+                tools.Count,
+                _workspaceRoot(),
+                CollectPromptSections(scope.ServiceProvider));
             var toolTokens = AgentContextWindow.EstimateTokens(tools);
             var usage = new TurnUsage();
 

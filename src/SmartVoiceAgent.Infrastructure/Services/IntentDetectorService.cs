@@ -21,7 +21,7 @@ public class IntentDetectorService : IIntentDetectionService
     public IntentDetectorService(LoggerServiceBase logger, IConfiguration configuration)
     {
         _logger = logger;
-        _config = configuration.GetSection("Intent").Get<IntentConfig>() ?? throw new NullReferenceException("Intent section cannot found in configuration.");
+        _config = configuration.GetSection("Intent").Get<IntentConfig>() ?? new IntentConfig();
         _intentPatterns = LoadIntentPatterns();
         _entityRegexes = LoadEntityRegexes();
     }

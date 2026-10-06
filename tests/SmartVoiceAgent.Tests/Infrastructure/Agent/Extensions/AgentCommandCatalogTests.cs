@@ -75,7 +75,41 @@ public sealed class AgentCommandCatalogTests : IDisposable
         service.GetCommands().Should().NotContain(command => command.Name == "/triage");
     }
 
+    [Fact]
+    public void SlashCommandService_TypingInPalette_ReadsCommandFilesOnce()
+    {
+        var commands = new CountingCommands();
+        var service = new SlashCommandService(agentCommands: commands);
+
+        foreach (var typed in new[] { "/", "/t", "/tr", "/tri", "/tria" })
+        {
+            service.GetSuggestions(typed);
+        }
+
+        commands.Reads.Should().Be(1);
+        service.GetSuggestions("/tria").Should().Contain(command => command.Name == "/triage");
+    }
+
     public void Dispose() => _folder.Dispose();
+
+    private sealed class CountingCommands : IAgentCommandCatalog
+    {
+        public int Reads { get; private set; }
+
+        public string UserCommandsDirectory => "commands";
+
+        public IReadOnlyList<AgentCommandInfo> GetCommands()
+        {
+            Reads++;
+            return [new AgentCommandInfo("triage", "Triage new issues", string.Empty, "triage.md", "user")];
+        }
+
+        public bool TryExpand(string input, out string prompt)
+        {
+            prompt = string.Empty;
+            return false;
+        }
+    }
 
     private IAgentPluginCatalog PluginsWith(params string[] commandFiles)
     {

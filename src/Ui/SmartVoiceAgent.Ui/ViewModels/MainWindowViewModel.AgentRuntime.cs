@@ -25,6 +25,14 @@ namespace SmartVoiceAgent.Ui.ViewModels
     }
 
     /// <summary>
+    /// A message sent while another turn was running, waiting for that turn to finish.
+    /// </summary>
+    /// <param name="Session">The chat the message was sent in.</param>
+    /// <param name="DisplayText">What the user typed or said, shown in the thread when it runs.</param>
+    /// <param name="Message">What goes to the agent, with attachments or command expansion applied.</param>
+    public sealed record QueuedAgentMessage(AgentChatSessionViewModel Session, string DisplayText, string Message);
+
+    /// <summary>
     /// Chat side of the tool-calling agent runtime: streaming replies, tool steps and approval cards.
     /// </summary>
     public partial class MainWindowViewModel
@@ -37,6 +45,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private IAgentSessionStore? _agentSessionStore;
         private CancellationTokenSource? _agentTurnCancellation;
         private bool _isAgentTurnRunning;
+        private readonly List<QueuedAgentMessage> _queuedAgentMessages = [];
         private ApprovalModeOption _selectedApprovalMode = ApprovalModes[0];
 
         /// <summary>
@@ -57,6 +66,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public ICommand StopAgentTurnCommand { get; }
 
+        public ICommand ClearQueuedAgentMessagesCommand { get; }
+
         /// <summary>
         /// Gets whether chat runs through the tool-calling agent.
         /// </summary>
@@ -76,6 +87,26 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         public bool IsSendVisible => !IsAgentTurnRunning;
+
+        /// <summary>
+        /// Gets the messages waiting for the running turn to finish, oldest first.
+        /// </summary>
+        public IReadOnlyList<QueuedAgentMessage> QueuedAgentMessages => _queuedAgentMessages;
+
+        /// <summary>
+        /// Gets whether messages are waiting for the running turn to finish.
+        /// </summary>
+        public bool HasQueuedAgentMessages => _queuedAgentMessages.Count > 0;
+
+        /// <summary>
+        /// Gets the composer line naming what will be sent once the running turn finishes.
+        /// </summary>
+        public string QueuedAgentMessagesText => _queuedAgentMessages.Count switch
+        {
+            0 => string.Empty,
+            1 => $"Sends next: {_queuedAgentMessages[0].DisplayText}",
+            var count => $"Sends next: {_queuedAgentMessages[0].DisplayText} (+{count - 1} more)"
+        };
 
         public ApprovalModeOption SelectedApprovalMode
         {
@@ -138,6 +169,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 await foreach (var agentEvent in _agentRuntime.RunTurnAsync(session.SessionId, message, cancellation.Token))
                 {
+                    // Text deltas only grow the streaming message; the thread list and counters
+                    // change when an item is added, so they refresh then and not per token.
+                    var timelineChanged = agentEvent is not AgentTextDelta;
                     switch (agentEvent)
                     {
                         case AgentTextDelta delta:
@@ -146,6 +180,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                                 streaming = AgentChatMessageViewModel.Agent(string.Empty);
                                 streaming.IsStreaming = true;
                                 session.AddMessage(streaming);
+                                timelineChanged = true;
                             }
 
                             streaming.AppendContent(delta.Text);
@@ -222,8 +257,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
                             break;
                     }
 
-                    session.RelativeTimeText = "now";
-                    RaiseAgentChatStateChanged();
+                    if (timelineChanged)
+                    {
+                        session.RelativeTimeText = "now";
+                        RaiseAgentChatStateChanged();
+                    }
                 }
             }
             catch (Exception ex)
@@ -245,6 +283,113 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 IsAgentTurnRunning = false;
                 RaiseAgentChatStateChanged();
             }
+
+            await RunNextQueuedAgentMessageAsync();
+        }
+
+        /// <summary>
+        /// Starts a turn, or queues it when another turn is running so nothing sent mid-turn is lost.
+        /// </summary>
+        /// <param name="session">The chat to run the turn in.</param>
+        /// <param name="displayText">What the user typed or said.</param>
+        /// <param name="message">What goes to the agent.</param>
+        private async Task StartOrQueueAgentTurnAsync(AgentChatSessionViewModel session, string displayText, string message)
+        {
+            if (IsAgentTurnRunning)
+            {
+                _queuedAgentMessages.Add(new QueuedAgentMessage(session, displayText, message));
+                RaiseQueuedAgentMessagesChanged();
+                AddLog($"QUEUED: {displayText}");
+                return;
+            }
+
+            AddAgentChatMessage(session, "You", displayText);
+            await RunAgentTurnAsync(session, message);
+        }
+
+        /// <summary>
+        /// Queues typed input while a turn runs. Plain messages, Markdown commands and /compact
+        /// wait for the turn; built-in commands such as /settings still run at once.
+        /// </summary>
+        /// <param name="input">The trimmed composer text.</param>
+        /// <returns>True when the input was queued.</returns>
+        private bool TryQueueAgentInput(string input)
+        {
+            if (!IsAgentTurnRunning || _agentRuntime is null || SelectedAgentChatSession is not { } session)
+            {
+                return false;
+            }
+
+            string message;
+            if (input.Equals("/compact", StringComparison.OrdinalIgnoreCase))
+            {
+                message = input;
+            }
+            else if (input.StartsWith('/'))
+            {
+                if (_agentCommands is null
+                    || IsBuiltInSlashCommand(input)
+                    || !_agentCommands.TryExpand(input, out var commandPrompt))
+                {
+                    return false;
+                }
+
+                message = commandPrompt;
+            }
+            else
+            {
+                message = BuildCommandSubmission(input, ComposerAttachments);
+                ClearComposerAttachments();
+            }
+
+            CommandInputText = string.Empty;
+            SlashCommandSuggestions.Clear();
+            IsSlashCommandPaletteVisible = false;
+            _queuedAgentMessages.Add(new QueuedAgentMessage(session, input, message));
+            RaiseQueuedAgentMessagesChanged();
+            AddLog($"QUEUED: {input}");
+            return true;
+        }
+
+        private async Task RunNextQueuedAgentMessageAsync()
+        {
+            while (!IsAgentTurnRunning && _queuedAgentMessages.Count > 0)
+            {
+                var next = _queuedAgentMessages[0];
+                _queuedAgentMessages.RemoveAt(0);
+                RaiseQueuedAgentMessagesChanged();
+
+                // The chat may have been closed while the message waited.
+                if (!AgentChatSessions.Contains(next.Session))
+                {
+                    continue;
+                }
+
+                AddAgentChatMessage(next.Session, "You", next.DisplayText);
+
+                // That turn runs whatever is still queued when it finishes.
+                await RunAgentTurnAsync(next.Session, next.Message);
+                return;
+            }
+        }
+
+        private void ClearQueuedAgentMessages()
+        {
+            if (_queuedAgentMessages.Count == 0)
+            {
+                return;
+            }
+
+            _queuedAgentMessages.Clear();
+            RaiseQueuedAgentMessagesChanged();
+            AddLog("QUEUE_CLEARED");
+        }
+
+        private void RaiseQueuedAgentMessagesChanged()
+        {
+            this.RaisePropertyChanged(nameof(QueuedAgentMessages));
+            this.RaisePropertyChanged(nameof(HasQueuedAgentMessages));
+            this.RaisePropertyChanged(nameof(QueuedAgentMessagesText));
         }
 
         private void StopAgentTurn()

@@ -70,6 +70,19 @@ public sealed class AgentRuntimeTests : IDisposable
     }
 
     [Fact]
+    public async Task RunTurnAsync_WithWorkspace_TellsTheModelWhichFolderToUse()
+    {
+        var chat = new ScriptedChatClient([new TextContent("ok")]);
+        var runtime = CreateRuntime(chat, [], workspaceRoot: @"C:\Projects\Kam");
+
+        await CollectAsync(runtime, "s1", "review the project");
+
+        var prompt = chat.Requests.Single()[0].Text;
+        prompt.Should().Contain(@"The user's workspace folder is C:\Projects\Kam.");
+        prompt.Should().NotContain("No workspace folder is selected");
+    }
+
+    [Fact]
     public async Task RunTurnAsync_RiskyToolInAskMode_WaitsForApprovalBeforeRunning()
     {
         var written = 0;
@@ -426,7 +439,8 @@ public sealed class AgentRuntimeTests : IDisposable
         int maxIterations = 24,
         int maxResultCharacters = 16000,
         int contextTokenBudget = 64000,
-        IReadOnlyList<IAgentPromptContributor>? contributors = null)
+        IReadOnlyList<IAgentPromptContributor>? contributors = null,
+        string? workspaceRoot = null)
     {
         var services = new ServiceCollection();
         services.AddScoped<IAgentToolProvider>(_ => new StaticToolProvider(tools));
@@ -448,7 +462,8 @@ public sealed class AgentRuntimeTests : IDisposable
                 ContextTokenBudget = contextTokenBudget
             }),
             NullLogger<AgentRuntime>.Instance,
-            () => new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero));
+            () => new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero),
+            () => workspaceRoot);
     }
 
     private static async Task<List<AgentEvent>> CollectAsync(

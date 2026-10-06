@@ -177,6 +177,41 @@ public class AiRuntimeConfigurationMapperTests
     }
 
     [Fact]
+    public void CreateAiServiceOverrides_WhenPlannerProfileIsInvalid_UsesChatProfileEverywhere()
+    {
+        var overrides = AiRuntimeConfigurationMapper.CreateAiServiceOverrides(
+            [
+                new ModelProviderProfile
+                {
+                    Id = "planner",
+                    Provider = ModelProviderType.OpenRouter,
+                    Endpoint = "https://openrouter.ai/api/v1",
+                    ApiKey = "",
+                    ModelId = "openai/gpt-4.1-mini",
+                    Roles = [ModelProviderRole.Planner],
+                    Enabled = true
+                },
+                new ModelProviderProfile
+                {
+                    Id = "chat",
+                    Provider = ModelProviderType.Anthropic,
+                    Endpoint = "https://api.anthropic.com",
+                    ApiKey = "sk-ant-chat",
+                    ModelId = "claude-sonnet-4-6",
+                    Roles = [ModelProviderRole.Chat],
+                    Enabled = true
+                }
+            ],
+            "planner",
+            "chat");
+
+        overrides.Should().Contain("AIService:Chat:ApiKey", "sk-ant-chat");
+        overrides.Should().Contain("AIService:Agents:ModelId", "claude-sonnet-4-6");
+        overrides.Should().Contain("AIService:Planner:ApiKey", "sk-ant-chat");
+        overrides.Should().Contain("AIService:Provider", "Anthropic");
+    }
+
+    [Fact]
     public void CreateIntegrationOverrides_TodoistKey_MapsMcpOptions()
     {
         using var settings = new JsonSettingsService(CreateTempSettingsDirectory());

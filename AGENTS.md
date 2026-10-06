@@ -430,6 +430,12 @@ See `RESPONSIVE_DESIGN.md` for full details.
 - **Voice and tray**: voice commands and the tray's "New task" run in the agent chat
 - **Roadmap**: `docs/architecture/agent-platform.md` (MCP host, Agent Skills, plugins, coding mode, subagents)
 
+#### Reliability and performance (October 2026)
+- **Missing config never breaks startup**: `LoggerServiceBase` is MongoDB only when `MongoDbConfiguration:ConnectionString` is set, otherwise `LocalFileLogger` (`%LocalAppData%/Kam/Logs/pipeline-*.log`); web search, HuggingFace and intent services report missing keys when used. `CompositionRootTests` resolves every registered service, so a throwing constructor fails CI
+- **Chat**: messages sent during a turn queue (`QueuedAgentMessages`) and run after it; streamed text refreshes at most every 50 ms; the message list uses `VirtualizingStackPanel`
+- **Startup**: MCP servers warm up in the background and a turn waits at most 5 s for them (`McpHost` `turnWait`); Whisper loads on first transcription
+- **JSONL stores** read from the end with `JsonLinesFile.ReadLinesNewestFirst`
+
 #### UI Redesign (October 2026)
 - **Design system**: violet accent tokens (`Accent`, `AccentStrong`, `AccentSubtle`, `AccentOn`) in `Themes/Colors.*.axaml`, Lucide-style icon geometries (`Icon*`) and `MonoFontFamily` in `Themes/AppTheme.axaml`, shared control classes in `Themes/Controls.axaml` (`PrimaryAction`, `SecondaryAction`, `Pill`, `Card`, `PageTitle`, `SectionTitle`, `Overline`)
 - **Shell**: icon sidebar that collapses at compact width, per-page title bar, chat workbench with bubbles, suggestion cards and a floating composer
@@ -439,7 +445,7 @@ See `RESPONSIVE_DESIGN.md` for full details.
 ### Test Status
 ```
 Build: ✅ Success (CI runs on windows-2025)
-Tests: 932 total; on Linux 13 fail because they assume Windows paths or tessdata
+Tests: 1208 total; on Linux 13 fail because they assume Windows paths or tessdata
 Run locally on Linux: DOTNET_ROLL_FORWARD=Major dotnet test tests/SmartVoiceAgent.Tests -p:EnableWindowsTargeting=true
 ```
 

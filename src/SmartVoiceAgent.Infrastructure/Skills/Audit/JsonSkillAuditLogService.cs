@@ -1,6 +1,7 @@
 using System.Text.Json;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Infrastructure.Helpers;
 
 namespace SmartVoiceAgent.Infrastructure.Skills.Audit;
 
@@ -62,12 +63,10 @@ public sealed class JsonSkillAuditLogService : ISkillAuditLogService
                 return Task.FromResult<IReadOnlyCollection<SkillAuditRecord>>([]);
             }
 
-            var records = File.ReadAllLines(_filePath)
-                .Where(line => !string.IsNullOrWhiteSpace(line))
+            var records = JsonLinesFile.ReadLinesNewestFirst(_filePath)
                 .Select(TryDeserialize)
                 .Where(record => record is not null)
                 .Select(record => record!)
-                .Reverse()
                 .Take(maxCount)
                 .ToArray();
 

@@ -105,6 +105,24 @@ public sealed class McpHostTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task GetToolsAsync_SlowServer_DoesNotHoldUpTheTurn()
+    {
+        await using var host = new McpHost(
+            [new FixedSource(Stdio("slow"))],
+            "mcp.json",
+            transportFactory: _ => new StreamClientTransport(new Pipe().Writer.AsStream(), new Pipe().Reader.AsStream()),
+            connectTimeout: TimeSpan.FromSeconds(30),
+            turnWait: TimeSpan.FromMilliseconds(100));
+
+        var started = DateTime.UtcNow;
+        var tools = await host.GetToolsAsync();
+
+        (DateTime.UtcNow - started).Should().BeLessThan(TimeSpan.FromSeconds(10));
+        tools.Should().BeEmpty();
+        host.Servers.Single().Status.Should().Be(McpServerStatus.Connecting, "the server keeps starting for a later turn");
+    }
+
+    [Fact]
     public async Task GetToolsAsync_DisabledServer_IsNotStarted()
     {
         var started = new List<string>();

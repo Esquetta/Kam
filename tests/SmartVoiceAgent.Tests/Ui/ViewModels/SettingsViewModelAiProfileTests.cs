@@ -31,6 +31,22 @@ public class SettingsViewModelAiProfileTests : IDisposable
     }
 
     [Fact]
+    public void InputLevelMeter_RunsOnlyWhileSettingsPageIsShown()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        using var viewModel = new SettingsViewModel(settingsService);
+
+        viewModel.IsInputLevelMonitoring.Should().BeFalse("the page is not shown yet");
+
+        viewModel.OnNavigatedTo();
+        viewModel.IsInputLevelMonitoring.Should().BeTrue();
+
+        viewModel.OnNavigatedFrom();
+        viewModel.IsInputLevelMonitoring.Should().BeFalse();
+        viewModel.InputLevel.Should().Be(0);
+    }
+
+    [Fact]
     public void OpenAiProvider_DefaultModelOptions_UseCurrentApiModelIds()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);

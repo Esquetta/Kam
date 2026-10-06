@@ -72,6 +72,19 @@ public sealed class AiWebResearchServiceTests
         handler.GoogleSearchRequests.Should().Be(1);
     }
 
+    [Fact]
+    public async Task SearchAsync_WithoutSearchKeys_SaysWebSearchIsNotSetUp()
+    {
+        using var httpClient = new HttpClient(new RecordingWebResearchHandler());
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection().Build();
+
+        var service = new AiWebResearchService(httpClient, new QueueingChatClient(), new TestLogger(), configuration);
+        var search = () => service.SearchAsync(new WebResearchRequest { Query = "kam", Language = "en", MaxResults = 2 });
+
+        (await search.Should().ThrowAsync<InvalidOperationException>())
+            .WithMessage("Web search is not set up*WebResearch:SearchApiKey*");
+    }
+
     private sealed class RecordingWebResearchHandler : HttpMessageHandler
     {
         public int GoogleSearchRequests { get; private set; }

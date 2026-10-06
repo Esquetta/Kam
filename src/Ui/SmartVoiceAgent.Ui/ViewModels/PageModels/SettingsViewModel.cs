@@ -1212,9 +1212,31 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 _settingsService.SelectedOutputDeviceId = string.Empty;
             }
 
-            // Start monitoring input levels
+            // The input meter runs only while the Settings page is open; see OnNavigatedTo.
+        }
+
+        /// <summary>
+        /// Starts the microphone level meter while the page is shown.
+        /// </summary>
+        public override void OnNavigatedTo()
+        {
+            base.OnNavigatedTo();
             StartInputLevelMonitoring();
         }
+
+        /// <summary>
+        /// Stops the microphone level meter, which otherwise polls the device ten times a second.
+        /// </summary>
+        public override void OnNavigatedFrom()
+        {
+            StopInputLevelMonitoring();
+            base.OnNavigatedFrom();
+        }
+
+        /// <summary>
+        /// Gets whether the input level meter is polling the microphone.
+        /// </summary>
+        public bool IsInputLevelMonitoring => _inputLevelCts is { IsCancellationRequested: false };
 
         private void OnDevicesChanged(object? sender, EventArgs e)
         {
@@ -1270,6 +1292,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             _inputLevelCts?.Cancel();
             _inputLevelCts = new CancellationTokenSource();
+            var token = _inputLevelCts.Token;
 
             Task.Run(async () =>
             {
@@ -1278,7 +1301,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 const int updateIntervalMs = 100;
                 float lastLevel = 0;
 
-                while (!_inputLevelCts.Token.IsCancellationRequested)
+                while (!token.IsCancellationRequested)
                 {
                     if (SelectedInputDevice != null && !IsRecordingTest)
                     {
@@ -1289,12 +1312,25 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                         if (Math.Abs(level - lastLevel) > 0.05f || Environment.TickCount % 5 == 0)
                         {
                             lastLevel = level;
-                            Dispatcher.UIThread.Post(() => InputLevel = level);
+                            Dispatcher.UIThread.Post(() =>
+                            {
+                                if (!token.IsCancellationRequested)
+                                {
+                                    InputLevel = level;
+                                }
+                            });
                         }
                     }
-                    await Task.Delay(updateIntervalMs, _inputLevelCts.Token);
+                    await Task.Delay(updateIntervalMs, token);
                 }
-            }, _inputLevelCts.Token);
+            }, token);
+        }
+
+        private void StopInputLevelMonitoring()
+        {
+            _inputLevelCts?.Cancel();
+            _inputLevelCts = null;
+            InputLevel = 0;
         }
 
         private void OnInputLevelChanged(object? sender, float level)

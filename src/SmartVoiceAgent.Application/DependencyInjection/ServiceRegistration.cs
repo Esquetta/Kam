@@ -1,6 +1,7 @@
 ﻿using Core.CrossCuttingConcerns.Logging.Serilog;
 using Core.CrossCuttingConcerns.Logging.Serilog.Logger;
 using FluentValidation;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SmartVoiceAgent.Application.Behaviors.Logging;
 using SmartVoiceAgent.Application.Behaviors.Performance;
@@ -43,8 +44,22 @@ public static class ServiceRegistration
 
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
 
-        services.AddSingleton<LoggerServiceBase, MongoDbLogger>();
+        services.AddSingleton(sp => CreatePipelineLogger(sp.GetService<IConfiguration>()));
 
         return services;
+    }
+
+    /// <summary>
+    /// Picks the logger for the request pipeline: MongoDB when a log database is configured,
+    /// otherwise a local rolling file, so commands never fail just because MongoDB is not set up.
+    /// </summary>
+    /// <param name="configuration">The app configuration, or null when none is registered.</param>
+    /// <returns>The logger shared by the pipeline behaviors and command handlers.</returns>
+    public static LoggerServiceBase CreatePipelineLogger(IConfiguration? configuration)
+    {
+        var mongo = configuration?.GetSection("MongoDbConfiguration");
+        return string.IsNullOrWhiteSpace(mongo?["ConnectionString"])
+            ? new LocalFileLogger()
+            : new MongoDbLogger(configuration!);
     }
 }
