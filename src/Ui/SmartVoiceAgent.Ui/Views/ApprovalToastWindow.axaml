@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="SmartVoiceAgent.Ui.Views.ApprovalToastWindow"
-        Title="Kam needs your approval"
+        Title="{DynamicResource Lang.Shell.Toast.Title}"
         Width="384"
         SizeToContent="Height"
         CanResize="False"
@@ -32,7 +32,7 @@
             </Border>
 
             <StackPanel Grid.Row="0" Grid.Column="1" Spacing="3">
-                <TextBlock Text="Kam needs your approval"
+                <TextBlock Text="{DynamicResource Lang.Shell.Toast.Title}"
                            FontSize="13"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextPrimaryBrush}"/>
@@ -52,10 +52,10 @@
                         HorizontalAlignment="Right">
                 <Button x:Name="DismissButton"
                         Classes="SecondaryAction"
-                        Content="Later"/>
+                        Content="{DynamicResource Lang.Shell.Toast.Later}"/>
                 <Button x:Name="ReviewButton"
                         Classes="PrimaryAction"
-                        Content="Review"/>
+                        Content="{DynamicResource Lang.Shell.Toast.Review}"/>
             </StackPanel>
         </Grid>
     </Border>

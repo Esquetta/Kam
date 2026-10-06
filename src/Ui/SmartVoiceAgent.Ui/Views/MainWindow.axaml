@@ -40,6 +40,11 @@
 			<Setter Property="IsVisible" Value="False"/>
 		</Style>
 
+		<!-- Holds labels that bind IsVisible themselves, such as the theme toggle's -->
+		<Style Selector="Border.Sidebar.Compact Panel.NavLabelGroup">
+			<Setter Property="IsVisible" Value="False"/>
+		</Style>
+
 		<Style Selector="Button.NavBtn">
 			<Setter Property="Height" Value="36"/>
 			<Setter Property="Margin" Value="0,1"/>
@@ -477,7 +482,7 @@
 									   FontWeight="Bold"
 									   Foreground="{DynamicResource TextPrimaryBrush}"/>
 							<TextBlock Classes="NavLabel"
-									   Text="Agent workspace"
+									   Text="{DynamicResource Lang.Shell.Brand.Tagline}"
 									   FontSize="11"
 									   FontWeight="Normal"
 									   Foreground="{DynamicResource TextMutedBrush}"/>
@@ -488,60 +493,60 @@
 				<!-- Primary navigation -->
 				<StackPanel Grid.Row="1" VerticalAlignment="Top">
 					<TextBlock Classes="NavLabel Overline"
-							   Text="WORKSPACE"
+							   Text="{DynamicResource Lang.Shell.Nav.Workspace}"
 							   Margin="10,0,0,8"/>
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Coordinator}}"
 							Command="{Binding NavigateToCoordinatorCommand}"
-							ToolTip.Tip="Workbench">
+							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Workbench}">
 						<StackPanel Orientation="Horizontal" Spacing="12">
 							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconChat}"/></Viewbox>
-							<TextBlock Classes="NavLabel" Text="Workbench"/>
+							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Workbench}"/>
 						</StackPanel>
 					</Button>
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Diagnostics}}"
 							Command="{Binding NavigateToDiagnosticsCommand}"
-							ToolTip.Tip="Runtime Diagnostics">
+							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.DiagnosticsTip}">
 						<StackPanel Orientation="Horizontal" Spacing="12">
 							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconActivity}"/></Viewbox>
-							<TextBlock Classes="NavLabel" Text="Diagnostics"/>
+							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Diagnostics}"/>
 						</StackPanel>
 					</Button>
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Plugins}}"
 							Command="{Binding NavigateToPluginsCommand}"
-							ToolTip.Tip="Skills">
+							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Skills}">
 						<StackPanel Orientation="Horizontal" Spacing="12">
 							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconBlocks}"/></Viewbox>
-							<TextBlock Classes="NavLabel" Text="Skills"/>
+							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Skills}"/>
 						</StackPanel>
 					</Button>
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Extensions}}"
 							Command="{Binding NavigateToExtensionsCommand}"
-							ToolTip.Tip="Extensions">
+							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Extensions}">
 						<StackPanel Orientation="Horizontal" Spacing="12">
 							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconPuzzle}"/></Viewbox>
-							<TextBlock Classes="NavLabel" Text="Extensions"/>
+							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Extensions}"/>
 						</StackPanel>
 					</Button>
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Integrations}}"
 							Command="{Binding NavigateToIntegrationsCommand}"
-							ToolTip.Tip="Integrations">
+							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Integrations}">
 						<StackPanel Orientation="Horizontal" Spacing="12">
 							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconPlug}"/></Viewbox>
-							<TextBlock Classes="NavLabel" Text="Integrations"/>
+							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Integrations}"/>
 						</StackPanel>
 					</Button>
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Settings}}"
 							Command="{Binding NavigateToSettingsCommand}"
-							ToolTip.Tip="Settings">
+							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Settings}">
 						<StackPanel Orientation="Horizontal" Spacing="12">
 							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconSliders}"/></Viewbox>
-							<TextBlock Classes="NavLabel" Text="Settings"/>
+							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Settings}"/>
 						</StackPanel>
 					</Button>
 				</StackPanel>
@@ -550,13 +555,17 @@
 				<StackPanel Grid.Row="2" Classes="SidebarFooter" Spacing="4">
 					<Button Classes="NavBtn"
 							Command="{Binding ToggleThemeCommand}"
-							ToolTip.Tip="Toggle Theme">
+							ToolTip.Tip="{DynamicResource Lang.Shell.ToggleTheme}">
 						<StackPanel Orientation="Horizontal" Spacing="12">
 							<Panel Width="18" Height="18">
 								<Viewbox IsVisible="{Binding IsDarkMode}"><Path Classes="Icon" Data="{StaticResource IconSun}"/></Viewbox>
 								<Viewbox IsVisible="{Binding !IsDarkMode}"><Path Classes="Icon" Data="{StaticResource IconMoon}"/></Viewbox>
 							</Panel>
-							<TextBlock Classes="NavLabel" Text="{Binding IsDarkMode, Converter={StaticResource BoolToStatusTextConverter}, ConverterParameter='Light mode|Dark mode'}"/>
+							<!-- Names the theme a click switches to, in the interface language -->
+							<Panel Classes="NavLabelGroup" VerticalAlignment="Center">
+								<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.LightMode}" IsVisible="{Binding IsDarkMode}"/>
+								<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.DarkMode}" IsVisible="{Binding !IsDarkMode}"/>
+							</Panel>
 						</StackPanel>
 					</Button>
 				</StackPanel>
@@ -618,8 +627,8 @@
 						<Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">
 							<Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="4,0">
 								<StackPanel Spacing="1">
-									<TextBlock Text="Chats" Classes="SectionTitle"/>
-									<TextBlock Text="Agent threads" Classes="Caption"/>
+									<TextBlock Text="{DynamicResource Lang.Chat.Threads.Title}" Classes="SectionTitle"/>
+									<TextBlock Text="{DynamicResource Lang.Chat.Threads.Subtitle}" Classes="Caption"/>
 								</StackPanel>
 								<Border Grid.Column="1" Classes="Pill">
 									<TextBlock Text="{Binding AgentChatSessionCountText}"/>
@@ -629,11 +638,11 @@
 							<Button Grid.Row="1"
 									Classes="PrimaryAction"
 									HorizontalAlignment="Stretch"
-									ToolTip.Tip="New chat (Ctrl+N)"
+									ToolTip.Tip="{DynamicResource Lang.Chat.NewChatTip}"
 									Command="{Binding NewAgentChatCommand}">
 								<StackPanel Orientation="Horizontal" Spacing="8">
 									<Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconPlus}" Stroke="{DynamicResource AccentOnBrush}" StrokeThickness="2.5"/></Viewbox>
-									<TextBlock Text="New task" FontWeight="SemiBold" VerticalAlignment="Center"/>
+									<TextBlock Text="{DynamicResource Lang.Chat.NewTask}" FontWeight="SemiBold" VerticalAlignment="Center"/>
 								</StackPanel>
 							</Button>
 
@@ -641,7 +650,7 @@
 							<TextBox Grid.Row="2"
 									 x:Name="ChatSearchInput"
 									 Classes="ChatSearch"
-									 PlaceholderText="Search chats (Ctrl+K)"
+									 PlaceholderText="{DynamicResource Lang.Chat.Search.Placeholder}"
 									 Text="{Binding AgentChatSearchText, Mode=TwoWay}"
 									 KeyDown="OnChatSearchKeyDown">
 								<TextBox.InnerLeftContent>
@@ -652,7 +661,7 @@
 											Margin="0,0,4,0"
 											Background="Transparent"
 											BorderThickness="0"
-											ToolTip.Tip="Clear search"
+											ToolTip.Tip="{DynamicResource Lang.Chat.Search.Clear}"
 											IsVisible="{Binding IsAgentChatSearchActive}"
 											Command="{Binding ClearAgentChatSearchCommand}">
 										<Viewbox Width="11" Height="11"><Path Classes="Icon" Data="{StaticResource IconX}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
@@ -678,8 +687,8 @@
 															CommandParameter="{Binding}">
 														<Button.ContextMenu>
 															<ContextMenu>
-																<MenuItem Header="Rename" InputGesture="F2" Click="OnRenameChatClick"/>
-																<MenuItem Header="Delete" IsEnabled="{Binding CanDelete}" Click="OnDeleteChatClick"/>
+																<MenuItem Header="{DynamicResource Lang.Common.Rename}" InputGesture="F2" Click="OnRenameChatClick"/>
+																<MenuItem Header="{DynamicResource Lang.Common.Delete}" IsEnabled="{Binding CanDelete}" Click="OnDeleteChatClick"/>
 															</ContextMenu>
 														</Button.ContextMenu>
 														<Border Classes="ChatSessionChrome"
@@ -733,11 +742,11 @@
 															Margin="0,6,6,0"
 															Background="Transparent"
 															BorderThickness="0"
-															ToolTip.Tip="Chat options">
+															ToolTip.Tip="{DynamicResource Lang.Chat.Options}">
 														<Button.Flyout>
 															<MenuFlyout Placement="BottomEdgeAlignedRight">
-																<MenuItem Header="Rename" InputGesture="F2" Click="OnRenameChatClick"/>
-																<MenuItem Header="Delete" IsEnabled="{Binding CanDelete}" Click="OnDeleteChatClick"/>
+																<MenuItem Header="{DynamicResource Lang.Common.Rename}" InputGesture="F2" Click="OnRenameChatClick"/>
+																<MenuItem Header="{DynamicResource Lang.Common.Delete}" IsEnabled="{Binding CanDelete}" Click="OnDeleteChatClick"/>
 															</MenuFlyout>
 														</Button.Flyout>
 														<Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconMore}" Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="3" Stretch="None"/></Viewbox>
@@ -759,21 +768,21 @@
 															IsVisible="{Binding IsConfirmingDelete}">
 														<StackPanel Spacing="8">
 															<StackPanel Spacing="2">
-																<TextBlock Text="Delete this chat?"
+																<TextBlock Text="{DynamicResource Lang.Chat.DeleteConfirm.Title}"
 																		   FontSize="13"
 																		   FontWeight="SemiBold"
 																		   Foreground="{DynamicResource TextPrimaryBrush}"/>
-																<TextBlock Text="Its messages are removed from this computer."
+																<TextBlock Text="{DynamicResource Lang.Chat.DeleteConfirm.Body}"
 																		   Classes="Caption"
 																		   TextWrapping="Wrap"/>
 															</StackPanel>
 															<StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
 																<Button Classes="SecondaryAction ChatRowAction"
-																		Content="Cancel"
+																		Content="{DynamicResource Lang.Common.Cancel}"
 																		Command="{Binding $parent[Window].DataContext.CancelDeleteAgentChatCommand}"
 																		CommandParameter="{Binding}"/>
 																<Button Classes="DestructiveAction ChatRowAction"
-																		Content="Delete"
+																		Content="{DynamicResource Lang.Common.Delete}"
 																		Command="{Binding $parent[Window].DataContext.ConfirmDeleteAgentChatCommand}"
 																		CommandParameter="{Binding}"/>
 															</StackPanel>
@@ -785,7 +794,7 @@
 									</ItemsControl>
 								</ScrollViewer>
 
-								<TextBlock Text="No chats match"
+								<TextBlock Text="{DynamicResource Lang.Chat.Search.NoResults}"
 										   Classes="Caption"
 										   HorizontalAlignment="Center"
 										   Margin="0,16,0,0"
@@ -805,7 +814,7 @@
 									<TextBlock Text="{Binding SelectedAgentChatSession.Title}"
 											   Classes="SectionTitle"
 											   TextTrimming="CharacterEllipsis"/>
-									<TextBlock Text="Conversation timeline" Classes="Caption"/>
+									<TextBlock Text="{DynamicResource Lang.Chat.Timeline}" Classes="Caption"/>
 								</StackPanel>
 								<Border Grid.Column="1" Classes="Pill" VerticalAlignment="Center">
 									<TextBlock Text="{Binding SelectedAgentChatMessageCountText}"/>
@@ -843,13 +852,13 @@
 										Background="Transparent"
 										BorderThickness="0"
 										VerticalAlignment="Center"
-										ToolTip.Tip="Chat options">
+										ToolTip.Tip="{DynamicResource Lang.Chat.Options}">
 									<Button.Flyout>
 										<MenuFlyout Placement="BottomEdgeAlignedRight">
-											<MenuItem Header="Rename" InputGesture="F2" Click="OnRenameChatClick"/>
-											<MenuItem Header="Copy conversation" Command="{Binding CopyAgentChatCommand}"/>
+											<MenuItem Header="{DynamicResource Lang.Common.Rename}" InputGesture="F2" Click="OnRenameChatClick"/>
+											<MenuItem Header="{DynamicResource Lang.Chat.CopyConversation}" Command="{Binding CopyAgentChatCommand}"/>
 											<Separator/>
-											<MenuItem Header="Delete" Click="OnDeleteChatClick"/>
+											<MenuItem Header="{DynamicResource Lang.Common.Delete}" Click="OnDeleteChatClick"/>
 										</MenuFlyout>
 									</Button.Flyout>
 									<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconMore}" Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="3" Stretch="None"/></Viewbox>
@@ -874,13 +883,13 @@
 										<Viewbox Width="24" Height="24"><Path Classes="Icon" Data="{StaticResource IconSparkles}" Stroke="White"/></Viewbox>
 									</Border>
 									<StackPanel Spacing="6" HorizontalAlignment="Center">
-										<TextBlock Text="Start a focused agent task"
+										<TextBlock Text="{DynamicResource Lang.Chat.Empty.Title}"
 												   FontSize="22"
 												   FontWeight="SemiBold"
 												   LetterSpacing="-0.3"
 												   HorizontalAlignment="Center"
 												   Foreground="{DynamicResource TextPrimaryBrush}"/>
-										<TextBlock Text="Pick a thread, attach files, or send the next task from the composer."
+										<TextBlock Text="{DynamicResource Lang.Chat.Empty.Body}"
 												   Classes="Caption"
 												   FontSize="13"
 												   TextAlignment="Center"
@@ -890,31 +899,31 @@
 										<Button Grid.Column="0"
 												Classes="SuggestionCard"
 												Command="{Binding UseComposerSuggestionCommand}"
-												CommandParameter="Review the current workspace and summarize what needs attention.">
+												CommandParameter="{DynamicResource Lang.Chat.Suggestion.Review.Prompt}">
 											<StackPanel Spacing="6">
 												<Viewbox Width="16" Height="16" HorizontalAlignment="Left"><Path Classes="Icon" Data="{StaticResource IconSearch}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
-												<TextBlock Text="Review current workspace" FontWeight="SemiBold" TextWrapping="Wrap"/>
-												<TextBlock Text="Summarize what needs attention" Classes="Caption"/>
+												<TextBlock Text="{DynamicResource Lang.Chat.Suggestion.Review.Title}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+												<TextBlock Text="{DynamicResource Lang.Chat.Suggestion.Review.Caption}" Classes="Caption"/>
 											</StackPanel>
 										</Button>
 										<Button Grid.Column="1"
 												Classes="SuggestionCard"
 												Command="{Binding UseComposerSuggestionCommand}"
-												CommandParameter="Inspect the failing tests and explain the root cause.">
+												CommandParameter="{DynamicResource Lang.Chat.Suggestion.Tests.Prompt}">
 											<StackPanel Spacing="6">
 												<Viewbox Width="16" Height="16" HorizontalAlignment="Left"><Path Classes="Icon" Data="{StaticResource IconAlert}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
-												<TextBlock Text="Inspect failing tests" FontWeight="SemiBold" TextWrapping="Wrap"/>
-												<TextBlock Text="Find the root cause" Classes="Caption"/>
+												<TextBlock Text="{DynamicResource Lang.Chat.Suggestion.Tests.Title}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+												<TextBlock Text="{DynamicResource Lang.Chat.Suggestion.Tests.Caption}" Classes="Caption"/>
 											</StackPanel>
 										</Button>
 										<Button Grid.Column="2"
 												Classes="SuggestionCard"
 												Command="{Binding UseComposerSuggestionCommand}"
-												CommandParameter="Plan the next implementation step for this project.">
+												CommandParameter="{DynamicResource Lang.Chat.Suggestion.Plan.Prompt}">
 											<StackPanel Spacing="6">
 												<Viewbox Width="16" Height="16" HorizontalAlignment="Left"><Path Classes="Icon" Data="{StaticResource IconSparkles}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
-												<TextBlock Text="Plan next implementation" FontWeight="SemiBold" TextWrapping="Wrap"/>
-												<TextBlock Text="Break work into steps" Classes="Caption"/>
+												<TextBlock Text="{DynamicResource Lang.Chat.Suggestion.Plan.Title}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+												<TextBlock Text="{DynamicResource Lang.Chat.Suggestion.Plan.Caption}" Classes="Caption"/>
 											</StackPanel>
 										</Button>
 									</Grid>
@@ -949,7 +958,7 @@
 															<Button Classes="IconButton CompactIconButton MessageAction"
 																	Background="Transparent"
 																	BorderThickness="0"
-																	ToolTip.Tip="Copy message"
+																	ToolTip.Tip="{DynamicResource Lang.Chat.Message.Copy}"
 																	Command="{Binding $parent[Window].DataContext.CopyAgentMessageCommand}"
 																	CommandParameter="{Binding}">
 																<Panel>
@@ -990,7 +999,7 @@
 																<Button Classes="IconButton CompactIconButton MessageAction"
 																		Background="Transparent"
 																		BorderThickness="0"
-																		ToolTip.Tip="Copy message"
+																		ToolTip.Tip="{DynamicResource Lang.Chat.Message.Copy}"
 																		Command="{Binding $parent[Window].DataContext.CopyAgentMessageCommand}"
 																		CommandParameter="{Binding}">
 																	<Panel>
@@ -1058,25 +1067,25 @@
 																  IsVisible="{Binding IsAwaitingApproval}">
 																<Viewbox Grid.Column="0" Width="14" Height="14" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconShield}" Stroke="{DynamicResource AccentOrangeBrush}"/></Viewbox>
 																<TextBlock Grid.Column="1"
-																		   Text="Run this?"
+																		   Text="{DynamicResource Lang.Chat.Tool.RunPrompt}"
 																		   FontSize="12"
 																		   FontWeight="SemiBold"
 																		   Foreground="{DynamicResource TextPrimaryBrush}"
 																		   VerticalAlignment="Center"/>
 																<Button Grid.Column="2"
 																		Classes="SecondaryAction"
-																		Content="Deny"
+																		Content="{DynamicResource Lang.Common.Deny}"
 																		Command="{Binding $parent[Window].DataContext.DenyToolCallCommand}"
 																		CommandParameter="{Binding}"/>
 																<Button Grid.Column="3"
 																		Classes="SecondaryAction"
-																		Content="Always allow"
+																		Content="{DynamicResource Lang.Common.AlwaysAllow}"
 																		ToolTip.Tip="{Binding AlwaysAllowHint}"
 																		Command="{Binding $parent[Window].DataContext.AlwaysAllowToolCallCommand}"
 																		CommandParameter="{Binding}"/>
 																<Button Grid.Column="4"
 																		Classes="PrimaryAction"
-																		Content="Approve"
+																		Content="{DynamicResource Lang.Common.Approve}"
 																		Command="{Binding $parent[Window].DataContext.ApproveToolCallCommand}"
 																		CommandParameter="{Binding}"/>
 															</Grid>
@@ -1094,7 +1103,7 @@
 											Margin="40,0,0,12"
 											IsVisible="{Binding IsAgentTurnRunning}">
 									<Ellipse Classes="WorkingDot" Width="6" Height="6" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
-									<TextBlock Text="Kam is working"
+									<TextBlock Text="{DynamicResource Lang.Chat.Working}"
 											   FontSize="12"
 											   Foreground="{DynamicResource TextMutedBrush}"
 											   VerticalAlignment="Center"/>
@@ -1183,12 +1192,12 @@
 										  RowSpacing="6"
 										  IsVisible="{Binding HasComposerAttachments}">
 										<Grid ColumnDefinitions="*,Auto">
-											<TextBlock Text="Context files" Classes="Overline"/>
+											<TextBlock Text="{DynamicResource Lang.Chat.Composer.ContextFiles}" Classes="Overline"/>
 											<Button Grid.Column="1"
 													Classes="CompactAction"
-													ToolTip.Tip="Clear context files"
+													ToolTip.Tip="{DynamicResource Lang.Chat.Composer.ClearContextTip}"
 													Command="{Binding ClearComposerAttachmentsCommand}">
-												<TextBlock Text="Clear context" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+												<TextBlock Text="{DynamicResource Lang.Chat.Composer.ClearContext}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
 											</Button>
 										</Grid>
 										<ItemsControl Grid.Row="1" ItemsSource="{Binding ComposerAttachments}">
@@ -1217,7 +1226,7 @@
 																	Classes="IconButton CompactIconButton"
 																	Background="Transparent"
 																	BorderThickness="0"
-																	ToolTip.Tip="Remove file"
+																	ToolTip.Tip="{DynamicResource Lang.Chat.Composer.RemoveFile}"
 																	Command="{Binding $parent[Window].DataContext.RemoveComposerAttachmentCommand}"
 																	CommandParameter="{Binding}">
 																<Viewbox Width="12" Height="12"><Path Classes="Icon" Data="{StaticResource IconX}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
@@ -1243,9 +1252,9 @@
 													   TextTrimming="CharacterEllipsis"/>
 											<Button Grid.Column="2"
 													Classes="CompactAction"
-													ToolTip.Tip="Don't send queued messages"
+													ToolTip.Tip="{DynamicResource Lang.Chat.Composer.ClearQueuedTip}"
 													Command="{Binding ClearQueuedAgentMessagesCommand}">
-												<TextBlock Text="Cancel" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+												<TextBlock Text="{DynamicResource Lang.Common.Cancel}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
 											</Button>
 										</Grid>
 									</Border>
@@ -1255,7 +1264,7 @@
 									<TextBox Grid.Row="2"
 											 x:Name="WorkbenchPromptInput"
 											 Classes="BareInput"
-											 PlaceholderText="Ask Kam to inspect, edit, test, or plan..."
+											 PlaceholderText="{DynamicResource Lang.Chat.Composer.Placeholder}"
 											 FontSize="14"
 											 Foreground="{DynamicResource TextPrimaryBrush}"
 											 AcceptsReturn="True"
@@ -1271,7 +1280,7 @@
 												CornerRadius="16"
 												Background="Transparent"
 												BorderThickness="0"
-												ToolTip.Tip="Attach files"
+												ToolTip.Tip="{DynamicResource Lang.Chat.Composer.AttachFiles}"
 												Click="OnAttachFilesClick">
 											<Viewbox Width="17" Height="17"><Path Classes="Icon" Data="{StaticResource IconPaperclip}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
 										</Button>
@@ -1320,14 +1329,14 @@
 										</Button>
 										<Button Grid.Column="5"
 												Classes="SendButton"
-												ToolTip.Tip="Send (Enter)"
+												ToolTip.Tip="{DynamicResource Lang.Chat.Composer.Send}"
 												IsVisible="{Binding IsSendVisible}"
 												Command="{Binding SubmitCommand}">
 											<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconArrowUp}"/></Viewbox>
 										</Button>
 										<Button Grid.Column="5"
 												Classes="SendButton"
-												ToolTip.Tip="Stop (Esc)"
+												ToolTip.Tip="{DynamicResource Lang.Chat.Composer.Stop}"
 												IsVisible="{Binding IsAgentTurnRunning}"
 												Command="{Binding StopAgentTurnCommand}">
 											<Viewbox Width="12" Height="12"><Path Classes="Icon" Data="{StaticResource IconStop}"/></Viewbox>
@@ -1336,7 +1345,7 @@
 								</Grid>
 							</Border>
 
-							<TextBlock Text="Enter to send  ·  Shift+Enter for a new line  ·  Type / for commands"
+							<TextBlock Text="{DynamicResource Lang.Chat.Composer.Hint}"
 									   FontSize="11"
 									   Foreground="{DynamicResource TextMutedBrush}"
 									   HorizontalAlignment="Center"/>
@@ -1390,15 +1399,15 @@
 								  Margin="16,14,16,12">
 								<Grid Grid.Row="0" ColumnDefinitions="*, Auto">
 									<StackPanel Grid.Column="0" Spacing="1" VerticalAlignment="Center">
-										<TextBlock Text="Activity" Classes="SectionTitle"/>
-										<TextBlock Text="Session" Classes="Caption"/>
+										<TextBlock Text="{DynamicResource Lang.Activity.Title}" Classes="SectionTitle"/>
+										<TextBlock Text="{DynamicResource Lang.Activity.Subtitle}" Classes="Caption"/>
 									</StackPanel>
 									<Border Grid.Column="1" Classes="Pill Success">
 										<StackPanel Orientation="Horizontal" Spacing="6">
 											<Ellipse Width="6" Height="6"
 													 Fill="{DynamicResource AccentGreenBrush}"
 													 VerticalAlignment="Center"/>
-											<TextBlock Text="Live"/>
+											<TextBlock Text="{DynamicResource Lang.Activity.Live}"/>
 										</StackPanel>
 									</Border>
 								</Grid>
@@ -1407,17 +1416,17 @@
 										<Button Grid.Column="0"
 												Classes="DrawerTab"
 												Classes.Selected="{Binding IsActivityRunsPanelVisible}"
-												Content="Agent runs"
+												Content="{DynamicResource Lang.Activity.Tab.Runs}"
 												Command="{Binding ShowRunsCommand}"/>
 										<Button Grid.Column="1"
 												Classes="DrawerTab"
 												Classes.Selected="{Binding IsActivityContextPanelVisible}"
-												Content="Context"
+												Content="{DynamicResource Lang.Activity.Context}"
 												Command="{Binding ShowContextCommand}"/>
 										<Button Grid.Column="2"
 												Classes="DrawerTab"
 												Classes.Selected="{Binding IsActivityEventsPanelVisible}"
-												Content="Event stream"
+												Content="{DynamicResource Lang.Activity.Tab.Events}"
 												Command="{Binding ShowEventsCommand}"/>
 									</Grid>
 								</Border>
@@ -1438,7 +1447,7 @@
 										  Width="14" Height="14"
 										  Stretch="Uniform"
 										  VerticalAlignment="Center"/>
-									<TextBlock Text="Approval needed"
+									<TextBlock Text="{DynamicResource Lang.Activity.ApprovalNeeded}"
 											   FontSize="12"
 											   FontWeight="SemiBold"
 											   Foreground="{DynamicResource AccentBrush}"
@@ -1504,7 +1513,7 @@
 																CornerRadius="6"
 																Padding="0"
 																Cursor="Hand"
-																ToolTip.Tip="Approve"
+																ToolTip.Tip="{DynamicResource Lang.Common.Approve}"
 																Command="{Binding ApproveCommand}">
 															<Path Data="M9,16.17L4.83,12L3.41,13.41L9,19L21,7L19.59,5.59L9,16.17Z"
 																  Fill="{DynamicResource AccentGreenBrush}"
@@ -1519,7 +1528,7 @@
 																CornerRadius="6"
 																Padding="0"
 																Cursor="Hand"
-																ToolTip.Tip="Reject"
+																ToolTip.Tip="{DynamicResource Lang.Activity.Reject}"
 																Command="{Binding RejectCommand}">
 															<Path Data="M18.3,5.71L12,12L5.7,5.71L4.29,7.12L10.59,13.41L4.29,19.71L5.7,21.12L12,14.83L18.3,21.12L19.71,19.71L13.41,13.41L19.71,7.12Z"
 																  Fill="{DynamicResource AccentErrorBrush}"
@@ -1550,7 +1559,7 @@
 										  Width="14" Height="14"
 										  Stretch="Uniform"
 										  VerticalAlignment="Center"/>
-									<TextBlock Text="Agent runs"
+									<TextBlock Text="{DynamicResource Lang.Activity.Runs.Title}"
 											   FontSize="12"
 											   FontWeight="SemiBold"
 											   Foreground="{DynamicResource TextMutedBrush}"
@@ -1613,7 +1622,7 @@
 										</DataTemplate>
 									</ItemsControl.ItemTemplate>
 								</ItemsControl>
-								<TextBlock Text="No agent runs yet."
+								<TextBlock Text="{DynamicResource Lang.Activity.Runs.Empty}"
 										   FontSize="12"
 										   Foreground="{DynamicResource TextMutedBrush}"
 										   Margin="2,2,0,0"
@@ -1627,7 +1636,7 @@
 									<StackPanel Spacing="8">
 										<Grid ColumnDefinitions="*, Auto">
 											<TextBlock Grid.Column="0"
-													   Text="Run detail"
+													   Text="{DynamicResource Lang.Activity.RunDetail.Title}"
 													   FontSize="12"
 													   FontWeight="SemiBold"
 													   Foreground="{DynamicResource TextPrimaryBrush}"/>
@@ -1647,7 +1656,7 @@
 											  RowSpacing="4">
 											<TextBlock Grid.Row="0"
 													   Grid.Column="0"
-													   Text="Model"
+													   Text="{DynamicResource Lang.Activity.RunDetail.Model}"
 													   FontSize="10"
 													   Foreground="{DynamicResource TextMutedBrush}"/>
 											<TextBlock Grid.Row="0"
@@ -1658,7 +1667,7 @@
 													   TextTrimming="CharacterEllipsis"/>
 											<TextBlock Grid.Row="1"
 													   Grid.Column="0"
-													   Text="Duration"
+													   Text="{DynamicResource Lang.Activity.RunDetail.Duration}"
 													   FontSize="10"
 													   Foreground="{DynamicResource TextMutedBrush}"/>
 											<TextBlock Grid.Row="1"
@@ -1682,7 +1691,7 @@
 														  Margin="0,2">
 														<TextBlock Grid.Row="0"
 																   Grid.Column="0"
-																   Text="Context"
+																   Text="{DynamicResource Lang.Activity.Context}"
 																   FontSize="10"
 																   Foreground="{DynamicResource TextMutedBrush}"/>
 														<TextBlock Grid.Row="0"
@@ -1742,7 +1751,7 @@
 											  Width="14" Height="14"
 											  Stretch="Uniform"
 											  VerticalAlignment="Center"/>
-										<TextBlock Text="Plan trace"
+										<TextBlock Text="{DynamicResource Lang.Activity.PlanTrace.Title}"
 												   FontSize="12"
 												   FontWeight="SemiBold"
 												   Foreground="{DynamicResource TextMutedBrush}"
@@ -1756,7 +1765,7 @@
 											CornerRadius="6"
 											Padding="0"
 											Cursor="Hand"
-											ToolTip.Tip="Clear planner trace"
+											ToolTip.Tip="{DynamicResource Lang.Activity.PlanTrace.Clear}"
 											Command="{Binding ClearSkillPlannerTraceCommand}">
 										<Path Data="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"
 											  Fill="{DynamicResource TextMutedBrush}"
@@ -1856,7 +1865,7 @@
 											  Width="14" Height="14"
 											  Stretch="Uniform"
 											  VerticalAlignment="Center"/>
-										<TextBlock Text="Skill results"
+										<TextBlock Text="{DynamicResource Lang.Activity.SkillResults.Title}"
 												   FontSize="12"
 												   FontWeight="SemiBold"
 												   Foreground="{DynamicResource TextMutedBrush}"
@@ -1870,7 +1879,7 @@
 											CornerRadius="6"
 											Padding="0"
 											Cursor="Hand"
-											ToolTip.Tip="Clear result history"
+											ToolTip.Tip="{DynamicResource Lang.Activity.SkillResults.Clear}"
 											Command="{Binding ClearSkillExecutionHistoryCommand}">
 										<Path Data="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z"
 											  Fill="{DynamicResource TextMutedBrush}"
@@ -1886,7 +1895,7 @@
 									  Margin="0,10,0,10">
 									<TextBox Grid.Row="0" Grid.Column="0"
 											 Text="{Binding SkillExecutionHistoryFilterText, Mode=TwoWay}"
-											 PlaceholderText="Filter result history..."
+											 PlaceholderText="{DynamicResource Lang.Activity.SkillResults.Filter}"
 											 FontSize="11"
 											 FontFamily="{StaticResource MonoFontFamily}"
 											 Background="{DynamicResource CardBgBrush}"
@@ -1913,7 +1922,7 @@
 											CornerRadius="6"
 											Padding="0"
 											Cursor="Hand"
-											ToolTip.Tip="Clear filters"
+											ToolTip.Tip="{DynamicResource Lang.Activity.SkillResults.ClearFilters}"
 											Command="{Binding ClearSkillExecutionHistoryFiltersCommand}"
 											IsVisible="{Binding HasSkillExecutionHistoryFilter}">
 										<Path Data="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"
@@ -1928,7 +1937,7 @@
 											   FontFamily="{StaticResource MonoFontFamily}"/>
 								</Grid>
 
-								<TextBlock Text="No matching executions"
+								<TextBlock Text="{DynamicResource Lang.Activity.SkillResults.NoMatches}"
 										   Foreground="{DynamicResource TextMutedBrush}"
 										   FontSize="10"
 										   FontFamily="{StaticResource MonoFontFamily}"
@@ -1999,7 +2008,7 @@
 																	CornerRadius="6"
 																	Padding="0"
 																	Cursor="Hand"
-																	ToolTip.Tip="Copy result"
+																	ToolTip.Tip="{DynamicResource Lang.Activity.SkillResults.CopyResult}"
 																	Command="{Binding CopyResultCommand}">
 																<Path Data="M19,21H8A2,2 0 0,1 6,19V7H8V19H19V21M16,3H4A2,2 0 0,0 2,5V17H4V5H16V3M20,7H10A2,2 0 0,0 8,9V17A2,2 0 0,0 10,19H20A2,2 0 0,0 22,17V9A2,2 0 0,0 20,7Z"
 																	  Fill="{DynamicResource TextMutedBrush}"
@@ -2013,7 +2022,7 @@
 																	CornerRadius="6"
 																	Padding="0"
 																	Cursor="Hand"
-																	ToolTip.Tip="Copy stdout"
+																	ToolTip.Tip="{DynamicResource Lang.Activity.SkillResults.CopyStdOut}"
 																	Command="{Binding CopyStdOutCommand}"
 																	IsVisible="{Binding HasStdOut}">
 																<Path Data="M5,3H19A2,2 0 0,1 21,5V19A2,2 0 0,1 19,21H5A2,2 0 0,1 3,19V5A2,2 0 0,1 5,3M5,7V19H19V7H5M7,9H17V11H7V9M7,13H15V15H7V13Z"
@@ -2028,7 +2037,7 @@
 																	CornerRadius="6"
 																	Padding="0"
 																	Cursor="Hand"
-																	ToolTip.Tip="Copy stderr"
+																	ToolTip.Tip="{DynamicResource Lang.Activity.SkillResults.CopyStdErr}"
 																	Command="{Binding CopyStdErrCommand}"
 																	IsVisible="{Binding HasStdErr}">
 																<Path Data="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
@@ -2043,7 +2052,7 @@
 																	CornerRadius="6"
 																	Padding="0"
 																	Cursor="Hand"
-																	ToolTip.Tip="Rerun skill"
+																	ToolTip.Tip="{DynamicResource Lang.Activity.SkillResults.Rerun}"
 																	Command="{Binding RerunCommand}"
 																	IsVisible="{Binding CanRerun}">
 																<Path Data="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.82,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"
@@ -2161,7 +2170,7 @@
 								Padding="14,12"
 								IsVisible="{Binding IsPageHostVisible}">
 							<Grid RowDefinitions="Auto, Auto, Auto, Auto" RowSpacing="8">
-								<TextBlock Grid.Row="0" Text="Message" Classes="Overline"/>
+								<TextBlock Grid.Row="0" Text="{DynamicResource Lang.Chat.Composer.MessageLabel}" Classes="Overline"/>
 
 								<Border Grid.Row="1"
 										Background="{DynamicResource SurfaceBgElevatedBrush}"
@@ -2234,7 +2243,7 @@
 														<Button Classes="IconButton CompactIconButton"
 																Background="Transparent"
 																BorderThickness="0"
-																ToolTip.Tip="Remove file"
+																ToolTip.Tip="{DynamicResource Lang.Chat.Composer.RemoveFile}"
 																Command="{Binding $parent[Window].DataContext.RemoveComposerAttachmentCommand}"
 																CommandParameter="{Binding}">
 															<Viewbox Width="10" Height="10"><Path Classes="Icon" Data="{StaticResource IconX}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
@@ -2259,14 +2268,14 @@
 												CornerRadius="14"
 												Background="Transparent"
 												BorderThickness="0"
-												ToolTip.Tip="Attach files"
+												ToolTip.Tip="{DynamicResource Lang.Chat.Composer.AttachFiles}"
 												Click="OnAttachFilesClick">
 											<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconPaperclip}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
 										</Button>
 										<TextBox Grid.Column="1"
 												 x:Name="PromptInput"
 												 Classes="BareInput"
-												 PlaceholderText="Type / for commands..."
+												 PlaceholderText="{DynamicResource Lang.Chat.Composer.SlashPlaceholder}"
 												 FontSize="13"
 												 VerticalAlignment="Center"
 												 AcceptsReturn="False"
@@ -2286,7 +2295,7 @@
 												Classes="SendButton"
 												Width="28" Height="28"
 												CornerRadius="14"
-												ToolTip.Tip="Send (Enter)"
+												ToolTip.Tip="{DynamicResource Lang.Chat.Composer.Send}"
 												Command="{Binding SubmitCommand}">
 											<Viewbox Width="13" Height="13"><Path Classes="Icon" Data="{StaticResource IconArrowUp}"/></Viewbox>
 										</Button>

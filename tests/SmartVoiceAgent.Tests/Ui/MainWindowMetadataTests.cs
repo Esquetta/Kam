@@ -1,4 +1,5 @@
 using FluentAssertions;
+using SmartVoiceAgent.Ui.Services;
 using System.Xml.Linq;
 
 namespace SmartVoiceAgent.Tests.Ui;
@@ -385,6 +386,41 @@ public sealed class MainWindowMetadataTests
             .Where(element => element.Name.LocalName == "Border")
             .Should()
             .BeEmpty();
+    }
+
+    [Fact]
+    public void MainWindow_ThemeToggleLabelFollowsTheLanguage()
+    {
+        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+        var mainWindow = XDocument.Parse(mainWindowText).Root;
+
+        var labelGroup = mainWindow!
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "StackPanel"
+                && AttributeValue(element, "Classes") == "SidebarFooter")
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Panel" && AttributeValue(element, "Classes") == "NavLabelGroup");
+
+        var labels = labelGroup.Elements().Where(element => element.Name.LocalName == "TextBlock").ToArray();
+        labels.Should().HaveCount(2);
+        labels.Select(label => (AttributeValue(label, "Text"), AttributeValue(label, "IsVisible")))
+            .Should()
+            .BeEquivalentTo(new[]
+            {
+                ("{DynamicResource Lang.Shell.LightMode}", "{Binding IsDarkMode}"),
+                ("{DynamicResource Lang.Shell.DarkMode}", "{Binding !IsDarkMode}")
+            });
+
+        // The labels bind IsVisible themselves, so the compact sidebar hides their group instead.
+        mainWindowText.Should().Contain("<Style Selector=\"Border.Sidebar.Compact Panel.NavLabelGroup\">");
+        mainWindowText.Should().NotContain("ConverterParameter='Light mode|Dark mode'");
+
+        LocalizedXaml.English["Shell.LightMode"].Should().Be("Light mode");
+        LocalizedXaml.English["Shell.DarkMode"].Should().Be("Dark mode");
+        var turkish = LocalizationService.LoadDictionary("tr-TR");
+        turkish["Shell.LightMode"].Should().Be("Açık tema");
+        turkish["Shell.DarkMode"].Should().Be("Koyu tema");
     }
 
     private static string? AttributeValue(XElement element, string attributeName)

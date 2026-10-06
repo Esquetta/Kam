@@ -1,0 +1,31 @@
+{
+  "Shell.Brand.Tagline": "Ajan çalışma alanı",
+  "Shell.Nav.Workspace": "ÇALIŞMA ALANI",
+  "Shell.Nav.Workbench": "Çalışma masası",
+  "Shell.Nav.Diagnostics": "Tanılama",
+  "Shell.Nav.DiagnosticsTip": "Çalışma zamanı tanılaması",
+  "Shell.Nav.Skills": "Yetenekler",
+  "Shell.Nav.Extensions": "Uzantılar",
+  "Shell.Nav.Integrations": "Entegrasyonlar",
+  "Shell.Nav.Settings": "Ayarlar",
+
+  "Shell.ToggleTheme": "Temayı değiştir",
+  "Shell.LightMode": "Açık tema",
+  "Shell.DarkMode": "Koyu tema",
+
+  "Shell.Tray.ToolTip": "Kam - Yapay zekâ iş istasyonu asistanı",
+  "Shell.Tray.ToolTipWaiting": "Kam - onayınızı bekliyor",
+  "Shell.Tray.Open": "Kam'ı aç",
+  "Shell.Tray.NewTask": "Yeni görev",
+  "Shell.Tray.VoiceListening": "Sesli dinleme",
+  "Shell.Tray.VoiceStatusReady": "Ses: Hazır",
+  "Shell.Tray.VoiceStatusListening": "Ses: Dinleniyor",
+  "Shell.Tray.About": "Kam hakkında",
+  "Shell.Tray.Quit": "Kam'dan çık",
+
+  "Shell.Toast.Title": "Kam onayınızı bekliyor",
+  "Shell.Toast.Thread": "\"{0}\" sohbetinde",
+  "Shell.Toast.ThreadWithOthers": "\"{0}\" sohbetinde · {1} onay daha bekliyor",
+  "Shell.Toast.Later": "Sonra",
+  "Shell.Toast.Review": "İncele"
+}

@@ -1,0 +1,31 @@
+{
+  "Shell.Brand.Tagline": "Agent workspace",
+  "Shell.Nav.Workspace": "WORKSPACE",
+  "Shell.Nav.Workbench": "Workbench",
+  "Shell.Nav.Diagnostics": "Diagnostics",
+  "Shell.Nav.DiagnosticsTip": "Runtime Diagnostics",
+  "Shell.Nav.Skills": "Skills",
+  "Shell.Nav.Extensions": "Extensions",
+  "Shell.Nav.Integrations": "Integrations",
+  "Shell.Nav.Settings": "Settings",
+
+  "Shell.ToggleTheme": "Toggle Theme",
+  "Shell.LightMode": "Light mode",
+  "Shell.DarkMode": "Dark mode",
+
+  "Shell.Tray.ToolTip": "Kam - AI Workstation Assistant",
+  "Shell.Tray.ToolTipWaiting": "Kam - waiting for your approval",
+  "Shell.Tray.Open": "Open Kam",
+  "Shell.Tray.NewTask": "New task",
+  "Shell.Tray.VoiceListening": "Voice listening",
+  "Shell.Tray.VoiceStatusReady": "Voice: Ready",
+  "Shell.Tray.VoiceStatusListening": "Voice: Listening",
+  "Shell.Tray.About": "About Kam",
+  "Shell.Tray.Quit": "Quit Kam",
+
+  "Shell.Toast.Title": "Kam needs your approval",
+  "Shell.Toast.Thread": "In \"{0}\"",
+  "Shell.Toast.ThreadWithOthers": "In \"{0}\" · {1} more waiting",
+  "Shell.Toast.Later": "Later",
+  "Shell.Toast.Review": "Review"
+}
