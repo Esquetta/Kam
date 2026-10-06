@@ -19,6 +19,8 @@
   "Voice.TalkWithShortcut": "Konuş ({0})",
   "Voice.StopAndSend": "Durdur ve gönder",
   "Voice.StopReading": "Okumayı durdur",
+  "Voice.SpokenReplies.TurnOn": "Yanıtları sesli oku",
+  "Voice.SpokenReplies.TurnOff": "Yanıtları sesli okumayı kapat",
   "Voice.Cancel": "İptal (Esc)",
   "Voice.Unavailable": "Bu bilgisayarda ses kullanılamıyor",
   "Voice.CommandModePaused": "Komut modu duraklatıldı. Sesli komutları çalıştırmak için üstteki durumdan sürdürün."

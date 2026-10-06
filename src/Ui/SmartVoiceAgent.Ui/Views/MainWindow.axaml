@@ -1338,7 +1338,7 @@
 											 Text="{Binding CommandInputText, Mode=TwoWay}"/>
 
 									<!-- Toolbar -->
-									<Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
+									<Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="6">
 										<Button Grid.Column="0"
 												Classes="IconButton"
 												Width="32" Height="32"
@@ -1371,6 +1371,20 @@
 											</ComboBox.ItemTemplate>
 										</ComboBox>
 										<Button Grid.Column="3"
+												x:Name="SpokenRepliesButton"
+												Classes="IconButton SpokenRepliesButton"
+												Width="32" Height="32"
+												CornerRadius="16"
+												Background="Transparent"
+												BorderThickness="0"
+												ToolTip.Tip="{Binding SpokenRepliesToolTip}"
+												Command="{Binding ToggleSpokenRepliesCommand}">
+											<Panel>
+												<Viewbox Width="17" Height="17" IsVisible="{Binding IsSpokenRepliesOn}"><Path Classes="Icon" Data="{StaticResource IconVolume}"/></Viewbox>
+												<Viewbox Width="17" Height="17" IsVisible="{Binding !IsSpokenRepliesOn}"><Path Classes="Icon" Data="{StaticResource IconVolumeOff}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
+											</Panel>
+										</Button>
+										<Button Grid.Column="4"
 												x:Name="TalkButton"
 												Classes="IconButton TalkButton"
 												Classes.listening="{Binding IsVoiceListening}"
@@ -1383,14 +1397,14 @@
 												Command="{Binding TalkCommand}">
 											<Viewbox Width="17" Height="17"><Path Classes="Icon" Data="{StaticResource IconMic}"/></Viewbox>
 										</Button>
-										<Button Grid.Column="4"
+										<Button Grid.Column="5"
 												Classes="SendButton"
 												ToolTip.Tip="{DynamicResource Lang.Chat.Composer.Send}"
 												IsVisible="{Binding IsSendVisible}"
 												Command="{Binding SubmitCommand}">
 											<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconArrowUp}"/></Viewbox>
 										</Button>
-										<Button Grid.Column="4"
+										<Button Grid.Column="5"
 												Classes="SendButton"
 												ToolTip.Tip="{DynamicResource Lang.Chat.Composer.Stop}"
 												IsVisible="{Binding IsAgentTurnRunning}"

@@ -19,6 +19,8 @@
   "Voice.TalkWithShortcut": "Talk ({0})",
   "Voice.StopAndSend": "Stop and send",
   "Voice.StopReading": "Stop reading",
+  "Voice.SpokenReplies.TurnOn": "Read replies aloud",
+  "Voice.SpokenReplies.TurnOff": "Turn off reading replies aloud",
   "Voice.Cancel": "Cancel (Esc)",
   "Voice.Unavailable": "Voice isn't available on this computer",
   "Voice.CommandModePaused": "Command mode is paused. Resume it from the status at the top to run voice commands."

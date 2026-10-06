@@ -424,6 +424,24 @@ public sealed class MainWindowMetadataTests
     }
 
     [Fact]
+    public void MainWindow_ComposerTogglesReadingRepliesAloud()
+    {
+        var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root!;
+        var button = mainWindow.Descendants().Single(element => AttributeValue(element, "Name") == "SpokenRepliesButton");
+
+        AttributeValue(button, "Command").Should().Be("{Binding ToggleSpokenRepliesCommand}");
+        AttributeValue(button, "ToolTip.Tip").Should().Be("{Binding SpokenRepliesToolTip}");
+        button.Descendants()
+            .Where(element => element.Name.LocalName == "Path")
+            .Select(element => AttributeValue(element, "Data"))
+            .Should().Equal("{StaticResource IconVolume}", "{StaticResource IconVolumeOff}");
+
+        var turkish = LocalizationService.LoadDictionary("tr-TR");
+        turkish["Voice.SpokenReplies.TurnOn"].Should().Be("Yanıtları sesli oku");
+        turkish["Voice.SpokenReplies.TurnOff"].Should().Be("Yanıtları sesli okumayı kapat");
+    }
+
+    [Fact]
     public void MainWindow_MicButtonsTalkAndTheComposerShowsVoiceStatus()
     {
         var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());

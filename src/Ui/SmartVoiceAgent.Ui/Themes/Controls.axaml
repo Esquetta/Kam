@@ -314,6 +314,11 @@
         <Setter Property="VerticalAlignment" Value="Stretch" />
     </Style>
 
+    <!-- Draw the 24x24 glyph as designed: Uniform stretch fits the narrow mic to its own bounds and leaves it off-center. -->
+    <Style Selector="Button.TalkButton Path.Icon, Button.SpokenRepliesButton Path.Icon">
+        <Setter Property="Stretch" Value="None" />
+    </Style>
+
     <Style Selector="Button.TalkButton.listening /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource AccentErrorBrush}" />
     </Style>

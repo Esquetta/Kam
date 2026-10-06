@@ -79,6 +79,69 @@ public sealed class MainWindowVoiceTests : IDisposable
     }
 
     [Fact]
+    public void ToggleSpokenRepliesCommand_TurnsReadingOffAndRestoresTheLastMode()
+    {
+        using var settings = new JsonSettingsService(_settingsDirectory);
+        settings.SpokenReplies = MainWindowViewModel.SpokenRepliesAll;
+        var viewModel = new MainWindowViewModel(settings);
+
+        viewModel.IsSpokenRepliesOn.Should().BeTrue();
+        viewModel.SpokenRepliesToolTip.Should().Be("Turn off reading replies aloud");
+
+        viewModel.ToggleSpokenRepliesCommand.Execute(null);
+
+        settings.SpokenReplies.Should().Be(MainWindowViewModel.SpokenRepliesOff);
+        viewModel.IsSpokenRepliesOn.Should().BeFalse();
+        viewModel.SpokenRepliesToolTip.Should().Be("Read replies aloud");
+
+        viewModel.ToggleSpokenRepliesCommand.Execute(null);
+
+        settings.SpokenReplies.Should().Be(MainWindowViewModel.SpokenRepliesAll);
+        viewModel.IsSpokenRepliesOn.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ToggleSpokenRepliesCommand_WhenOffAtStart_TurnsOnRepliesToVoiceCommands()
+    {
+        using var settings = new JsonSettingsService(_settingsDirectory);
+        settings.SpokenReplies = MainWindowViewModel.SpokenRepliesOff;
+        var viewModel = new MainWindowViewModel(settings);
+
+        viewModel.ToggleSpokenRepliesCommand.Execute(null);
+
+        settings.SpokenReplies.Should().Be(MainWindowViewModel.SpokenRepliesVoice);
+    }
+
+    [Fact]
+    public void ToggleSpokenRepliesCommand_WhileReading_StopsReading()
+    {
+        using var settings = new JsonSettingsService(_settingsDirectory);
+        var fakes = new VoiceFakes();
+        var viewModel = new MainWindowViewModel(settings);
+        var voice = fakes.CreateAssistant();
+        viewModel.SetVoiceAssistant(voice);
+        _ = voice.SpeakAsync("Opened Spotify.");
+
+        viewModel.ToggleSpokenRepliesCommand.Execute(null);
+
+        fakes.Speech.StopCount.Should().Be(1);
+    }
+
+    [Fact]
+    public void SpokenRepliesSetting_ChangedInSettings_UpdatesTheToggle()
+    {
+        using var settings = new JsonSettingsService(_settingsDirectory);
+        var viewModel = new MainWindowViewModel(settings);
+        var changed = new List<string?>();
+        viewModel.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        settings.SpokenReplies = MainWindowViewModel.SpokenRepliesOff;
+
+        viewModel.IsSpokenRepliesOn.Should().BeFalse();
+        changed.Should().Contain(nameof(MainWindowViewModel.IsSpokenRepliesOn));
+    }
+
+    [Fact]
     public void TalkToolTip_NamesTheShortcutFromSettings()
     {
         using var settings = new JsonSettingsService(_settingsDirectory);

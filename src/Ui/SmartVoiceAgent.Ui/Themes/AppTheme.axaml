@@ -44,6 +44,8 @@
     <StreamGeometry x:Key="IconArrowUp">M12 19V5 M5 12l7-7 7 7</StreamGeometry>
     <StreamGeometry x:Key="IconPaperclip">M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48</StreamGeometry>
     <StreamGeometry x:Key="IconMic">M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z M19 10v2a7 7 0 0 1-14 0v-2 M12 19v3</StreamGeometry>
+    <StreamGeometry x:Key="IconVolume">M11 5L6 9H2v6h4l5 4V5z M15.54 8.46a5 5 0 0 1 0 7.07 M19.07 4.93a10 10 0 0 1 0 14.14</StreamGeometry>
+    <StreamGeometry x:Key="IconVolumeOff">M11 5L6 9H2v6h4l5 4V5z M22 9l-6 6 M16 9l6 6</StreamGeometry>
     <StreamGeometry x:Key="IconPlus">M12 5v14 M5 12h14</StreamGeometry>
     <!-- Brand mark: same waveform as the app and tray icon -->
     <StreamGeometry x:Key="IconBrandWave">M4 10v4 M8 7.5v9 M12 5v14 M16 7.5v9 M20 10v4</StreamGeometry>

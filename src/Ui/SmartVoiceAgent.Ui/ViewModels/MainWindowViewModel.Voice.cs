@@ -46,6 +46,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private int _voiceProblemVersion;
         private int _pendingVoiceCommands;
         private bool _isSavingWakeWordSetting;
+        private string _spokenRepliesOnMode = SpokenRepliesVoice;
 
         /// <summary>
         /// Gets whether voice is set up on this computer.
@@ -133,9 +134,25 @@ namespace SmartVoiceAgent.Ui.ViewModels
             };
 
         /// <summary>
+        /// Gets whether replies are read aloud: <see cref="ISettingsService.SpokenReplies"/> is anything but Off.
+        /// </summary>
+        public bool IsSpokenRepliesOn => !string.Equals(
+            _pageSettingsService.SpokenReplies, SpokenRepliesOff, StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Gets the read-aloud button's tooltip, which says what a click does.
+        /// </summary>
+        public string SpokenRepliesToolTip => Loc.Get(IsSpokenRepliesOn ? "Voice.SpokenReplies.TurnOff" : "Voice.SpokenReplies.TurnOn");
+
+        /// <summary>
         /// Starts recording a command, or stops and sends it; while a reply is read aloud, stops reading.
         /// </summary>
         public ICommand TalkCommand { get; private set; } = null!;
+
+        /// <summary>
+        /// Turns reading replies aloud off, or back on in the mode it had before.
+        /// </summary>
+        public ICommand ToggleSpokenRepliesCommand { get; private set; } = null!;
 
         /// <summary>
         /// Stops recording without sending, and stops reading aloud.
@@ -317,7 +334,25 @@ namespace SmartVoiceAgent.Ui.ViewModels
             TalkCommand = ReactiveCommand.Create(ToggleTalk);
             CancelVoiceCommand = ReactiveCommand.Create(CancelVoice);
             ToggleWakeWordCommand = ReactiveCommand.Create(ToggleWakeWord);
+            ToggleSpokenRepliesCommand = ReactiveCommand.Create(ToggleSpokenReplies);
             _pageSettingsService.SettingChanged += OnVoiceSettingChanged;
+        }
+
+        private void ToggleSpokenReplies()
+        {
+            if (IsSpokenRepliesOn)
+            {
+                _spokenRepliesOnMode = _pageSettingsService.SpokenReplies;
+                _pageSettingsService.SpokenReplies = SpokenRepliesOff;
+                if (_voice?.State == VoiceState.Speaking)
+                {
+                    _voice.Cancel();
+                }
+
+                return;
+            }
+
+            _pageSettingsService.SpokenReplies = _spokenRepliesOnMode;
         }
 
         /// <summary>
@@ -410,6 +445,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     this.RaisePropertyChanged(nameof(TalkShortcut));
                     this.RaisePropertyChanged(nameof(TalkToolTip));
                     TalkShortcutChanged?.Invoke(this, EventArgs.Empty);
+                    break;
+                case nameof(ISettingsService.SpokenReplies):
+                    this.RaisePropertyChanged(nameof(IsSpokenRepliesOn));
+                    this.RaisePropertyChanged(nameof(SpokenRepliesToolTip));
                     break;
                 case nameof(ISettingsService.IsNoiseSuppressionEnabled):
                     if (_voice is not null)
@@ -594,6 +633,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             this.RaisePropertyChanged(nameof(VoiceStatusText));
             this.RaisePropertyChanged(nameof(VoiceStatusColor));
             this.RaisePropertyChanged(nameof(TalkToolTip));
+            this.RaisePropertyChanged(nameof(SpokenRepliesToolTip));
 
             _trayIconService?.SetVoiceEnabled(IsWakeWordEnabled);
             _trayIconService?.UpdateStatus(
