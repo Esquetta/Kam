@@ -123,6 +123,28 @@ public sealed class MainWindowMetadataTests
     }
 
     [Fact]
+    public void MainWindow_ChatRendersAgentToolStepsAndApprovalCards()
+    {
+        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+
+        mainWindowText.Should().Contain("IsVisible=\"{Binding IsToolStep}\"");
+        mainWindowText.Should().Contain("Classes.Approval=\"{Binding IsAwaitingApproval}\"");
+        mainWindowText.Should().Contain("Text=\"{Binding ToolDisplayName}\"");
+        mainWindowText.Should().Contain("Text=\"{Binding ArgumentsPreview}\"");
+        mainWindowText.Should().Contain("Text=\"{Binding ToolStatusText}\"");
+        mainWindowText.Should().Contain("ApproveToolCallCommand");
+        mainWindowText.Should().Contain("AlwaysAllowToolCallCommand");
+        mainWindowText.Should().Contain("DenyToolCallCommand");
+        mainWindowText.Should().Contain("Content=\"Always allow\"");
+        mainWindowText.Should().Contain("StopAgentTurnCommand");
+        mainWindowText.Should().Contain("IsVisible=\"{Binding IsSendVisible}\"");
+        mainWindowText.Should().Contain("Kam is working");
+        mainWindowText.Should().Contain("vm:MainWindowViewModel.ApprovalModes");
+        mainWindowText.Should().Contain("SelectedItem=\"{Binding SelectedApprovalMode}\"");
+        mainWindowText.Should().Contain("x:Name=\"ChatScrollViewer\"");
+    }
+
+    [Fact]
     public void MainWindow_ActivityPanelUsesStructuredFeedBindings()
     {
         var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());

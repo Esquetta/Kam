@@ -136,6 +136,47 @@ public class ShellSkillExecutorTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_ShellRun_TruncationKeepsTheEndOfOutput()
+    {
+        var executor = new ShellSkillExecutor();
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject(
+            "shell.run",
+            new
+            {
+                command = EchoStdOutCommand(new string('x', 900) + "kam-last-line"),
+                workingDirectory = _workspace,
+                timeoutMilliseconds = 5000,
+                maxOutputLength = 500
+            }));
+
+        result.Success.Should().BeTrue();
+        var data = result.Data.Should().BeOfType<ShellCommandResult>().Subject;
+        data.Truncated.Should().BeTrue();
+        data.StdOut.Should().Contain("[truncated]");
+        data.StdOut.TrimEnd().Should().EndWith("kam-last-line");
+        (data.StdOut.Length + data.StdErr.Length).Should().BeLessThanOrEqualTo(500);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShellRun_AllowsCommandsThatOnlyContainBlockedWords()
+    {
+        var executor = new ShellSkillExecutor();
+
+        var result = await executor.ExecuteAsync(SkillPlan.FromObject(
+            "shell.run",
+            new
+            {
+                command = "echo normal Models format",
+                workingDirectory = _workspace,
+                timeoutMilliseconds = 5000
+            }));
+
+        result.Success.Should().BeTrue(result.ErrorMessage);
+        result.Message.Should().Contain("Models");
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ShellRun_BlocksDangerousCommands()
     {
         var executor = new ShellSkillExecutor();

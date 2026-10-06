@@ -77,6 +77,36 @@ public class SkillRuntimeRegistrationTests
     }
 
     [Fact]
+    public async Task AddSmartVoiceAgent_ExposesBuiltInSkillsAsAgentTools()
+    {
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection().Build();
+
+        services.AddLogging();
+        services.AddApplicationServices();
+        services.AddInfrastructureServices(configuration);
+        services.AddSmartVoiceAgent(configuration);
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+
+        provider.GetService<IAgentRuntime>().Should().NotBeNull();
+        provider.GetService<IToolPermissionService>().Should().NotBeNull();
+        provider.GetService<IAgentSessionStore>().Should().NotBeNull();
+
+        var tools = new List<SmartVoiceAgent.Core.Models.Agents.AgentToolDescriptor>();
+        foreach (var toolProvider in scope.ServiceProvider.GetServices<IAgentToolProvider>())
+        {
+            tools.AddRange(await toolProvider.GetToolsAsync(TestContext.Current.CancellationToken));
+        }
+
+        tools.Should().NotBeEmpty();
+        tools.Select(tool => tool.Name).Should().OnlyHaveUniqueItems()
+            .And.AllSatisfy(name => name.Should().MatchRegex("^[A-Za-z0-9_-]{1,64}$"));
+        tools.Should().Contain(tool => tool.Name == "apps_open");
+        tools.Should().NotContain(tool => tool.Name == "agents_run");
+    }
+
+    [Fact]
     public void AddSmartVoiceAgent_AnthropicConfiguration_ResolvesChatClient()
     {
         var services = new ServiceCollection();

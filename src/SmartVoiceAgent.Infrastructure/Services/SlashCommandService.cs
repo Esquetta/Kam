@@ -82,6 +82,7 @@ public sealed class SlashCommandService : ISlashCommandService
         new("/workspace status", "Show configured workspace root and local repository signals.", "/workspace status", "Workflow"),
         new("/workspace commands", "Show coding-agent workspace command entry points.", "/workspace commands", "Workflow"),
         new("/hooks", "Show coding-agent hook availability.", "/hooks", "Workflow"),
+        new("/compact", "Summarize earlier messages in this chat thread so it fits the model's context.", "/compact", "Runtime"),
         new("/clear", "Clear the command input.", "/clear", "General")
     ];
 
@@ -221,6 +222,10 @@ public sealed class SlashCommandService : ISlashCommandService
             "/workspace" => SlashCommandResult.Succeeded("/workspace", FormatWorkspace(arguments)),
             "/hooks" => SlashCommandResult.Succeeded("/hooks", FormatCodingAgentWorkflow("/hooks")),
             "/clear" => SlashCommandResult.Succeeded("/clear", "Input cleared."),
+            // Chat sends /compact to the agent runtime; this only answers when that runtime is off.
+            "/compact" => SlashCommandResult.Failed(
+                "/compact",
+                "Compacting needs agent chat. Set AgentRuntime:Enabled to true and open a chat thread."),
             _ => SlashCommandResult.Failed(commandName, $"Unknown slash command: {commandName}")
         };
     }

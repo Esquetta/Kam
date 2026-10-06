@@ -1,4 +1,5 @@
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Infrastructure.Skills.BuiltIn.AgentTools;
 using SmartVoiceAgent.Infrastructure.Skills.Policy;
 
 namespace SmartVoiceAgent.Infrastructure.Skills.BuiltIn;
@@ -490,12 +491,13 @@ public static class BuiltInSkillManifestCatalog
                 SkillRiskLevel.High,
                 [SkillPermission.ProcessLaunch],
                 [
-                    RequiredString("command", "Non-interactive shell command to execute."),
+                    RequiredString("command", "Non-interactive shell command to execute (PowerShell on Windows, /bin/sh elsewhere)."),
                     OptionalString("workingDirectory", "Existing working directory."),
-                    OptionalNumber("timeoutMilliseconds", "Command timeout in milliseconds."),
-                    OptionalNumber("maxOutputLength", "Maximum stdout/stderr characters to return.")
+                    OptionalNumber("timeoutMilliseconds", "Command timeout in milliseconds. Default 120000, maximum 600000."),
+                    OptionalNumber("maxOutputLength", "Maximum stdout/stderr characters to return. Long output keeps its start and end.")
                 ],
-                timeoutMilliseconds: 15000),
+                // The executor enforces the command timeout; the pipeline limit only has to outlast it.
+                timeoutMilliseconds: ShellSkillExecutor.MaxTimeoutMilliseconds + 10000),
             Create(
                 "window.active",
                 "Active Window Context",

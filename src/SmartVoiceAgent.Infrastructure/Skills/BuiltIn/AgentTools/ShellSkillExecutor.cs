@@ -10,37 +10,19 @@ namespace SmartVoiceAgent.Infrastructure.Skills.BuiltIn.AgentTools;
 
 public sealed class ShellSkillExecutor : ISkillExecutor
 {
-    private const int DefaultTimeoutMilliseconds = 10000;
-    private const int MaxTimeoutMilliseconds = 15000;
+    /// <summary>
+    /// Default command timeout. Builds and test runs routinely take minutes.
+    /// </summary>
+    public const int DefaultTimeoutMilliseconds = 120000;
+
+    /// <summary>
+    /// Longest timeout a caller may ask for.
+    /// </summary>
+    public const int MaxTimeoutMilliseconds = 600000;
+
     private const int DefaultMaxOutputLength = 6000;
     private const int MaxOutputLength = 20000;
-
-    private static readonly string[] BlockedPatterns =
-    [
-        "git reset --hard",
-        "git clean -fd",
-        "rm -rf",
-        "rm ",
-        "unlink ",
-        "remove-item",
-        "del ",
-        "del /s",
-        "erase ",
-        "rd /s",
-        "rmdir /s",
-        "cmd /c del",
-        "cmd /c erase",
-        "cmd /c rd",
-        "cmd /c rmdir",
-        "format ",
-        "diskpart",
-        "shutdown",
-        "restart-computer",
-        "stop-computer",
-        "mkfs",
-        "dd if=",
-        ":(){"
-    ];
+    private const string TruncationMarker = "\n...[truncated]...\n";
 
     private readonly ISkillRegistry? _skillRegistry;
 
@@ -239,10 +221,11 @@ public sealed class ShellSkillExecutor : ISkillExecutor
         string command,
         IReadOnlyDictionary<string, string> runtimeOptions)
     {
-        if (IsBlockedCommand(command, runtimeOptions))
+        var blockedRule = FindBlockedRule(command, runtimeOptions);
+        if (blockedRule is not null)
         {
             return SkillResult.Failed(
-                "Shell command blocked by safety policy.",
+                $"Shell command blocked by safety policy ({blockedRule}).",
                 SkillExecutionStatus.PermissionDenied,
                 "shell_command_blocked");
         }
@@ -304,16 +287,21 @@ public sealed class ShellSkillExecutor : ISkillExecutor
                 "shell_working_directory_not_allowed");
     }
 
-    private static bool IsBlockedCommand(
+    private static string? FindBlockedRule(
         string command,
         IReadOnlyDictionary<string, string> runtimeOptions)
     {
-        var normalized = NormalizeCommand(command);
-        var blockedPatterns = BlockedPatterns
-            .Concat(GetRuntimeList(runtimeOptions, SkillRuntimePolicyOptions.ShellBlockedPatterns));
+        var builtInRule = ShellCommandGuard.FindBlockedRule(command);
+        if (builtInRule is not null)
+        {
+            return builtInRule;
+        }
 
-        return blockedPatterns.Any(pattern =>
-            normalized.Contains(NormalizeCommand(pattern), StringComparison.OrdinalIgnoreCase));
+        // Patterns from shell.blockedPatterns are plain substrings, as configured.
+        var normalized = NormalizeCommand(command);
+        return GetRuntimeList(runtimeOptions, SkillRuntimePolicyOptions.ShellBlockedPatterns)
+            .FirstOrDefault(pattern =>
+                normalized.Contains(NormalizeCommand(pattern), StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsAllowedCommand(
@@ -422,17 +410,33 @@ public sealed class ShellSkillExecutor : ISkillExecutor
             return (stdout, stderr, false);
         }
 
-        var remaining = Math.Max(0, maxOutputLength);
-        var limitedStdout = stdout.Length <= remaining
-            ? stdout
-            : stdout[..remaining];
-        remaining -= limitedStdout.Length;
+        // Stderr keeps at least a third of the budget, because errors are what the agent acts on.
+        var stderrBudget = Math.Min(
+            stderr.Length,
+            Math.Max(maxOutputLength / 3, maxOutputLength - stdout.Length));
+        var stdoutBudget = maxOutputLength - stderrBudget;
 
-        var limitedStderr = remaining > 0
-            ? stderr[..Math.Min(stderr.Length, remaining)]
-            : string.Empty;
+        return (KeepHeadAndTail(stdout, stdoutBudget), KeepHeadAndTail(stderr, stderrBudget), true);
+    }
 
-        return (limitedStdout, limitedStderr, true);
+    /// <summary>
+    /// Keeps the start and the end of long output. Build and test summaries are at the end.
+    /// </summary>
+    private static string KeepHeadAndTail(string text, int budget)
+    {
+        if (text.Length <= budget)
+        {
+            return text;
+        }
+
+        if (budget <= TruncationMarker.Length * 2)
+        {
+            return budget <= 0 ? string.Empty : text[^budget..];
+        }
+
+        var head = (budget - TruncationMarker.Length) / 3;
+        var tail = budget - TruncationMarker.Length - head;
+        return string.Concat(text.AsSpan(0, head), TruncationMarker, text.AsSpan(text.Length - tail));
     }
 
     private static SkillResult Failed(

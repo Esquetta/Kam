@@ -35,7 +35,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         Events
     }
 
-    public class MainWindowViewModel : ViewModelBase
+    public partial class MainWindowViewModel : ViewModelBase
     {
         private TrayIconService? _trayIconService;
         private ICommandInputService? _commandInput;
@@ -675,6 +675,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
             UseComposerSuggestionCommand = ReactiveCommand.Create<string?>(UseComposerSuggestion);
             ToggleVoiceCommand = ReactiveCommand.Create(ToggleVoiceEnabled);
             StartVoiceRecordingCommand = ReactiveCommand.CreateFromTask(StartVoiceRecordingAsync);
+            ApproveToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: true, alwaysAllow: false));
+            AlwaysAllowToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: true, alwaysAllow: true));
+            DenyToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: false, alwaysAllow: false));
+            StopAgentTurnCommand = ReactiveCommand.Create(StopAgentTurn);
             InitializeAgentChatSessions();
 
             Dispatcher.UIThread.Post(() =>
@@ -1122,6 +1126,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             SelectedAgentChatSession = session;
             RaiseAgentChatStateChanged();
+
+            if (session.NeedsHistoryLoad)
+            {
+                _ = LoadAgentSessionHistoryAsync(session);
+            }
         }
 
         private void AddAgentChatMessage(string role, string content)
@@ -1174,6 +1183,18 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 return;
             }
 
+            // /compact belongs to the agent runtime, which summarizes the selected thread.
+            if (_agentRuntime is not null
+                && SelectedAgentChatSession is not null
+                && input.Equals("/compact", StringComparison.OrdinalIgnoreCase))
+            {
+                CommandInputText = string.Empty;
+                SlashCommandSuggestions.Clear();
+                IsSlashCommandPaletteVisible = false;
+                await RunAgentTurnAsync(SelectedAgentChatSession, input);
+                return;
+            }
+
             if (_slashCommandService?.IsSlashCommand(input) == true)
             {
                 var slashResult = await _slashCommandService.ExecuteAsync(input);
@@ -1184,6 +1205,15 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 CommandInputText = string.Empty;
                 SlashCommandSuggestions.Clear();
                 IsSlashCommandPaletteVisible = false;
+                return;
+            }
+
+            if (_agentRuntime is not null && SelectedAgentChatSession is not null)
+            {
+                var message = BuildCommandSubmission(input, ComposerAttachments);
+                CommandInputText = string.Empty;
+                ClearComposerAttachments();
+                await RunAgentTurnAsync(SelectedAgentChatSession, message);
                 return;
             }
 
@@ -2115,14 +2145,42 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private string _relativeTimeText;
         private bool _isSelected;
 
+        private bool _isRunning;
+        private int _persistedMessageCount;
+
         private AgentChatSessionViewModel(
+            string sessionId,
             string title,
             string summary,
             string relativeTimeText)
         {
+            SessionId = sessionId;
             _title = title;
             _summary = summary;
             _relativeTimeText = relativeTimeText;
+        }
+
+        /// <summary>
+        /// Gets the id the agent runtime stores this thread under.
+        /// </summary>
+        public string SessionId { get; }
+
+        /// <summary>
+        /// Gets whether the saved history still has to be read from disk before the thread is shown.
+        /// </summary>
+        public bool NeedsHistoryLoad { get; private set; }
+
+        /// <summary>
+        /// Gets or sets whether an agent turn is running in this thread.
+        /// </summary>
+        public bool IsRunning
+        {
+            get => _isRunning;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _isRunning, value);
+                this.RaisePropertyChanged(nameof(StatusText));
+            }
         }
 
         public string Title
@@ -2157,20 +2215,47 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public string AgentName => "Kam Agent";
 
-        public string StatusText => IsSelected ? "Active" : "Ready";
+        public string StatusText => IsRunning ? "Working" : IsSelected ? "Active" : "Ready";
 
         public string ModelText => "Settings model";
 
-        public string MessageCountText =>
-            Messages.Count == 0
-                ? "No messages"
-                : Messages.Count == 1
-                    ? "1 message"
-                    : $"{Messages.Count} messages";
+        public string MessageCountText
+        {
+            get
+            {
+                var count = NeedsHistoryLoad ? _persistedMessageCount : Messages.Count;
+                return count == 0
+                    ? "No messages"
+                    : count == 1
+                        ? "1 message"
+                        : $"{count} messages";
+            }
+        }
 
         public void AddMessage(AgentChatMessageViewModel message)
         {
             Messages.Add(message);
+            this.RaisePropertyChanged(nameof(MessageCountText));
+        }
+
+        public void RemoveMessage(AgentChatMessageViewModel message)
+        {
+            Messages.Remove(message);
+            this.RaisePropertyChanged(nameof(MessageCountText));
+        }
+
+        /// <summary>
+        /// Replaces the timeline with history read from disk.
+        /// </summary>
+        public void LoadHistory(IEnumerable<AgentChatMessageViewModel> messages)
+        {
+            Messages.Clear();
+            foreach (var message in messages)
+            {
+                Messages.Add(message);
+            }
+
+            NeedsHistoryLoad = false;
             this.RaisePropertyChanged(nameof(MessageCountText));
         }
 
@@ -2179,41 +2264,23 @@ namespace SmartVoiceAgent.Ui.ViewModels
             string summary,
             string relativeTimeText)
         {
-            return new AgentChatSessionViewModel(title, summary, relativeTimeText);
-        }
-    }
-
-    public sealed class AgentChatMessageViewModel
-    {
-        public AgentChatMessageViewModel(
-            string role,
-            string content,
-            string timeText)
-        {
-            Role = role;
-            Content = content;
-            TimeText = timeText;
+            return new AgentChatSessionViewModel(Guid.NewGuid().ToString("N"), title, summary, relativeTimeText);
         }
 
-        public string Role { get; }
-
-        public string Content { get; }
-
-        public string TimeText { get; }
-
         /// <summary>
-        /// Gets whether the message was written by the user, which renders it as an outgoing bubble.
+        /// Creates a thread saved by an earlier run; its history loads when it is opened.
         /// </summary>
-        public bool IsUser => Role.Equals("You", StringComparison.OrdinalIgnoreCase);
-
-        /// <summary>
-        /// Gets whether the message came from the agent or the system.
-        /// </summary>
-        public bool IsAgent => !IsUser;
-
-        public static AgentChatMessageViewModel System(string content)
+        public static AgentChatSessionViewModel CreateSaved(
+            string sessionId,
+            string title,
+            string relativeTimeText,
+            int savedItemCount)
         {
-            return new AgentChatMessageViewModel("System", content, DateTime.Now.ToString("HH:mm"));
+            return new AgentChatSessionViewModel(sessionId, title, "Saved thread", relativeTimeText)
+            {
+                NeedsHistoryLoad = true,
+                _persistedMessageCount = savedItemCount
+            };
         }
     }
 

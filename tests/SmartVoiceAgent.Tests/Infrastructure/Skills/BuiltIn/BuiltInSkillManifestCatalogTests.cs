@@ -1,5 +1,6 @@
 using FluentAssertions;
 using SmartVoiceAgent.Infrastructure.Skills.BuiltIn;
+using SmartVoiceAgent.Infrastructure.Skills.BuiltIn.AgentTools;
 
 namespace SmartVoiceAgent.Tests.Infrastructure.Skills.BuiltIn;
 
@@ -85,7 +86,7 @@ public class BuiltInSkillManifestCatalogTests
 
         manifests["shell.run"].RiskLevel.Should().Be(SmartVoiceAgent.Core.Models.Skills.SkillRiskLevel.High);
         manifests["shell.run"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.ProcessLaunch);
-        manifests["shell.run"].TimeoutMilliseconds.Should().BeLessThanOrEqualTo(15000);
+        manifests["shell.run"].TimeoutMilliseconds.Should().BeGreaterThan(ShellSkillExecutor.MaxTimeoutMilliseconds);
 
         manifests["apps.open"].RiskLevel.Should().Be(SmartVoiceAgent.Core.Models.Skills.SkillRiskLevel.Medium);
         manifests["apps.open"].Permissions.Should().Contain(SmartVoiceAgent.Core.Models.Skills.SkillPermission.ProcessLaunch);

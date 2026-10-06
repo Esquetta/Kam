@@ -6,7 +6,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SmartVoiceAgent.Application.DependencyInjection;
+using Microsoft.Extensions.Options;
 using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Core.Models.Agents;
 using SmartVoiceAgent.Infrastructure.DependencyInjection;
 using SmartVoiceAgent.Infrastructure.Extensions;
 using SmartVoiceAgent.Ui.Services;
@@ -145,6 +147,17 @@ namespace SmartVoiceAgent.Ui
 
                 var skillExecutionPipeline = services.GetRequiredService<ISkillExecutionPipeline>();
                 _mainViewModel.SetSkillExecutionPipeline(skillExecutionPipeline);
+
+                // Chat runs through the tool-calling agent unless AgentRuntime:Enabled is false,
+                // which keeps the legacy single-skill planner for one release.
+                var agentRuntimeOptions = services.GetRequiredService<IOptions<AgentRuntimeOptions>>().Value;
+                if (agentRuntimeOptions.Enabled)
+                {
+                    _mainViewModel.SetAgentRuntime(
+                        services.GetRequiredService<IAgentRuntime>(),
+                        services.GetRequiredService<IToolPermissionService>(),
+                        services.GetRequiredService<IAgentSessionStore>());
+                }
 
                 // Setup Voice Command Service
                 SetupVoiceCommandService(_mainViewModel, services);

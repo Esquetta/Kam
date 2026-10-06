@@ -22,7 +22,7 @@
 | **Framework** | .NET 9.0 |
 | **UI Framework** | Avalonia UI 12.0.3 with ReactiveUI (cross-platform desktop) |
 | **AI/ML** | AutoGen 0.2.3, Microsoft.SemanticKernel 1.67.1, Microsoft.Agents.AI |
-| **MCP** | ModelContextProtocol 0.5.0-preview.1 |
+| **MCP** | ModelContextProtocol 1.4.0 |
 | **CQRS** | Cortex.Mediator 3.1.2 |
 | **Validation** | FluentValidation 12.1.1 |
 | **Audio** | NAudio 2.2.1, Whisper.net 1.9.0 |
@@ -417,6 +417,14 @@ See `RESPONSIVE_DESIGN.md` for full details.
 - **AgentFactory.cs**: Optimized instructions for reliable function calling with explicit examples
 - **TaskAgentTools.cs**: Production-ready error handling with retry logic, timeout protection, thread safety
 - **AgentBuilder.cs**: Fixed reflection parameter count mismatch for InitializeAsync with CancellationToken
+
+#### Agent Runtime (October 2026)
+- **Chat runs a tool-calling agent loop**: `IAgentRuntime` (`Infrastructure/Agent/Runtime/AgentRuntime.cs`) streams `AgentEvent`s; the model calls built-in skills natively through `SkillToolProvider`, and every call passes `IToolPermissionService` (Ask / Auto-edit / Full auto plus "always allow" rules)
+- **Threads persist** as `%AppData%/Kam/sessions/<id>.json` via `IAgentSessionStore`
+- **Context**: `AgentContextWindow` keeps requests under `AgentRuntime:ContextTokenBudget` by shortening old tool results, then inserting a summary message into the thread (`/compact` forces it); the model sees only the newest summary and what follows
+- **Shell**: `ShellCommandGuard` matches destructive commands by command position, not substring; `shell.run` timeout is up to 10 minutes
+- **Fallback**: `AgentRuntime:Enabled=false` keeps the legacy single-skill planner; voice still uses it
+- **Roadmap**: `docs/architecture/agent-platform.md` (MCP host, Agent Skills, plugins, coding mode, subagents)
 
 #### UI Redesign (October 2026)
 - **Design system**: violet accent tokens (`Accent`, `AccentStrong`, `AccentSubtle`, `AccentOn`) in `Themes/Colors.*.axaml`, Lucide-style icon geometries (`Icon*`) and `MonoFontFamily` in `Themes/AppTheme.axaml`, shared control classes in `Themes/Controls.axaml` (`PrimaryAction`, `SecondaryAction`, `Pill`, `Card`, `PageTitle`, `SectionTitle`, `Overline`)

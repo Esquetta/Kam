@@ -3,8 +3,8 @@ name: .NET CI
 on:
   push:
     branches: [ master, main, develop ]
+  # Every PR, so stacked PRs (based on another feature branch) get a Windows build and test run too.
   pull_request:
-    branches: [ master, main ]
 
 jobs:
   build:

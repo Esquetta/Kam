@@ -54,6 +54,9 @@
     <StreamGeometry x:Key="IconCheck">M20 6L9 17l-5-5</StreamGeometry>
     <StreamGeometry x:Key="IconAlert">M12 9v4 M12 17h.01 M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z</StreamGeometry>
     <StreamGeometry x:Key="IconBot">M12 8V4H8 M4 8h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z M2 14h2 M20 14h2 M15 13v2 M9 13v2</StreamGeometry>
+    <StreamGeometry x:Key="IconWrench">M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z</StreamGeometry>
+    <StreamGeometry x:Key="IconShield">M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z</StreamGeometry>
+    <StreamGeometry x:Key="IconStop">M7 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z</StreamGeometry>
     <StreamGeometry x:Key="IconSearch">M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14z M21 21l-4.3-4.3</StreamGeometry>
 
     <!-- SunIcon - Simplified for Avalonia -->

@@ -8,7 +8,9 @@ using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
 using SmartVoiceAgent.Core.Models.CodingAgent;
 using SmartVoiceAgent.Core.Models.GitHub;
+using SmartVoiceAgent.Core.Models.Agents;
 using SmartVoiceAgent.Infrastructure.Agent.Agents;
+using SmartVoiceAgent.Infrastructure.Agent.Runtime;
 using SmartVoiceAgent.Infrastructure.Agent.Conf;
 using SmartVoiceAgent.Infrastructure.Agent.Functions;
 using SmartVoiceAgent.Infrastructure.Agent.Tools;
@@ -153,6 +155,33 @@ public static class ServiceCollectionExtensions
                 () => ResolveExternalSkillModelId(configuration));
         });
         services.AddSingleton<ISkillPlannerService, ModelSkillPlannerService>();
+
+        // Tool-calling agent runtime (chat). Tool providers are scoped so each turn gets fresh executors.
+        services.Configure<AgentRuntimeOptions>(configuration.GetSection(AgentRuntimeOptions.SectionName));
+        services.AddSingleton<IToolPermissionService, ToolPermissionService>();
+        services.AddSingleton<IAgentSessionStore, JsonAgentSessionStore>();
+        services.AddScoped<IAgentToolProvider, SkillToolProvider>();
+        services.AddSingleton<IAgentRuntime>(sp =>
+        {
+            var chatClient = new Lazy<IChatClient>(() =>
+            {
+                var chatConfig = configuration
+                    .GetSection("AIService:Chat")
+                    .Get<AIServiceConfiguration>();
+
+                return IsUsableAiConfiguration(chatConfig)
+                    ? CreateObservedChatClient(sp, chatConfig!)
+                    : sp.GetRequiredService<IChatClient>();
+            });
+
+            return new AgentRuntime(
+                () => chatClient.Value,
+                sp.GetRequiredService<IServiceScopeFactory>(),
+                sp.GetRequiredService<IToolPermissionService>(),
+                sp.GetRequiredService<IAgentSessionStore>(),
+                sp.GetRequiredService<IOptions<AgentRuntimeOptions>>(),
+                sp.GetRequiredService<ILogger<AgentRuntime>>());
+        });
 
         // Host control service (must be registered before hosted service)
         services.AddSingleton<VoiceAgentHostControlService>();
