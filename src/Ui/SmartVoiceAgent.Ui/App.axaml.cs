@@ -276,6 +276,10 @@ namespace SmartVoiceAgent.Ui
                     // Register Smart Voice Agent services
                     services.AddSmartVoiceAgent(configuration);
 
+                    // Lets ${secret:NAME} in mcp.json read secrets saved in Settings.
+                    services.AddSingleton<ISecretValueProvider>(_ =>
+                        new JsonFileSettingsSecretStore(JsonSettingsService.GetDefaultSettingsDirectory()));
+
                     // Register our custom UI Log Service (replaces the dummy one)
                     services.AddSingleton<IUiLogService>(sp => new UiLogService());
                 })

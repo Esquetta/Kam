@@ -11,6 +11,7 @@ using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Core.Models.Agents;
 using SmartVoiceAgent.Infrastructure.Agent.Agents;
 using SmartVoiceAgent.Infrastructure.Agent.Runtime;
+using SmartVoiceAgent.Infrastructure.Agent.Mcp;
 using SmartVoiceAgent.Infrastructure.Agent.Conf;
 using SmartVoiceAgent.Infrastructure.Agent.Functions;
 using SmartVoiceAgent.Infrastructure.Agent.Tools;
@@ -161,6 +162,19 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IToolPermissionService, ToolPermissionService>();
         services.AddSingleton<IAgentSessionStore, JsonAgentSessionStore>();
         services.AddScoped<IAgentToolProvider, SkillToolProvider>();
+
+        // MCP servers from %AppData%/Kam/mcp.json, plugins and the Todoist integration, started on first use.
+        services.AddSingleton(sp => new UserMcpServerSource(
+            UserMcpServerSource.DefaultPath(),
+            sp.GetService<ILogger<UserMcpServerSource>>()));
+        services.AddSingleton<IMcpServerSource>(sp => sp.GetRequiredService<UserMcpServerSource>());
+        services.AddSingleton<IMcpServerSource, TodoistMcpServerSource>();
+        services.AddSingleton<IMcpHost>(sp => new McpHost(
+            sp.GetServices<IMcpServerSource>(),
+            sp.GetRequiredService<UserMcpServerSource>().ConfigPath,
+            sp.GetService<ISecretValueProvider>(),
+            sp.GetService<ILoggerFactory>()));
+        services.AddScoped<IAgentToolProvider, McpToolProvider>();
         services.AddSingleton<IAgentRuntime>(sp =>
         {
             var chatClient = new Lazy<IChatClient>(() =>
