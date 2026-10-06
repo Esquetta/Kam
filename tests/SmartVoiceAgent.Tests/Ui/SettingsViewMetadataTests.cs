@@ -12,16 +12,33 @@ public sealed class SettingsViewMetadataTests
         var view = XDocument.Parse(LocalizedXaml.ReadAllText(FindSettingsViewXamlPath())).Root;
 
         view.Should().NotBeNull();
-        view!
+        var voiceSection = FindVoiceSection(view!);
+        var textElements = view!
             .Descendants()
             .Where(element => element.Name.LocalName is "TextBlock" or "TextBox")
+            .ToList();
+
+        textElements
+            .Where(element => !element.Ancestors().Contains(voiceSection))
+            .SelectMany(element => element.Attributes())
+            .Select(attribute => attribute.Value)
+            .Should()
+            .NotContain(value => value.Contains("Endpoint", StringComparison.OrdinalIgnoreCase));
+        textElements
             .SelectMany(element => element.Attributes())
             .Select(attribute => attribute.Value)
             .Should()
             .NotContain(value =>
-                value.Contains("Endpoint", StringComparison.OrdinalIgnoreCase)
-                || value.Contains("AiEndpoint", StringComparison.Ordinal)
+                value.Contains("AiEndpoint", StringComparison.Ordinal)
                 || value.Contains("ChatEndpoint", StringComparison.Ordinal));
+
+        // The only address on the page is the speech API's, shown when that engine is chosen.
+        textElements
+            .Where(element => element.Attributes().Any(attribute =>
+                attribute.Value.Contains("Endpoint", StringComparison.OrdinalIgnoreCase)))
+            .Should()
+            .ContainSingle()
+            .Which.Attribute("Text")?.Value.Should().Be("{Binding SpeechApiEndpoint, Mode=TwoWay}");
     }
 
     [Fact]
@@ -51,7 +68,21 @@ public sealed class SettingsViewMetadataTests
         LocalizationService.LoadDictionary("tr-TR")["Settings.ReducedMotionDesc"].Should().Be("Animasyonları kapat");
     }
 
-    private static string FindSettingsViewXamlPath()
+    /// <summary>
+    /// Returns the panel that follows the <c>Voice Settings Section</c> comment.
+    /// </summary>
+    /// <param name="view">The parsed view.</param>
+    internal static XElement FindVoiceSection(XElement view)
+    {
+        var comment = view
+            .DescendantNodes()
+            .OfType<XComment>()
+            .Single(node => node.Value.Trim() == "Voice Settings Section");
+
+        return comment.ElementsAfterSelf().First();
+    }
+
+    internal static string FindSettingsViewXamlPath()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)

@@ -301,15 +301,16 @@
             <!-- Voice Settings Section -->
             <StackPanel Spacing="8" Margin="0,8,0,8">
                 <Grid ColumnDefinitions="*, Auto">
-                    <TextBlock Grid.Column="0" 
-                               Text="VOICE &amp; AUDIO"
+                    <TextBlock Grid.Column="0"
+                               Text="{DynamicResource Lang.Settings.Voice.Section}"
                                Classes="Overline"
+                               Margin="4,0,0,0"
                                VerticalAlignment="Center"/>
-                    <Button Grid.Column="1" 
+                    <Button Grid.Column="1"
                             Command="{Binding RefreshDevicesCommand}"
                             Background="Transparent"
                             Padding="8"
-                            ToolTip.Tip="Refresh device list">
+                            ToolTip.Tip="{DynamicResource Lang.Settings.Voice.RefreshDevices}">
                         <Path Data="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"
                               Fill="{DynamicResource TextMutedBrush}"
                               Width="16" Height="16"
@@ -334,10 +335,169 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Input Device -->
+                <!-- Speech Recognition -->
                 <Border Classes="SettingsItem">
                     <StackPanel Spacing="12">
-                        <!-- Header -->
+                        <Grid ColumnDefinitions="Auto, *">
+                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
+                                <Path Data="M9,5A4,4 0 0,1 13,9A4,4 0 0,1 9,13A4,4 0 0,1 5,9A4,4 0 0,1 9,5M9,15C11.67,15 17,16.34 17,19V21H1V19C1,16.34 6.33,15 9,15M16.76,5.36C18.78,7.56 18.78,10.61 16.76,12.63L15.08,10.94C15.92,9.76 15.92,8.23 15.08,7.05L16.76,5.36M20.07,2C24,6.05 23.97,12.11 20.07,16L18.44,14.37C21.21,11.19 21.21,6.65 18.44,3.63L20.07,2Z"
+                                      Width="16" Height="16"
+                                      Stretch="Uniform"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.Recognition}"
+                                           FontSize="13"
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.RecognitionDesc}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           Margin="0,2,0,0"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+                            <StackPanel Grid.Column="0" Spacing="6">
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.SpokenLanguage}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                <ComboBox ItemsSource="{Binding VoiceLanguageOptions}"
+                                          SelectedItem="{Binding SelectedVoiceLanguage, Mode=TwoWay}"
+                                          HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Spacing="6">
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.Engine}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                <ComboBox ItemsSource="{Binding SpeechEngineOptions}"
+                                          SelectedItem="{Binding SelectedSpeechEngine, Mode=TwoWay}"
+                                          HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Local Whisper model -->
+                        <StackPanel Spacing="6" IsVisible="{Binding IsLocalSpeechEngine}">
+                            <TextBlock Text="{DynamicResource Lang.Settings.Model}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextMutedBrush}"/>
+                            <Grid ColumnDefinitions="*, Auto" ColumnSpacing="8">
+                                <ComboBox Grid.Column="0"
+                                          ItemsSource="{Binding LocalSpeechModelOptions}"
+                                          SelectedItem="{Binding SelectedLocalSpeechModel, Mode=TwoWay}"
+                                          IsEnabled="{Binding !IsDownloadingSpeechModel}"
+                                          HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid ColumnDefinitions="Auto, *" ColumnSpacing="10">
+                                                <TextBlock Grid.Column="0"
+                                                           Text="{Binding Label}"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Hint}"
+                                                           FontSize="11"
+                                                           Foreground="{DynamicResource TextMutedBrush}"
+                                                           VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <Button Grid.Column="1"
+                                        Command="{Binding DownloadSpeechModelCommand}"
+                                        IsEnabled="{Binding CanDownloadSpeechModel}"
+                                        Classes="SecondaryAction"
+                                        Padding="12,8">
+                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.Model.Download}" FontSize="12" FontWeight="Medium"/>
+                                </Button>
+                            </Grid>
+                            <TextBlock Text="{Binding SpeechModelStatus}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       TextWrapping="Wrap"/>
+                            <Grid ColumnDefinitions="*, Auto"
+                                  ColumnSpacing="8"
+                                  IsVisible="{Binding IsDownloadingSpeechModel}">
+                                <ProgressBar Grid.Column="0"
+                                             Value="{Binding SpeechModelDownloadProgress, Mode=OneWay}"
+                                             Minimum="0"
+                                             Maximum="1"
+                                             Height="6"
+                                             CornerRadius="3"
+                                             VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding SpeechModelDownloadPercent}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           MinWidth="36"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+                            <TextBlock Text="{Binding SpeechModelDownloadError}"
+                                       IsVisible="{Binding HasSpeechModelDownloadError}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource AccentErrorBrush}"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock Text="{DynamicResource Lang.Settings.Voice.Model.Note}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <!-- OpenAI-compatible transcription API -->
+                        <StackPanel Spacing="10" IsVisible="{Binding IsApiSpeechEngine}">
+                            <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+                                <StackPanel Grid.Column="0" Spacing="6">
+                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.Api.Endpoint}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource TextMutedBrush}"/>
+                                    <TextBox Text="{Binding SpeechApiEndpoint, Mode=TwoWay}"
+                                             PlaceholderText="https://api.openai.com/v1"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="6">
+                                    <TextBlock Text="{DynamicResource Lang.Settings.Model}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource TextMutedBrush}"/>
+                                    <TextBox Text="{Binding SpeechApiModel, Mode=TwoWay}"
+                                             PlaceholderText="whisper-1"/>
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{DynamicResource Lang.Settings.ApiKey}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                <TextBox Text="{Binding SpeechApiKey, Mode=TwoWay}"
+                                         PasswordChar="*"
+                                         PlaceholderText="sk-..."/>
+                                <TextBlock Text="{Binding MaskedSpeechApiKey}"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                            <TextBlock Text="{DynamicResource Lang.Settings.Voice.Api.Note}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Microphone -->
+                <Border Classes="SettingsItem">
+                    <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="Auto, *">
                             <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
                                 <Path Data="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"
@@ -345,31 +505,29 @@
                                       Stretch="Uniform"/>
                             </Border>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Input Device"
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.Microphone}"
                                            FontSize="13"
                                            FontWeight="Medium"
                                            Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                <TextBlock Text="Select your microphone"
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicrophoneDesc}"
                                            FontSize="11"
                                            Foreground="{DynamicResource TextMutedBrush}"
                                            Margin="0,2,0,0"/>
                             </StackPanel>
                         </Grid>
-                        
-                        <!-- Device Dropdown -->
+
                         <ComboBox ItemsSource="{Binding InputDevices}"
                                   SelectedItem="{Binding SelectedInputDevice}"
                                   HorizontalAlignment="Stretch"
                                   IsVisible="{Binding HasInputDevices}"
-                                  ToolTip.Tip="Select the microphone to use for voice commands">
+                                  ToolTip.Tip="{DynamicResource Lang.Settings.Voice.MicrophoneTip}">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
-                        
-                        <!-- No Input Devices Message -->
+
                         <Border Background="{DynamicResource CardBgHoverBrush}"
                                 CornerRadius="6"
                                 Padding="12,8"
@@ -379,23 +537,23 @@
                                       Fill="{DynamicResource TextMutedBrush}"
                                       Width="16" Height="16"
                                       Stretch="Uniform"/>
-                                <TextBlock Text="No microphones detected. Please connect a microphone and click refresh."
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.NoMicrophones}"
                                            FontSize="12"
                                            Foreground="{DynamicResource TextMutedBrush}"
                                            TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
-                        
-                        <!-- Input Volume with VU Meter -->
+
+                        <!-- Input level meter and volume -->
                         <Grid ColumnDefinitions="Auto, *, Auto">
-                            <Path Grid.Column="0" 
+                            <Path Grid.Column="0"
                                   Data="M9,7H11V17H9V7M13,7H15V17H13V7M5,7H7V17H5V7M17,7H19V17H17V7Z"
                                   Fill="{DynamicResource TextMutedBrush}"
                                   Width="14" Height="14"
                                   Stretch="Uniform"
                                   VerticalAlignment="Center"
                                   Margin="0,0,8,0"/>
-                            <ProgressBar Grid.Column="1" 
+                            <ProgressBar Grid.Column="1"
                                          Value="{Binding InputLevel, Mode=OneWay}"
                                          Maximum="1"
                                          Height="8"
@@ -414,190 +572,96 @@
                                     Minimum="0" Maximum="1"
                                     Width="80"
                                     VerticalAlignment="Center"
-                                    ToolTip.Tip="Adjust microphone sensitivity"/>
+                                    ToolTip.Tip="{DynamicResource Lang.Settings.Voice.InputVolumeTip}"/>
                         </Grid>
-                    </StackPanel>
-                </Border>
 
-                <!-- Output Device -->
-                <Border Classes="SettingsItem">
-                    <StackPanel Spacing="12">
-                        <!-- Header -->
-                        <Grid ColumnDefinitions="Auto, *">
-                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
-                                <Path Data="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z"
-                                      Width="16" Height="16"
-                                      Stretch="Uniform"/>
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Output Device"
+                        <Border Height="1" Background="{DynamicResource BorderSubtleBrush}"/>
+
+                        <!-- Noise suppression -->
+                        <Grid ColumnDefinitions="*, Auto">
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.NoiseSuppression}"
                                            FontSize="13"
-                                           FontWeight="Medium"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                <TextBlock Text="Select your speakers or headset"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           Margin="0,2,0,0"/>
-                            </StackPanel>
-                        </Grid>
-                        
-                        <!-- Device Dropdown -->
-                        <ComboBox ItemsSource="{Binding OutputDevices}"
-                                  SelectedItem="{Binding SelectedOutputDevice}"
-                                  HorizontalAlignment="Stretch"
-                                  IsVisible="{Binding HasOutputDevices}"
-                                  ToolTip.Tip="Select speakers or headset for audio output">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
-                        
-                        <!-- No Output Devices Message -->
-                        <Border Background="{DynamicResource CardBgHoverBrush}"
-                                CornerRadius="6"
-                                Padding="12,8"
-                                IsVisible="{Binding !HasOutputDevices}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Path Data="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9Z"
-                                      Fill="{DynamicResource TextMutedBrush}"
-                                      Width="16" Height="16"
-                                      Stretch="Uniform"/>
-                                <TextBlock Text="No output devices detected. Please connect speakers or headset."
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.NoiseSuppressionDesc}"
                                            FontSize="12"
                                            Foreground="{DynamicResource TextMutedBrush}"
+                                           Margin="0,2,0,0"
                                            TextWrapping="Wrap"/>
                             </StackPanel>
-                        </Border>
-                        
-                        <!-- Output Volume -->
-                        <Grid ColumnDefinitions="Auto, *, Auto">
-                            <Path Grid.Column="0" 
-                                  Data="M3,9V15H7L12,20V4L7,9H3Z"
-                                  Fill="{DynamicResource TextMutedBrush}"
-                                  Width="14" Height="14"
-                                  Stretch="Uniform"
-                                  VerticalAlignment="Center"
-                                  Margin="0,0,8,0"/>
-                            <Slider Grid.Column="1"
-                                    Value="{Binding OutputVolume, Mode=TwoWay}"
-                                    Minimum="0" Maximum="1"
-                                    VerticalAlignment="Center"
-                                    ToolTip.Tip="Adjust output volume"/>
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding OutputVolume, StringFormat='{}{0:P0}'}"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       Width="35"
-                                       TextAlignment="Right"
-                                       VerticalAlignment="Center"
-                                       Margin="8,0,0,0"/>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding IsNoiseSuppressionEnabled, Mode=TwoWay}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
                         </Grid>
-                    </StackPanel>
-                </Border>
 
-                <!-- Noise Suppression Toggle -->
-                <Border Classes="SettingsItem">
-                    <Grid ColumnDefinitions="Auto, *, Auto">
-                        <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
-                            <Path Data="M12,2C13.85,2 15.55,2.78 16.79,4.05C18.03,5.32 18.75,7.05 18.75,8.86C18.75,11.65 16.8,14.03 14.17,14.68C14.41,15.56 14.79,16.39 15.3,17.15C15.5,17.45 15.45,17.85 15.15,18.05C14.85,18.25 14.45,18.2 14.25,17.9C13.58,16.93 13.09,15.85 12.81,14.71H11.19C10.91,15.85 10.42,16.93 9.75,17.9C9.55,18.2 9.15,18.25 8.85,18.05C8.55,17.85 8.5,17.45 8.7,17.15C9.21,16.39 9.59,15.56 9.83,14.68C7.2,14.03 5.25,11.65 5.25,8.86C5.25,7.05 5.97,5.32 7.21,4.05C8.45,2.78 10.15,2 12,2M12,4C10.66,4 9.39,4.53 8.46,5.46C7.53,6.39 7,7.66 7,8.86C7,11.03 8.79,12.82 10.96,12.82H13.04C15.21,12.82 17,11.03 17,8.86C17,7.66 16.47,6.39 15.54,5.46C14.61,4.53 13.34,4 12,4Z"
-                                  Width="16" Height="16"
-                                  Stretch="Uniform"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="Noise Suppression"
+                        <Border Height="1" Background="{DynamicResource BorderSubtleBrush}"/>
+
+                        <!-- Mic test -->
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTest}"
                                        FontSize="13"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="Reduce background noise during voice recording"
+                            <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTestDesc}"
                                        FontSize="12"
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        Margin="0,2,0,0"/>
                         </StackPanel>
-                        <ToggleSwitch Grid.Column="2"
-                                      IsChecked="{Binding IsNoiseSuppressionEnabled, Mode=TwoWay}"
-                                      OnContent=""
-                                      OffContent=""
-                                      VerticalAlignment="Center"
-                                      ToolTip.Tip="Toggle noise suppression for cleaner voice input"/>
-                    </Grid>
-                </Border>
 
-                <!-- Mic Test Section -->
-                <Border Classes="SettingsItem">
-                    <StackPanel Spacing="12">
-                        <!-- Header -->
-                        <Grid ColumnDefinitions="Auto, *">
-                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
-                                <Path Data="M12,2A7,7 0 0,0 5,9V14A7,7 0 0,0 12,21A7,7 0 0,0 19,14V9A7,7 0 0,0 12,2M12,4A5,5 0 0,1 17,9V14A5,5 0 0,1 12,19A5,5 0 0,1 7,14V9A5,5 0 0,1 12,4M12,5A8,8 0 0,0 4,13V16H6V13A6,6 0 0,1 12,7A6,6 0 0,1 18,13V16H20V13A8,8 0 0,0 12,5M12,23A2,2 0 0,0 14,21H10A2,2 0 0,0 12,23Z"
-                                      Width="16" Height="16"
-                                      Stretch="Uniform"/>
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Mic Test"
-                                           FontSize="13"
-                                           FontWeight="Medium"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                <TextBlock Text="Record a sample and play it back"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           Margin="0,2,0,0"/>
-                            </StackPanel>
-                        </Grid>
-                        
-                        <!-- Test Controls - Responsive wrapping -->
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <Button Command="{Binding StartMicTestCommand}"
                                     IsEnabled="{Binding !IsRecordingTest}"
                                     Classes="PrimaryAction"
                                     Padding="16,8"
-                                    ToolTip.Tip="Record a 10-second sample to test your microphone">
+                                    ToolTip.Tip="{DynamicResource Lang.Settings.Voice.MicTest.StartTip}">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <Path Data="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M12,4A1,1 0 0,0 11,5V11A1,1 0 0,0 13,11V5A1,1 0 0,0 12,4Z"
                                           Width="14" Height="14"
                                           Stretch="Uniform"/>
-                                    <TextBlock Text="Test Mic" FontSize="12" FontWeight="Medium"/>
+                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTest.Start}" FontSize="12" FontWeight="Medium"/>
                                 </StackPanel>
                             </Button>
-                            
+
                             <Button Command="{Binding StopMicTestCommand}"
                                     IsEnabled="{Binding IsRecordingTest}"
                                     Classes="DestructiveAction"
                                     Padding="16,8"
-                                    ToolTip.Tip="Stop recording">
+                                    ToolTip.Tip="{DynamicResource Lang.Settings.Voice.MicTest.StopTip}">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <Path Data="M6,6H18V18H6V6Z"
                                           Fill="{DynamicResource AccentErrorOnBrush}"
                                           Width="14" Height="14"
                                           Stretch="Uniform"/>
-                                    <TextBlock Text="Stop" FontSize="12" FontWeight="Medium"/>
+                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTest.Stop}" FontSize="12" FontWeight="Medium"/>
                                 </StackPanel>
                             </Button>
-                            
+
                             <Button Command="{Binding PlayTestRecordingCommand}"
                                     IsEnabled="{Binding HasTestRecording}"
                                     Classes="SecondaryAction"
                                     Padding="16,8"
                                     IsVisible="{Binding HasTestRecording}"
-                                    ToolTip.Tip="Play back the recorded sample">
+                                    ToolTip.Tip="{DynamicResource Lang.Settings.Voice.MicTest.PlayTip}">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <Path Data="M8,5.14V19.14L19,12.14L8,5.14Z"
                                           Fill="{DynamicResource TextSecondaryBrush}"
                                           Width="14" Height="14"
                                           Stretch="Uniform"/>
-                                    <TextBlock Text="Play" FontSize="12" FontWeight="Medium"/>
+                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTest.Play}" FontSize="12" FontWeight="Medium"/>
                                 </StackPanel>
                             </Button>
                         </StackPanel>
-                        
-                        <!-- Recording Status -->
+
+                        <!-- Recording status -->
                         <Border Background="{DynamicResource AccentErrorGlowBrush}"
                                 CornerRadius="6"
                                 Padding="12,8"
                                 IsVisible="{Binding IsRecordingTest}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Border Width="8" Height="8" 
+                                <Border Width="8" Height="8"
                                         Background="{DynamicResource AccentErrorBrush}"
                                         CornerRadius="4">
                                     <Border.Styles>
@@ -618,11 +682,264 @@
                                         </Style>
                                     </Border.Styles>
                                 </Border>
-                                <TextBlock Text="Recording... (click Stop to finish)"
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTest.Recording}"
                                            FontSize="12"
                                            Foreground="{DynamicResource AccentErrorBrush}"/>
                             </StackPanel>
                         </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- Hands-free -->
+                <Border Classes="SettingsItem">
+                    <StackPanel Spacing="12">
+                        <Grid ColumnDefinitions="Auto, *">
+                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
+                                <Path Data="M4.93,4.93C3.12,6.74 2,9.24 2,12C2,14.76 3.12,17.26 4.93,19.07L6.34,17.66C4.89,16.22 4,14.22 4,12C4,9.79 4.89,7.78 6.34,6.34L4.93,4.93M19.07,4.93L17.66,6.34C19.11,7.78 20,9.79 20,12C20,14.22 19.11,16.22 17.66,17.66L19.07,19.07C20.88,17.26 22,14.76 22,12C22,9.24 20.88,6.74 19.07,4.93M7.76,7.76C6.67,8.85 6,10.35 6,12C6,13.65 6.67,15.15 7.76,16.24L9.17,14.83C8.45,14.11 8,13.11 8,12C8,10.89 8.45,9.89 9.17,9.17L7.76,7.76M16.24,7.76L14.83,9.17C15.55,9.89 16,10.89 16,12C16,13.11 15.55,14.11 14.83,14.83L16.24,16.24C17.33,15.15 18,13.65 18,12C18,10.35 17.33,8.85 16.24,7.76M12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12A2,2 0 0,0 12,10Z"
+                                      Width="16" Height="16"
+                                      Stretch="Uniform"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.HandsFree}"
+                                           FontSize="13"
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.HandsFreeDesc}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Wake phrase -->
+                        <Grid ColumnDefinitions="*, Auto">
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.WakeWord}"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.WakeWordDesc}"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           Margin="0,2,0,0"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding WakeWordEnabled, Mode=TwoWay}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+                        <TextBox Text="{Binding WakeWord, Mode=TwoWay}"
+                                 IsEnabled="{Binding WakeWordEnabled}"
+                                 PlaceholderText="Hey Kam"/>
+                        <TextBlock Text="{Binding WakeWordNote}"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   TextWrapping="Wrap"/>
+
+                        <Border Height="1" Background="{DynamicResource BorderSubtleBrush}"/>
+
+                        <!-- Talk shortcut -->
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="{DynamicResource Lang.Settings.Voice.Shortcut}"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <ComboBox ItemsSource="{Binding TalkShortcutOptions}"
+                                      SelectedItem="{Binding SelectedTalkShortcut, Mode=TwoWay}"
+                                      HorizontalAlignment="Stretch">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Text="{DynamicResource Lang.Settings.Voice.Shortcut.Note}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Spoken replies -->
+                <Border Classes="SettingsItem">
+                    <StackPanel Spacing="12">
+                        <Grid ColumnDefinitions="Auto, *">
+                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
+                                <Path Data="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z"
+                                      Width="16" Height="16"
+                                      Stretch="Uniform"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.SpokenReplies}"
+                                           FontSize="13"
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.SpokenRepliesDesc}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+                            <StackPanel Grid.Column="0" Spacing="6">
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.SpokenReplies.Mode}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                <ComboBox ItemsSource="{Binding SpokenRepliesOptions}"
+                                          SelectedItem="{Binding SelectedSpokenReplies, Mode=TwoWay}"
+                                          HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Spacing="6">
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.Voice}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                <ComboBox ItemsSource="{Binding SpeechVoiceOptions}"
+                                          SelectedItem="{Binding SelectedSpeechVoice, Mode=TwoWay}"
+                                          IsEnabled="{Binding CanUseSpeechOutput}"
+                                          HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Speaking rate -->
+                        <StackPanel Spacing="6" IsEnabled="{Binding CanUseSpeechOutput}">
+                            <Grid ColumnDefinitions="*, Auto">
+                                <TextBlock Grid.Column="0"
+                                           Text="{DynamicResource Lang.Settings.Voice.Rate}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding SpeechRateText}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="10">
+                                <TextBlock Grid.Column="0"
+                                           Text="{DynamicResource Lang.Settings.Voice.Rate.Slower}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           VerticalAlignment="Center"/>
+                                <Slider Grid.Column="1"
+                                        Value="{Binding SpeechRate, Mode=TwoWay}"
+                                        Minimum="-5"
+                                        Maximum="5"
+                                        TickFrequency="1"
+                                        IsSnapToTickEnabled="True"
+                                        VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2"
+                                           Text="{DynamicResource Lang.Settings.Voice.Rate.Faster}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Command="{Binding PreviewSpeechCommand}"
+                                    IsEnabled="{Binding CanPreviewSpeech}"
+                                    Classes="SecondaryAction"
+                                    Padding="16,8">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Path Data="M8,5.14V19.14L19,12.14L8,5.14Z"
+                                          Fill="{DynamicResource TextSecondaryBrush}"
+                                          Width="14" Height="14"
+                                          Stretch="Uniform"/>
+                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.Preview}" FontSize="12" FontWeight="Medium"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding StopSpeechPreviewCommand}"
+                                    IsEnabled="{Binding IsPreviewingSpeech}"
+                                    Classes="SecondaryAction"
+                                    Padding="16,8">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Path Data="M6,6H18V18H6V6Z"
+                                          Fill="{DynamicResource TextSecondaryBrush}"
+                                          Width="14" Height="14"
+                                          Stretch="Uniform"/>
+                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.Preview.Stop}" FontSize="12" FontWeight="Medium"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding SpeechOutputProblem}"
+                                   IsVisible="{Binding HasSpeechOutputProblem}"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   TextWrapping="Wrap"/>
+
+                        <Border Height="1" Background="{DynamicResource BorderSubtleBrush}"/>
+
+                        <!-- Output device -->
+                        <TextBlock Text="{DynamicResource Lang.Settings.Voice.Output}"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <ComboBox ItemsSource="{Binding OutputDevices}"
+                                  SelectedItem="{Binding SelectedOutputDevice}"
+                                  HorizontalAlignment="Stretch"
+                                  IsVisible="{Binding HasOutputDevices}"
+                                  ToolTip.Tip="{DynamicResource Lang.Settings.Voice.OutputTip}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <Border Background="{DynamicResource CardBgHoverBrush}"
+                                CornerRadius="6"
+                                Padding="12,8"
+                                IsVisible="{Binding !HasOutputDevices}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Path Data="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9Z"
+                                      Fill="{DynamicResource TextMutedBrush}"
+                                      Width="16" Height="16"
+                                      Stretch="Uniform"/>
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.NoOutputs}"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Grid ColumnDefinitions="Auto, *, Auto">
+                            <Path Grid.Column="0"
+                                  Data="M3,9V15H7L12,20V4L7,9H3Z"
+                                  Fill="{DynamicResource TextMutedBrush}"
+                                  Width="14" Height="14"
+                                  Stretch="Uniform"
+                                  VerticalAlignment="Center"
+                                  Margin="0,0,8,0"/>
+                            <Slider Grid.Column="1"
+                                    Value="{Binding OutputVolume, Mode=TwoWay}"
+                                    Minimum="0" Maximum="1"
+                                    VerticalAlignment="Center"
+                                    ToolTip.Tip="{DynamicResource Lang.Settings.Voice.OutputVolumeTip}"/>
+                            <TextBlock Grid.Column="2"
+                                       Text="{Binding OutputVolume, StringFormat='{}{0:P0}'}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       Width="35"
+                                       TextAlignment="Right"
+                                       VerticalAlignment="Center"
+                                       Margin="8,0,0,0"/>
+                        </Grid>
                     </StackPanel>
                 </Border>
             </StackPanel>
