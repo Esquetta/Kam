@@ -193,6 +193,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             if (changedKeys.Any(key => key.StartsWith("AIService", StringComparison.OrdinalIgnoreCase)))
             {
                 RefreshAgentChatModelOptions();
+                UpdateStatusProperties();
             }
         }
 
@@ -212,6 +213,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     "EMAIL" => "email (after restart)",
                     "SMS" => "SMS (after restart)",
                     "GITHUBAPP" => "GitHub App (after restart)",
+                    "VOICE" => "voice",
                     _ => section
                 })
                 .Distinct(StringComparer.Ordinal)

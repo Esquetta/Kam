@@ -4,6 +4,8 @@ using FluentAssertions;
 using Microsoft.Extensions.AI;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Agents;
+using SmartVoiceAgent.Tests.Ui.Services;
+using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.ViewModels;
 
 namespace SmartVoiceAgent.Tests.Ui.ViewModels;
@@ -320,6 +322,56 @@ public sealed class MainWindowAgentRuntimeTests
         runtime.SessionIds.Should().Equal(session.SessionId);
         commandInput.Submitted.Should().BeEmpty();
         session.Messages.Select(m => $"{m.Role}:{m.Content}").Should().Equal("You:open spotify", "Kam:Opened Spotify.");
+    }
+
+    [Fact]
+    public async Task SubmitVoiceCommandAsync_ReadsTheReplyAloud()
+    {
+        var settingsDirectory = Path.Combine(Path.GetTempPath(), "kam-voice-reply-tests", Guid.NewGuid().ToString("N"));
+        using var settings = new JsonSettingsService(settingsDirectory);
+        var runtime = new ScriptedRuntime();
+        var viewModel = new MainWindowViewModel(settings);
+        viewModel.SetAgentRuntime(runtime, new FakePermissions(), new EmptySessionStore());
+        var fakes = new VoiceFakes();
+        viewModel.SetVoiceAssistant(fakes.CreateAssistant());
+        var session = viewModel.SelectedAgentChatSession!;
+        runtime.Script(new AgentTurnCompleted(session.SessionId, "**Opened** Spotify.", 1, 0, 0));
+        runtime.Finish();
+
+        await viewModel.SubmitVoiceCommandAsync("open spotify");
+
+        await VoiceFakes.WaitUntilAsync(() => fakes.Speech.Spoken.Count == 1, "the reply is read aloud");
+        fakes.Speech.Spoken[0].Should().Be("Opened Spotify.");
+    }
+
+    [Theory]
+    [InlineData("Voice", false)]
+    [InlineData("All", true)]
+    public async Task TypedTurn_IsReadAloudOnlyWhenEveryReplyIs(string spokenReplies, bool expected)
+    {
+        var settingsDirectory = Path.Combine(Path.GetTempPath(), "kam-voice-reply-tests", Guid.NewGuid().ToString("N"));
+        using var settings = new JsonSettingsService(settingsDirectory);
+        settings.SpokenReplies = spokenReplies;
+        var runtime = new ScriptedRuntime();
+        var viewModel = new MainWindowViewModel(settings);
+        viewModel.SetAgentRuntime(runtime, new FakePermissions(), new EmptySessionStore());
+        var fakes = new VoiceFakes();
+        viewModel.SetVoiceAssistant(fakes.CreateAssistant());
+        var session = viewModel.SelectedAgentChatSession!;
+        runtime.Script(new AgentTurnCompleted(session.SessionId, "Done.", 0, 0, 0));
+        runtime.Finish();
+
+        await viewModel.RunAgentTurnAsync(session, "tidy my desktop");
+
+        if (expected)
+        {
+            await VoiceFakes.WaitUntilAsync(() => fakes.Speech.Spoken.Count == 1, "the reply is read aloud");
+        }
+        else
+        {
+            await Task.Delay(100);
+            fakes.Speech.Spoken.Should().BeEmpty();
+        }
     }
 
     [Fact]

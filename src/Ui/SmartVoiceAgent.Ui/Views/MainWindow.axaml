@@ -587,15 +587,21 @@
 						   FontWeight="SemiBold"
 						   Foreground="{DynamicResource TextPrimaryBrush}"
 						   VerticalAlignment="Center"/>
-				<Border Grid.Column="1" Classes="Pill">
-					<StackPanel Orientation="Horizontal" Spacing="6">
-						<Ellipse Width="6" Height="6"
-								 Fill="{Binding StatusColor, Mode=OneWay}"
-								 VerticalAlignment="Center"/>
-						<TextBlock Text="{Binding StatusText, Mode=OneWay}"
-								   Foreground="{DynamicResource TextSecondaryBrush}"/>
-					</StackPanel>
-				</Border>
+				<Button Grid.Column="1"
+						x:Name="HeaderStatusButton"
+						Classes="PillButton"
+						Command="{Binding HeaderStatusCommand}"
+						ToolTip.Tip="{Binding StatusToolTip}">
+					<Border Classes="Pill">
+						<StackPanel Orientation="Horizontal" Spacing="6">
+							<Ellipse Width="6" Height="6"
+									 Fill="{Binding StatusColor, Mode=OneWay}"
+									 VerticalAlignment="Center"/>
+							<TextBlock Text="{Binding StatusText, Mode=OneWay}"
+									   Foreground="{DynamicResource TextSecondaryBrush}"/>
+						</StackPanel>
+					</Border>
+				</Button>
 			</Grid>
 		</Border>
 
@@ -1306,26 +1312,46 @@
 											</ComboBox.ItemTemplate>
 										</ComboBox>
 										<StackPanel Grid.Column="3"
+													x:Name="VoiceStatusPanel"
 													Orientation="Horizontal"
-													Spacing="5"
+													Spacing="6"
 													VerticalAlignment="Center"
 													Margin="0,0,4,0"
-													IsVisible="{Binding IsVoiceEnabled}">
+													IsVisible="{Binding IsVoiceStatusVisible}">
 											<Ellipse Width="6" Height="6" Fill="{Binding VoiceStatusColor}" VerticalAlignment="Center"/>
 											<TextBlock Text="{Binding VoiceStatusText}"
 													   FontSize="11"
-													   Foreground="{Binding VoiceStatusColor}"
+													   MaxWidth="260"
+													   TextTrimming="CharacterEllipsis"
+													   Foreground="{DynamicResource TextSecondaryBrush}"
 													   VerticalAlignment="Center"/>
+											<ProgressBar Classes="VoiceMeter"
+														 Minimum="0"
+														 Maximum="1"
+														 Value="{Binding VoiceMeterValue}"
+														 Foreground="{Binding VoiceStatusColor}"
+														 IsVisible="{Binding IsVoiceMeterVisible}"/>
+											<Button Classes="IconButton CompactIconButton"
+													Background="Transparent"
+													BorderThickness="0"
+													ToolTip.Tip="{DynamicResource Lang.Voice.Cancel}"
+													IsVisible="{Binding IsVoiceCancelVisible}"
+													Command="{Binding CancelVoiceCommand}">
+												<Viewbox Width="12" Height="12"><Path Classes="Icon" Data="{StaticResource IconX}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
+											</Button>
 										</StackPanel>
 										<Button Grid.Column="4"
-												Classes="IconButton"
+												x:Name="TalkButton"
+												Classes="IconButton TalkButton"
+												Classes.listening="{Binding IsVoiceListening}"
 												Width="32" Height="32"
 												CornerRadius="16"
 												Background="Transparent"
 												BorderThickness="0"
-												ToolTip.Tip="Toggle Voice Control"
-												Command="{Binding ToggleVoiceCommand}">
-											<Viewbox Width="17" Height="17"><Path Classes="Icon" Data="{StaticResource IconMic}" Stroke="{Binding VoiceStatusColor}"/></Viewbox>
+												ToolTip.Tip="{Binding TalkToolTip}"
+												IsEnabled="{Binding IsVoiceAvailable}"
+												Command="{Binding TalkCommand}">
+											<Viewbox Width="17" Height="17"><Path Classes="Icon" Data="{StaticResource IconMic}"/></Viewbox>
 										</Button>
 										<Button Grid.Column="5"
 												Classes="SendButton"
@@ -2282,14 +2308,16 @@
 												 TextWrapping="NoWrap"
 												 Text="{Binding CommandInputText, Mode=TwoWay}"/>
 										<Button Grid.Column="2"
-												Classes="IconButton"
+												Classes="IconButton TalkButton"
+												Classes.listening="{Binding IsVoiceListening}"
 												Width="28" Height="28"
 												CornerRadius="14"
 												Background="Transparent"
 												BorderThickness="0"
-												ToolTip.Tip="Toggle Voice Control (Say 'Hey Kam')"
-												Command="{Binding ToggleVoiceCommand}">
-											<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconMic}" Stroke="{Binding VoiceStatusColor}"/></Viewbox>
+												ToolTip.Tip="{Binding TalkToolTip}"
+												IsEnabled="{Binding IsVoiceAvailable}"
+												Command="{Binding TalkCommand}">
+											<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconMic}"/></Viewbox>
 										</Button>
 										<Button Grid.Column="3"
 												Classes="SendButton"

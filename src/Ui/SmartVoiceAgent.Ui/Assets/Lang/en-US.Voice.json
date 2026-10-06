@@ -1,0 +1,25 @@
+{
+  "Voice.State.Off": "Voice unavailable",
+  "Voice.State.Ready": "Voice ready",
+  "Voice.State.WakeListening": "Say “{0}”",
+  "Voice.State.Preparing": "Downloading speech model {0:P0}",
+  "Voice.State.Listening": "Listening…",
+  "Voice.State.Transcribing": "Transcribing…",
+  "Voice.State.Speaking": "Reading the reply…",
+
+  "Voice.Problem.MicrophoneUnavailable": "Microphone unavailable",
+  "Voice.Problem.ModelDownloadFailed": "Speech model couldn't be downloaded",
+  "Voice.Problem.NoSpeechEngine": "Set up speech recognition in Settings",
+  "Voice.Problem.TranscriptionFailed": "Couldn't turn the recording into text",
+  "Voice.Problem.NothingHeard": "Didn't hear anything",
+  "Voice.Problem.WakeWordUnavailable": "Wake phrase listener couldn't start",
+  "Voice.Problem.ShortcutInUse": "{0} is taken by another app; pick another talk shortcut in Settings",
+
+  "Voice.Talk": "Talk",
+  "Voice.TalkWithShortcut": "Talk ({0})",
+  "Voice.StopAndSend": "Stop and send",
+  "Voice.StopReading": "Stop reading",
+  "Voice.Cancel": "Cancel (Esc)",
+  "Voice.Unavailable": "Voice isn't available on this computer",
+  "Voice.CommandModePaused": "Command mode is paused. Resume it from the status at the top to run voice commands."
+}

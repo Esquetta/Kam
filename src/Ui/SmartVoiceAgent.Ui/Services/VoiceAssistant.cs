@@ -200,11 +200,12 @@ public sealed class VoiceAssistant : IDisposable
         {
             recorder = _recorder;
             _recorder = null;
+            _listenTimeout?.Cancel();
         }
 
         if (recorder is not null)
         {
-            recorder.OnVoiceCaptured -= OnCommandCaptured;
+            Detach(recorder);
             recorder.Dispose();
             Rest();
         }

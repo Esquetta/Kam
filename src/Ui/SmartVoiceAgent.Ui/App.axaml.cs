@@ -180,8 +180,8 @@ namespace SmartVoiceAgent.Ui
                     _ = WarmUpMcpServersAsync(services.GetService<IMcpHost>());
                 }
 
-                // Setup Voice Command Service
-                SetupVoiceCommandService(_mainViewModel, services);
+                // Voice: the talk button and shortcut, the wake phrase and spoken replies.
+                SetupVoiceAssistant(_mainViewModel, services);
 
                 // Apply startup behavior settings
                 ApplyStartupBehavior(desktop, settingsService);
@@ -551,37 +551,27 @@ namespace SmartVoiceAgent.Ui
             }
         }
 
-        private void SetupVoiceCommandService(MainWindowViewModel viewModel, IServiceProvider services)
+        private void SetupVoiceAssistant(MainWindowViewModel viewModel, IServiceProvider services)
         {
-            if (_host == null) return;
-
             try
             {
-                _errorHandlingService?.LogInformation("Initializing Voice Command Service...");
-                
-                var wakeWordService = services.GetRequiredService<IWakeWordDetectionService>();
-                var voiceRecognitionFactory = services.GetRequiredService<IVoiceRecognitionFactory>();
-                var sttService = services.GetRequiredService<IMultiSTTService>();
-                var noiseSuppression = services.GetRequiredService<INoiseSuppressionService>();
-                var commandInput = services.GetRequiredService<ICommandInputService>();
-                var uiLogService = services.GetRequiredService<IUiLogService>();
+                var voice = new VoiceAssistant(
+                    services.GetRequiredService<IVoiceRecognitionFactory>(),
+                    services.GetRequiredService<IMultiSTTService>(),
+                    services.GetRequiredService<IWakeWordDetectionService>(),
+                    services.GetRequiredService<ISpeechModelStore>(),
+                    services.GetRequiredService<ITextToSpeechService>(),
+                    services.GetRequiredService<IConfiguration>(),
+                    services.GetService<INoiseSuppressionService>(),
+                    services.GetService<IUiLogService>());
 
-                var voiceCommandService = new VoiceCommandService(
-                    wakeWordService,
-                    voiceRecognitionFactory,
-                    sttService,
-                    noiseSuppression,
-                    commandInput,
-                    uiLogService);
-
-                viewModel.SetVoiceCommandService(voiceCommandService);
-                _errorHandlingService?.LogInformation("Voice Command Service initialized successfully");
-                Console.WriteLine("✅ Voice Command Service initialized");
+                viewModel.SetVoiceAssistant(voice);
+                _errorHandlingService?.LogInformation("Voice assistant initialized");
             }
             catch (Exception ex)
             {
-                _errorHandlingService?.LogError(ex, "Failed to initialize Voice Command Service");
-                Console.WriteLine($"⚠️ Failed to initialize Voice Command Service: {ex.Message}");
+                // Chat works without voice; the talk button explains that voice is unavailable.
+                _errorHandlingService?.LogError(ex, "Failed to initialize the voice assistant");
             }
         }
 

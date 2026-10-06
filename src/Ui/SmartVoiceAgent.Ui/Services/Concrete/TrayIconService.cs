@@ -19,6 +19,7 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
         private NativeMenuItem? _openItem;
         private NativeMenuItem? _newTaskItem;
         private NativeMenuItem? _voiceToggleItem;
+        private NativeMenuItem? _talkItem;
         private NativeMenuItem? _extensionsItem;
         private NativeMenuItem? _skillsItem;
         private NativeMenuItem? _diagnosticsItem;
@@ -39,9 +40,14 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
         public event EventHandler<NavView>? NavigateRequested;
 
         /// <summary>
-        /// Event raised when user requests to toggle voice recognition
+        /// Raised when "Listen for the wake phrase" is clicked.
         /// </summary>
         public event EventHandler? ToggleVoiceRequested;
+
+        /// <summary>
+        /// Raised when "Talk" is clicked: start recording a command, or stop and send it.
+        /// </summary>
+        public event EventHandler? TalkRequested;
 
         /// <summary>
         /// Raised when "New task" is clicked: open a new agent chat and show the window.
@@ -150,6 +156,9 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
             });
             _menu.Add(_newTaskItem);
 
+            _talkItem = CreateItem((_, _) => TalkRequested?.Invoke(this, EventArgs.Empty));
+            _menu.Add(_talkItem);
+
             _voiceToggleItem = new NativeMenuItem
             {
                 ToggleType = MenuItemToggleType.CheckBox,
@@ -208,6 +217,7 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
         {
             SetHeader(_openItem, Loc.Get("Shell.Tray.Open"));
             SetHeader(_newTaskItem, Loc.Get("Shell.Tray.NewTask"));
+            SetHeader(_talkItem, Loc.Get("Shell.Tray.Talk"));
             SetHeader(_voiceToggleItem, Loc.Get("Shell.Tray.VoiceListening"));
             SetHeader(_extensionsItem, Loc.Get("Shell.Nav.Extensions"));
             SetHeader(_skillsItem, Loc.Get("Shell.Nav.Skills"));

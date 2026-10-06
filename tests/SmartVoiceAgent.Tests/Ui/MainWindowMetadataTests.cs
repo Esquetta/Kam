@@ -423,6 +423,54 @@ public sealed class MainWindowMetadataTests
         turkish["Shell.DarkMode"].Should().Be("Koyu tema");
     }
 
+    [Fact]
+    public void MainWindow_MicButtonsTalkAndTheComposerShowsVoiceStatus()
+    {
+        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
+        var mainWindow = XDocument.Parse(mainWindowText).Root!;
+        var talkButtons = mainWindow
+            .Descendants()
+            .Where(element => element.Name.LocalName == "Button"
+                && (AttributeValue(element, "Classes") ?? string.Empty).Contains("TalkButton", StringComparison.Ordinal))
+            .ToArray();
+
+        talkButtons.Should().HaveCount(2, "the chat composer and the command prompt on other pages both have one");
+        foreach (var button in talkButtons)
+        {
+            AttributeValue(button, "Command").Should().Be("{Binding TalkCommand}");
+            AttributeValue(button, "ToolTip.Tip").Should().Be("{Binding TalkToolTip}");
+            AttributeValue(button, "IsEnabled").Should().Be("{Binding IsVoiceAvailable}");
+            AttributeValue(button, "Classes.listening").Should().Be("{Binding IsVoiceListening}");
+        }
+
+        mainWindowText.Should().NotContain("ToggleVoiceCommand");
+        mainWindowText.Should().NotContain("Toggle Voice Control");
+
+        var status = mainWindow.Descendants().Single(element => AttributeValue(element, "Name") == "VoiceStatusPanel");
+        AttributeValue(status, "IsVisible").Should().Be("{Binding IsVoiceStatusVisible}");
+        status.Descendants().Should().Contain(element =>
+            element.Name.LocalName == "ProgressBar" && AttributeValue(element, "Value") == "{Binding VoiceMeterValue}");
+        status.Descendants().Should().Contain(element =>
+            element.Name.LocalName == "Button"
+            && AttributeValue(element, "Command") == "{Binding CancelVoiceCommand}"
+            && AttributeValue(element, "ToolTip.Tip") == "Cancel (Esc)");
+    }
+
+    [Fact]
+    public void MainWindow_HeaderStatusIsAButtonWithATooltip()
+    {
+        var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root!;
+
+        var status = mainWindow.Descendants().Single(element => AttributeValue(element, "Name") == "HeaderStatusButton");
+
+        status.Name.LocalName.Should().Be("Button");
+        AttributeValue(status, "Classes").Should().Be("PillButton");
+        AttributeValue(status, "Command").Should().Be("{Binding HeaderStatusCommand}");
+        AttributeValue(status, "ToolTip.Tip").Should().Be("{Binding StatusToolTip}");
+        status.Descendants().Should().Contain(element =>
+            element.Name.LocalName == "TextBlock" && AttributeValue(element, "Text") == "{Binding StatusText, Mode=OneWay}");
+    }
+
     private static string? AttributeValue(XElement element, string attributeName)
     {
         return element

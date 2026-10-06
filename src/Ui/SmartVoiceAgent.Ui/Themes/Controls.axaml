@@ -308,6 +308,30 @@
         <Setter Property="Stretch" Value="Uniform" />
     </Style>
 
+    <!-- Talk button: red while recording a command. -->
+    <Style Selector="Button.TalkButton.listening /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentErrorBrush}" />
+    </Style>
+
+    <Style Selector="Button.TalkButton.listening Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource AccentOnBrush}" />
+    </Style>
+
+    <Style Selector="Button.TalkButton:disabled Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="Opacity" Value="0.5" />
+    </Style>
+
+    <Style Selector="ProgressBar.VoiceMeter">
+        <Setter Property="Width" Value="44" />
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="Height" Value="4" />
+        <Setter Property="MinHeight" Value="4" />
+        <Setter Property="CornerRadius" Value="2" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}" />
+    </Style>
+
     <Style Selector="Button.CompactIconButton">
         <Setter Property="Width" Value="24" />
         <Setter Property="Height" Value="24" />
@@ -334,6 +358,32 @@
     <!-- ========================= -->
     <!-- PILLS / BADGES -->
     <!-- ========================= -->
+
+    <!-- A pill that acts as a button, such as the title bar status. -->
+    <Style Selector="Button.PillButton">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style Selector="Button.PillButton /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="Button.PillButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="Button.PillButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="Button.PillButton:pointerover Border.Pill">
+        <Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}" />
+    </Style>
 
     <Style Selector="Border.Pill">
         <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}" />

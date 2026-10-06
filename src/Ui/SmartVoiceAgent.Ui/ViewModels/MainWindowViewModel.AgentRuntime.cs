@@ -66,7 +66,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
     /// <param name="Session">The chat the message was sent in.</param>
     /// <param name="DisplayText">What the user typed or said, shown in the thread when it runs.</param>
     /// <param name="Message">What goes to the agent, with attachments or command expansion applied.</param>
-    public sealed record QueuedAgentMessage(AgentChatSessionViewModel Session, string DisplayText, string Message);
+    public sealed record QueuedAgentMessage(AgentChatSessionViewModel Session, string DisplayText, string Message, bool FromVoice = false);
 
     /// <summary>
     /// Chat side of the tool-calling agent runtime: streaming replies, tool steps and approval cards.
@@ -121,6 +121,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 this.RaiseAndSetIfChanged(ref _isAgentTurnRunning, value);
                 this.RaisePropertyChanged(nameof(IsSendVisible));
+                UpdateStatusProperties();
             }
         }
 
@@ -181,13 +182,17 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _selectedApprovalMode = ApprovalModes.FirstOrDefault(option => option.Mode == toolPermissions.Mode) ?? ApprovalModes[0];
             this.RaisePropertyChanged(nameof(SelectedApprovalMode));
             this.RaisePropertyChanged(nameof(IsAgentRuntimeEnabled));
+            UpdateStatusProperties();
             _ = LoadSavedAgentSessionsAsync();
         }
 
         /// <summary>
         /// Runs one agent turn in a thread and renders its events as they arrive.
         /// </summary>
-        public async Task RunAgentTurnAsync(AgentChatSessionViewModel session, string message)
+        /// <param name="session">The chat to run the turn in.</param>
+        /// <param name="message">What goes to the agent.</param>
+        /// <param name="fromVoice">Whether the turn started from a voice command, so its reply can be read aloud.</param>
+        public async Task RunAgentTurnAsync(AgentChatSessionViewModel session, string message, bool fromVoice = false)
         {
             if (_agentRuntime is null || IsAgentTurnRunning)
             {
@@ -285,6 +290,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                             if (!string.IsNullOrWhiteSpace(done.FinalText))
                             {
                                 session.Summary = done.FinalText.ReplaceLineEndings(" ");
+                                ReadReplyAloud(done.FinalText, fromVoice);
                             }
 
                             AddLog($"AGENT_TURN_DONE: {done.ToolCallCount} tool calls, {done.InputTokens + done.OutputTokens} tokens");
@@ -341,18 +347,23 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// <param name="session">The chat to run the turn in.</param>
         /// <param name="displayText">What the user typed or said.</param>
         /// <param name="message">What goes to the agent.</param>
-        private async Task StartOrQueueAgentTurnAsync(AgentChatSessionViewModel session, string displayText, string message)
+        /// <param name="fromVoice">Whether the turn started from a voice command.</param>
+        private async Task StartOrQueueAgentTurnAsync(
+            AgentChatSessionViewModel session,
+            string displayText,
+            string message,
+            bool fromVoice = false)
         {
             if (IsAgentTurnRunning)
             {
-                _queuedAgentMessages.Add(new QueuedAgentMessage(session, displayText, message));
+                _queuedAgentMessages.Add(new QueuedAgentMessage(session, displayText, message, fromVoice));
                 RaiseQueuedAgentMessagesChanged();
                 AddLog($"QUEUED: {displayText}");
                 return;
             }
 
             AddAgentChatMessage(session, AgentChatMessageViewModel.UserRole, displayText);
-            await RunAgentTurnAsync(session, message);
+            await RunAgentTurnAsync(session, message, fromVoice);
         }
 
         /// <summary>
@@ -416,7 +427,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 AddAgentChatMessage(next.Session, AgentChatMessageViewModel.UserRole, next.DisplayText);
 
                 // That turn runs whatever is still queued when it finishes.
-                await RunAgentTurnAsync(next.Session, next.Message);
+                await RunAgentTurnAsync(next.Session, next.Message, next.FromVoice);
                 return;
             }
         }

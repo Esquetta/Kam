@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using ReactiveUI;
@@ -91,22 +92,42 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// <summary>
         /// What the title bar status shows; the text follows the interface language.
         /// </summary>
-        private enum HeaderStatus
+        public enum HeaderStatus
         {
+            /// <summary>The app is still connecting the agent or the command loop.</summary>
             Starting,
-            Online,
-            Offline,
+
+            /// <summary>The agent has a model and waits for a message.</summary>
+            AgentReady,
+
+            /// <summary>An agent turn is running.</summary>
+            AgentWorking,
+
+            /// <summary>The agent is on but Settings have no usable model.</summary>
+            NeedsModel,
+
+            /// <summary>The agent is off (<c>AgentRuntime:Enabled=false</c>) and the command loop runs commands.</summary>
+            CommandModeOn,
+
+            /// <summary>The agent is off and the command loop is paused.</summary>
+            CommandModePaused,
+
+            /// <summary>The background host failed to start.</summary>
             FailedToStart
         }
 
         private HeaderStatus _headerStatus = HeaderStatus.Starting;
+        private string? _hostFailureReason;
 
         /* ========================= */
         /* CACHED BRUSHES */
         /* ========================= */
         // Static brushes to avoid repeated allocations
-        private static readonly IBrush OnlineStatusColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#10B981"));
-        private static readonly IBrush OfflineStatusColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
+        private static readonly IBrush OnlineStatusColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#10B981"));
+        private static readonly IBrush OfflineStatusColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
+        private static readonly IBrush WorkingStatusColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#8B7CFF"));
+        private static readonly IBrush AttentionStatusColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#F59E0B"));
+        private static readonly IBrush IdleStatusColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#8A8A99"));
 
         /* ========================= */
         /* NAVIGATION */
@@ -171,7 +192,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /// <summary>
-        /// Status text for header display - reflects VoiceAgent Host state
+        /// Gets the title bar status: the agent's state, or the command loop's when the agent is off.
         /// </summary>
         public override string StatusText
         {
@@ -180,7 +201,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /// <summary>
-        /// Status color for header display indicator
+        /// Gets the color of the title bar status dot.
         /// </summary>
         public override IBrush StatusColor
         {
@@ -188,17 +209,99 @@ namespace SmartVoiceAgent.Ui.ViewModels
             protected set => base.StatusColor = value;
         }
 
+        /// <summary>
+        /// Gets what the title bar status shows.
+        /// </summary>
+        public HeaderStatus CurrentHeaderStatus => _headerStatus;
+
+        /// <summary>
+        /// Gets the title bar status tooltip, which says what the state means and what a click does.
+        /// </summary>
+        public string? StatusToolTip => _headerStatus switch
+        {
+            HeaderStatus.AgentReady => Loc.Format(
+                "Workbench.Status.AgentReadyTip",
+                AiRuntimeConfigurationMapper.ResolveChatProfile(_pageSettingsService)?.ModelId),
+            HeaderStatus.AgentWorking => Loc.Get("Workbench.Status.AgentWorkingTip"),
+            HeaderStatus.NeedsModel => Loc.Get("Workbench.Status.NeedsModelTip"),
+            HeaderStatus.CommandModeOn => Loc.Get("Workbench.Status.CommandModeOnTip"),
+            HeaderStatus.CommandModePaused => Loc.Get("Workbench.Status.CommandModePausedTip"),
+            HeaderStatus.FailedToStart => _hostFailureReason,
+            _ => null
+        };
+
+        /// <summary>
+        /// Acts on the title bar status: opens Settings when a model is missing, pauses or resumes the
+        /// command loop when the agent is off, and otherwise shows the chat.
+        /// </summary>
+        public ICommand HeaderStatusCommand { get; }
+
         private void UpdateStatusProperties()
         {
-            // Use cached brushes to avoid repeated allocations
-            _headerStatus = IsHostRunning ? HeaderStatus.Online : HeaderStatus.Offline;
+            _headerStatus = ResolveHeaderStatus();
             base.StatusText = FormatHeaderStatus(_headerStatus);
-            base.StatusColor = IsHostRunning ? OnlineStatusColor : OfflineStatusColor;
+            base.StatusColor = _headerStatus switch
+            {
+                HeaderStatus.AgentReady or HeaderStatus.CommandModeOn => OnlineStatusColor,
+                HeaderStatus.AgentWorking => WorkingStatusColor,
+                HeaderStatus.NeedsModel => AttentionStatusColor,
+                HeaderStatus.FailedToStart => OfflineStatusColor,
+                _ => IdleStatusColor
+            };
 
-            // Also explicitly raise property changed for this class
             this.RaisePropertyChanged(nameof(StatusText));
             this.RaisePropertyChanged(nameof(StatusColor));
+            this.RaisePropertyChanged(nameof(StatusToolTip));
+            this.RaisePropertyChanged(nameof(CurrentHeaderStatus));
             StatusChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        private HeaderStatus ResolveHeaderStatus()
+        {
+            if (_hostFailureReason is not null)
+            {
+                return HeaderStatus.FailedToStart;
+            }
+
+            if (_agentRuntime is not null)
+            {
+                if (IsAgentTurnRunning)
+                {
+                    return HeaderStatus.AgentWorking;
+                }
+
+                return AiRuntimeConfigurationMapper.ResolveChatProfile(_pageSettingsService) is null
+                    ? HeaderStatus.NeedsModel
+                    : HeaderStatus.AgentReady;
+            }
+
+            if (_hostControl is null)
+            {
+                return HeaderStatus.Starting;
+            }
+
+            return IsHostRunning ? HeaderStatus.CommandModeOn : HeaderStatus.CommandModePaused;
+        }
+
+        private void OnHeaderStatusClicked()
+        {
+            switch (_headerStatus)
+            {
+                case HeaderStatus.NeedsModel:
+                    NavigateTo(NavView.Settings);
+                    break;
+                case HeaderStatus.CommandModeOn:
+                case HeaderStatus.CommandModePaused:
+                    _ = ToggleHostAsync();
+                    break;
+                case HeaderStatus.FailedToStart:
+                    NavigateTo(NavView.Diagnostics);
+                    break;
+                case HeaderStatus.AgentReady:
+                case HeaderStatus.AgentWorking:
+                    NavigateTo(NavView.Coordinator);
+                    break;
+            }
         }
 
         /// <summary>
@@ -207,14 +310,15 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// <param name="reason">Short reason shown to the user.</param>
         public void ReportHostStartFailure(string reason)
         {
-            Dispatcher.UIThread.Post(() =>
+            _hostFailureReason = string.IsNullOrWhiteSpace(reason) ? Loc.Get("Workbench.Status.AgentFailed") : reason;
+            if (Dispatcher.UIThread.CheckAccess())
             {
-                _headerStatus = HeaderStatus.FailedToStart;
-                base.StatusText = FormatHeaderStatus(_headerStatus);
-                base.StatusColor = OfflineStatusColor;
-                this.RaisePropertyChanged(nameof(StatusText));
-                this.RaisePropertyChanged(nameof(StatusColor));
-            });
+                UpdateStatusProperties();
+            }
+            else
+            {
+                Dispatcher.UIThread.Post(UpdateStatusProperties);
+            }
 
             AddLog($"Agent host failed to start: {reason}");
         }
@@ -223,8 +327,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             return status switch
             {
-                HeaderStatus.Online => Loc.Get("Workbench.Status.AgentOnline"),
-                HeaderStatus.Offline => Loc.Get("Workbench.Status.AgentOffline"),
+                HeaderStatus.AgentReady => Loc.Get("Workbench.Status.AgentReady"),
+                HeaderStatus.AgentWorking => Loc.Get("Workbench.Status.AgentWorking"),
+                HeaderStatus.NeedsModel => Loc.Get("Workbench.Status.NeedsModel"),
+                HeaderStatus.CommandModeOn => Loc.Get("Workbench.Status.CommandModeOn"),
+                HeaderStatus.CommandModePaused => Loc.Get("Workbench.Status.CommandModePaused"),
                 HeaderStatus.FailedToStart => Loc.Get("Workbench.Status.AgentFailed"),
                 _ => Loc.Get("Workbench.Status.Starting")
             };
@@ -666,57 +773,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /* ========================= */
-        /* VOICE COMMAND */
-        /* ========================= */
-
-        private VoiceCommandService? _voiceCommandService;
-
-        // Performance: Cache brushes to avoid parsing on every status change
-        private static readonly IBrush s_voiceListeningColor = Brush.Parse("#10B981"); // Green
-        private static readonly IBrush s_voiceWakeWordColor = Brush.Parse("#F59E0B"); // Orange
-        private static readonly IBrush s_voiceRecordingColor = Brush.Parse("#EF4444"); // Red
-        private static readonly IBrush s_voiceProcessingColor = Brush.Parse("#3B82F6"); // Blue
-        private static readonly IBrush s_voiceIdleColor = Brush.Parse("#6B7280"); // Gray
-        
-        private bool _isVoiceEnabled = false;
-        public bool IsVoiceEnabled
-        {
-            get => _isVoiceEnabled;
-            private set => this.RaiseAndSetIfChanged(ref _isVoiceEnabled, value);
-        }
-
-        private bool _isListeningForWakeWord = false;
-        public bool IsListeningForWakeWord
-        {
-            get => _isListeningForWakeWord;
-            private set => this.RaiseAndSetIfChanged(ref _isListeningForWakeWord, value);
-        }
-
-        private bool _isRecordingVoice = false;
-        public bool IsRecordingVoice
-        {
-            get => _isRecordingVoice;
-            private set => this.RaiseAndSetIfChanged(ref _isRecordingVoice, value);
-        }
-
-        private string _voiceStatusText = "Voice: Off";
-        public string VoiceStatusText
-        {
-            get => _voiceStatusText;
-            private set => this.RaiseAndSetIfChanged(ref _voiceStatusText, value);
-        }
-
-        private IBrush _voiceStatusColor = Brush.Parse("#6B7280"); // Gray
-        public IBrush VoiceStatusColor
-        {
-            get => _voiceStatusColor;
-            private set => this.RaiseAndSetIfChanged(ref _voiceStatusColor, value);
-        }
-
-        public ICommand ToggleVoiceCommand { get; }
-        public ICommand StartVoiceRecordingCommand { get; }
-
-        /* ========================= */
         /* CONSTRUCTOR */
         /* ========================= */
 
@@ -741,6 +797,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             NavigateToIntegrationsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Integrations));
             NavigateToSettingsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Settings));
             ToggleThemeCommand = ReactiveCommand.Create(ToggleTheme);
+            HeaderStatusCommand = ReactiveCommand.Create(OnHeaderStatusClicked);
             ClearSkillExecutionHistoryCommand = ReactiveCommand.Create(ClearSkillExecutionHistory);
             ClearSkillExecutionHistoryFiltersCommand = ReactiveCommand.Create(ClearSkillExecutionHistoryFilters);
             ClearSkillPlannerTraceCommand = ReactiveCommand.Create(ClearSkillPlannerTrace);
@@ -755,8 +812,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ShowContextCommand = ReactiveCommand.Create(() => SelectedActivityPanelMode = ActivityPanelMode.Context);
             ShowEventsCommand = ReactiveCommand.Create(() => SelectedActivityPanelMode = ActivityPanelMode.Events);
             UseComposerSuggestionCommand = ReactiveCommand.Create<string?>(UseComposerSuggestion);
-            ToggleVoiceCommand = ReactiveCommand.Create(ToggleVoiceEnabled);
-            StartVoiceRecordingCommand = ReactiveCommand.CreateFromTask(StartVoiceRecordingAsync);
             ApproveToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: true, alwaysAllow: false));
             AlwaysAllowToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: true, alwaysAllow: true));
             DenyToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: false, alwaysAllow: false));
@@ -764,6 +819,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ClearQueuedAgentMessagesCommand = ReactiveCommand.Create(ClearQueuedAgentMessages);
             InitializeChatExperience();
             InitializeAgentChatSessions();
+            InitializeVoice();
 
             // Text built in code follows the interface language; Cleanup unsubscribes.
             LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
@@ -1155,10 +1211,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 NavigateTo(view);
             };
 
-            service.ToggleVoiceRequested += (s, e) =>
-            {
-                ToggleVoiceEnabled();
-            };
+            service.ToggleVoiceRequested += (s, e) => ToggleWakeWordCommand.Execute(null);
+            service.TalkRequested += (s, e) => ToggleTalk();
 
             service.NewTaskRequested += (s, e) => StartNewTask();
 
@@ -1179,7 +1233,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             };
 
             // Sync initial voice state
-            service.SetVoiceEnabled(IsVoiceEnabled);
+            service.SetVoiceEnabled(IsWakeWordEnabled);
         }
 
         public void SetCommandInputService(ICommandInputService commandInput)
@@ -1564,8 +1618,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     AddLog($"THEME_SET: {(IsDarkMode ? "DARK" : "LIGHT")}");
                     return true;
                 case "/voice":
-                    ToggleVoiceEnabled();
-                    AddLog($"VOICE_SET: {(IsVoiceEnabled ? "ON" : "OFF")}");
+                    ToggleWakeWordCommand.Execute(null);
                     return true;
                 default:
                     return false;
@@ -1580,11 +1633,14 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 {
                     AddLog($"✅ {e.Result}");
                     AddAgentChatMessage(AgentChatMessageViewModel.AgentRole, e.Result);
+                    ReadCommandLoopReplyAloud(e.Result);
                 }
                 else
                 {
                     AddLog($"❌ Error: {e.Result}");
-                    AddAgentChatMessage(AgentChatMessageViewModel.AgentRole, Loc.Format("Workbench.Chat.Error", e.Result));
+                    var error = Loc.Format("Workbench.Chat.Error", e.Result);
+                    AddAgentChatMessage(AgentChatMessageViewModel.AgentRole, error);
+                    ReadCommandLoopReplyAloud(error);
                 }
             });
         }
@@ -2068,8 +2124,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// </summary>
         public void RefreshLocalizedText()
         {
-            base.StatusText = FormatHeaderStatus(_headerStatus);
-            this.RaisePropertyChanged(nameof(StatusText));
+            UpdateStatusProperties();
+            RaiseVoiceStateChanged();
             this.RaisePropertyChanged(nameof(ActivePageTitle));
             this.RaisePropertyChanged(nameof(ActiveComposerContextText));
             this.RaisePropertyChanged(nameof(QueuedAgentMessagesText));
@@ -2149,142 +2205,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
             RaiseSkillExecutionHistoryFilterStateChanged();
         }
 
-        /* ========================= */
-        /* VOICE COMMAND METHODS */
-        /* ========================= */
-
-        /// <summary>
-        /// Sets the voice command service
-        /// </summary>
-        public void SetVoiceCommandService(VoiceCommandService voiceCommandService)
-        {
-            _voiceCommandService = voiceCommandService;
-            
-            // Subscribe to voice events
-            _voiceCommandService.StatusChanged += OnVoiceStatusChanged;
-            _voiceCommandService.OnTranscriptionResult += OnVoiceTranscriptionResult;
-            _voiceCommandService.OnError += OnVoiceError;
-            _voiceCommandService.CommandRouter = RouteVoiceCommand;
-
-            IsVoiceEnabled = false;
-            IsListeningForWakeWord = false;
-            VoiceStatusText = "Voice: Off";
-            VoiceStatusColor = s_voiceIdleColor;
-            _trayIconService?.SetVoiceEnabled(false);
-            _trayIconService?.UpdateStatus("Ready", false);
-        }
-
-        private void OnVoiceStatusChanged(object? sender, VoiceStatusEventArgs e)
-        {
-            Dispatcher.UIThread.Post(() =>
-            {
-                IsListeningForWakeWord = e.Status == VoiceStatus.ListeningForWakeWord;
-                IsRecordingVoice = e.Status == VoiceStatus.Recording;
-                VoiceStatusText = e.Message;
-                
-                // Update status color based on state (using cached brushes)
-                VoiceStatusColor = e.Status switch
-                {
-                    VoiceStatus.ListeningForWakeWord => s_voiceListeningColor,
-                    VoiceStatus.WakeWordDetected => s_voiceWakeWordColor,
-                    VoiceStatus.Recording => s_voiceRecordingColor,
-                    VoiceStatus.Processing or VoiceStatus.Transcribing => s_voiceProcessingColor,
-                    VoiceStatus.Error => s_voiceRecordingColor, // Red (reuse)
-                    _ => s_voiceIdleColor
-                };
-                
-                // Add to log for important states
-                if (e.Status is VoiceStatus.WakeWordDetected or VoiceStatus.Error)
-                {
-                    AddLog(e.Message);
-                }
-            });
-        }
-
-        private void OnVoiceTranscriptionResult(object? sender, string text)
-        {
-            Dispatcher.UIThread.Post(() =>
-            {
-                AddLog($"🎤 Voice: '{text}'");
-            });
-        }
-
-        /// <summary>
-        /// Sends a transcribed voice command to the agent chat when the agent runtime is on.
-        /// </summary>
-        /// <param name="text">The transcribed command.</param>
-        /// <returns><c>true</c> when the agent chat takes the command.</returns>
-        public bool RouteVoiceCommand(string text)
-        {
-            if (_agentRuntime is null || string.IsNullOrWhiteSpace(text))
-            {
-                return false;
-            }
-
-            Dispatcher.UIThread.Post(() => _ = SubmitVoiceCommandAsync(text.Trim()));
-            return true;
-        }
-
-        /// <summary>
-        /// Runs a voice command as a turn in the selected chat, starting a chat when none is open.
-        /// While another turn runs, the command waits for it.
-        /// </summary>
-        /// <param name="text">The transcribed command.</param>
-        public async Task SubmitVoiceCommandAsync(string text)
-        {
-            if (SelectedAgentChatSession is null)
-            {
-                CreateNewAgentChat();
-            }
-
-            await StartOrQueueAgentTurnAsync(SelectedAgentChatSession!, text, text);
-        }
-
-        /// <summary>
-        /// Opens a new agent chat on the chat page, as the tray's "New task" does.
-        /// </summary>
-        public void StartNewTask()
-        {
-            NavigateTo(NavView.Coordinator);
-            CreateNewAgentChat();
-        }
-
-        private void OnVoiceError(object? sender, string error)
-        {
-            Dispatcher.UIThread.Post(() =>
-            {
-                AddLog($"❌ Voice Error: {error}");
-            });
-        }
-
-        private void ToggleVoiceEnabled()
-        {
-            if (_voiceCommandService == null)
-            {
-                AddLog("⚠️ Voice service not available");
-                return;
-            }
-
-            if (IsVoiceEnabled)
-            {
-                _voiceCommandService.StopWakeWordDetection();
-                IsVoiceEnabled = false;
-                VoiceStatusText = "Voice: Off";
-                VoiceStatusColor = Brush.Parse("#6B7280");
-                AddLog("🛑 Voice control disabled");
-            }
-            else
-            {
-                _voiceCommandService.StartWakeWordDetection();
-                IsVoiceEnabled = true;
-                AddLog("🎤 Voice control enabled - Say 'Hey Kam'");
-            }
-
-            // Sync tray icon menu state
-            _trayIconService?.SetVoiceEnabled(IsVoiceEnabled);
-            _trayIconService?.UpdateStatus(IsVoiceEnabled ? "Listening" : "Ready", IsVoiceEnabled);
-        }
-
         private void ShowMainWindow()
         {
             if (global::Avalonia.Application.Current?.ApplicationLifetime
@@ -2297,17 +2217,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     desktop.MainWindow.Activate();
                 }
             }
-        }
-
-        private async Task StartVoiceRecordingAsync()
-        {
-            if (_voiceCommandService == null)
-            {
-                AddLog("⚠️ Voice service not available");
-                return;
-            }
-
-            await _voiceCommandService.StartVoiceRecordingAsync();
         }
 
         /* ========================= */
@@ -2344,7 +2253,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 _skillPlannerTraceStore.Changed -= OnSkillPlannerTraceChanged;
             }
 
-            _voiceCommandService?.Dispose();
+            CleanupVoice();
             foreach (var viewModel in _viewModelCache.Values.OfType<IDisposable>().Distinct())
             {
                 viewModel.Dispose();
