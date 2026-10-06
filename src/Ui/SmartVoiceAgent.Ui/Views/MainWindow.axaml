@@ -849,13 +849,26 @@
 										  SelectedItem="{Binding SelectedAgentChatModel, Mode=TwoWay}"
 										  IsVisible="{Binding IsAgentRuntimeEnabled}"
 										  ToolTip.Tip="{Binding AgentChatModelTip}">
+									<!-- The closed picker shows only the model, so a long id can't push the header off screen -->
+									<ComboBox.SelectionBoxItemTemplate>
+										<DataTemplate DataType="vm:AgentChatModelOption">
+											<StackPanel Orientation="Horizontal" Spacing="6">
+												<Viewbox Width="12" Height="12" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconCpu}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
+												<TextBlock Text="{Binding Label}"
+														   FontSize="12"
+														   MaxWidth="160"
+														   TextTrimming="CharacterEllipsis"
+														   VerticalAlignment="Center"/>
+											</StackPanel>
+										</DataTemplate>
+									</ComboBox.SelectionBoxItemTemplate>
 									<ComboBox.ItemTemplate>
 										<DataTemplate DataType="vm:AgentChatModelOption">
 											<StackPanel Orientation="Horizontal" Spacing="6">
 												<Viewbox Width="12" Height="12" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconCpu}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
 												<TextBlock Text="{Binding Label}"
 														   FontSize="12"
-														   MaxWidth="180"
+														   MaxWidth="220"
 														   TextTrimming="CharacterEllipsis"
 														   VerticalAlignment="Center"/>
 												<TextBlock Text="{Binding Caption}"

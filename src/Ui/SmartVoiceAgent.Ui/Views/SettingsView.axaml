@@ -544,36 +544,40 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Input level meter and volume -->
-                        <Grid ColumnDefinitions="Auto, *, Auto">
-                            <Path Grid.Column="0"
-                                  Data="M9,7H11V17H9V7M13,7H15V17H13V7M5,7H7V17H5V7M17,7H19V17H17V7Z"
-                                  Fill="{DynamicResource TextMutedBrush}"
-                                  Width="14" Height="14"
-                                  Stretch="Uniform"
-                                  VerticalAlignment="Center"
-                                  Margin="0,0,8,0"/>
-                            <ProgressBar Grid.Column="1"
-                                         Value="{Binding InputLevel, Mode=OneWay}"
+                        <!-- Input volume, with the live level under the slider -->
+                        <StackPanel Spacing="4">
+                            <Grid ColumnDefinitions="Auto, *, Auto">
+                                <Viewbox Grid.Column="0" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,8,0">
+                                    <Path Classes="Icon" Data="{StaticResource IconMic}" Stroke="{DynamicResource TextMutedBrush}"/>
+                                </Viewbox>
+                                <Slider Grid.Column="1"
+                                        Value="{Binding InputVolume, Mode=TwoWay}"
+                                        Minimum="0" Maximum="1"
+                                        VerticalAlignment="Center"
+                                        ToolTip.Tip="{DynamicResource Lang.Settings.Voice.InputVolumeTip}"/>
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding InputVolume, StringFormat='{}{0:P0}'}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           Width="35"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"
+                                           Margin="8,0,0,0"/>
+                            </Grid>
+                            <ProgressBar Value="{Binding InputLevel, Mode=OneWay}"
                                          Maximum="1"
-                                         Height="8"
-                                         CornerRadius="4"
-                                         VerticalAlignment="Center"
-                                         Margin="0,0,8,0">
+                                         Height="4"
+                                         MinHeight="4"
+                                         CornerRadius="2"
+                                         Margin="22,0,43,0">
                                 <ProgressBar.Styles>
                                     <Style Selector="ProgressBar">
                                         <Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}"/>
-                                        <Setter Property="Foreground" Value="#43B581"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource AccentGreenBrush}"/>
                                     </Style>
                                 </ProgressBar.Styles>
                             </ProgressBar>
-                            <Slider Grid.Column="2"
-                                    Value="{Binding InputVolume, Mode=TwoWay}"
-                                    Minimum="0" Maximum="1"
-                                    Width="80"
-                                    VerticalAlignment="Center"
-                                    ToolTip.Tip="{DynamicResource Lang.Settings.Voice.InputVolumeTip}"/>
-                        </Grid>
+                        </StackPanel>
 
                         <Border Height="1" Background="{DynamicResource BorderSubtleBrush}"/>
 
@@ -618,23 +622,22 @@
                                     Padding="16,8"
                                     ToolTip.Tip="{DynamicResource Lang.Settings.Voice.MicTest.StartTip}">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Path Data="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M12,4A1,1 0 0,0 11,5V11A1,1 0 0,0 13,11V5A1,1 0 0,0 12,4Z"
-                                          Width="14" Height="14"
-                                          Stretch="Uniform"/>
+                                    <Viewbox Width="14" Height="14">
+                                        <Path Classes="Icon" Data="{StaticResource IconMic}" Fill="Transparent" Stroke="{DynamicResource AccentOnBrush}"/>
+                                    </Viewbox>
                                     <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTest.Start}" FontSize="12" FontWeight="Medium"/>
                                 </StackPanel>
                             </Button>
 
                             <Button Command="{Binding StopMicTestCommand}"
                                     IsEnabled="{Binding IsRecordingTest}"
-                                    Classes="DestructiveAction"
+                                    Classes="SecondaryAction"
                                     Padding="16,8"
                                     ToolTip.Tip="{DynamicResource Lang.Settings.Voice.MicTest.StopTip}">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Path Data="M6,6H18V18H6V6Z"
-                                          Fill="{DynamicResource AccentErrorOnBrush}"
-                                          Width="14" Height="14"
-                                          Stretch="Uniform"/>
+                                    <Viewbox Width="12" Height="12">
+                                        <Path Classes="Icon" Data="{StaticResource IconStop}"/>
+                                    </Viewbox>
                                     <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTest.Stop}" FontSize="12" FontWeight="Medium"/>
                                 </StackPanel>
                             </Button>

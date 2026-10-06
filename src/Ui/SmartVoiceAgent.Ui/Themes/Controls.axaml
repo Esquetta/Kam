@@ -455,6 +455,16 @@
         <Setter Property="BorderThickness" Value="1" />
     </Style>
 
+    <!-- Disabled inputs keep their surface and fade, like disabled actions -->
+    <Style Selector="TextBox:disabled">
+        <Setter Property="Opacity" Value="0.5" />
+    </Style>
+
+    <Style Selector="TextBox:disabled /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}" />
+    </Style>
+
     <Style Selector="ToggleSwitch">
         <Setter Property="Cursor" Value="Hand" />
     </Style>
@@ -475,6 +485,15 @@
 
     <Style Selector="ComboBox:focus /template/ Border#Background">
         <Setter Property="BorderBrush" Value="{DynamicResource AccentStrongBrush}" />
+    </Style>
+
+    <Style Selector="ComboBox:disabled">
+        <Setter Property="Opacity" Value="0.5" />
+    </Style>
+
+    <Style Selector="ComboBox:disabled /template/ Border#Background">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}" />
     </Style>
 
     <!-- ========================= -->
