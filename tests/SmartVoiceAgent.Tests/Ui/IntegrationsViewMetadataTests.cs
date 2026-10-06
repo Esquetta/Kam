@@ -36,6 +36,20 @@ public sealed class IntegrationsViewMetadataTests
     }
 
     [Fact]
+    public void IntegrationsView_ShouldExposeWebSearchCard()
+    {
+        var xaml = File.ReadAllText(Path.GetFullPath(ViewPath));
+
+        xaml.Should().Contain("Text=\"Web search\"");
+        xaml.Should().Contain("Google Programmable Search");
+        xaml.Should().Contain("Text=\"{Binding WebSearchApiKey, Mode=TwoWay}\"");
+        xaml.Should().Contain("Text=\"{Binding WebSearchEngineId, Mode=TwoWay}\"");
+        xaml.Should().Contain("SaveWebSearchCommand");
+        xaml.Should().Contain("ClearWebSearchCommand");
+        xaml.Should().Contain("WebSearchStatusText");
+    }
+
+    [Fact]
     public void IntegrationsView_GitHubAppCard_ShouldNotAskForRawPrivateKeyMaterial()
     {
         var xaml = File.ReadAllText(Path.GetFullPath(ViewPath));

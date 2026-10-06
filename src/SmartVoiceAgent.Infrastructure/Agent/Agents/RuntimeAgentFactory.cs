@@ -20,7 +20,7 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
     private readonly IRuntimeAgentRunStore _runStore;
     private readonly IRuntimeAgentReadOnlyToolService? _readOnlyToolService;
     private readonly IUiLogService? _uiLogService;
-    private readonly string _modelId;
+    private readonly Func<string> _modelId;
 
     public RuntimeAgentFactory(
         Func<IChatClient> chatClientFactory,
@@ -29,6 +29,20 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
         IRuntimeAgentReadOnlyToolService? readOnlyToolService,
         IUiLogService? uiLogService,
         string modelId)
+        : this(chatClientFactory, logger, runStore, readOnlyToolService, uiLogService, () => modelId)
+    {
+    }
+
+    /// <summary>
+    /// Creates the factory with a model id read at each run, so a Settings change shows up in new runs.
+    /// </summary>
+    public RuntimeAgentFactory(
+        Func<IChatClient> chatClientFactory,
+        ILogger<RuntimeAgentFactory> logger,
+        IRuntimeAgentRunStore runStore,
+        IRuntimeAgentReadOnlyToolService? readOnlyToolService,
+        IUiLogService? uiLogService,
+        Func<string> modelId)
     {
         _chatClientFactory = chatClientFactory;
         _logger = logger;
@@ -47,7 +61,8 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
             "Creating runtime task agent {AgentName} for role {Role}",
             normalizedRequest.AgentName,
             normalizedRequest.Role);
-        var run = _runStore.Start(normalizedRequest, _modelId);
+        var modelId = _modelId();
+        var run = _runStore.Start(normalizedRequest, modelId);
         _uiLogService?.LogAgentUpdate(
             normalizedRequest.AgentName,
             "Created automatically for this request.",
@@ -128,7 +143,7 @@ public sealed class RuntimeAgentFactory : IRuntimeAgentFactory
                 normalizedRequest.AgentName,
                 normalizedRequest.Role,
                 final.Response,
-                _modelId,
+                modelId,
                 run.RunId,
                 final.ActionRequests);
         }

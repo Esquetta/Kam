@@ -575,6 +575,13 @@ public sealed class MainWindowAgentRuntimeTests
                     null))
                 .ToList());
 
+        public Task<AgentSessionSummary?> GetSummaryAsync(string sessionId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<AgentSessionSummary?>(null);
+
+        public Task RenameAsync(string sessionId, string? title, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task SetModelAsync(string sessionId, string? modelId, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
         public Task DeleteAsync(string sessionId, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 

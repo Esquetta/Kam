@@ -1,0 +1,62 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="SmartVoiceAgent.Ui.Views.ApprovalToastWindow"
+        Title="Kam needs your approval"
+        Width="384"
+        SizeToContent="Height"
+        CanResize="False"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Topmost="True"
+        WindowDecorations="None"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent">
+
+    <!-- Shown near the tray when a tool call waits for approval and the chat is not on screen. -->
+    <Border Margin="12"
+            Background="{DynamicResource SurfaceBgElevatedBrush}"
+            BorderBrush="{DynamicResource AccentOrangeBrush}"
+            BorderThickness="1"
+            CornerRadius="12"
+            Padding="14,12"
+            BoxShadow="0 8 24 0 #33000000">
+        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="12">
+            <Border Grid.Row="0" Grid.Column="0"
+                    Width="32" Height="32"
+                    CornerRadius="9"
+                    VerticalAlignment="Top"
+                    Background="{DynamicResource AccentOrangeGlowBrush}">
+                <Viewbox Width="16" Height="16">
+                    <Path Classes="Icon" Data="{StaticResource IconShield}" Stroke="{DynamicResource AccentOrangeBrush}"/>
+                </Viewbox>
+            </Border>
+
+            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="3">
+                <TextBlock Text="Kam needs your approval"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                <TextBlock x:Name="ToolText"
+                           FontSize="12"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextTrimming="CharacterEllipsis"/>
+                <TextBlock x:Name="ThreadText"
+                           FontSize="11"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           TextTrimming="CharacterEllipsis"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="1" Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        HorizontalAlignment="Right">
+                <Button x:Name="DismissButton"
+                        Classes="SecondaryAction"
+                        Content="Later"/>
+                <Button x:Name="ReviewButton"
+                        Classes="PrimaryAction"
+                        Content="Review"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

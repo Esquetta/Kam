@@ -31,6 +31,7 @@
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.3" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.3" />
     <PackageReference Include="Lucide.Avalonia" Version="0.2.0" />
+    <PackageReference Include="Markdig" Version="1.4.0" />
     <PackageReference Include="ReactiveUI.Avalonia" Version="12.0.1" />
     <PackageReference Include="Serilog" Version="4.3.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />

@@ -48,6 +48,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private AgentToolStepState _toolState;
         private string _toolSummary = string.Empty;
         private string? _approvalRequestId;
+        private bool _isCopied;
 
         public AgentChatMessageViewModel(
             string role,
@@ -260,6 +261,28 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _lastContentRefresh = Environment.TickCount64;
             Content = _content + _pendingContent;
             _pendingContent.Clear();
+        }
+
+        /// <summary>Gets whether the message was just copied; the copy button shows a check for a moment.</summary>
+        public bool IsCopied
+        {
+            get => _isCopied;
+            private set => this.RaiseAndSetIfChanged(ref _isCopied, value);
+        }
+
+        /// <summary>
+        /// Shows the copied state on the message's copy button for a moment.
+        /// </summary>
+        public void MarkCopied()
+        {
+            IsCopied = true;
+            _ = ResetCopiedLaterAsync();
+        }
+
+        private async Task ResetCopiedLaterAsync()
+        {
+            await Task.Delay(1500);
+            IsCopied = false;
         }
 
         /// <summary>Gets the tooltip for "Always allow", naming the rule it saves.</summary>

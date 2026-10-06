@@ -28,6 +28,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private string _todoistApiKey = string.Empty;
         private bool _isTaskAgentEnabled;
 
+        // Web search (Google Programmable Search)
+        private string _webSearchApiKey = string.Empty;
+        private string _webSearchEngineId = string.Empty;
+        private bool _isWebSearchConfigured;
+
         // GitHub App
         private string _githubAppId = string.Empty;
         private string _githubInstallationId = string.Empty;
@@ -83,6 +88,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             // Commands
             SaveTodoistCommand = ReactiveCommand.Create(SaveTodoist);
             ClearTodoistCommand = ReactiveCommand.Create(ClearTodoist);
+
+            SaveWebSearchCommand = ReactiveCommand.Create(SaveWebSearch);
+            ClearWebSearchCommand = ReactiveCommand.Create(ClearWebSearch);
             
             SaveEmailCommand = ReactiveCommand.Create(SaveEmail);
             ClearEmailCommand = ReactiveCommand.Create(ClearEmail);
@@ -118,6 +126,51 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         public string TodoistDescription => "Connect to Todoist for task management capabilities. The Task Agent will be enabled when a valid API key is provided.";
         public string TodoistStatusText => IsTaskAgentEnabled ? "ACTIVE" : "NOT CONFIGURED";
+
+        #endregion
+
+        #region Web Search Properties
+
+        /// <summary>Gets or sets the Google Custom Search JSON API key being edited.</summary>
+        public string WebSearchApiKey
+        {
+            get => _webSearchApiKey;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _webSearchApiKey, value);
+                this.RaisePropertyChanged(nameof(CanSaveWebSearch));
+            }
+        }
+
+        /// <summary>Gets or sets the Programmable Search engine ID being edited.</summary>
+        public string WebSearchEngineId
+        {
+            get => _webSearchEngineId;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _webSearchEngineId, value);
+                this.RaisePropertyChanged(nameof(CanSaveWebSearch));
+            }
+        }
+
+        /// <summary>Gets whether a saved key and engine ID let the agent search the web.</summary>
+        public bool IsWebSearchConfigured
+        {
+            get => _isWebSearchConfigured;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _isWebSearchConfigured, value);
+                this.RaisePropertyChanged(nameof(WebSearchStatusText));
+            }
+        }
+
+        /// <summary>Gets whether both fields are filled in.</summary>
+        public bool CanSaveWebSearch =>
+            !string.IsNullOrWhiteSpace(WebSearchApiKey) && !string.IsNullOrWhiteSpace(WebSearchEngineId);
+
+        public string WebSearchDescription => "Lets the agent search the web. Create a search engine at programmablesearchengine.google.com, then a Custom Search JSON API key in Google Cloud. Changes apply to the next message.";
+
+        public string WebSearchStatusText => IsWebSearchConfigured ? "ACTIVE" : "NOT CONFIGURED";
 
         #endregion
 
@@ -361,6 +414,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public ICommand SaveTodoistCommand { get; }
         public ICommand ClearTodoistCommand { get; }
 
+        // Web Search Commands
+        public ICommand SaveWebSearchCommand { get; }
+        public ICommand ClearWebSearchCommand { get; }
+
         // Email Commands
         public ICommand SaveEmailCommand { get; }
         public ICommand ClearEmailCommand { get; }
@@ -385,6 +442,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             // Todoist
             TodoistApiKey = _settingsService.TodoistApiKey;
+
+            // Web search
+            WebSearchApiKey = _settingsService.WebSearchApiKey;
+            WebSearchEngineId = _settingsService.WebSearchEngineId;
+            IsWebSearchConfigured = CanSaveWebSearch;
 
             // GitHub App
             _isLoadingSettings = true;
@@ -534,6 +596,25 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             TodoistApiKey = string.Empty;
             _settingsService.TodoistApiKey = string.Empty;
             _settingsService.Save();
+        }
+
+        #endregion
+
+        #region Web Search Methods
+
+        private void SaveWebSearch()
+        {
+            _settingsService.WebSearchApiKey = WebSearchApiKey.Trim();
+            _settingsService.WebSearchEngineId = WebSearchEngineId.Trim();
+            _settingsService.Save();
+            IsWebSearchConfigured = CanSaveWebSearch;
+        }
+
+        private void ClearWebSearch()
+        {
+            WebSearchApiKey = string.Empty;
+            WebSearchEngineId = string.Empty;
+            SaveWebSearch();
         }
 
         #endregion
@@ -1109,6 +1190,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             // Auto-save when leaving the view
             SaveTodoist();
+            SaveWebSearch();
             SaveGitHubApp();
             SaveEmail();
             SaveSms();

@@ -64,7 +64,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private IGitHubAppClient? _githubAppClient;
         private IGitHubAppClientFactory? _githubAppClientFactory;
         private readonly IModelConnectionTestService _modelConnectionTestService = new ModelConnectionTestService();
-        private readonly ISettingsService _pageSettingsService = new JsonSettingsService();
+        private readonly ISettingsService _pageSettingsService;
         private readonly Dictionary<NavView, ViewModelBase> _viewModelCache = [];
 
         private const int MaxSkillExecutionHistoryScanCount = 50;
@@ -385,6 +385,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 }
 
                 this.RaisePropertyChanged(nameof(HasAgentChatMessages));
+                RefreshAgentChatModelOptions();
             }
         }
 
@@ -656,7 +657,18 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /* ========================= */
 
         public MainWindowViewModel()
+            : this(new JsonSettingsService())
         {
+        }
+
+        /// <summary>
+        /// Creates the view model over a specific settings store.
+        /// </summary>
+        /// <param name="settingsService">Settings the pages and the chat model picker read.</param>
+        public MainWindowViewModel(ISettingsService settingsService)
+        {
+            _pageSettingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+
             // Commands
             NavigateToCoordinatorCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Coordinator));
             NavigateToDiagnosticsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Diagnostics));
@@ -686,6 +698,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             DenyToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: false, alwaysAllow: false));
             StopAgentTurnCommand = ReactiveCommand.Create(StopAgentTurn);
             ClearQueuedAgentMessagesCommand = ReactiveCommand.Create(ClearQueuedAgentMessages);
+            InitializeChatExperience();
             InitializeAgentChatSessions();
 
             Dispatcher.UIThread.Post(() =>
@@ -1124,6 +1137,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         private void CreateNewAgentChat()
         {
+            // A new chat matches no search yet, so the search is cleared to show it.
+            AgentChatSearchText = string.Empty;
             var session = AgentChatSessionViewModel.Create(
                 "New chat",
                 "No messages yet",
@@ -1180,6 +1195,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 DateTime.Now.ToString("HH:mm")));
 
             if (role.Equals("You", StringComparison.OrdinalIgnoreCase)
+                && !session.HasCustomTitle
                 && session.Title is "Workspace chat" or "New chat")
             {
                 session.Title = content.Length <= 40
@@ -2242,152 +2258,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             get => _isSelected;
             set => this.RaiseAndSetIfChanged(ref _isSelected, value);
-        }
-    }
-
-    public sealed class AgentChatSessionViewModel : ReactiveObject
-    {
-        private string _title;
-        private string _summary;
-        private string _relativeTimeText;
-        private bool _isSelected;
-
-        private bool _isRunning;
-        private int _persistedMessageCount;
-
-        private AgentChatSessionViewModel(
-            string sessionId,
-            string title,
-            string summary,
-            string relativeTimeText)
-        {
-            SessionId = sessionId;
-            _title = title;
-            _summary = summary;
-            _relativeTimeText = relativeTimeText;
-        }
-
-        /// <summary>
-        /// Gets the id the agent runtime stores this thread under.
-        /// </summary>
-        public string SessionId { get; }
-
-        /// <summary>
-        /// Gets whether the saved history still has to be read from disk before the thread is shown.
-        /// </summary>
-        public bool NeedsHistoryLoad { get; private set; }
-
-        /// <summary>
-        /// Gets or sets whether an agent turn is running in this thread.
-        /// </summary>
-        public bool IsRunning
-        {
-            get => _isRunning;
-            set
-            {
-                this.RaiseAndSetIfChanged(ref _isRunning, value);
-                this.RaisePropertyChanged(nameof(StatusText));
-            }
-        }
-
-        public string Title
-        {
-            get => _title;
-            set => this.RaiseAndSetIfChanged(ref _title, value);
-        }
-
-        public string Summary
-        {
-            get => _summary;
-            set => this.RaiseAndSetIfChanged(ref _summary, value);
-        }
-
-        public string RelativeTimeText
-        {
-            get => _relativeTimeText;
-            set => this.RaiseAndSetIfChanged(ref _relativeTimeText, value);
-        }
-
-        public bool IsSelected
-        {
-            get => _isSelected;
-            set
-            {
-                this.RaiseAndSetIfChanged(ref _isSelected, value);
-                this.RaisePropertyChanged(nameof(StatusText));
-            }
-        }
-
-        public ObservableCollection<AgentChatMessageViewModel> Messages { get; } = new();
-
-        public string AgentName => "Kam Agent";
-
-        public string StatusText => IsRunning ? "Working" : IsSelected ? "Active" : "Ready";
-
-        public string ModelText => "Settings model";
-
-        public string MessageCountText
-        {
-            get
-            {
-                var count = NeedsHistoryLoad ? _persistedMessageCount : Messages.Count;
-                return count == 0
-                    ? "No messages"
-                    : count == 1
-                        ? "1 message"
-                        : $"{count} messages";
-            }
-        }
-
-        public void AddMessage(AgentChatMessageViewModel message)
-        {
-            Messages.Add(message);
-            this.RaisePropertyChanged(nameof(MessageCountText));
-        }
-
-        public void RemoveMessage(AgentChatMessageViewModel message)
-        {
-            Messages.Remove(message);
-            this.RaisePropertyChanged(nameof(MessageCountText));
-        }
-
-        /// <summary>
-        /// Replaces the timeline with history read from disk.
-        /// </summary>
-        public void LoadHistory(IEnumerable<AgentChatMessageViewModel> messages)
-        {
-            Messages.Clear();
-            foreach (var message in messages)
-            {
-                Messages.Add(message);
-            }
-
-            NeedsHistoryLoad = false;
-            this.RaisePropertyChanged(nameof(MessageCountText));
-        }
-
-        public static AgentChatSessionViewModel Create(
-            string title,
-            string summary,
-            string relativeTimeText)
-        {
-            return new AgentChatSessionViewModel(Guid.NewGuid().ToString("N"), title, summary, relativeTimeText);
-        }
-
-        /// <summary>
-        /// Creates a thread saved by an earlier run; its history loads when it is opened.
-        /// </summary>
-        public static AgentChatSessionViewModel CreateSaved(
-            string sessionId,
-            string title,
-            string relativeTimeText,
-            int savedItemCount)
-        {
-            return new AgentChatSessionViewModel(sessionId, title, "Saved thread", relativeTimeText)
-            {
-                NeedsHistoryLoad = true,
-                _persistedMessageCount = savedItemCount
-            };
         }
     }
 

@@ -5,6 +5,7 @@
 		xmlns:local="clr-namespace:SmartVoiceAgent.Ui.Views"
 		xmlns:services="clr-namespace:SmartVoiceAgent.Ui.Services"
 		xmlns:converters="clr-namespace:SmartVoiceAgent.Ui.Converters"
+		xmlns:controls="using:SmartVoiceAgent.Ui.Controls"
 		x:Class="SmartVoiceAgent.Ui.Views.MainWindow"
 		x:DataType="vm:MainWindowViewModel"
 		Background="{DynamicResource PanelBgBrush}"
@@ -240,7 +241,66 @@
 			<Setter Property="Padding" Value="10,9"/>
 		</Style>
 
+		<!-- Row menu shows on hover, in place of the time -->
+		<Style Selector="Button.ChatRowMenu">
+			<Setter Property="Opacity" Value="0"/>
+		</Style>
+
+		<Style Selector="Panel.ChatSessionRow:pointerover Button.ChatRowMenu, Button.ChatRowMenu:flyout-open, Button.ChatRowMenu:focus-visible">
+			<Setter Property="Opacity" Value="1"/>
+		</Style>
+
+		<Style Selector="Panel.ChatSessionRow:pointerover TextBlock.ChatRowTime">
+			<Setter Property="Opacity" Value="0"/>
+		</Style>
+
+		<Style Selector="Border.ChatSessionEditor">
+			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+			<Setter Property="Margin" Value="0,0,0,2"/>
+			<Setter Property="Padding" Value="8"/>
+		</Style>
+
+		<Style Selector="TextBox.ChatRenameInput">
+			<Setter Property="MinHeight" Value="30"/>
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="Padding" Value="8,5"/>
+			<Setter Property="CornerRadius" Value="6"/>
+		</Style>
+
+		<Style Selector="Button.ChatRowAction">
+			<Setter Property="MinHeight" Value="28"/>
+			<Setter Property="Padding" Value="10,4"/>
+			<Setter Property="FontSize" Value="12"/>
+		</Style>
+
+		<Style Selector="TextBox.ChatSearch">
+			<Setter Property="MinHeight" Value="32"/>
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="Padding" Value="8,6"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+		</Style>
+
+		<!-- Copy buttons under messages show on hover -->
+		<Style Selector="Button.MessageAction">
+			<Setter Property="Opacity" Value="0"/>
+		</Style>
+
+		<Style Selector="Border.ChatMessage:pointerover Button.MessageAction, Button.MessageAction:focus-visible">
+			<Setter Property="Opacity" Value="1"/>
+		</Style>
+
+		<Style Selector="ComboBox.ModelPicker">
+			<Setter Property="MinHeight" Value="28"/>
+			<Setter Property="MaxWidth" Value="360"/>
+			<Setter Property="Padding" Value="10,2,6,2"/>
+			<Setter Property="CornerRadius" Value="14"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+
+		<!-- Transparent, so hovering anywhere in a message shows its copy button -->
 		<Style Selector="Border.ChatMessage">
+			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="Padding" Value="0"/>
 			<Setter Property="Margin" Value="0,0,0,22"/>
 		</Style>
@@ -555,7 +615,7 @@
 							BorderBrush="{DynamicResource BorderSubtleBrush}"
 							BorderThickness="0,0,1,0"
 							Padding="12,16,12,12">
-						<Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+						<Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">
 							<Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="4,0">
 								<StackPanel Spacing="1">
 									<TextBlock Text="Chats" Classes="SectionTitle"/>
@@ -569,7 +629,7 @@
 							<Button Grid.Row="1"
 									Classes="PrimaryAction"
 									HorizontalAlignment="Stretch"
-									ToolTip.Tip="New chat"
+									ToolTip.Tip="New chat (Ctrl+N)"
 									Command="{Binding NewAgentChatCommand}">
 								<StackPanel Orientation="Horizontal" Spacing="8">
 									<Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconPlus}" Stroke="{DynamicResource AccentOnBrush}" StrokeThickness="2.5"/></Viewbox>
@@ -577,60 +637,160 @@
 								</StackPanel>
 							</Button>
 
-							<ScrollViewer Grid.Row="2"
-										  VerticalScrollBarVisibility="Auto"
-										  HorizontalScrollBarVisibility="Disabled">
-								<ItemsControl ItemsSource="{Binding AgentChatSessions}">
-									<ItemsControl.ItemTemplate>
-										<DataTemplate DataType="vm:AgentChatSessionViewModel">
-											<Button Classes="ChatSessionItem"
-													Command="{Binding $parent[Window].DataContext.SelectAgentChatCommand}"
-													CommandParameter="{Binding}">
-												<Border Classes="ChatSessionChrome"
-														Background="{Binding IsSelected, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentSubtleBrush|TransparentBrush'}">
-													<Grid RowDefinitions="Auto,Auto,Auto"
-														  ColumnDefinitions="*,Auto"
-														  RowSpacing="3"
-														  ColumnSpacing="8">
-														<TextBlock Grid.Row="0" Grid.Column="0"
-																   Text="{Binding Title}"
-																   FontSize="13"
-																   FontWeight="SemiBold"
-																   Foreground="{DynamicResource TextPrimaryBrush}"
-																   TextTrimming="CharacterEllipsis"/>
-														<TextBlock Grid.Row="0" Grid.Column="1"
-																   Text="{Binding RelativeTimeText}"
-																   FontSize="11"
-																   Foreground="{DynamicResource TextMutedBrush}"/>
-														<TextBlock Grid.Row="1" Grid.ColumnSpan="2"
-																   Text="{Binding Summary}"
-																   FontSize="12"
-																   Foreground="{DynamicResource TextMutedBrush}"
-																   TextTrimming="CharacterEllipsis"/>
-														<StackPanel Grid.Row="2" Grid.ColumnSpan="2"
-																	Orientation="Horizontal"
-																	Spacing="6"
-																	Margin="0,3,0,0">
-															<TextBlock Text="{Binding AgentName}"
-																	   FontSize="11"
-																	   Foreground="{DynamicResource TextSecondaryBrush}"/>
-															<TextBlock Text="·" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
-															<TextBlock Text="{Binding StatusText}"
-																	   FontSize="11"
-																	   FontWeight="SemiBold"
-																	   Foreground="{DynamicResource AccentBrush}"/>
-															<TextBlock Text="·" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
-															<TextBlock Text="{Binding MessageCountText}"
-																	   FontSize="11"
-																	   Foreground="{DynamicResource TextMutedBrush}"/>
+							<!-- Search: matches titles and the last message -->
+							<TextBox Grid.Row="2"
+									 x:Name="ChatSearchInput"
+									 Classes="ChatSearch"
+									 PlaceholderText="Search chats (Ctrl+K)"
+									 Text="{Binding AgentChatSearchText, Mode=TwoWay}"
+									 KeyDown="OnChatSearchKeyDown">
+								<TextBox.InnerLeftContent>
+									<Viewbox Width="13" Height="13" Margin="10,0,0,0" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconSearch}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
+								</TextBox.InnerLeftContent>
+								<TextBox.InnerRightContent>
+									<Button Classes="IconButton CompactIconButton"
+											Margin="0,0,4,0"
+											Background="Transparent"
+											BorderThickness="0"
+											ToolTip.Tip="Clear search"
+											IsVisible="{Binding IsAgentChatSearchActive}"
+											Command="{Binding ClearAgentChatSearchCommand}">
+										<Viewbox Width="11" Height="11"><Path Classes="Icon" Data="{StaticResource IconX}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
+									</Button>
+								</TextBox.InnerRightContent>
+							</TextBox>
+
+							<Panel Grid.Row="3">
+								<ScrollViewer VerticalScrollBarVisibility="Auto"
+											  HorizontalScrollBarVisibility="Disabled">
+									<ItemsControl x:Name="ChatThreadList" ItemsSource="{Binding AgentChatSessions}">
+										<ItemsControl.ItemsPanel>
+											<ItemsPanelTemplate>
+												<VirtualizingStackPanel/>
+											</ItemsPanelTemplate>
+										</ItemsControl.ItemsPanel>
+										<ItemsControl.ItemTemplate>
+											<DataTemplate DataType="vm:AgentChatSessionViewModel">
+												<Panel Classes="ChatSessionRow" IsVisible="{Binding IsVisibleInList}">
+													<Button Classes="ChatSessionItem"
+															IsVisible="{Binding IsShowingSummary}"
+															Command="{Binding $parent[Window].DataContext.SelectAgentChatCommand}"
+															CommandParameter="{Binding}">
+														<Button.ContextMenu>
+															<ContextMenu>
+																<MenuItem Header="Rename" InputGesture="F2" Click="OnRenameChatClick"/>
+																<MenuItem Header="Delete" IsEnabled="{Binding CanDelete}" Click="OnDeleteChatClick"/>
+															</ContextMenu>
+														</Button.ContextMenu>
+														<Border Classes="ChatSessionChrome"
+																Background="{Binding IsSelected, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentSubtleBrush|TransparentBrush'}">
+															<Grid RowDefinitions="Auto,Auto,Auto"
+																  ColumnDefinitions="*,Auto"
+																  RowSpacing="3"
+																  ColumnSpacing="8">
+																<TextBlock Grid.Row="0" Grid.Column="0"
+																		   Text="{Binding Title}"
+																		   FontSize="13"
+																		   FontWeight="SemiBold"
+																		   Foreground="{DynamicResource TextPrimaryBrush}"
+																		   TextTrimming="CharacterEllipsis"/>
+																<TextBlock Grid.Row="0" Grid.Column="1"
+																		   Classes="ChatRowTime"
+																		   Text="{Binding RelativeTimeText}"
+																		   FontSize="11"
+																		   Foreground="{DynamicResource TextMutedBrush}"/>
+																<TextBlock Grid.Row="1" Grid.ColumnSpan="2"
+																		   Text="{Binding Summary}"
+																		   FontSize="12"
+																		   Foreground="{DynamicResource TextMutedBrush}"
+																		   TextTrimming="CharacterEllipsis"/>
+																<StackPanel Grid.Row="2" Grid.ColumnSpan="2"
+																			Orientation="Horizontal"
+																			Spacing="6"
+																			Margin="0,3,0,0">
+																	<TextBlock Text="{Binding AgentName}"
+																			   FontSize="11"
+																			   Foreground="{DynamicResource TextSecondaryBrush}"/>
+																	<TextBlock Text="·" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+																	<TextBlock Text="{Binding StatusText}"
+																			   FontSize="11"
+																			   FontWeight="SemiBold"
+																			   Foreground="{DynamicResource AccentBrush}"/>
+																	<TextBlock Text="·" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+																	<TextBlock Text="{Binding MessageCountText}"
+																			   FontSize="11"
+																			   Foreground="{DynamicResource TextMutedBrush}"/>
+																</StackPanel>
+															</Grid>
+														</Border>
+													</Button>
+
+													<!-- Row menu; shown on hover in place of the time -->
+													<Button Classes="IconButton CompactIconButton ChatRowMenu"
+															IsVisible="{Binding IsShowingSummary}"
+															HorizontalAlignment="Right"
+															VerticalAlignment="Top"
+															Margin="0,6,6,0"
+															Background="Transparent"
+															BorderThickness="0"
+															ToolTip.Tip="Chat options">
+														<Button.Flyout>
+															<MenuFlyout Placement="BottomEdgeAlignedRight">
+																<MenuItem Header="Rename" InputGesture="F2" Click="OnRenameChatClick"/>
+																<MenuItem Header="Delete" IsEnabled="{Binding CanDelete}" Click="OnDeleteChatClick"/>
+															</MenuFlyout>
+														</Button.Flyout>
+														<Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconMore}" Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="3" Stretch="None"/></Viewbox>
+													</Button>
+
+													<!-- Rename: Enter saves, Esc cancels -->
+													<Border Classes="ChatSessionChrome ChatSessionEditor"
+															IsVisible="{Binding IsRenaming}"
+															PropertyChanged="OnRenameEditorPropertyChanged">
+														<TextBox Classes="ChatRenameInput"
+																 Text="{Binding EditTitle, Mode=TwoWay}"
+																 MaxLength="120"
+																 KeyDown="OnRenameKeyDown"
+																 LostFocus="OnRenameLostFocus"/>
+													</Border>
+
+													<!-- Delete confirmation -->
+													<Border Classes="ChatSessionChrome ChatSessionEditor"
+															IsVisible="{Binding IsConfirmingDelete}">
+														<StackPanel Spacing="8">
+															<StackPanel Spacing="2">
+																<TextBlock Text="Delete this chat?"
+																		   FontSize="13"
+																		   FontWeight="SemiBold"
+																		   Foreground="{DynamicResource TextPrimaryBrush}"/>
+																<TextBlock Text="Its messages are removed from this computer."
+																		   Classes="Caption"
+																		   TextWrapping="Wrap"/>
+															</StackPanel>
+															<StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+																<Button Classes="SecondaryAction ChatRowAction"
+																		Content="Cancel"
+																		Command="{Binding $parent[Window].DataContext.CancelDeleteAgentChatCommand}"
+																		CommandParameter="{Binding}"/>
+																<Button Classes="DestructiveAction ChatRowAction"
+																		Content="Delete"
+																		Command="{Binding $parent[Window].DataContext.ConfirmDeleteAgentChatCommand}"
+																		CommandParameter="{Binding}"/>
+															</StackPanel>
 														</StackPanel>
-													</Grid>
-												</Border>
-											</Button>
-										</DataTemplate>
-									</ItemsControl.ItemTemplate>
-								</ItemsControl>
-							</ScrollViewer>
+													</Border>
+												</Panel>
+											</DataTemplate>
+										</ItemsControl.ItemTemplate>
+									</ItemsControl>
+								</ScrollViewer>
+
+								<TextBlock Text="No chats match"
+										   Classes="Caption"
+										   HorizontalAlignment="Center"
+										   Margin="0,16,0,0"
+										   IsVisible="{Binding HasNoAgentChatSearchResults}"/>
+							</Panel>
 						</Grid>
 					</Border>
 
@@ -640,19 +800,60 @@
 								BorderBrush="{DynamicResource BorderSubtleBrush}"
 								BorderThickness="0,0,0,1"
 								Padding="24,14">
-							<Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+							<Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
 								<StackPanel Grid.Column="0" Spacing="2">
 									<TextBlock Text="{Binding SelectedAgentChatSession.Title}"
 											   Classes="SectionTitle"
 											   TextTrimming="CharacterEllipsis"/>
 									<TextBlock Text="Conversation timeline" Classes="Caption"/>
 								</StackPanel>
-								<Border Grid.Column="1" Classes="Pill">
+								<Border Grid.Column="1" Classes="Pill" VerticalAlignment="Center">
 									<TextBlock Text="{Binding SelectedAgentChatMessageCountText}"/>
 								</Border>
-								<Border Grid.Column="2" Classes="Pill Accent">
-									<TextBlock Text="Model follows Settings"/>
-								</Border>
+
+								<!-- Model for this chat; "Settings default" follows the model chosen in Settings -->
+								<ComboBox Grid.Column="2"
+										  Classes="ModelPicker"
+										  ItemsSource="{Binding AgentChatModelOptions}"
+										  SelectedItem="{Binding SelectedAgentChatModel, Mode=TwoWay}"
+										  IsVisible="{Binding IsAgentRuntimeEnabled}"
+										  ToolTip.Tip="{Binding AgentChatModelTip}">
+									<ComboBox.ItemTemplate>
+										<DataTemplate DataType="vm:AgentChatModelOption">
+											<StackPanel Orientation="Horizontal" Spacing="6">
+												<Viewbox Width="12" Height="12" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconCpu}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
+												<TextBlock Text="{Binding Label}"
+														   FontSize="12"
+														   MaxWidth="220"
+														   TextTrimming="CharacterEllipsis"
+														   VerticalAlignment="Center"/>
+												<TextBlock Text="{Binding Caption}"
+														   FontSize="11"
+														   Foreground="{DynamicResource TextMutedBrush}"
+														   VerticalAlignment="Center"/>
+											</StackPanel>
+										</DataTemplate>
+									</ComboBox.ItemTemplate>
+								</ComboBox>
+
+								<Button Grid.Column="3"
+										Classes="IconButton"
+										Width="30" Height="30"
+										CornerRadius="8"
+										Background="Transparent"
+										BorderThickness="0"
+										VerticalAlignment="Center"
+										ToolTip.Tip="Chat options">
+									<Button.Flyout>
+										<MenuFlyout Placement="BottomEdgeAlignedRight">
+											<MenuItem Header="Rename" InputGesture="F2" Click="OnRenameChatClick"/>
+											<MenuItem Header="Copy conversation" Command="{Binding CopyAgentChatCommand}"/>
+											<Separator/>
+											<MenuItem Header="Delete" Click="OnDeleteChatClick"/>
+										</MenuFlyout>
+									</Button.Flyout>
+									<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconMore}" Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="3" Stretch="None"/></Viewbox>
+								</Button>
 							</Grid>
 						</Border>
 
@@ -742,10 +943,25 @@
 																				 Foreground="{DynamicResource TextPrimaryBrush}"
 																				 TextWrapping="Wrap"/>
 														</Border>
-														<TextBlock Text="{Binding TimeText}"
-																   FontSize="11"
-																   Foreground="{DynamicResource TextMutedBrush}"
-																   HorizontalAlignment="Right"/>
+														<StackPanel Orientation="Horizontal"
+																	Spacing="4"
+																	HorizontalAlignment="Right">
+															<Button Classes="IconButton CompactIconButton MessageAction"
+																	Background="Transparent"
+																	BorderThickness="0"
+																	ToolTip.Tip="Copy message"
+																	Command="{Binding $parent[Window].DataContext.CopyAgentMessageCommand}"
+																	CommandParameter="{Binding}">
+																<Panel>
+																	<Viewbox Width="12" Height="12" IsVisible="{Binding !IsCopied}"><Path Classes="Icon" Data="{StaticResource IconCopy}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
+																	<Viewbox Width="12" Height="12" IsVisible="{Binding IsCopied}"><Path Classes="Icon" Data="{StaticResource IconCheck}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
+																</Panel>
+															</Button>
+															<TextBlock Text="{Binding TimeText}"
+																	   FontSize="11"
+																	   Foreground="{DynamicResource TextMutedBrush}"
+																	   VerticalAlignment="Center"/>
+														</StackPanel>
 													</StackPanel>
 
 													<!-- Incoming (agent / system) -->
@@ -766,11 +982,23 @@
 																		   Foreground="{DynamicResource TextMutedBrush}"
 																		   VerticalAlignment="Center"/>
 															</StackPanel>
-															<SelectableTextBlock Text="{Binding Content}"
-																				 FontSize="14"
-																				 LineHeight="22"
-																				 Foreground="{DynamicResource TextSecondaryBrush}"
-																				 TextWrapping="Wrap"/>
+															<controls:MarkdownView Markdown="{Binding Content}"/>
+															<StackPanel Orientation="Horizontal"
+																		Spacing="2"
+																		Margin="-4,0,0,-12"
+																		IsVisible="{Binding !IsStreaming}">
+																<Button Classes="IconButton CompactIconButton MessageAction"
+																		Background="Transparent"
+																		BorderThickness="0"
+																		ToolTip.Tip="Copy message"
+																		Command="{Binding $parent[Window].DataContext.CopyAgentMessageCommand}"
+																		CommandParameter="{Binding}">
+																	<Panel>
+																		<Viewbox Width="13" Height="13" IsVisible="{Binding !IsCopied}"><Path Classes="Icon" Data="{StaticResource IconCopy}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
+																		<Viewbox Width="13" Height="13" IsVisible="{Binding IsCopied}"><Path Classes="Icon" Data="{StaticResource IconCheck}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
+																	</Panel>
+																</Button>
+															</StackPanel>
 														</StackPanel>
 													</Grid>
 
@@ -1023,17 +1251,17 @@
 									</Border>
 
 									<!-- Prompt -->
+									<!-- Enter sends and Shift+Enter adds a line; MainWindow handles keys before the TextBox does -->
 									<TextBox Grid.Row="2"
 											 x:Name="WorkbenchPromptInput"
 											 Classes="BareInput"
 											 PlaceholderText="Ask Kam to inspect, edit, test, or plan..."
 											 FontSize="14"
 											 Foreground="{DynamicResource TextPrimaryBrush}"
-											 AcceptsReturn="False"
+											 AcceptsReturn="True"
 											 TextWrapping="Wrap"
 											 MaxHeight="160"
-											 Text="{Binding CommandInputText, Mode=TwoWay}"
-											 KeyDown="OnPromptKeyDown"/>
+											 Text="{Binding CommandInputText, Mode=TwoWay}"/>
 
 									<!-- Toolbar -->
 									<Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="6">
@@ -1099,7 +1327,7 @@
 										</Button>
 										<Button Grid.Column="5"
 												Classes="SendButton"
-												ToolTip.Tip="Stop"
+												ToolTip.Tip="Stop (Esc)"
 												IsVisible="{Binding IsAgentTurnRunning}"
 												Command="{Binding StopAgentTurnCommand}">
 											<Viewbox Width="12" Height="12"><Path Classes="Icon" Data="{StaticResource IconStop}"/></Viewbox>
@@ -1108,7 +1336,7 @@
 								</Grid>
 							</Border>
 
-							<TextBlock Text="Type / for commands  ·  Enter to send"
+							<TextBlock Text="Enter to send  ·  Shift+Enter for a new line  ·  Type / for commands"
 									   FontSize="11"
 									   Foreground="{DynamicResource TextMutedBrush}"
 									   HorizontalAlignment="Center"/>
@@ -2043,8 +2271,7 @@
 												 VerticalAlignment="Center"
 												 AcceptsReturn="False"
 												 TextWrapping="NoWrap"
-												 Text="{Binding CommandInputText, Mode=TwoWay}"
-												 KeyDown="OnPromptKeyDown"/>
+												 Text="{Binding CommandInputText, Mode=TwoWay}"/>
 										<Button Grid.Column="2"
 												Classes="IconButton"
 												Width="28" Height="28"

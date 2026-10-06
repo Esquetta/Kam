@@ -37,7 +37,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
     /// </summary>
     public partial class MainWindowViewModel
     {
-        private const int MaxSavedThreadsShown = 40;
         private const string CompactedNotice = "Earlier messages were summarized to save context.";
 
         private IAgentRuntime? _agentRuntime;
@@ -164,6 +163,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             AgentChatMessageViewModel? streaming = null;
             var wroteText = false;
             var steps = new Dictionary<string, AgentChatMessageViewModel>(StringComparer.Ordinal);
+            var approvalRequests = new List<string>();
 
             try
             {
@@ -204,6 +204,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
                             if (steps.TryGetValue(approval.CallId, out var waiting))
                             {
                                 waiting.RequestApproval(approval.RequestId, approval.AlwaysAllowRule);
+                                approvalRequests.Add(approval.RequestId);
+                                NotifyApprovalRequested(session, waiting, approval.RequestId);
                             }
 
                             AddLog($"TOOL_APPROVAL_NEEDED: {approval.ToolName}");
@@ -276,6 +278,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 foreach (var step in steps.Values)
                 {
                     step.Abandon();
+                }
+
+                foreach (var requestId in approvalRequests)
+                {
+                    DismissApprovalNotice(requestId);
                 }
 
                 _agentTurnCancellation = null;
@@ -404,6 +411,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 return;
             }
 
+            DismissApprovalNotice(requestId);
             if (_agentRuntime.ResolveApproval(requestId, approved, alwaysAllow))
             {
                 step.ApprovalAnswered(approved);
@@ -439,7 +447,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             try
             {
                 var saved = await _agentSessionStore.ListAsync();
-                foreach (var summary in saved.Take(MaxSavedThreadsShown))
+                foreach (var summary in saved)
                 {
                     if (AgentChatSessions.Any(session => session.SessionId == summary.Id))
                     {
@@ -450,9 +458,12 @@ namespace SmartVoiceAgent.Ui.ViewModels
                         summary.Id,
                         summary.Title,
                         FormatRelativeTime(summary.UpdatedAt, DateTimeOffset.Now),
-                        summary.MessageCount));
+                        summary.MessageCount,
+                        summary.ModelId,
+                        summary.HasCustomTitle));
                 }
 
+                ApplyAgentChatSearch();
                 RaiseAgentChatStateChanged();
             }
             catch (Exception ex)
