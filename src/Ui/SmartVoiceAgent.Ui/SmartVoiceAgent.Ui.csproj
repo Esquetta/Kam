@@ -9,6 +9,8 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <UserSecretsId>c596b7d6-7516-451c-b4fc-598ea1e7ddc6</UserSecretsId>
     <ApplicationIcon>Assets\favicon.ico</ApplicationIcon>
+    <!-- Ship only English and Turkish resource assemblies from packages. -->
+    <SatelliteResourceLanguages>en;tr</SatelliteResourceLanguages>
     
     <!-- Assembly Information - appears in Task Manager, file properties, etc. -->
     <AssemblyTitle>Kam</AssemblyTitle>

@@ -1,6 +1,4 @@
-using AgentFrameworkToolkit.Tools;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.AI;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models;
@@ -31,7 +29,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             _webResearchServiceFactory = webResearchServiceFactory;
         }
 
-        [AITool("search_web", "Search given query in web.")]
         public async Task<string> SearchWebAsync(
             [Description("Search query text.")]
             string query,
@@ -88,14 +85,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
 
             return builder.ToString();
-        }
-
-        public IEnumerable<AIFunction> GetTools()
-        {
-            return
-            [
-                AIFunctionFactory.Create(SearchWebAsync)
-            ];
         }
     }
 }

@@ -1,5 +1,3 @@
-using AgentFrameworkToolkit.Tools;
-using Microsoft.Extensions.AI;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Commands;
 using SmartVoiceAgent.Infrastructure.Agent.Tools;
@@ -28,7 +26,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
 
         #region Application Management
 
-        [AITool("open_application_async", "Opens a desktop application by name.")]
         public async Task<string> OpenApplicationAsync(
             [Description("Name of the application to open (e.g., Chrome, Spotify)")]
             string applicationName)
@@ -54,7 +51,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             }
         }
 
-        [AITool("close_application", "Closes a running desktop application safely.")]
         public async Task<string> CloseApplicationAsync(
             [Description("Name of the application to close")]
             string applicationName)
@@ -79,7 +75,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             }
         }
 
-        [AITool("check_application_status", "Checks if an application is installed and returns diagnostic info.")]
         public async Task<string> CheckApplicationAsync(
             [Description("Name of the application to verify")]
             string applicationName)
@@ -95,7 +90,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             }
         }
 
-        [AITool("get_application_path", "Retrieves the full installation path for an application.")]
         public async Task<string> GetApplicationPathAsync(string applicationName)
         {
             try
@@ -109,7 +103,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             }
         }
 
-        [AITool("is_application_running", "Checks if an application is currently running.")]
         public async Task<string> IsApplicationRunningAsync(string applicationName)
         {
             try
@@ -123,7 +116,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             }
         }
 
-        [AITool("list_installed_applications", "Lists all installed applications on the system.")]
         public async Task<string> ListInstalledApplicationsAsync(bool includeSystemApps = false)
         {
             try
@@ -141,7 +133,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
 
         #region Media Control
 
-        [AITool("play_music", "Plays music using available media players.")]
         public async Task<string> PlayMusicAsync(
             [Description("Name of the track, playlist, etc.")] string trackName)
         {
@@ -161,7 +152,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
 
         #region Device Control
 
-        [AITool("control_device", "Controls system devices and hardware components.")]
         public async Task<string> ControlDeviceAsync(
             [Description("Name of the device (volume, wifi, etc)")] string deviceName,
             [Description("Action (increase, toggle, on, off)")] string action)
@@ -181,7 +171,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
 
         #region File Operations (Delegated to FileAgentTools)
 
-        [AITool("read_file", "Reads the content of a file from the file system.")]
         public async Task<string> ReadFileAsync(
             [Description("Full path to the file to read")]
             string filePath)
@@ -189,7 +178,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             return await _fileTools.ReadFileAsync(filePath);
         }
 
-        [AITool("write_file", "Writes content to a file. Creates the file if it doesn't exist.")]
         public async Task<string> WriteFileAsync(
             [Description("Full path to the file to write")]
             string filePath,
@@ -201,7 +189,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             return await _fileTools.WriteFileAsync(filePath, content, append);
         }
 
-        [AITool("create_file", "Creates a new file with optional initial content.")]
         public async Task<string> CreateFileAsync(
             [Description("Full path to the file to create")]
             string filePath,
@@ -211,7 +198,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             return await _fileTools.CreateFileAsync(filePath, content);
         }
 
-        [AITool("delete_file", "Deletes a file from the file system.")]
         public async Task<string> DeleteFileAsync(
             [Description("Full path to the file to delete")]
             string filePath)
@@ -219,7 +205,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             return await _fileTools.DeleteFileAsync(filePath);
         }
 
-        [AITool("copy_file", "Copies a file to a new location.")]
         public async Task<string> CopyFileAsync(
             [Description("Source file path")]
             string sourcePath,
@@ -231,7 +216,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             return await _fileTools.CopyFileAsync(sourcePath, destinationPath, overwrite);
         }
 
-        [AITool("move_file", "Moves a file to a new location.")]
         public async Task<string> MoveFileAsync(
             [Description("Source file path")]
             string sourcePath,
@@ -243,7 +227,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             return await _fileTools.MoveFileAsync(sourcePath, destinationPath, overwrite);
         }
 
-        [AITool("file_exists", "Checks if a file exists at the specified path.")]
         public async Task<string> FileExistsAsync(
             [Description("Full path to check")]
             string filePath)
@@ -251,7 +234,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             return await _fileTools.FileExistsAsync(filePath);
         }
 
-        [AITool("get_file_info", "Gets detailed information about a file.")]
         public async Task<string> GetFileInfoAsync(
             [Description("Full path to the file")]
             string filePath)
@@ -259,7 +241,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             return await _fileTools.GetFileInfoAsync(filePath);
         }
 
-        [AITool("list_files", "Lists files in a directory with optional filter.")]
         public async Task<string> ListFilesAsync(
             [Description("Directory path to list files from")]
             string directoryPath,
@@ -271,7 +252,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             return await _fileTools.ListFilesAsync(directoryPath, searchPattern, recursive);
         }
 
-        [AITool("search_files", "Searches for files by name pattern in a directory.")]
         public async Task<string> SearchFilesAsync(
             [Description("Directory to search in")]
             string directoryPath,
@@ -283,7 +263,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             return await _fileTools.SearchFilesAsync(directoryPath, searchPattern, recursive);
         }
 
-        [AITool("create_directory", "Creates a new directory.")]
         public async Task<string> CreateDirectoryAsync(
             [Description("Full path of the directory to create")]
             string directoryPath)
@@ -291,7 +270,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             return await _fileTools.CreateDirectoryAsync(directoryPath);
         }
 
-        [AITool("read_lines", "Reads specific lines from a file.")]
         public async Task<string> ReadLinesAsync(
             [Description("Full path to the file")]
             string filePath,
@@ -304,39 +282,5 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
         }
 
         #endregion
-
-        public IEnumerable<AIFunction> GetTools()
-        {
-            return
-            [
-                // Application Management
-                AIFunctionFactory.Create(OpenApplicationAsync),
-                AIFunctionFactory.Create(CloseApplicationAsync),
-                AIFunctionFactory.Create(CheckApplicationAsync),
-                AIFunctionFactory.Create(GetApplicationPathAsync),
-                AIFunctionFactory.Create(IsApplicationRunningAsync),
-                AIFunctionFactory.Create(ListInstalledApplicationsAsync),
-                
-                // Media Control
-                AIFunctionFactory.Create(PlayMusicAsync),
-                
-                // Device Control
-                AIFunctionFactory.Create(ControlDeviceAsync),
-                
-                // File Operations
-                AIFunctionFactory.Create(ReadFileAsync),
-                AIFunctionFactory.Create(WriteFileAsync),
-                AIFunctionFactory.Create(CreateFileAsync),
-                AIFunctionFactory.Create(DeleteFileAsync),
-                AIFunctionFactory.Create(CopyFileAsync),
-                AIFunctionFactory.Create(MoveFileAsync),
-                AIFunctionFactory.Create(FileExistsAsync),
-                AIFunctionFactory.Create(GetFileInfoAsync),
-                AIFunctionFactory.Create(ListFilesAsync),
-                AIFunctionFactory.Create(SearchFilesAsync),
-                AIFunctionFactory.Create(CreateDirectoryAsync),
-                AIFunctionFactory.Create(ReadLinesAsync)
-            ];
-        }
     }
 }

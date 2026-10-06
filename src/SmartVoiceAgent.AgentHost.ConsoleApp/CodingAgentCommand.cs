@@ -64,7 +64,6 @@ public sealed class CodingAgentCommand
     private readonly ICodingAgentProcessRunner _processRunner;
     private readonly ISkillHealthService? _skillHealthService;
     private readonly ISkillTestService? _skillTestService;
-    private readonly IAgentRegistry? _agentRegistry;
     private readonly IGitHubAppClient? _githubAppClient;
     private readonly McpOptions _mcpOptions;
 
@@ -73,7 +72,6 @@ public sealed class CodingAgentCommand
         ICodingAgentProcessRunner? processRunner = null,
         ISkillHealthService? skillHealthService = null,
         ISkillTestService? skillTestService = null,
-        IAgentRegistry? agentRegistry = null,
         IGitHubAppClient? githubAppClient = null,
         IOptions<McpOptions>? mcpOptions = null)
     {
@@ -81,7 +79,6 @@ public sealed class CodingAgentCommand
         _processRunner = processRunner ?? new CodingAgentProcessRunner();
         _skillHealthService = skillHealthService;
         _skillTestService = skillTestService;
-        _agentRegistry = agentRegistry;
         _githubAppClient = githubAppClient;
         _mcpOptions = mcpOptions?.Value ?? new McpOptions();
     }
@@ -316,7 +313,7 @@ public sealed class CodingAgentCommand
             "  /github-app    Alias for GitHub App repository, PR, workflow, and run commands.",
             "  /plugins       Show skill/plugin health summary.",
             "  /mcp           Show configured MCP endpoints.",
-            "  /agents        Show registered runtime agents and coding role templates.",
+            "  /agents        Show coding role templates.",
             "  /worktree      Show worktree status or plan a new worktree.",
             "  /hooks         Show configured coding-agent hooks.",
             string.Empty,
@@ -1084,27 +1081,8 @@ public sealed class CodingAgentCommand
 
     private string FormatAgents()
     {
-        var names = _agentRegistry?.GetAllAgentNames()
-            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-            .ToArray() ?? [];
-
         var builder = new StringBuilder()
-            .AppendLine("Kam agents:");
-
-        if (names.Length == 0)
-        {
-            builder.AppendLine("  registered runtime agents: none");
-        }
-        else
-        {
-            builder.AppendLine("  registered runtime agents:");
-            foreach (var name in names)
-            {
-                builder.AppendLine($"    {name}");
-            }
-        }
-
-        builder
+            .AppendLine("Kam agents:")
             .AppendLine("  coding role templates:")
             .AppendLine("    reviewer")
             .AppendLine("    test-runner")

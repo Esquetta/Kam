@@ -1,6 +1,4 @@
-﻿using AgentFrameworkToolkit.Tools;
-using Microsoft.Extensions.AI;
-using SmartVoiceAgent.Infrastructure.Security;
+﻿using SmartVoiceAgent.Infrastructure.Security;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
@@ -51,7 +49,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
         #region Enhanced Existing Methods
 
-        [AITool("create_file", "Creates a new file with optional initial content and can optionally open it.")]
         public async Task<string> CreateFileAsync(
             [Description("Full path to the file to create")]
             string filePath,
@@ -108,7 +105,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("list_files", "Lists files in a directory with optional filter and can open the folder.")]
         public async Task<string> ListFilesAsync(
             [Description("Directory path to list files from")]
             string directoryPath,
@@ -169,7 +165,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
         #region New File Opening Tools
 
-        [AITool("open_file", "Opens a file with its default application (Notepad, Word, etc.).")]
         public async Task<string> OpenFileAsync(
             [Description("Full path to the file to open")]
             string filePath,
@@ -220,7 +215,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("open_directory", "Opens a folder in File Explorer.")]
         public async Task<string> OpenDirectoryAsync(
             [Description("Full path to the directory to open")]
             string directoryPath,
@@ -277,7 +271,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("show_in_explorer", "Shows a specific file or folder in File Explorer with highlighting.")]
         public async Task<string> ShowInExplorerAsync(
             [Description("Full path to the file or folder to show")]
             string path)
@@ -321,7 +314,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
         #region Original Methods (Keep existing implementations)
 
-        [AITool("read_file", "Reads the content of a file from the file system.")]
         public async Task<string> ReadFileAsync(
             [Description("Full path to the file to read")]
             string filePath)
@@ -365,7 +357,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("write_file", "Writes content to a file. Creates the file if it doesn't exist.")]
         public async Task<string> WriteFileAsync(
             [Description("Full path to the file to write")]
             string filePath,
@@ -439,7 +430,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("delete_file", "Deletes a file from the file system.")]
         public async Task<string> DeleteFileAsync(
             [Description("Full path to the file to delete")]
             string filePath)
@@ -472,7 +462,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("copy_file", "Copies a file to a new location.")]
         public async Task<string> CopyFileAsync(
             [Description("Source file path")]
             string sourcePath,
@@ -525,7 +514,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("move_file", "Moves a file to a new location.")]
         public async Task<string> MoveFileAsync(
             [Description("Source file path")]
             string sourcePath,
@@ -570,7 +558,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("file_exists", "Checks if a file exists at the specified path.")]
         public Task<string> FileExistsAsync(
             [Description("Full path to check")]
             string filePath)
@@ -593,7 +580,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("get_file_info", "Gets detailed information about a file.")]
         public Task<string> GetFileInfoAsync(
             [Description("Full path to the file")]
             string filePath)
@@ -631,7 +617,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("search_files", "Searches for files by name pattern in a directory.")]
         public Task<string> SearchFilesAsync(
             [Description("Directory to search in")]
             string directoryPath,
@@ -682,7 +667,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("search_file_content", "Searches text file contents and returns bounded path/line snippets.")]
         public async Task<string> SearchFileContentAsync(
             [Description("Directory to search in")]
             string directoryPath,
@@ -772,7 +756,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("list_directory_tree", "Returns a bounded directory tree for project or folder inspection.")]
         public Task<string> ListDirectoryTreeAsync(
             [Description("Directory to inspect")]
             string directoryPath,
@@ -815,7 +798,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("describe_workspace", "Returns a bounded workspace map with directory tree and file extension summary.")]
         public Task<string> DescribeWorkspaceAsync(
             [Description("Directory to inspect")]
             string directoryPath,
@@ -877,7 +859,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("code_outline", "Returns a lightweight line-numbered outline for common code files.")]
         public async Task<string> OutlineCodeAsync(
             [Description("Full path to the code file")]
             string filePath,
@@ -942,7 +923,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("replace_file_range", "Replaces a 1-based line range in a text file and returns a diff preview.")]
         public async Task<string> ReplaceRangeAsync(
             [Description("Full path to the file")]
             string filePath,
@@ -999,7 +979,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("patch_file", "Safely replaces exact text in a file and returns a diff preview.")]
         public async Task<string> PatchFileAsync(
             [Description("Full path to the file")]
             string filePath,
@@ -1050,7 +1029,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("preview_file_diff", "Returns a diff between the current file and proposed complete content without writing.")]
         public async Task<string> PreviewDiffAsync(
             [Description("Full path to the file")]
             string filePath,
@@ -1074,7 +1052,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("git_diff_summary", "Returns read-only git status and diff statistics for the workspace.")]
         public async Task<string> GetGitDiffSummaryAsync()
         {
             var status = await RunReadOnlyGitAsync(["status", "--short", "--branch"]);
@@ -1101,7 +1078,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             return sb.ToString().TrimEnd();
         }
 
-        [AITool("create_directory", "Creates a new directory.")]
         public async Task<string> CreateDirectoryAsync(
             [Description("Full path of the directory to create")]
             string directoryPath,
@@ -1139,7 +1115,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
         }
 
-        [AITool("read_lines", "Reads specific lines from a file.")]
         public async Task<string> ReadLinesAsync(
             [Description("Full path to the file")]
             string filePath,
@@ -1191,39 +1166,6 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         }
 
         #endregion
-
-        public IEnumerable<AIFunction> GetTools()
-        {
-            return
-            [
-                // File Operations (Enhanced)
-                AIFunctionFactory.Create(ReadFileAsync),
-                AIFunctionFactory.Create(WriteFileAsync),
-                AIFunctionFactory.Create(CreateFileAsync),
-                AIFunctionFactory.Create(DeleteFileAsync),
-                AIFunctionFactory.Create(CopyFileAsync),
-                AIFunctionFactory.Create(MoveFileAsync),
-                AIFunctionFactory.Create(FileExistsAsync),
-                AIFunctionFactory.Create(GetFileInfoAsync),
-                AIFunctionFactory.Create(ListFilesAsync),
-                AIFunctionFactory.Create(SearchFilesAsync),
-                AIFunctionFactory.Create(SearchFileContentAsync),
-                AIFunctionFactory.Create(ListDirectoryTreeAsync),
-                AIFunctionFactory.Create(DescribeWorkspaceAsync),
-                AIFunctionFactory.Create(OutlineCodeAsync),
-                AIFunctionFactory.Create(ReplaceRangeAsync),
-                AIFunctionFactory.Create(PatchFileAsync),
-                AIFunctionFactory.Create(PreviewDiffAsync),
-                AIFunctionFactory.Create(GetGitDiffSummaryAsync),
-                AIFunctionFactory.Create(CreateDirectoryAsync),
-                AIFunctionFactory.Create(ReadLinesAsync),
-                
-                // NEW: File Opening Tools
-                AIFunctionFactory.Create(OpenFileAsync),
-                AIFunctionFactory.Create(OpenDirectoryAsync),
-                AIFunctionFactory.Create(ShowInExplorerAsync)
-            ];
-        }
 
         private static string FormatFileSize(long bytes)
         {

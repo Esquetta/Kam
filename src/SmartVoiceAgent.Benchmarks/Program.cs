@@ -15,7 +15,6 @@ class Program
         Console.WriteLine();
         Console.WriteLine("Available benchmark categories:");
         Console.WriteLine("  1. All benchmarks");
-        Console.WriteLine("  2. Agent & AI (Agent creation, initialization)");
         Console.WriteLine("  3. Infrastructure (Context, Commands, Logging)");
         Console.WriteLine("  4. Services (Music, UI components)");
         Console.WriteLine("  5. Memory & Allocation");
@@ -35,11 +34,6 @@ class Program
             case "1" or "all":
                 Console.WriteLine("Running all benchmarks...");
                 BenchmarkRunner.Run(typeof(Program).Assembly, config);
-                break;
-
-            case "2" or "agent":
-                Console.WriteLine("Running Agent benchmarks...");
-                BenchmarkRunner.Run<AgentCreationBenchmark>(config);
                 break;
 
             case "3" or "infrastructure":

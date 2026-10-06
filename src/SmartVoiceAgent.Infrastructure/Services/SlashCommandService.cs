@@ -75,7 +75,7 @@ public sealed class SlashCommandService : ISlashCommandService
         new("/tools", "Show tool, MCP, and skill management entry points.", "/tools", "Skills"),
         new("/mcp", "Show configured MCP endpoint status.", "/mcp", "Integrations"),
         new("/agent", "Create a short-lived task agent for one request.", "/agent <task>", "Runtime", ["/task-agent"]),
-        new("/agents", "Show registered runtime agents.", "/agents", "Runtime"),
+        new("/agents", "Show task agent runs.", "/agents", "Runtime"),
         new("/agents cancel", "Cancel a running runtime agent task.", "/agents cancel <runId>", "Runtime"),
         new("/agents retry", "Queue a retry from a previous runtime agent task.", "/agents retry <runId>", "Runtime"),
         new("/test", "Run a registered smoke test for one skill.", "/test <skillId>", "Skills"),
@@ -93,7 +93,6 @@ public sealed class SlashCommandService : ISlashCommandService
     private readonly ISkillHealthService? _skillHealthService;
     private readonly ISkillTestService? _skillTestService;
     private readonly ISkillEvalCaseCatalog? _evalCaseCatalog;
-    private readonly IAgentRegistry? _agentRegistry;
     private readonly CodingAgentOptions _codingAgentOptions;
     private readonly McpOptions _mcpOptions;
     private readonly IApplicationUpdateService? _applicationUpdateService;
@@ -119,7 +118,6 @@ public sealed class SlashCommandService : ISlashCommandService
         ISkillHealthService? skillHealthService = null,
         ISkillTestService? skillTestService = null,
         ISkillEvalCaseCatalog? evalCaseCatalog = null,
-        IAgentRegistry? agentRegistry = null,
         IOptions<CodingAgentOptions>? codingAgentOptions = null,
         IOptions<McpOptions>? mcpOptions = null,
         IApplicationUpdateService? applicationUpdateService = null,
@@ -140,7 +138,6 @@ public sealed class SlashCommandService : ISlashCommandService
         _skillHealthService = skillHealthService;
         _skillTestService = skillTestService;
         _evalCaseCatalog = evalCaseCatalog;
-        _agentRegistry = agentRegistry;
         _codingAgentOptions = codingAgentOptions?.Value ?? new CodingAgentOptions();
         _mcpOptions = mcpOptions?.Value ?? new McpOptions();
         _applicationUpdateService = applicationUpdateService;
@@ -890,35 +887,18 @@ public sealed class SlashCommandService : ISlashCommandService
     private string FormatAgents()
     {
         var runs = _runtimeAgentRunStore?.List(12) ?? [];
-        var names = _agentRegistry?.GetAllAgentNames()
-            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-            .ToArray() ?? [];
-
-        if (names.Length == 0 && runs.Count == 0)
+        if (runs.Count == 0)
         {
-            return "Kam agents: no runtime agents are registered yet.";
+            return "Kam agents: no task agent runs yet.";
         }
 
         var builder = new StringBuilder()
-            .AppendLine("Kam agents:");
-
-        if (runs.Count > 0)
+            .AppendLine("Kam agents:")
+            .AppendLine("  task runs:");
+        foreach (var run in runs)
         {
-            builder.AppendLine("  task runs:");
-            foreach (var run in runs)
-            {
-                builder.AppendLine(
-                    $"    {run.AgentName} [{run.Status}] {FormatRuntimeAgentRunAge(run)} - {NormalizeMessage(run.LastMessage ?? run.Role)}");
-            }
-        }
-
-        if (names.Length > 0)
-        {
-            builder.AppendLine("  registered agents:");
-            foreach (var name in names)
-            {
-                builder.AppendLine($"    {name}");
-            }
+            builder.AppendLine(
+                $"    {run.AgentName} [{run.Status}] {FormatRuntimeAgentRunAge(run)} - {NormalizeMessage(run.LastMessage ?? run.Role)}");
         }
 
         return builder.ToString().TrimEnd();
