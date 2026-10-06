@@ -142,7 +142,7 @@
 
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                         <TextBox Text="{Binding PluginSource}"
-                                 Watermark="Folder, https git URL or owner/repo (a marketplace installs all its plugins, turned off)"/>
+                                 PlaceholderText="Folder, https git URL or owner/repo (a marketplace installs all its plugins, turned off)"/>
                         <Button Grid.Column="1" Classes="PrimaryAction" Command="{Binding InstallPluginCommand}"
                                 IsEnabled="{Binding !IsBusy}" Content="Install"/>
                     </Grid>
@@ -204,7 +204,7 @@
                     </Grid>
 
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                        <TextBox Text="{Binding SkillSource}" Watermark="Folder that contains SKILL.md"/>
+                        <TextBox Text="{Binding SkillSource}" PlaceholderText="Folder that contains SKILL.md"/>
                         <Button Grid.Column="1" Classes="PrimaryAction" Command="{Binding InstallSkillCommand}" Content="Install"/>
                     </Grid>
 
