@@ -166,7 +166,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                         case AgentApprovalRequested approval:
                             if (steps.TryGetValue(approval.CallId, out var waiting))
                             {
-                                waiting.RequestApproval(approval.RequestId);
+                                waiting.RequestApproval(approval.RequestId, approval.AlwaysAllowRule);
                             }
 
                             AddLog($"TOOL_APPROVAL_NEEDED: {approval.ToolName}");

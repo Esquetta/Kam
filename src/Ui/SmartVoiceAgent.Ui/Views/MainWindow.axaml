@@ -823,7 +823,7 @@
 																<Button Grid.Column="3"
 																		Classes="SecondaryAction"
 																		Content="Always allow"
-																		ToolTip.Tip="Run this tool without asking from now on"
+																		ToolTip.Tip="{Binding AlwaysAllowHint}"
 																		Command="{Binding $parent[Window].DataContext.AlwaysAllowToolCallCommand}"
 																		CommandParameter="{Binding}"/>
 																<Button Grid.Column="4"

@@ -114,7 +114,7 @@ public sealed class AgentRuntimeTests : IDisposable
 
         first.OfType<AgentApprovalRequested>().Should().ContainSingle();
         second.OfType<AgentApprovalRequested>().Should().BeEmpty();
-        permissions.AllowedTools.Should().Contain("shell_run");
+        permissions.AllowRules.Should().Contain("shell_run");
     }
 
     [Fact]

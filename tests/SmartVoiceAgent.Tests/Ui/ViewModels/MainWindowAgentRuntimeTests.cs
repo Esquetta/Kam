@@ -378,15 +378,19 @@ public sealed class MainWindowAgentRuntimeTests
     {
         public ApprovalMode Mode { get; set; } = ApprovalMode.Ask;
 
-        public IReadOnlyCollection<string> AllowedTools => [];
+        public IReadOnlyCollection<string> AllowRules => [];
+
+        public IReadOnlyCollection<string> DenyRules => [];
 
         public ToolPermissionDecision Evaluate(AgentToolDescriptor tool, string argumentsJson) => ToolPermissionDecision.Ask;
 
-        public void AlwaysAllow(string toolName)
+        public string SuggestAllowRule(AgentToolDescriptor tool, string argumentsJson) => tool.Name;
+
+        public void AddRule(string rule, bool allow)
         {
         }
 
-        public void Revoke(string toolName)
+        public void RemoveRule(string rule)
         {
         }
     }

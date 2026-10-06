@@ -29,6 +29,7 @@ public sealed record AgentToolCallCompleted(
 /// The runtime is waiting for the user to approve this exact call.
 /// Answer it with <c>IAgentRuntime.ResolveApproval</c>.
 /// </summary>
+/// <param name="AlwaysAllowRule">The rule "Always allow" saves, such as <c>shell_run(git status:*)</c>.</param>
 public sealed record AgentApprovalRequested(
     string SessionId,
     string RequestId,
@@ -36,7 +37,8 @@ public sealed record AgentApprovalRequested(
     string ToolName,
     string DisplayName,
     string ArgumentsJson,
-    ToolRisk Risk) : AgentEvent(SessionId);
+    ToolRisk Risk,
+    string? AlwaysAllowRule = null) : AgentEvent(SessionId);
 
 /// <summary>
 /// Earlier messages were summarized so the conversation fits the context budget.
