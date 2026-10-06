@@ -1,3 +1,4 @@
+using Avalonia.Threading;
 using ReactiveUI;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.AI;
@@ -10,6 +11,7 @@ using SmartVoiceAgent.Ui.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -42,16 +44,20 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     private string _coreReadinessStatus = "ACTION_NEEDED";
     private string _hostStatus = "Unknown";
     private string _skillStatus = "Unavailable";
-    private string _skillSmokeStatus = "Not run";
+    private Func<string> _skillSmokeStatusSource = () => Loc.Get("Diagnostics.SkillSmoke.NotRun");
+    private string _skillSmokeStatus = Loc.Get("Diagnostics.SkillSmoke.NotRun");
     private string _skillSmokeSummaryValue = string.Empty;
     private string _applicationVersionText = "Unknown";
     private string _applicationUpdateStatus = "Not checked";
-    private string _applicationUpdateActionStatus = "Updates not checked.";
+    private Func<string> _applicationUpdateActionStatusSource = () => Loc.Get("Diagnostics.Updates.NotChecked");
+    private string _applicationUpdateActionStatus = Loc.Get("Diagnostics.Updates.NotChecked");
     private string _downloadedUpdatePackagePath = string.Empty;
     private string _liveTestStatus = "NEEDS_ACTION";
     private string _liveTestNextAction = "Fix blocking model settings before live commands.";
-    private string _readinessReportCopyStatus = "Report not copied.";
-    private string _lastRefreshText = "Not refreshed";
+    private Func<string> _readinessReportCopyStatusSource = () => Loc.Get("Diagnostics.Report.NotCopied");
+    private string _readinessReportCopyStatus = Loc.Get("Diagnostics.Report.NotCopied");
+    private Func<string> _lastRefreshTextSource = () => Loc.Get("Diagnostics.Refresh.Never");
+    private string _lastRefreshText = Loc.Get("Diagnostics.Refresh.Never");
     private bool _isRefreshing;
     private bool _isRunningSkillSmoke;
     private bool _isCoreReady;
@@ -93,7 +99,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         _applicationUpdateSession = applicationUpdateSession;
         _copyReport = copyReport;
 
-        Title = "Runtime Diagnostics";
+        Title = Loc.Get("Diagnostics.Title");
         RefreshCommand = ReactiveCommand.CreateFromTask(RefreshAsync);
         RunSkillSmokeCommand = ReactiveCommand.CreateFromTask(RunSkillSmokeAsync);
         CheckApplicationUpdateCommand = ReactiveCommand.CreateFromTask(CheckApplicationUpdateAsync);
@@ -116,6 +122,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             _skillPlannerTraceStore.Changed += OnCommandLoopEvidenceChanged;
         }
 
+        LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
         RefreshLocalState();
     }
 
@@ -147,11 +154,25 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
 
     public ObservableCollection<string> BlockingItems { get; } = [];
 
+    /// <summary>
+    /// Gets the core readiness code, <c>READY</c> or <c>ACTION_NEEDED</c>, as the readiness report writes it.
+    /// </summary>
     public string CoreReadinessStatus
     {
         get => _coreReadinessStatus;
-        private set => this.RaiseAndSetIfChanged(ref _coreReadinessStatus, value);
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref _coreReadinessStatus, value);
+            this.RaisePropertyChanged(nameof(CoreReadinessStatusText));
+        }
     }
+
+    /// <summary>
+    /// Gets the core readiness status in the interface language, shown in the page header.
+    /// </summary>
+    public string CoreReadinessStatusText => CoreReadinessStatus == "READY"
+        ? Loc.Get("Diagnostics.Status.Ready")
+        : Loc.Get("Diagnostics.Status.ActionNeeded");
 
     public bool IsCoreReady
     {
@@ -201,11 +222,25 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         private set => this.RaiseAndSetIfChanged(ref _downloadedUpdatePackagePath, value);
     }
 
+    /// <summary>
+    /// Gets the live test code, <c>READY_FOR_LIVE_TEST</c> or <c>NEEDS_ACTION</c>, as the readiness report writes it.
+    /// </summary>
     public string LiveTestStatus
     {
         get => _liveTestStatus;
-        private set => this.RaiseAndSetIfChanged(ref _liveTestStatus, value);
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref _liveTestStatus, value);
+            this.RaisePropertyChanged(nameof(LiveTestStatusText));
+        }
     }
+
+    /// <summary>
+    /// Gets the live test status in the interface language, shown next to the live test heading.
+    /// </summary>
+    public string LiveTestStatusText => LiveTestStatus == "READY_FOR_LIVE_TEST"
+        ? Loc.Get("Diagnostics.LiveTest.Ready")
+        : Loc.Get("Diagnostics.LiveTest.NeedsAction");
 
     public string LiveTestNextAction
     {
@@ -310,7 +345,8 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             }
 
             RebuildSummary();
-            LastRefreshText = $"Updated {DateTimeOffset.Now:HH:mm:ss}";
+            var refreshedAt = FormatClockTime(DateTimeOffset.Now);
+            SetLastRefreshText(() => Loc.Format("Diagnostics.Refresh.Updated", refreshedAt));
         }
         finally
         {
@@ -327,7 +363,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
 
         if (_skillEvalHarness is null || _skillEvalCaseCatalog is null)
         {
-            SkillSmokeStatus = "Smoke eval services unavailable";
+            SetSkillSmokeStatus(() => Loc.Get("Diagnostics.SkillSmoke.ServicesUnavailable"));
             _skillSmokeSummaryValue = "Unavailable";
             ReplaceRuntimeItem(
                 "Skill Smoke",
@@ -344,11 +380,12 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             var summary = await _skillEvalHarness.RunAsync(
                 _skillEvalCaseCatalog.CreateSmokeCases()).ConfigureAwait(true);
             ApplySkillSmokeSummary(summary);
-            LastRefreshText = $"Skill smoke {DateTimeOffset.Now:HH:mm:ss}";
+            var smokeAt = FormatClockTime(DateTimeOffset.Now);
+            SetLastRefreshText(() => Loc.Format("Diagnostics.Refresh.SkillSmoke", smokeAt));
         }
         catch (Exception ex)
         {
-            SkillSmokeStatus = "Smoke evals failed to run";
+            SetSkillSmokeStatus(() => Loc.Get("Diagnostics.SkillSmoke.FailedToRun"));
             _skillSmokeSummaryValue = "Failed";
             ReplaceRuntimeItem(
                 "Skill Smoke",
@@ -372,20 +409,20 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
                 CurrentApplicationVersion(),
                 "Application update service is unavailable.");
             _applicationUpdateSession?.RecordCheck(_lastApplicationUpdateCheck);
-            ApplicationUpdateActionStatus = _lastApplicationUpdateCheck.Message;
+            SetApplicationUpdateActionStatus(_lastApplicationUpdateCheck.Message);
             ApplyApplicationUpdateDiagnostics();
             RebuildSummary();
             return;
         }
 
-        ApplicationUpdateActionStatus = "Checking GitHub Releases for Kam updates.";
+        SetApplicationUpdateActionStatus(() => Loc.Get("Diagnostics.Updates.Checking"));
         try
         {
             _lastApplicationUpdateCheck = await _applicationUpdateService
                 .CheckForUpdatesAsync()
                 .ConfigureAwait(true);
             _applicationUpdateSession?.RecordCheck(_lastApplicationUpdateCheck);
-            ApplicationUpdateActionStatus = _lastApplicationUpdateCheck.Message;
+            SetApplicationUpdateActionStatus(_lastApplicationUpdateCheck.Message);
         }
         catch (Exception ex)
         {
@@ -393,12 +430,13 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
                 CurrentApplicationVersion(),
                 $"Update check failed: {ex.Message}");
             _applicationUpdateSession?.RecordCheck(_lastApplicationUpdateCheck);
-            ApplicationUpdateActionStatus = _lastApplicationUpdateCheck.Message;
+            SetApplicationUpdateActionStatus(_lastApplicationUpdateCheck.Message);
         }
 
         ApplyApplicationUpdateDiagnostics();
         RebuildSummary();
-        LastRefreshText = $"Updates {DateTimeOffset.Now:HH:mm:ss}";
+        var checkedAt = FormatClockTime(DateTimeOffset.Now);
+        SetLastRefreshText(() => Loc.Format("Diagnostics.Refresh.Updates", checkedAt));
     }
 
     public async Task DownloadApplicationUpdateAsync()
@@ -410,13 +448,13 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             _lastApplicationRestartPlan = null;
             _isApplicationRestartBlocked = false;
             _applicationUpdateSession?.ClearDownload();
-            ApplicationUpdateActionStatus = _lastApplicationUpdateDownload.Message;
+            SetApplicationUpdateActionStatus(_lastApplicationUpdateDownload.Message);
             ApplyApplicationUpdateDiagnostics();
             RebuildSummary();
             return;
         }
 
-        ApplicationUpdateActionStatus = "Downloading latest Kam release package.";
+        SetApplicationUpdateActionStatus(() => Loc.Get("Diagnostics.Updates.Downloading"));
         try
         {
             _lastApplicationUpdateDownload = await _applicationUpdateService
@@ -434,11 +472,11 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         if (_lastApplicationUpdateDownload.Success)
         {
             DownloadedUpdatePackagePath = _lastApplicationUpdateDownload.FilePath ?? string.Empty;
-            ApplicationUpdateActionStatus = "Downloaded Kam update package.";
+            SetApplicationUpdateActionStatus(() => Loc.Get("Diagnostics.Updates.Downloaded"));
             if (_lastApplicationUpdateDownload.IsVerified)
             {
                 PlanApplicationRestart();
-                ApplicationUpdateActionStatus = "Downloaded Kam update package.";
+                SetApplicationUpdateActionStatus(() => Loc.Get("Diagnostics.Updates.Downloaded"));
                 return;
             }
 
@@ -446,12 +484,12 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             _isApplicationRestartBlocked = true;
             ApplyApplicationUpdateDiagnostics();
             RebuildSummary();
-            ApplicationUpdateActionStatus = "Verify the downloaded package before restart handoff.";
+            SetApplicationUpdateActionStatus(() => Loc.Get("Diagnostics.Updates.VerifyBeforeRestart"));
             return;
         }
 
         _applicationUpdateSession?.ClearDownload();
-        ApplicationUpdateActionStatus = _lastApplicationUpdateDownload.Message;
+        SetApplicationUpdateActionStatus(_lastApplicationUpdateDownload.Message);
         _lastApplicationRestartPlan = null;
         _isApplicationRestartBlocked = false;
         ApplyApplicationUpdateDiagnostics();
@@ -467,7 +505,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         {
             _lastApplicationRestartPlan = null;
             _isApplicationRestartBlocked = true;
-            ApplicationUpdateActionStatus = "Verify the downloaded package before restart handoff.";
+            SetApplicationUpdateActionStatus(() => Loc.Get("Diagnostics.Updates.VerifyBeforeRestart"));
             ApplyApplicationUpdateDiagnostics();
             RebuildSummary();
             return;
@@ -490,7 +528,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
                     null,
                     validation.NormalizedPackagePath ?? packagePath,
                     ["Download and verify the package again before restart handoff."]);
-                ApplicationUpdateActionStatus = validation.Message;
+                SetApplicationUpdateActionStatus(validation.Message);
                 ApplyApplicationUpdateDiagnostics();
                 RebuildSummary();
                 return;
@@ -513,7 +551,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             _lastApplicationRestartPlan = _applicationRestartPlanner.CreateRestartPlan(packagePath);
         }
 
-        ApplicationUpdateActionStatus = _lastApplicationRestartPlan.Message;
+        SetApplicationUpdateActionStatus(_lastApplicationRestartPlan.Message);
         ApplyApplicationUpdateDiagnostics();
         RebuildSummary();
     }
@@ -557,12 +595,12 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         var report = BuildReadinessReport();
         if (_copyReport is null)
         {
-            ReadinessReportCopyStatus = "Clipboard unavailable.";
+            SetReadinessReportCopyStatus(() => Loc.Get("Diagnostics.Report.ClipboardUnavailable"));
             return;
         }
 
         _copyReport("readiness_report", report);
-        ReadinessReportCopyStatus = "Readiness report copied.";
+        SetReadinessReportCopyStatus(() => Loc.Get("Diagnostics.Report.Copied"));
     }
 
     private ModelProviderProfile? RefreshLocalState()
@@ -572,7 +610,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         RuntimeItems.Clear();
         ApplicationUpdateItems.Clear();
         BlockingItems.Clear();
-        SkillSmokeStatus = "Not run";
+        SetSkillSmokeStatus(() => Loc.Get("Diagnostics.SkillSmoke.NotRun"));
         _skillSmokeSummaryValue = string.Empty;
 
         var profiles = _settingsService.ModelProviderProfiles.ToArray();
@@ -972,7 +1010,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     {
         if (summary.Total <= 0)
         {
-            SkillSmokeStatus = "No smoke evals configured";
+            SetSkillSmokeStatus(() => Loc.Get("Diagnostics.SkillSmoke.NoneConfigured"));
             _skillSmokeSummaryValue = "No smoke";
             ReplaceRuntimeItem(
                 "Skill Smoke",
@@ -983,7 +1021,9 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             return;
         }
 
-        SkillSmokeStatus = $"{summary.Passed}/{summary.Total} smoke evals passing";
+        var passed = summary.Passed;
+        var total = summary.Total;
+        SetSkillSmokeStatus(() => Loc.Format("Diagnostics.SkillSmoke.Passing", passed, total));
         _skillSmokeSummaryValue = $"{summary.Passed}/{summary.Total} smoke";
 
         var isPassing = summary.Failed == 0;
@@ -1643,6 +1683,57 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         {
             BlockingItems.Add(item);
         }
+    }
+
+    private void SetSkillSmokeStatus(Func<string> source)
+    {
+        _skillSmokeStatusSource = source;
+        SkillSmokeStatus = source();
+    }
+
+    private void SetApplicationUpdateActionStatus(string text) => SetApplicationUpdateActionStatus(() => text);
+
+    private void SetApplicationUpdateActionStatus(Func<string> source)
+    {
+        _applicationUpdateActionStatusSource = source;
+        ApplicationUpdateActionStatus = source();
+    }
+
+    private void SetReadinessReportCopyStatus(Func<string> source)
+    {
+        _readinessReportCopyStatusSource = source;
+        ReadinessReportCopyStatus = source();
+    }
+
+    private void SetLastRefreshText(Func<string> source)
+    {
+        _lastRefreshTextSource = source;
+        LastRefreshText = source();
+    }
+
+    private static string FormatClockTime(DateTimeOffset time) =>
+        time.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        if (global::Avalonia.Application.Current is not null && !Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(ApplyLanguage);
+            return;
+        }
+
+        ApplyLanguage();
+    }
+
+    private void ApplyLanguage()
+    {
+        Title = Loc.Get("Diagnostics.Title");
+        this.RaisePropertyChanged(nameof(CoreReadinessStatusText));
+        this.RaisePropertyChanged(nameof(LiveTestStatusText));
+        SkillSmokeStatus = _skillSmokeStatusSource();
+        ApplicationUpdateActionStatus = _applicationUpdateActionStatusSource();
+        ReadinessReportCopyStatus = _readinessReportCopyStatusSource();
+        LastRefreshText = _lastRefreshTextSource();
     }
 
     private void OnHostStateChanged(object? sender, bool isRunning)

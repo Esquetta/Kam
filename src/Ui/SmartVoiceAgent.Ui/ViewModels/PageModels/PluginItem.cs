@@ -6,6 +6,7 @@ using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Infrastructure.Skills.BuiltIn;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Collections.ObjectModel;
 using System.Threading;
@@ -14,6 +15,7 @@ using System.Windows.Input;
 using SmartVoiceAgent.Infrastructure.Skills.Adapters;
 using SmartVoiceAgent.Infrastructure.Skills.Importing;
 using SmartVoiceAgent.Infrastructure.Skills.Policy;
+using SmartVoiceAgent.Ui.Services;
 
 namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 {
@@ -27,8 +29,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private string _lastRunDetail = string.Empty;
         private string _healthMetricsText = string.Empty;
         private string _failureMetricsText = string.Empty;
-        private string _requiredPermissionsText = "Requires: none";
-        private string _grantedPermissionsText = "Granted: none";
+        private string _requiredPermissionsText =
+            Loc.Format("Skills.Permissions.Requires", Loc.Get("Skills.Permissions.None"));
+        private string _grantedPermissionsText =
+            Loc.Format("Skills.Permissions.Granted", Loc.Get("Skills.Permissions.None"));
         private string _missingPermissionsText = string.Empty;
         private string _policyGuardrailText = string.Empty;
 
@@ -191,16 +195,19 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
     {
         private ObservableCollection<PluginItem> _plugins = new();
         private ObservableCollection<SkillEvalResultItem> _skillEvalResults = new();
-        private string _skillEvalStatus = "Smoke evals not run";
-        private string _skillEvalDetail = "Open this screen with runtime services available to run smoke evals.";
+        private Func<string> _skillEvalStatusSource = () => Loc.Get("Skills.Eval.NotRun");
+        private Func<string> _skillEvalDetailSource = () => Loc.Get("Skills.Eval.NeedsRuntime");
+        private string _skillEvalStatus = Loc.Get("Skills.Eval.NotRun");
+        private string _skillEvalDetail = Loc.Get("Skills.Eval.NeedsRuntime");
         private bool _isSkillEvalHealthy;
         private bool _hasSkillEvalResults;
         private string _importLocation = string.Empty;
         private int _selectedImportSourceIndex;
-        private string _importStatus = "Import local or skills.sh folders containing SKILL.md.";
+        private Func<string> _importStatusSource = () => Loc.Get("Skills.Import.Hint");
+        private string _importStatus = Loc.Get("Skills.Import.Hint");
         private PluginItem? _selectedPlugin;
         private bool _hasSelectedPlugin;
-        private string _selectedSkillTitle = "No skill selected";
+        private string _selectedSkillTitle = Loc.Get("Skills.Detail.NoSelection");
         private string _selectedSkillId = string.Empty;
         private string _selectedSkillSource = string.Empty;
         private string _selectedSkillExecutor = string.Empty;
@@ -222,6 +229,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private ISkillEvalCaseCatalog? _skillEvalCaseCatalog;
         private ISkillTestService? _skillTestService;
         private SkillEvalSummary? _lastEvalSummary;
+        private IReadOnlyCollection<SkillHealthReport> _lastReports = [];
+        private bool _showsBuiltInSnapshot;
 
         public ObservableCollection<PluginItem> Plugins
         {
@@ -260,7 +269,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         }
 
         public ObservableCollection<string> ImportSources { get; } =
-            new(["Local folder", "skills.sh folder"]);
+            new([Loc.Get("Skills.Import.LocalFolder"), Loc.Get("Skills.Import.SkillsShFolder")]);
 
         public string ImportLocation
         {
@@ -388,17 +397,17 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         public PluginsViewModel()
         {
-            Title = "SKILLS";
+            Title = Loc.Get("Skills.Title");
             ImportSkillCommand = ReactiveCommand.CreateFromTask(ImportSkillAsync);
             RunSkillEvalCommand = ReactiveCommand.CreateFromTask(RunSkillEvalAsync);
             SaveRuntimePolicyOptionCommand = ReactiveCommand.CreateFromTask(SaveRuntimePolicyOptionAsync);
-            LoadPlugins(CreateBuiltInHealthSnapshot());
+            LoadBuiltInSnapshot();
+            LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
         }
 
         public PluginsViewModel(IEnumerable<SkillHealthReport> skillHealthReports)
             : this()
         {
-            Title = "SKILLS";
             LoadPlugins(skillHealthReports);
         }
 
@@ -526,18 +535,27 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                         RiskLevel = manifest.RiskLevel,
                         Status = status,
                         Details = status == SkillHealthStatus.Healthy
-                            ? "Built-in skill configured."
-                            : "Skill is disabled."
+                            ? Loc.Get("Skills.BuiltIn.Configured")
+                            : Loc.Get("Skills.BuiltIn.Disabled")
                     };
                 })
                 .ToArray();
         }
 
+        private void LoadBuiltInSnapshot()
+        {
+            LoadPlugins(CreateBuiltInHealthSnapshot());
+            _showsBuiltInSnapshot = true;
+        }
+
         private void LoadPlugins(IEnumerable<SkillHealthReport> skillHealthReports)
         {
+            var reports = skillHealthReports.ToArray();
+            _lastReports = reports;
+            _showsBuiltInSnapshot = false;
             var selectedSkillId = SelectedPlugin?.SkillId;
             Plugins = new ObservableCollection<PluginItem>(
-                skillHealthReports.Select(CreatePluginItem));
+                reports.Select(CreatePluginItem));
             ApplyPluginEvalResults(_lastEvalSummary);
             SelectPlugin(!string.IsNullOrWhiteSpace(selectedSkillId)
                 ? selectedSkillId
@@ -580,8 +598,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 await RunOnUiThreadAsync(() =>
                 {
-                    SkillEvalStatus = "Smoke evals failed to run";
-                    SkillEvalDetail = ex.Message;
+                    SetSkillEvalText(() => Loc.Get("Skills.Eval.FailedToRun"), () => ex.Message);
                     IsSkillEvalHealthy = false;
                 });
             }
@@ -591,14 +608,14 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             if (_skillImportService is null)
             {
-                ImportStatus = "Skill import service is not available.";
+                SetImportStatus(() => Loc.Get("Skills.Import.Unavailable"));
                 return;
             }
 
             var location = ImportLocation.Trim();
             if (string.IsNullOrWhiteSpace(location))
             {
-                ImportStatus = "Enter a folder path containing SKILL.md.";
+                SetImportStatus(() => Loc.Get("Skills.Import.EnterPath"));
                 return;
             }
 
@@ -615,13 +632,18 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     Location = location
                 });
 
-                ImportStatus = result.ImportedCount == 1
-                    ? "Imported 1 skill. Review required before use."
-                    : $"Imported {result.ImportedCount} skills. Review required before use.";
-
-                if (result.ImportedCount == 0)
+                var importedCount = result.ImportedCount;
+                if (importedCount == 0)
                 {
-                    ImportStatus = "No skills found. Select a folder containing SKILL.md.";
+                    SetImportStatus(() => Loc.Get("Skills.Import.NoneFound"));
+                }
+                else if (importedCount == 1)
+                {
+                    SetImportStatus(() => Loc.Get("Skills.Import.ImportedOne"));
+                }
+                else
+                {
+                    SetImportStatus(() => Loc.Format("Skills.Import.ImportedMany", importedCount));
                 }
 
                 if (_skillHealthService is not null)
@@ -631,7 +653,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
             catch (Exception ex)
             {
-                ImportStatus = $"Import failed: {ex.Message}";
+                SetImportStatus(() => Loc.Format("Skills.Import.Failed", ex.Message));
             }
         }
 
@@ -655,7 +677,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
             if (plugin is null)
             {
-                SelectedSkillTitle = "No skill selected";
+                SelectedSkillTitle = Loc.Get("Skills.Detail.NoSelection");
                 SelectedSkillId = string.Empty;
                 SelectedSkillSource = string.Empty;
                 SelectedSkillExecutor = string.Empty;
@@ -675,8 +697,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
             SelectedSkillTitle = plugin.Name;
             SelectedSkillId = plugin.SkillId;
-            SelectedSkillSource = $"Source: {plugin.Source}";
-            SelectedSkillExecutor = $"Executor: {plugin.ExecutorType}";
+            SelectedSkillSource = Loc.Format("Skills.Detail.Source", plugin.Source);
+            SelectedSkillExecutor = Loc.Format("Skills.Detail.Executor", plugin.ExecutorType);
             SelectedSkillRisk = plugin.RiskLevelText;
             SelectedSkillChecksum = plugin.ChecksumText;
             SelectedSkillPermissions = $"{plugin.RequiredPermissionsText} | {plugin.GrantedPermissionsText}";
@@ -687,7 +709,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
             SelectedSkillLastRun = plugin.HasLastRun
                 ? $"{plugin.LastRunStatus} | {plugin.LastRunDetail}"
-                : "Last Run: none";
+                : Loc.Get("Skills.Detail.LastRunNone");
             SelectedSkillHealthMetrics = FormatSelectedHealthMetrics(plugin);
             SelectedSkillPolicyGuardrail = plugin.PolicyGuardrailText;
             SelectedSkillExecutionHistory = new ObservableCollection<SkillExecutionHistoryItem>(
@@ -707,8 +729,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             if (_skillPolicyManager is null || SelectedPlugin is null)
             {
-                SkillEvalStatus = "Runtime policy unavailable";
-                SkillEvalDetail = "Skill policy manager is not registered for this screen.";
+                SetSkillEvalText(
+                    () => Loc.Get("Skills.Policy.Unavailable"),
+                    () => Loc.Get("Skills.Policy.ManagerMissing"));
                 IsSkillEvalHealthy = false;
                 return;
             }
@@ -716,8 +739,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             var key = PolicyOptionKeyInput.Trim();
             if (string.IsNullOrWhiteSpace(key))
             {
-                SkillEvalStatus = "Runtime policy not saved";
-                SkillEvalDetail = "Policy option key is required.";
+                SetSkillEvalText(
+                    () => Loc.Get("Skills.Policy.NotSaved"),
+                    () => Loc.Get("Skills.Policy.KeyRequired"));
                 IsSkillEvalHealthy = false;
                 return;
             }
@@ -731,8 +755,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 CancellationToken.None);
             if (!changed)
             {
-                SkillEvalStatus = "Runtime policy not saved";
-                SkillEvalDetail = $"{skillId}: policy option could not be persisted.";
+                SetSkillEvalText(
+                    () => Loc.Get("Skills.Policy.NotSaved"),
+                    () => Loc.Format("Skills.Policy.NotPersisted", skillId));
                 IsSkillEvalHealthy = false;
                 return;
             }
@@ -743,10 +768,19 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
 
             UpdateSelectedRuntimeOption(skillId, key, value);
-            SkillEvalStatus = "Runtime policy saved";
-            SkillEvalDetail = string.IsNullOrWhiteSpace(value)
-                ? $"{skillId}: removed {key}."
-                : $"{skillId}: saved {key}.";
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                SetSkillEvalText(
+                    () => Loc.Get("Skills.Policy.Saved"),
+                    () => Loc.Format("Skills.Policy.OptionRemoved", skillId, key));
+            }
+            else
+            {
+                SetSkillEvalText(
+                    () => Loc.Get("Skills.Policy.Saved"),
+                    () => Loc.Format("Skills.Policy.OptionSaved", skillId, key));
+            }
+
             IsSkillEvalHealthy = true;
         }
 
@@ -754,23 +788,30 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             if (_skillTestService is null)
             {
-                SkillEvalStatus = "Skill test unavailable";
-                SkillEvalDetail = "Runtime skill test service is not registered for this screen.";
+                SetSkillEvalText(
+                    () => Loc.Get("Skills.Test.Unavailable"),
+                    () => Loc.Get("Skills.Test.ServiceMissing"));
                 IsSkillEvalHealthy = false;
                 return;
             }
 
-            SkillEvalStatus = "Testing skill";
-            SkillEvalDetail = $"Executing smoke test for {skillId}.";
+            SetSkillEvalText(
+                () => Loc.Get("Skills.Test.Running"),
+                () => Loc.Format("Skills.Test.Executing", skillId));
             IsSkillEvalHealthy = false;
 
             try
             {
                 var result = await _skillTestService.TestAsync(skillId);
-                SkillEvalStatus = result.Success ? "Skill test passed" : "Skill test failed";
-                SkillEvalDetail = result.Success
-                    ? $"{skillId}: {result.Message}"
-                    : $"{skillId}: {result.ErrorMessage}";
+                if (result.Success)
+                {
+                    SetSkillEvalText(() => Loc.Get("Skills.Test.Passed"), () => $"{skillId}: {result.Message}");
+                }
+                else
+                {
+                    SetSkillEvalText(() => Loc.Get("Skills.Test.Failed"), () => $"{skillId}: {result.ErrorMessage}");
+                }
+
                 IsSkillEvalHealthy = result.Success;
 
                 if (_skillHealthService is not null)
@@ -780,8 +821,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
             catch (Exception ex)
             {
-                SkillEvalStatus = "Skill test failed";
-                SkillEvalDetail = ex.Message;
+                SetSkillEvalText(() => Loc.Get("Skills.Test.Failed"), () => ex.Message);
                 IsSkillEvalHealthy = false;
             }
         }
@@ -790,16 +830,18 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             if (_skillEvalHarness is null || _skillEvalCaseCatalog is null)
             {
-                SkillEvalStatus = "Smoke eval services unavailable";
-                SkillEvalDetail = "Runtime eval services are not registered for this screen.";
+                SetSkillEvalText(
+                    () => Loc.Get("Skills.Eval.ServicesUnavailable"),
+                    () => Loc.Get("Skills.Eval.ServicesMissing"));
                 IsSkillEvalHealthy = false;
                 return;
             }
 
             try
             {
-                SkillEvalStatus = "Running smoke evals";
-                SkillEvalDetail = "Executing skill smoke cases.";
+                SetSkillEvalText(
+                    () => Loc.Get("Skills.Eval.Running"),
+                    () => Loc.Get("Skills.Eval.Executing"));
                 IsSkillEvalHealthy = false;
 
                 var summary = await _skillEvalHarness.RunAsync(
@@ -811,8 +853,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 await RunOnUiThreadAsync(() =>
                 {
-                    SkillEvalStatus = "Smoke evals failed to run";
-                    SkillEvalDetail = ex.Message;
+                    SetSkillEvalText(() => Loc.Get("Skills.Eval.FailedToRun"), () => ex.Message);
                     IsSkillEvalHealthy = false;
                 });
             }
@@ -824,26 +865,102 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
             if (summary is null || summary.Total <= 0)
             {
-                SkillEvalStatus = "Smoke evals not run";
-                SkillEvalDetail = "No smoke eval results are available.";
+                SetSkillEvalText(
+                    () => Loc.Get("Skills.Eval.NotRun"),
+                    () => Loc.Get("Skills.Eval.NoResults"));
                 IsSkillEvalHealthy = false;
-                SkillEvalResults = new ObservableCollection<SkillEvalResultItem>();
-                HasSkillEvalResults = false;
+                RebuildSkillEvalResults();
                 ApplyPluginEvalResults(null);
                 return;
             }
 
-            SkillEvalStatus = $"{summary.Passed}/{summary.Total} smoke evals passing";
-            IsSkillEvalHealthy = summary.Failed == 0;
-            SkillEvalResults = new ObservableCollection<SkillEvalResultItem>(
-                summary.Results.Select(CreateSkillEvalResultItem));
-            HasSkillEvalResults = SkillEvalResults.Count > 0;
-
+            var passed = summary.Passed;
+            var total = summary.Total;
             var failingResult = summary.Results.FirstOrDefault(result => !result.Passed);
-            SkillEvalDetail = failingResult is null
-                ? "All smoke eval cases matched their expected status."
-                : $"{failingResult.SkillId}: {failingResult.Message}";
+            if (failingResult is null)
+            {
+                SetSkillEvalText(
+                    () => Loc.Format("Skills.Eval.Passing", passed, total),
+                    () => Loc.Get("Skills.Eval.AllMatched"));
+            }
+            else
+            {
+                SetSkillEvalText(
+                    () => Loc.Format("Skills.Eval.Passing", passed, total),
+                    () => $"{failingResult.SkillId}: {failingResult.Message}");
+            }
+
+            IsSkillEvalHealthy = summary.Failed == 0;
+            RebuildSkillEvalResults();
             ApplyPluginEvalResults(summary);
+        }
+
+        private void RebuildSkillEvalResults()
+        {
+            SkillEvalResults = _lastEvalSummary is { Total: > 0 } summary
+                ? new ObservableCollection<SkillEvalResultItem>(summary.Results.Select(CreateSkillEvalResultItem))
+                : new ObservableCollection<SkillEvalResultItem>();
+            HasSkillEvalResults = SkillEvalResults.Count > 0;
+        }
+
+        private void SetSkillEvalText(Func<string> status, Func<string> detail)
+        {
+            _skillEvalStatusSource = status;
+            _skillEvalDetailSource = detail;
+            SkillEvalStatus = status();
+            SkillEvalDetail = detail();
+        }
+
+        private void SetImportStatus(Func<string> status)
+        {
+            _importStatusSource = status;
+            ImportStatus = status();
+        }
+
+        private void OnLanguageChanged(object? sender, EventArgs e)
+        {
+            if (global::Avalonia.Application.Current is not null && !Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(ApplyLanguage);
+                return;
+            }
+
+            ApplyLanguage();
+        }
+
+        private void ApplyLanguage()
+        {
+            Title = Loc.Get("Skills.Title");
+
+            var importSourceIndex = _selectedImportSourceIndex;
+            ImportSources[0] = Loc.Get("Skills.Import.LocalFolder");
+            ImportSources[1] = Loc.Get("Skills.Import.SkillsShFolder");
+            _selectedImportSourceIndex = importSourceIndex;
+            this.RaisePropertyChanged(nameof(SelectedImportSourceIndex));
+
+            ImportStatus = _importStatusSource();
+            SkillEvalStatus = _skillEvalStatusSource();
+            SkillEvalDetail = _skillEvalDetailSource();
+            RebuildSkillEvalResults();
+
+            var selectedSkillId = SelectedPlugin?.SkillId;
+            var policyKey = PolicyOptionKeyInput;
+            var policyValue = PolicyOptionValueInput;
+            if (_showsBuiltInSnapshot)
+            {
+                LoadBuiltInSnapshot();
+            }
+            else
+            {
+                LoadPlugins(_lastReports);
+            }
+
+            if (selectedSkillId is not null
+                && string.Equals(SelectedPlugin?.SkillId, selectedSkillId, StringComparison.OrdinalIgnoreCase))
+            {
+                PolicyOptionKeyInput = policyKey;
+                PolicyOptionValueInput = policyValue;
+            }
         }
 
         private void ApplyPluginEvalResults(SkillEvalSummary? summary)
@@ -866,7 +983,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 }
 
                 plugin.HasEvalResult = true;
-                plugin.LastEvalStatus = result.Passed ? "Eval Pass" : "Eval Fail";
+                plugin.LastEvalStatus = result.Passed
+                    ? Loc.Get("Skills.Eval.CardPass")
+                    : Loc.Get("Skills.Eval.CardFail");
                 plugin.LastEvalDetail = result.Message;
             }
         }
@@ -885,15 +1004,15 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 Status = FormatStatus(report.Status),
                 Source = report.Source,
                 ExecutorType = string.IsNullOrWhiteSpace(report.ExecutorType)
-                    ? "unknown"
+                    ? Loc.Get("Skills.Detail.ExecutorUnknown")
                     : report.ExecutorType,
-                RiskLevelText = $"Risk: {report.RiskLevel}",
+                RiskLevelText = Loc.Format("Skills.Detail.Risk", FormatRiskLevel(report.RiskLevel)),
                 ChecksumText = string.IsNullOrWhiteSpace(report.Checksum)
-                    ? "Checksum: n/a"
-                    : $"Checksum: {report.Checksum}",
+                    ? Loc.Get("Skills.Detail.ChecksumNone")
+                    : Loc.Format("Skills.Detail.Checksum", report.Checksum),
                 InstalledFromText = string.IsNullOrWhiteSpace(report.InstalledFrom)
-                    ? "Installed From: n/a"
-                    : $"Installed From: {report.InstalledFrom}",
+                    ? Loc.Get("Skills.Detail.InstalledFromNone")
+                    : Loc.Format("Skills.Detail.InstalledFrom", report.InstalledFrom),
                 HealthDetail = report.Details,
                 IconColor = Brush.Parse(palette.IconColor),
                 GlowColor = Brush.Parse(palette.GlowColor),
@@ -913,17 +1032,21 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     or SkillHealthStatus.MissingExecutor,
                 HasLastRun = report.LastRunAt.HasValue,
                 LastRunStatus = report.LastRunAt.HasValue
-                    ? $"Last Run: {FormatExecutionStatus(report.LastRunStatus)}"
+                    ? Loc.Format("Skills.Detail.LastRun", FormatExecutionStatus(report.LastRunStatus))
                     : string.Empty,
                 LastRunDetail = FormatLastRunDetail(report),
                 HealthMetricsText = FormatHealthMetrics(report),
                 FailureMetricsText = FormatFailureMetrics(report),
                 LastRunColor = GetExecutionStatusBrush(report.LastRunStatus),
-                RequiredPermissionsText = FormatPermissions("Requires", report.RequiredPermissions),
-                GrantedPermissionsText = FormatPermissions("Granted", report.GrantedPermissions),
+                RequiredPermissionsText = Loc.Format(
+                    "Skills.Permissions.Requires",
+                    FormatPermissionList(report.RequiredPermissions)),
+                GrantedPermissionsText = Loc.Format(
+                    "Skills.Permissions.Granted",
+                    FormatPermissionList(report.GrantedPermissions)),
                 MissingPermissionsText = report.MissingPermissions.Count == 0
                     ? string.Empty
-                    : FormatPermissions("Missing", report.MissingPermissions),
+                    : Loc.Format("Skills.Permissions.Missing", FormatPermissionList(report.MissingPermissions)),
                 RuntimeOptions = CloneRuntimeOptions(report.RuntimeOptions),
                 ExecutionHistory = new ObservableCollection<SkillExecutionHistoryItem>(
                     report.RecentRuns
@@ -1016,18 +1139,27 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             return status switch
             {
-                SkillHealthStatus.Healthy => "Healthy",
-                SkillHealthStatus.Disabled => "Disabled",
-                SkillHealthStatus.MissingExecutor => "Missing Executor",
-                SkillHealthStatus.ReviewRequired => "Review Required",
-                SkillHealthStatus.PermissionDenied => "Permission Denied",
-                _ => "Unknown"
+                SkillHealthStatus.Healthy => Loc.Get("Skills.Status.Healthy"),
+                SkillHealthStatus.Disabled => Loc.Get("Skills.Status.Disabled"),
+                SkillHealthStatus.MissingExecutor => Loc.Get("Skills.Status.MissingExecutor"),
+                SkillHealthStatus.ReviewRequired => Loc.Get("Skills.Status.ReviewRequired"),
+                SkillHealthStatus.PermissionDenied => Loc.Get("Skills.Status.PermissionDenied"),
+                _ => Loc.Get("Skills.Status.Unknown")
             };
         }
 
-        private static string FormatPermissions(
-            string label,
-            IReadOnlyCollection<SkillPermission> permissions)
+        private static string FormatRiskLevel(SkillRiskLevel riskLevel)
+        {
+            return riskLevel switch
+            {
+                SkillRiskLevel.Low => Loc.Get("Skills.Risk.Low"),
+                SkillRiskLevel.Medium => Loc.Get("Skills.Risk.Medium"),
+                SkillRiskLevel.High => Loc.Get("Skills.Risk.High"),
+                _ => riskLevel.ToString()
+            };
+        }
+
+        private static string FormatPermissionList(IReadOnlyCollection<SkillPermission> permissions)
         {
             var values = permissions
                 .Where(permission => permission != SkillPermission.None)
@@ -1036,8 +1168,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 .ToArray();
 
             return values.Length == 0
-                ? $"{label}: none"
-                : $"{label}: {string.Join(", ", values)}";
+                ? Loc.Get("Skills.Permissions.None")
+                : string.Join(", ", values);
         }
 
         private static SkillExecutionHistoryItem CreateExecutionHistoryItem(SkillAuditRecord record)
@@ -1057,8 +1189,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 Name = result.Name,
                 SkillId = result.SkillId,
-                StatusText = result.Passed ? "Pass" : "Fail",
-                ExpectedActualText = $"Expected: {result.ExpectedStatus} | Actual: {result.ActualStatus}",
+                StatusText = result.Passed ? Loc.Get("Skills.Eval.Pass") : Loc.Get("Skills.Eval.Fail"),
+                ExpectedActualText = Loc.Format("Skills.Eval.ExpectedActual", result.ExpectedStatus, result.ActualStatus),
                 DetailText = FormatEvalResultDetail(result),
                 StatusColor = result.Passed
                     ? Brush.Parse("#10B981")
@@ -1085,7 +1217,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
 
             return parts.Count == 0
-                ? "No execution detail."
+                ? Loc.Get("Skills.Detail.NoExecutionDetail")
                 : string.Join(" | ", parts);
         }
 
@@ -1103,7 +1235,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
 
             return parts.Count == 0
-                ? "No eval detail."
+                ? Loc.Get("Skills.Eval.NoDetail")
                 : string.Join(" | ", parts);
         }
 
@@ -1127,17 +1259,17 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             return status switch
             {
-                SkillExecutionStatus.Succeeded => "Succeeded",
-                SkillExecutionStatus.ValidationFailed => "Validation Failed",
-                SkillExecutionStatus.TimedOut => "Timed Out",
-                SkillExecutionStatus.SkillNotFound => "Skill Not Found",
-                SkillExecutionStatus.ExecutorNotFound => "Executor Not Found",
-                SkillExecutionStatus.ReviewRequired => "Review Required",
-                SkillExecutionStatus.PermissionDenied => "Permission Denied",
-                SkillExecutionStatus.Cancelled => "Cancelled",
-                SkillExecutionStatus.Disabled => "Disabled",
-                SkillExecutionStatus.Failed => "Failed",
-                _ => "Unknown"
+                SkillExecutionStatus.Succeeded => Loc.Get("Skills.Run.Succeeded"),
+                SkillExecutionStatus.ValidationFailed => Loc.Get("Skills.Run.ValidationFailed"),
+                SkillExecutionStatus.TimedOut => Loc.Get("Skills.Run.TimedOut"),
+                SkillExecutionStatus.SkillNotFound => Loc.Get("Skills.Run.SkillNotFound"),
+                SkillExecutionStatus.ExecutorNotFound => Loc.Get("Skills.Run.ExecutorNotFound"),
+                SkillExecutionStatus.ReviewRequired => Loc.Get("Skills.Run.ReviewRequired"),
+                SkillExecutionStatus.PermissionDenied => Loc.Get("Skills.Run.PermissionDenied"),
+                SkillExecutionStatus.Cancelled => Loc.Get("Skills.Run.Cancelled"),
+                SkillExecutionStatus.Disabled => Loc.Get("Skills.Run.Disabled"),
+                SkillExecutionStatus.Failed => Loc.Get("Skills.Run.Failed"),
+                _ => Loc.Get("Skills.Run.Unknown")
             };
         }
 
@@ -1178,9 +1310,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
             var parts = new List<string>
             {
-                string.Format(
-                    System.Globalization.CultureInfo.InvariantCulture,
-                    "Recent: {0}/{1} succeeded ({2:0.0}%)",
+                Loc.Format(
+                    "Skills.Metrics.Recent",
                     report.RecentSuccessCount,
                     report.RecentRunCount,
                     report.RecentSuccessRatePercent)
@@ -1188,7 +1319,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
             if (report.RecentAverageDurationMilliseconds > 0)
             {
-                parts.Add($"avg {report.RecentAverageDurationMilliseconds} ms");
+                parts.Add(Loc.Format("Skills.Metrics.Average", report.RecentAverageDurationMilliseconds));
             }
 
             return string.Join(" | ", parts);
@@ -1204,8 +1335,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             var parts = new List<string>
             {
                 report.LastFailureAt.HasValue
-                    ? $"Last Failure: {report.LastFailureAt.Value.ToLocalTime():yyyy-MM-dd HH:mm}"
-                    : "Last Failure: unknown"
+                    ? Loc.Format(
+                        "Skills.Metrics.LastFailure",
+                        report.LastFailureAt.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture))
+                    : Loc.Get("Skills.Metrics.LastFailureUnknown")
             };
 
             if (!string.IsNullOrWhiteSpace(report.LastFailureErrorCode))
@@ -1225,7 +1358,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             if (!plugin.HasHealthMetrics)
             {
-                return "Recent Metrics: no runs";
+                return Loc.Get("Skills.Metrics.NoRuns");
             }
 
             return plugin.HasFailureMetrics

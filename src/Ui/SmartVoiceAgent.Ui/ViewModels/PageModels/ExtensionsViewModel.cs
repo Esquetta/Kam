@@ -3,6 +3,7 @@ using ReactiveUI;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Agents.Extensions;
 using SmartVoiceAgent.Infrastructure.Agent.Mcp;
+using SmartVoiceAgent.Ui.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -28,6 +29,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private string _pluginSource = string.Empty;
         private string _skillSource = string.Empty;
         private string _message = string.Empty;
+        private Func<string>? _messageSource;
         private bool _isBusy;
 
         /// <summary>
@@ -47,7 +49,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             Action<string>? openPath = null,
             Action<Action>? post = null)
         {
-            Title = "Extensions";
+            Title = Loc.Get("Extensions.Title");
             _mcpHost = mcpHost;
             _plugins = plugins;
             _skills = skills;
@@ -70,6 +72,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 _mcpHost.StateChanged += OnMcpStateChanged;
             }
 
+            LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
             Refresh();
         }
 
@@ -98,8 +101,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public bool HasNoCommands => Commands.Count == 0;
 
         /// <summary>Gets the line under the page title.</summary>
-        public string SummaryText =>
-            $"{Count(McpServers.Count, "MCP server")} · {Count(Skills.Count, "skill")} · {Count(Plugins.Count, "plugin")} · {Count(Commands.Count, "command")}";
+        public string SummaryText => string.Join(" · ",
+            ExtensionCounts.McpServers(McpServers.Count),
+            ExtensionCounts.Skills(Skills.Count),
+            ExtensionCounts.Plugins(Plugins.Count),
+            ExtensionCounts.Commands(Commands.Count));
 
         /// <summary>Gets or sets the folder, git URL or owner/repo to install a plugin from.</summary>
         public string PluginSource
@@ -202,10 +208,19 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 var tools = await _mcpHost.GetToolsAsync();
                 RefreshMcpServers();
+                var toolCount = tools.Count;
                 var failed = McpServers.Count(server => server.IsFailed);
-                Message = failed == 0
-                    ? $"Connected. {Count(tools.Count, "tool")} available to the agent."
-                    : $"{Count(tools.Count, "tool")} available. {Count(failed, "server")} failed to start; see the error below it.";
+                if (failed == 0)
+                {
+                    ShowMessage(() => Loc.Format("Extensions.Message.Connected", ExtensionCounts.Tools(toolCount)));
+                }
+                else
+                {
+                    ShowMessage(() => Loc.Format(
+                        "Extensions.Message.ConnectedWithFailures",
+                        ExtensionCounts.Tools(toolCount),
+                        ExtensionCounts.Servers(failed)));
+                }
             }
             finally
             {
@@ -224,7 +239,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             await _mcpHost.ReloadAsync();
             RefreshMcpServers();
             RaiseCounts();
-            Message = "Reloaded mcp.json. Servers start on the next chat turn.";
+            ShowMessage(() => Loc.Get("Extensions.Message.Reloaded"));
         }
 
         /// <summary>Installs a plugin from <see cref="PluginSource"/>.</summary>
@@ -232,7 +247,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             if (_plugins is null || string.IsNullOrWhiteSpace(PluginSource))
             {
-                Message = "Enter a plugin folder, a git URL or owner/repo.";
+                ShowMessage(() => Loc.Get("Extensions.Message.EnterPluginSource"));
                 return;
             }
 
@@ -240,7 +255,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             try
             {
                 var result = await _plugins.InstallAsync(PluginSource.Trim());
-                Message = result.Message;
+                ShowMessage(() => result.Message);
                 if (result.Success)
                 {
                     PluginSource = string.Empty;
@@ -250,7 +265,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
             catch (Exception ex)
             {
-                Message = $"Could not install the plugin: {ex.Message}";
+                ShowMessage(() => Loc.Format("Extensions.Message.PluginInstallFailed", ex.Message));
             }
             finally
             {
@@ -263,7 +278,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             if (_skills is null || string.IsNullOrWhiteSpace(SkillSource))
             {
-                Message = "Enter a folder that contains SKILL.md.";
+                ShowMessage(() => Loc.Get("Extensions.Message.EnterSkillSource"));
                 return;
             }
 
@@ -271,12 +286,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 var skill = _skills.Install(SkillSource.Trim().Trim('"'));
                 SkillSource = string.Empty;
-                Message = $"Installed the {skill.Name} skill. The agent can use it from the next message.";
+                ShowMessage(() => Loc.Format("Extensions.Message.SkillInstalled", skill.Name));
                 Refresh();
             }
             catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or ArgumentException)
             {
-                Message = ex.Message;
+                ShowMessage(() => ex.Message);
             }
         }
 
@@ -287,14 +302,22 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 _mcpHost.StateChanged -= OnMcpStateChanged;
             }
+
+            LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
         }
 
         private void SetPluginEnabled(string name, bool enabled)
         {
             _plugins?.SetEnabled(name, enabled);
-            Message = enabled
-                ? $"Turned on {name}. Its skills, commands and servers are available from the next message."
-                : $"Turned off {name}.";
+            if (enabled)
+            {
+                ShowMessage(() => Loc.Format("Extensions.Message.PluginOn", name));
+            }
+            else
+            {
+                ShowMessage(() => Loc.Format("Extensions.Message.PluginOff", name));
+            }
+
             _ = ReloadMcpQuietlyAsync().ContinueWith(_ => _post(Refresh), TaskScheduler.Default);
         }
 
@@ -302,7 +325,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             if (_plugins?.Uninstall(name) == true)
             {
-                Message = $"Removed {name}.";
+                ShowMessage(() => Loc.Format("Extensions.Message.PluginRemoved", name));
                 _ = ReloadMcpQuietlyAsync().ContinueWith(_ => _post(Refresh), TaskScheduler.Default);
             }
         }
@@ -311,7 +334,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             if (_skills?.Uninstall(name) == true)
             {
-                Message = $"Removed the {name} skill.";
+                ShowMessage(() => Loc.Format("Extensions.Message.SkillRemoved", name));
                 Refresh();
             }
         }
@@ -327,11 +350,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 new UserMcpServerSource(_mcpHost.UserConfigPath).EnsureExists();
                 _openPath(_mcpHost.UserConfigPath);
-                Message = "Edit mcp.json, save it, then press Reload.";
+                ShowMessage(() => Loc.Get("Extensions.Message.EditMcpConfig"));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                Message = ex.Message;
+                ShowMessage(() => ex.Message);
             }
         }
 
@@ -349,7 +372,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                Message = ex.Message;
+                ShowMessage(() => ex.Message);
             }
         }
 
@@ -360,6 +383,23 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 await _mcpHost.ReloadAsync();
             }
         }
+
+        private void ShowMessage(Func<string> source)
+        {
+            _messageSource = source;
+            Message = source();
+        }
+
+        private void OnLanguageChanged(object? sender, EventArgs e) => _post(() =>
+        {
+            Title = Loc.Get("Extensions.Title");
+            if (_messageSource is not null)
+            {
+                Message = _messageSource();
+            }
+
+            Refresh();
+        });
 
         private void OnMcpStateChanged(object? sender, EventArgs e) => _post(() =>
         {
@@ -402,7 +442,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
             catch (Exception ex)
             {
-                Message = ex.Message;
+                ShowMessage(() => ex.Message);
                 return [];
             }
         }
@@ -415,8 +455,6 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 collection.Add(item);
             }
         }
-
-        private static string Count(int count, string noun) => $"{count} {noun}{(count == 1 ? string.Empty : "s")}";
 
         private static void OpenWithShell(string path)
         {
@@ -444,11 +482,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             SourceText = definition.Source == "user" ? "mcp.json" : definition.Source;
             (StatusText, StatusClass) = state.Status switch
             {
-                McpServerStatus.Ready => ($"{state.ToolCount} tool{(state.ToolCount == 1 ? string.Empty : "s")}", "Success"),
-                McpServerStatus.Connecting => ("Starting", "Accent"),
-                McpServerStatus.Failed => ("Failed", "Danger"),
-                McpServerStatus.Disabled => ("Off", "Neutral"),
-                _ => ("Starts on first use", "Neutral")
+                McpServerStatus.Ready => (ExtensionCounts.Tools(state.ToolCount), "Success"),
+                McpServerStatus.Connecting => (Loc.Get("Extensions.Mcp.Status.Starting"), "Accent"),
+                McpServerStatus.Failed => (Loc.Get("Extensions.Mcp.Status.Failed"), "Danger"),
+                McpServerStatus.Disabled => (Loc.Get("Common.Off"), "Neutral"),
+                _ => (Loc.Get("Extensions.Mcp.Status.Idle"), "Neutral")
             };
             Error = state.Error ?? string.Empty;
             IsFailed = state.Status == McpServerStatus.Failed;
@@ -512,7 +550,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _setEnabled = setEnabled;
             _isEnabled = plugin.Enabled;
             Name = plugin.Name;
-            Description = string.IsNullOrWhiteSpace(plugin.Description) ? "No description." : plugin.Description;
+            Description = string.IsNullOrWhiteSpace(plugin.Description) ? Loc.Get("Extensions.NoDescription") : plugin.Description;
             VersionText = string.Join(" · ", new[]
             {
                 string.IsNullOrWhiteSpace(plugin.Version) ? null : "v" + plugin.Version,
@@ -520,11 +558,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }.Where(part => part is not null));
 
             var parts = new List<string>();
-            AddPart(parts, plugin.SkillDirectories.Count, "skill");
-            AddPart(parts, plugin.CommandFiles.Count, "command");
-            AddPart(parts, plugin.McpServers.Count, "MCP server");
-            AddPart(parts, plugin.AgentCount, "agent");
-            ComponentsText = parts.Count == 0 ? "Nothing to load" : string.Join(" · ", parts);
+            AddPart(parts, plugin.SkillDirectories.Count, ExtensionCounts.Skills);
+            AddPart(parts, plugin.CommandFiles.Count, ExtensionCounts.Commands);
+            AddPart(parts, plugin.McpServers.Count, ExtensionCounts.McpServers);
+            AddPart(parts, plugin.AgentCount, ExtensionCounts.Agents);
+            ComponentsText = parts.Count == 0 ? Loc.Get("Extensions.Plugins.NothingToLoad") : string.Join(" · ", parts);
             Error = plugin.Error ?? string.Empty;
             UninstallCommand = ReactiveCommand.Create(uninstall);
             OpenFolderCommand = ReactiveCommand.Create(openFolder);
@@ -570,11 +608,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /// <summary>Opens the plugin folder.</summary>
         public ICommand OpenFolderCommand { get; }
 
-        private static void AddPart(List<string> parts, int count, string noun)
+        private static void AddPart(List<string> parts, int count, Func<int, string> format)
         {
             if (count > 0)
             {
-                parts.Add($"{count} {noun}{(count == 1 ? string.Empty : "s")}");
+                parts.Add(format(count));
             }
         }
     }
@@ -593,13 +631,14 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public AgentSkillItemViewModel(AgentSkillInfo skill, Action? uninstall, Action openFolder)
         {
             Name = skill.Name;
-            Description = string.IsNullOrWhiteSpace(skill.Description) ? "No description." : skill.Description;
+            Description = string.IsNullOrWhiteSpace(skill.Description) ? Loc.Get("Extensions.NoDescription") : skill.Description;
             SourceText = skill.Source switch
             {
-                "user" => "Your skills",
-                "workspace" => "Workspace",
-                "imported" => "Imported",
-                _ when skill.Source.StartsWith("plugin:", StringComparison.Ordinal) => "Plugin " + skill.Source["plugin:".Length..],
+                "user" => Loc.Get("Extensions.Source.UserSkills"),
+                "workspace" => Loc.Get("Extensions.Source.Workspace"),
+                "imported" => Loc.Get("Extensions.Source.Imported"),
+                _ when skill.Source.StartsWith("plugin:", StringComparison.Ordinal) =>
+                    Loc.Format("Extensions.Source.Plugin", skill.Source["plugin:".Length..]),
                 _ => skill.Source
             };
             CanUninstall = uninstall is not null;
@@ -642,9 +681,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             Description = command.Description;
             SourceText = command.Source switch
             {
-                "user" => "Your commands",
-                "workspace" => "Workspace",
-                _ when command.Source.StartsWith("plugin:", StringComparison.Ordinal) => "Plugin " + command.Source["plugin:".Length..],
+                "user" => Loc.Get("Extensions.Source.UserCommands"),
+                "workspace" => Loc.Get("Extensions.Source.Workspace"),
+                _ when command.Source.StartsWith("plugin:", StringComparison.Ordinal) =>
+                    Loc.Format("Extensions.Source.Plugin", command.Source["plugin:".Length..]),
                 _ => command.Source
             };
             OpenFileCommand = ReactiveCommand.Create(openFile);
@@ -661,5 +701,53 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         /// <summary>Opens the command file.</summary>
         public ICommand OpenFileCommand { get; }
+    }
+
+    /// <summary>
+    /// Counted nouns for the Extensions page, such as "3 MCP servers", in the current language.
+    /// </summary>
+    internal static class ExtensionCounts
+    {
+        /// <summary>Formats a number of MCP servers.</summary>
+        /// <param name="count">The number.</param>
+        public static string McpServers(int count) => count == 1
+            ? Loc.Format("Extensions.Count.McpServer.One", count)
+            : Loc.Format("Extensions.Count.McpServer.Other", count);
+
+        /// <summary>Formats a number of skills.</summary>
+        /// <param name="count">The number.</param>
+        public static string Skills(int count) => count == 1
+            ? Loc.Format("Extensions.Count.Skill.One", count)
+            : Loc.Format("Extensions.Count.Skill.Other", count);
+
+        /// <summary>Formats a number of plugins.</summary>
+        /// <param name="count">The number.</param>
+        public static string Plugins(int count) => count == 1
+            ? Loc.Format("Extensions.Count.Plugin.One", count)
+            : Loc.Format("Extensions.Count.Plugin.Other", count);
+
+        /// <summary>Formats a number of slash commands.</summary>
+        /// <param name="count">The number.</param>
+        public static string Commands(int count) => count == 1
+            ? Loc.Format("Extensions.Count.Command.One", count)
+            : Loc.Format("Extensions.Count.Command.Other", count);
+
+        /// <summary>Formats a number of tools.</summary>
+        /// <param name="count">The number.</param>
+        public static string Tools(int count) => count == 1
+            ? Loc.Format("Extensions.Count.Tool.One", count)
+            : Loc.Format("Extensions.Count.Tool.Other", count);
+
+        /// <summary>Formats a number of servers.</summary>
+        /// <param name="count">The number.</param>
+        public static string Servers(int count) => count == 1
+            ? Loc.Format("Extensions.Count.Server.One", count)
+            : Loc.Format("Extensions.Count.Server.Other", count);
+
+        /// <summary>Formats a number of agents.</summary>
+        /// <param name="count">The number.</param>
+        public static string Agents(int count) => count == 1
+            ? Loc.Format("Extensions.Count.Agent.One", count)
+            : Loc.Format("Extensions.Count.Agent.Other", count);
     }
 }

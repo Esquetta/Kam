@@ -36,8 +36,8 @@
             <!-- Header -->
             <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Spacing="6">
-                    <TextBlock Text="{Binding Title}" Classes="PageTitle"/>
-                    <TextBlock Text="Give the agent new tools and know-how: MCP servers, skills, plugins and slash commands."
+                    <TextBlock Text="{DynamicResource Lang.Extensions.Title}" Classes="PageTitle"/>
+                    <TextBlock Text="{DynamicResource Lang.Extensions.Subtitle}"
                                Classes="PageSubtitle"/>
                     <TextBlock Text="{Binding SummaryText}" Classes="Caption"/>
                 </StackPanel>
@@ -47,7 +47,7 @@
                         Command="{Binding RefreshCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
-                        <TextBlock Text="Refresh"/>
+                        <TextBlock Text="{DynamicResource Lang.Common.Refresh}"/>
                     </StackPanel>
                 </Button>
             </Grid>
@@ -66,20 +66,20 @@
                             <Viewbox><Path Classes="Icon" Data="{StaticResource IconPlug}" Stroke="{DynamicResource AccentBrush}" Fill="Transparent"/></Viewbox>
                         </Border>
                         <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center" Spacing="2">
-                            <TextBlock Text="MCP servers" Classes="SectionTitle"/>
-                            <TextBlock Text="Same format as Claude Desktop, Claude Code and Cursor. Tools appear as mcp__server__tool."
+                            <TextBlock Text="{DynamicResource Lang.Extensions.Mcp.Title}" Classes="SectionTitle"/>
+                            <TextBlock Text="{DynamicResource Lang.Extensions.Mcp.Caption}"
                                        Classes="Caption"/>
                         </StackPanel>
                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <Button Classes="SecondaryAction" Command="{Binding OpenMcpConfigCommand}" Content="Open mcp.json"/>
-                            <Button Classes="SecondaryAction" Command="{Binding ReloadServersCommand}" Content="Reload"/>
-                            <Button Classes="PrimaryAction" Command="{Binding ConnectServersCommand}" Content="Connect"/>
+                            <Button Classes="SecondaryAction" Command="{Binding OpenMcpConfigCommand}" Content="{DynamicResource Lang.Extensions.Mcp.OpenConfig}"/>
+                            <Button Classes="SecondaryAction" Command="{Binding ReloadServersCommand}" Content="{DynamicResource Lang.Extensions.Mcp.Reload}"/>
+                            <Button Classes="PrimaryAction" Command="{Binding ConnectServersCommand}" Content="{DynamicResource Lang.Extensions.Mcp.Connect}"/>
                         </StackPanel>
                     </Grid>
 
                     <TextBlock Classes="EmptyText"
                                IsVisible="{Binding HasNoMcpServers}"
-                               Text="No servers yet. Open mcp.json, paste a server under mcpServers, then press Reload. Use ${secret:NAME} or ${env:NAME} for keys."/>
+                               Text="{DynamicResource Lang.Extensions.Mcp.Empty}"/>
 
                     <ItemsControl ItemsSource="{Binding McpServers}">
                         <ItemsControl.ItemsPanel>
@@ -106,7 +106,7 @@
                                         </Border>
                                         <Button Grid.Column="2"
                                                 Classes="IconAction"
-                                                ToolTip.Tip="Restart"
+                                                ToolTip.Tip="{DynamicResource Lang.Extensions.Mcp.Restart}"
                                                 Command="{Binding RestartCommand}">
                                             <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
                                         </Button>
@@ -132,22 +132,22 @@
                             <Viewbox><Path Classes="Icon" Data="{StaticResource IconPuzzle}" Stroke="{DynamicResource AccentBrush}" Fill="Transparent"/></Viewbox>
                         </Border>
                         <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center" Spacing="2">
-                            <TextBlock Text="Plugins" Classes="SectionTitle"/>
-                            <TextBlock Text="Claude Code plugins work as they are: skills, commands and MCP servers in one folder."
+                            <TextBlock Text="{DynamicResource Lang.Extensions.Plugins.Title}" Classes="SectionTitle"/>
+                            <TextBlock Text="{DynamicResource Lang.Extensions.Plugins.Caption}"
                                        Classes="Caption"/>
                         </StackPanel>
                         <Button Grid.Column="2" Classes="SecondaryAction" VerticalAlignment="Center"
-                                Command="{Binding OpenPluginsFolderCommand}" Content="Open folder"/>
+                                Command="{Binding OpenPluginsFolderCommand}" Content="{DynamicResource Lang.Extensions.OpenFolder}"/>
                     </Grid>
 
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                         <TextBox Text="{Binding PluginSource}"
-                                 PlaceholderText="Folder, https git URL or owner/repo (a marketplace installs all its plugins, turned off)"/>
+                                 PlaceholderText="{DynamicResource Lang.Extensions.Plugins.SourcePlaceholder}"/>
                         <Button Grid.Column="1" Classes="PrimaryAction" Command="{Binding InstallPluginCommand}"
-                                IsEnabled="{Binding !IsBusy}" Content="Install"/>
+                                IsEnabled="{Binding !IsBusy}" Content="{DynamicResource Lang.Common.Install}"/>
                     </Grid>
 
-                    <TextBlock Classes="EmptyText" IsVisible="{Binding HasNoPlugins}" Text="No plugins installed."/>
+                    <TextBlock Classes="EmptyText" IsVisible="{Binding HasNoPlugins}" Text="{DynamicResource Lang.Extensions.Plugins.Empty}"/>
 
                     <ItemsControl ItemsSource="{Binding Plugins}">
                         <ItemsControl.ItemsPanel>
@@ -168,14 +168,14 @@
                                         </StackPanel>
                                         <ToggleSwitch Grid.Column="1"
                                                       IsChecked="{Binding IsEnabled}"
-                                                      OnContent="On"
-                                                      OffContent="Off"
+                                                      OnContent="{DynamicResource Lang.Common.On}"
+                                                      OffContent="{DynamicResource Lang.Common.Off}"
                                                       VerticalAlignment="Center"/>
-                                        <Button Grid.Column="2" Classes="IconAction" ToolTip.Tip="Open folder"
+                                        <Button Grid.Column="2" Classes="IconAction" ToolTip.Tip="{DynamicResource Lang.Extensions.OpenFolder}"
                                                 VerticalAlignment="Center" Command="{Binding OpenFolderCommand}">
                                             <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconFolder}"/></Viewbox>
                                         </Button>
-                                        <Button Grid.Column="3" Classes="IconAction" ToolTip.Tip="Remove plugin"
+                                        <Button Grid.Column="3" Classes="IconAction" ToolTip.Tip="{DynamicResource Lang.Extensions.Plugins.Remove}"
                                                 VerticalAlignment="Center" Command="{Binding UninstallCommand}">
                                             <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconTrash}"/></Viewbox>
                                         </Button>
@@ -195,21 +195,21 @@
                             <Viewbox><Path Classes="Icon" Data="{StaticResource IconSparkles}" Stroke="{DynamicResource AccentBrush}" Fill="Transparent"/></Viewbox>
                         </Border>
                         <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center" Spacing="2">
-                            <TextBlock Text="Skills" Classes="SectionTitle"/>
-                            <TextBlock Text="Folders with a SKILL.md. The agent sees each name and description, and loads the instructions only when a task needs them."
+                            <TextBlock Text="{DynamicResource Lang.Extensions.Skills.Title}" Classes="SectionTitle"/>
+                            <TextBlock Text="{DynamicResource Lang.Extensions.Skills.Caption}"
                                        Classes="Caption"/>
                         </StackPanel>
                         <Button Grid.Column="2" Classes="SecondaryAction" VerticalAlignment="Center"
-                                Command="{Binding OpenSkillsFolderCommand}" Content="Open folder"/>
+                                Command="{Binding OpenSkillsFolderCommand}" Content="{DynamicResource Lang.Extensions.OpenFolder}"/>
                     </Grid>
 
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                        <TextBox Text="{Binding SkillSource}" PlaceholderText="Folder that contains SKILL.md"/>
-                        <Button Grid.Column="1" Classes="PrimaryAction" Command="{Binding InstallSkillCommand}" Content="Install"/>
+                        <TextBox Text="{Binding SkillSource}" PlaceholderText="{DynamicResource Lang.Extensions.Skills.SourcePlaceholder}"/>
+                        <Button Grid.Column="1" Classes="PrimaryAction" Command="{Binding InstallSkillCommand}" Content="{DynamicResource Lang.Common.Install}"/>
                     </Grid>
 
                     <TextBlock Classes="EmptyText" IsVisible="{Binding HasNoSkills}"
-                               Text="No skills yet. Install one above, or add .kam/skills or .claude/skills to your workspace."/>
+                               Text="{DynamicResource Lang.Extensions.Skills.Empty}"/>
 
                     <ItemsControl ItemsSource="{Binding Skills}">
                         <ItemsControl.ItemsPanel>
@@ -226,12 +226,12 @@
                                         <Border Grid.Column="1" Classes="Pill" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding SourceText}"/>
                                         </Border>
-                                        <Button Grid.Column="2" Classes="IconAction" ToolTip.Tip="Remove skill"
+                                        <Button Grid.Column="2" Classes="IconAction" ToolTip.Tip="{DynamicResource Lang.Extensions.Skills.Remove}"
                                                 VerticalAlignment="Center" IsVisible="{Binding CanUninstall}"
                                                 Command="{Binding UninstallCommand}">
                                             <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconTrash}"/></Viewbox>
                                         </Button>
-                                        <Button Grid.Column="3" Classes="IconAction" ToolTip.Tip="Open folder"
+                                        <Button Grid.Column="3" Classes="IconAction" ToolTip.Tip="{DynamicResource Lang.Extensions.OpenFolder}"
                                                 VerticalAlignment="Center" Command="{Binding OpenFolderCommand}">
                                             <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconFolder}"/></Viewbox>
                                         </Button>
@@ -251,16 +251,16 @@
                             <Viewbox><Path Classes="Icon" Data="{StaticResource IconWrench}" Stroke="{DynamicResource AccentBrush}" Fill="Transparent"/></Viewbox>
                         </Border>
                         <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center" Spacing="2">
-                            <TextBlock Text="Slash commands" Classes="SectionTitle"/>
-                            <TextBlock Text="Markdown prompts you run from chat. $ARGUMENTS is replaced with what you type after the command."
+                            <TextBlock Text="{DynamicResource Lang.Extensions.Commands.Title}" Classes="SectionTitle"/>
+                            <TextBlock Text="{DynamicResource Lang.Extensions.Commands.Caption}"
                                        Classes="Caption"/>
                         </StackPanel>
                         <Button Grid.Column="2" Classes="SecondaryAction" VerticalAlignment="Center"
-                                Command="{Binding OpenCommandsFolderCommand}" Content="Open folder"/>
+                                Command="{Binding OpenCommandsFolderCommand}" Content="{DynamicResource Lang.Extensions.OpenFolder}"/>
                     </Grid>
 
                     <TextBlock Classes="EmptyText" IsVisible="{Binding HasNoCommands}"
-                               Text="No commands yet. Save a .md file in the commands folder; review.md becomes /review."/>
+                               Text="{DynamicResource Lang.Extensions.Commands.Empty}"/>
 
                     <ItemsControl ItemsSource="{Binding Commands}">
                         <ItemsControl.ItemsPanel>
@@ -277,7 +277,7 @@
                                         <Border Grid.Column="1" Classes="Pill" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding SourceText}"/>
                                         </Border>
-                                        <Button Grid.Column="2" Classes="IconAction" ToolTip.Tip="Open file"
+                                        <Button Grid.Column="2" Classes="IconAction" ToolTip.Tip="{DynamicResource Lang.Extensions.Commands.OpenFile}"
                                                 VerticalAlignment="Center" Command="{Binding OpenFileCommand}">
                                             <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconFile}"/></Viewbox>
                                         </Button>

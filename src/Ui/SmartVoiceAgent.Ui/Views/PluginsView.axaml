@@ -265,7 +265,7 @@
                     <Button Grid.Column="2"
                             Command="{Binding RunSkillEvalCommand}"
                             Classes="IconButton PluginActionButton"
-                            ToolTip.Tip="Run smoke evals"
+                            ToolTip.Tip="{DynamicResource Lang.Skills.Eval.RunTip}"
                             Width="30"
                             Height="30"
                             Padding="0"
@@ -291,10 +291,10 @@
                                   MinHeight="34"/>
                         <TextBox Grid.Column="1"
                                  Text="{Binding ImportLocation}"
-                                 PlaceholderText="Folder path containing SKILL.md"
+                                 PlaceholderText="{DynamicResource Lang.Skills.Import.Placeholder}"
                                  MinHeight="34"/>
                         <Button Grid.Column="2"
-                                Content="Import"
+                                Content="{DynamicResource Lang.Skills.Import.Button}"
                                 Command="{Binding ImportSkillCommand}"
                                 Classes="PrimaryAction"
                                 MinHeight="34"
@@ -365,7 +365,7 @@
                         <StackPanel IsVisible="{Binding HasSelectedSkillExecutionHistory}"
                                     Spacing="3"
                                     Margin="0,4,0,0">
-                            <TextBlock Text="Execution History"
+                            <TextBlock Text="{DynamicResource Lang.Skills.Detail.ExecutionHistory}"
                                        FontSize="10"
                                        FontFamily="{StaticResource MonoFontFamily}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
@@ -409,15 +409,15 @@
                               IsVisible="{Binding CanEditSelectedSkillPolicy}">
                             <TextBox Grid.Column="0"
                                      Text="{Binding PolicyOptionKeyInput, Mode=TwoWay}"
-                                     PlaceholderText="policy key"
+                                     PlaceholderText="{DynamicResource Lang.Skills.Policy.KeyPlaceholder}"
                                      MinHeight="32"/>
                             <TextBox Grid.Column="1"
                                      Text="{Binding PolicyOptionValueInput, Mode=TwoWay}"
-                                     PlaceholderText="value"
+                                     PlaceholderText="{DynamicResource Lang.Skills.Policy.ValuePlaceholder}"
                                      MinHeight="32"/>
                             <Button Grid.Column="2"
                                     Command="{Binding SaveRuntimePolicyOptionCommand}"
-                                    ToolTip.Tip="Save runtime policy"
+                                    ToolTip.Tip="{DynamicResource Lang.Skills.Policy.SaveTip}"
                                     MinHeight="32"
                                     Padding="10,0">
                                 <Path Data="M9,16.2L4.8,12L3.4,13.4L9,19L21,7L19.6,5.6L9,16.2Z"
@@ -431,7 +431,7 @@
                             Command="{Binding SelectedPlugin.TestSkillCommand}"
                             Classes="IconButton PluginActionButton"
                             IsVisible="{Binding SelectedPlugin.CanTestSkill}"
-                            ToolTip.Tip="Test skill"
+                            ToolTip.Tip="{DynamicResource Lang.Skills.Test.Tip}"
                             Width="30"
                             Height="30"
                             Padding="0"
@@ -616,7 +616,7 @@
                                     <Button Classes="IconButton CompactIconButton PluginActionButton"
                                             Padding="0"
                                             Cursor="Hand"
-                                            ToolTip.Tip="Details"
+                                            ToolTip.Tip="{DynamicResource Lang.Skills.Card.Details}"
                                             Command="{Binding SelectCommand}">
                                         <Path Data="M11,17H13V11H11V17M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,7V9H13V7H11Z"
                                               Fill="{DynamicResource AccentBrush}"
@@ -628,7 +628,7 @@
                                     <Button Classes="IconButton CompactIconButton PluginActionButton"
                                             Padding="0"
                                             Cursor="Hand"
-                                            ToolTip.Tip="Test Skill"
+                                            ToolTip.Tip="{DynamicResource Lang.Skills.Test.Tip}"
                                             IsVisible="{Binding CanTestSkill}"
                                             Command="{Binding TestSkillCommand}">
                                         <Path Data="M8,5V19L19,12L8,5Z"
@@ -641,7 +641,7 @@
                                     <Button Classes="IconButton CompactIconButton PluginActionButton"
                                             Padding="0"
                                             Cursor="Hand"
-                                            ToolTip.Tip="Approve Review"
+                                            ToolTip.Tip="{DynamicResource Lang.Skills.Card.ApproveReview}"
                                             IsVisible="{Binding CanApproveReview}"
                                             Command="{Binding ApproveReviewCommand}">
                                         <Path Data="M9,16.17L4.83,12L3.41,13.41L9,19L21,7L19.59,5.59L9,16.17Z"
@@ -654,7 +654,7 @@
                                     <Button Classes="IconButton CompactIconButton PluginActionButton"
                                             Padding="0"
                                             Cursor="Hand"
-                                            ToolTip.Tip="Enable"
+                                            ToolTip.Tip="{DynamicResource Lang.Common.Enable}"
                                             IsVisible="{Binding CanEnable}"
                                             Command="{Binding EnableCommand}">
                                         <Path Data="M8,5V19L19,12L8,5Z"
@@ -667,7 +667,7 @@
                                     <Button Classes="IconButton CompactIconButton PluginActionButton"
                                             Padding="0"
                                             Cursor="Hand"
-                                            ToolTip.Tip="Grant Permissions"
+                                            ToolTip.Tip="{DynamicResource Lang.Skills.Card.GrantPermissions}"
                                             IsVisible="{Binding CanGrantPermissions}"
                                             Command="{Binding GrantPermissionsCommand}">
                                         <Path Data="M12,17A2,2 0 0,0 14,15A2,2 0 0,0 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8H17V6A5,5 0 0,0 7,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0,0 18,8M9,8V6A3,3 0 0,1 15,6V8H9Z"
@@ -680,7 +680,7 @@
                                     <Button Classes="IconButton CompactIconButton PluginActionButton"
                                             Padding="0"
                                             Cursor="Hand"
-                                            ToolTip.Tip="Disable"
+                                            ToolTip.Tip="{DynamicResource Lang.Common.Disable}"
                                             IsVisible="{Binding CanDisable}"
                                             Command="{Binding DisableCommand}">
                                         <Path Data="M13,3H11V13H13V3M17.83,5.17L16.41,6.59A6,6 0 1,1 7.59,6.59L6.17,5.17A8,8 0 1,0 17.83,5.17Z"
@@ -693,7 +693,7 @@
                                     <Button Classes="IconButton CompactIconButton PluginActionButton"
                                             Padding="0"
                                             Cursor="Hand"
-                                            ToolTip.Tip="Revoke Permissions"
+                                            ToolTip.Tip="{DynamicResource Lang.Skills.Card.RevokePermissions}"
                                             IsVisible="{Binding CanRevokePermissions}"
                                             Command="{Binding RevokePermissionsCommand}">
                                         <Path Data="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C14.15,22.47 16.1,21.26 17.64,19.66L16.22,18.24C15.04,19.42 13.6,20.34 12,20.82C7.98,19.57 5,15.28 5,11V6.3L12,3.18L19,6.3V11C19,12.1 18.8,13.2 18.43,14.25L20,15.82C20.64,14.31 21,12.67 21,11V5L12,1M4.27,3L3,4.27L19.73,21L21,19.73L4.27,3Z"
