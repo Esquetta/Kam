@@ -218,6 +218,13 @@
 			<Setter Property="Margin" Value="0,0,6,6"/>
 		</Style>
 
+		<Style Selector="Border.VoiceStatusStrip">
+			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding" Value="10,4,4,4"/>
+			<Setter Property="MinHeight" Value="30"/>
+		</Style>
+
 		<Style Selector="Border.QueuedMessageStrip">
 			<Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
 			<Setter Property="CornerRadius" Value="8"/>
@@ -815,12 +822,21 @@
 								BorderBrush="{DynamicResource BorderSubtleBrush}"
 								BorderThickness="0,0,0,1"
 								Padding="24,14">
-							<Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+							<Grid ColumnSpacing="8">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="*" MinWidth="96"/>
+									<ColumnDefinition Width="Auto"/>
+									<ColumnDefinition Width="Auto"/>
+									<ColumnDefinition Width="Auto"/>
+								</Grid.ColumnDefinitions>
 								<StackPanel Grid.Column="0" Spacing="2">
 									<TextBlock Text="{Binding SelectedAgentChatSession.Title}"
 											   Classes="SectionTitle"
 											   TextTrimming="CharacterEllipsis"/>
-									<TextBlock Text="{DynamicResource Lang.Chat.Timeline}" Classes="Caption"/>
+									<TextBlock Text="{DynamicResource Lang.Chat.Timeline}"
+											   Classes="Caption"
+											   TextWrapping="NoWrap"
+											   TextTrimming="CharacterEllipsis"/>
 								</StackPanel>
 								<Border Grid.Column="1" Classes="Pill" VerticalAlignment="Center">
 									<TextBlock Text="{Binding SelectedAgentChatMessageCountText}"/>
@@ -839,7 +855,7 @@
 												<Viewbox Width="12" Height="12" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconCpu}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
 												<TextBlock Text="{Binding Label}"
 														   FontSize="12"
-														   MaxWidth="220"
+														   MaxWidth="180"
 														   TextTrimming="CharacterEllipsis"
 														   VerticalAlignment="Center"/>
 												<TextBlock Text="{Binding Caption}"
@@ -1244,26 +1260,56 @@
 										</ItemsControl>
 									</Grid>
 
-									<!-- Messages sent while a turn runs -->
-									<Border Grid.Row="1"
-											Classes="QueuedMessageStrip"
-											IsVisible="{Binding HasQueuedAgentMessages}">
-										<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-											<Viewbox Grid.Column="0" Width="13" Height="13" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconClock}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
-											<TextBlock Grid.Column="1"
-													   Text="{Binding QueuedAgentMessagesText}"
-													   FontSize="12"
-													   Foreground="{DynamicResource TextSecondaryBrush}"
-													   VerticalAlignment="Center"
-													   TextTrimming="CharacterEllipsis"/>
-											<Button Grid.Column="2"
-													Classes="CompactAction"
-													ToolTip.Tip="{DynamicResource Lang.Chat.Composer.ClearQueuedTip}"
-													Command="{Binding ClearQueuedAgentMessagesCommand}">
-												<TextBlock Text="{DynamicResource Lang.Common.Cancel}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
-											</Button>
-										</Grid>
-									</Border>
+									<StackPanel Grid.Row="1" Spacing="6">
+										<!-- Voice: listening, transcribing, model download and problems -->
+										<Border x:Name="VoiceStatusPanel"
+												Classes="VoiceStatusStrip"
+												IsVisible="{Binding IsVoiceStatusVisible}">
+											<Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+												<Ellipse Grid.Column="0" Width="7" Height="7" Fill="{Binding VoiceStatusColor}" VerticalAlignment="Center"/>
+												<TextBlock Grid.Column="1"
+														   Text="{Binding VoiceStatusText}"
+														   FontSize="12"
+														   Foreground="{DynamicResource TextSecondaryBrush}"
+														   VerticalAlignment="Center"
+														   TextTrimming="CharacterEllipsis"/>
+												<ProgressBar Grid.Column="2"
+															 Classes="VoiceMeter"
+															 Minimum="0"
+															 Maximum="1"
+															 Value="{Binding VoiceMeterValue}"
+															 Foreground="{Binding VoiceStatusColor}"
+															 IsVisible="{Binding IsVoiceMeterVisible}"/>
+												<Button Grid.Column="3"
+														Classes="CompactAction"
+														ToolTip.Tip="{DynamicResource Lang.Voice.Cancel}"
+														IsVisible="{Binding IsVoiceCancelVisible}"
+														Command="{Binding CancelVoiceCommand}">
+													<TextBlock Text="{DynamicResource Lang.Common.Cancel}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+												</Button>
+											</Grid>
+										</Border>
+
+										<!-- Messages sent while a turn runs -->
+										<Border Classes="QueuedMessageStrip"
+												IsVisible="{Binding HasQueuedAgentMessages}">
+											<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+												<Viewbox Grid.Column="0" Width="13" Height="13" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconClock}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
+												<TextBlock Grid.Column="1"
+														   Text="{Binding QueuedAgentMessagesText}"
+														   FontSize="12"
+														   Foreground="{DynamicResource TextSecondaryBrush}"
+														   VerticalAlignment="Center"
+														   TextTrimming="CharacterEllipsis"/>
+												<Button Grid.Column="2"
+														Classes="CompactAction"
+														ToolTip.Tip="{DynamicResource Lang.Chat.Composer.ClearQueuedTip}"
+														Command="{Binding ClearQueuedAgentMessagesCommand}">
+													<TextBlock Text="{DynamicResource Lang.Common.Cancel}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+												</Button>
+											</Grid>
+										</Border>
+									</StackPanel>
 
 									<!-- Prompt -->
 									<!-- Enter sends and Shift+Enter adds a line; MainWindow handles keys before the TextBox does -->
@@ -1279,7 +1325,7 @@
 											 Text="{Binding CommandInputText, Mode=TwoWay}"/>
 
 									<!-- Toolbar -->
-									<Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="6">
+									<Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
 										<Button Grid.Column="0"
 												Classes="IconButton"
 												Width="32" Height="32"
@@ -1311,36 +1357,7 @@
 												</DataTemplate>
 											</ComboBox.ItemTemplate>
 										</ComboBox>
-										<StackPanel Grid.Column="3"
-													x:Name="VoiceStatusPanel"
-													Orientation="Horizontal"
-													Spacing="6"
-													VerticalAlignment="Center"
-													Margin="0,0,4,0"
-													IsVisible="{Binding IsVoiceStatusVisible}">
-											<Ellipse Width="6" Height="6" Fill="{Binding VoiceStatusColor}" VerticalAlignment="Center"/>
-											<TextBlock Text="{Binding VoiceStatusText}"
-													   FontSize="11"
-													   MaxWidth="260"
-													   TextTrimming="CharacterEllipsis"
-													   Foreground="{DynamicResource TextSecondaryBrush}"
-													   VerticalAlignment="Center"/>
-											<ProgressBar Classes="VoiceMeter"
-														 Minimum="0"
-														 Maximum="1"
-														 Value="{Binding VoiceMeterValue}"
-														 Foreground="{Binding VoiceStatusColor}"
-														 IsVisible="{Binding IsVoiceMeterVisible}"/>
-											<Button Classes="IconButton CompactIconButton"
-													Background="Transparent"
-													BorderThickness="0"
-													ToolTip.Tip="{DynamicResource Lang.Voice.Cancel}"
-													IsVisible="{Binding IsVoiceCancelVisible}"
-													Command="{Binding CancelVoiceCommand}">
-												<Viewbox Width="12" Height="12"><Path Classes="Icon" Data="{StaticResource IconX}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
-											</Button>
-										</StackPanel>
-										<Button Grid.Column="4"
+										<Button Grid.Column="3"
 												x:Name="TalkButton"
 												Classes="IconButton TalkButton"
 												Classes.listening="{Binding IsVoiceListening}"
@@ -1353,14 +1370,14 @@
 												Command="{Binding TalkCommand}">
 											<Viewbox Width="17" Height="17"><Path Classes="Icon" Data="{StaticResource IconMic}"/></Viewbox>
 										</Button>
-										<Button Grid.Column="5"
+										<Button Grid.Column="4"
 												Classes="SendButton"
 												ToolTip.Tip="{DynamicResource Lang.Chat.Composer.Send}"
 												IsVisible="{Binding IsSendVisible}"
 												Command="{Binding SubmitCommand}">
 											<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconArrowUp}"/></Viewbox>
 										</Button>
-										<Button Grid.Column="5"
+										<Button Grid.Column="4"
 												Classes="SendButton"
 												ToolTip.Tip="{DynamicResource Lang.Chat.Composer.Stop}"
 												IsVisible="{Binding IsAgentTurnRunning}"
