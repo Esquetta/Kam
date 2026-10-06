@@ -63,7 +63,6 @@
   "Settings.Voice.Recognition": "Speech recognition",
   "Settings.Voice.RecognitionDesc": "How Kam turns what you say into text",
   "Settings.Voice.SpokenLanguage": "Spoken language",
-  "Settings.Voice.Language.Interface": "Same as interface",
   "Settings.Voice.Language.Auto": "Detect automatically",
   "Settings.Voice.Engine": "Recognition engine",
   "Settings.Voice.Engine.Local": "On this computer (Whisper)",

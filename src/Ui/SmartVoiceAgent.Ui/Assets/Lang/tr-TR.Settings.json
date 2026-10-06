@@ -63,7 +63,6 @@
   "Settings.Voice.Recognition": "Konuşma tanıma",
   "Settings.Voice.RecognitionDesc": "Kam'ın söylediklerinizi nasıl yazıya dökeceği",
   "Settings.Voice.SpokenLanguage": "Konuşma dili",
-  "Settings.Voice.Language.Interface": "Arayüz diliyle aynı",
   "Settings.Voice.Language.Auto": "Otomatik algıla",
   "Settings.Voice.Engine": "Tanıma motoru",
   "Settings.Voice.Engine.Local": "Bu bilgisayarda (Whisper)",

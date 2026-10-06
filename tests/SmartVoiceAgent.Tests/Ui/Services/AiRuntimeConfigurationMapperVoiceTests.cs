@@ -21,7 +21,7 @@ public sealed class AiRuntimeConfigurationMapperVoiceTests : IDisposable
 
         var overrides = AiRuntimeConfigurationMapper.CreateVoiceOverrides(settings);
 
-        overrides.Should().Contain("Voice:Language", "en");
+        overrides.Should().Contain("Voice:Language", "auto");
         overrides.Should().Contain("Voice:SpeechEngine", "Local");
         overrides.Should().Contain("Voice:LocalModel", "base");
         overrides.Should().Contain("Voice:WakeWord", "Hey Kam");
@@ -36,10 +36,10 @@ public sealed class AiRuntimeConfigurationMapperVoiceTests : IDisposable
     [InlineData("tr", "en-US", "tr")]
     [InlineData("EN", "tr-TR", "en")]
     [InlineData("auto", "tr-TR", "auto")]
-    [InlineData("", "tr-TR", "tr")]
-    [InlineData("", "en-US", "en")]
-    [InlineData(" ", "tr", "tr")]
-    public void CreateVoiceOverrides_SpokenLanguage_FollowsVoiceThenInterfaceLanguage(
+    [InlineData("", "tr-TR", "auto")]
+    [InlineData("", "en-US", "auto")]
+    [InlineData(" ", "tr", "auto")]
+    public void CreateVoiceOverrides_SpokenLanguage_IsTheChosenLanguageOrDetected(
         string voiceLanguage,
         string interfaceLanguage,
         string expected)
@@ -53,7 +53,7 @@ public sealed class AiRuntimeConfigurationMapperVoiceTests : IDisposable
     }
 
     [Fact]
-    public void CreateVoiceOverrides_WithoutInterfaceLanguage_UsesTheSystemLanguage()
+    public void ResolveInterfaceLanguage_WithoutInterfaceLanguage_UsesTheSystemLanguage()
     {
         using var settings = new JsonSettingsService(_settingsDirectory);
         settings.VoiceLanguage = string.Empty;
@@ -62,10 +62,11 @@ public sealed class AiRuntimeConfigurationMapperVoiceTests : IDisposable
         try
         {
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("tr-TR");
-            AiRuntimeConfigurationMapper.CreateVoiceOverrides(settings).Should().Contain("Voice:Language", "tr");
+            AiRuntimeConfigurationMapper.ResolveInterfaceLanguage(settings).Should().Be("tr");
+            AiRuntimeConfigurationMapper.CreateVoiceOverrides(settings).Should().Contain("Voice:Language", "auto");
 
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("fr-FR");
-            AiRuntimeConfigurationMapper.CreateVoiceOverrides(settings).Should().Contain("Voice:Language", "en");
+            AiRuntimeConfigurationMapper.ResolveInterfaceLanguage(settings).Should().Be("en");
         }
         finally
         {

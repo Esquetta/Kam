@@ -1676,7 +1676,6 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             var options = new List<VoiceOption>
             {
-                new(string.Empty, static () => Loc.Get("Settings.Voice.Language.Interface")),
                 new(AiRuntimeConfigurationMapper.AutoSpokenLanguage, static () => Loc.Get("Settings.Voice.Language.Auto")),
                 new("tr", static () => "Türkçe"),
                 new("en", static () => "English")
@@ -1711,7 +1710,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         private void InitializeSpeechRecognitionSettings()
         {
-            var savedLanguage = _settingsService.VoiceLanguage?.Trim() ?? string.Empty;
+            // Nothing saved means detect automatically.
+            var savedLanguage = _settingsService.VoiceLanguage?.Trim() is { Length: > 0 } language
+                ? language
+                : AiRuntimeConfigurationMapper.AutoSpokenLanguage;
             _voiceLanguageOptions = CreateVoiceLanguageOptions(savedLanguage);
             _selectedVoiceLanguage = _voiceLanguageOptions.First(option =>
                 option.Value.Equals(savedLanguage, StringComparison.OrdinalIgnoreCase));
@@ -1971,8 +1973,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public bool CanPreviewSpeech => CanUseSpeechOutput && !_isPreviewingSpeech;
 
         /// <summary>
-        /// Gets the two-letter language replies are spoken in: the chosen spoken language, or the interface
-        /// language when it follows the interface or is detected automatically.
+        /// Gets the two-letter language the preview is spoken in: the chosen spoken language, or the interface
+        /// language when the spoken language is detected automatically.
         /// </summary>
         public string EffectiveSpokenLanguage
         {
@@ -1980,7 +1982,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 var language = AiRuntimeConfigurationMapper.ResolveSpokenLanguage(_settingsService);
                 return language == AiRuntimeConfigurationMapper.AutoSpokenLanguage
-                    ? LocalizationService.Instance.CurrentLanguage.Split('-')[0]
+                    ? AiRuntimeConfigurationMapper.ResolveInterfaceLanguage(_settingsService)
                     : language;
             }
         }

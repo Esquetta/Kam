@@ -18,19 +18,16 @@ public sealed class SettingsViewModelVoiceTests : IDisposable
         using var settings = new JsonSettingsService(_settingsDirectory);
         using var viewModel = new SettingsViewModel(settings);
 
-        viewModel.VoiceLanguageOptions.Select(option => option.Value).Should().Equal("", "auto", "tr", "en");
+        viewModel.VoiceLanguageOptions.Select(option => option.Value).Should().Equal("auto", "tr", "en");
         viewModel.VoiceLanguageOptions.Select(option => option.Label)
-            .Should().Equal("Same as interface", "Detect automatically", "Türkçe", "English");
-        viewModel.SelectedVoiceLanguage!.Value.Should().BeEmpty();
+            .Should().Equal("Detect automatically", "Türkçe", "English");
+        viewModel.SelectedVoiceLanguage!.Value.Should().Be("auto");
 
         viewModel.SelectedVoiceLanguage = viewModel.VoiceLanguageOptions.Single(option => option.Value == "tr");
         settings.VoiceLanguage.Should().Be("tr");
 
         viewModel.SelectedVoiceLanguage = viewModel.VoiceLanguageOptions.Single(option => option.Value == "auto");
         settings.VoiceLanguage.Should().Be("auto");
-
-        viewModel.SelectedVoiceLanguage = viewModel.VoiceLanguageOptions[0];
-        settings.VoiceLanguage.Should().BeEmpty();
     }
 
     [Fact]
@@ -41,7 +38,7 @@ public sealed class SettingsViewModelVoiceTests : IDisposable
         using var viewModel = new SettingsViewModel(settings);
 
         viewModel.SelectedVoiceLanguage!.Value.Should().Be("de");
-        viewModel.VoiceLanguageOptions.Should().HaveCount(5);
+        viewModel.VoiceLanguageOptions.Should().HaveCount(4);
         settings.VoiceLanguage.Should().Be("de");
     }
 

@@ -73,8 +73,10 @@ public static class AiRuntimeConfigurationMapper
     }
 
     /// <summary>
-    /// Returns the spoken language speech services use: the language chosen for voice (such as <c>tr</c> or
-    /// <c>auto</c>), or the two-letter code of the interface language when voice follows the interface.
+    /// Returns the spoken language speech services use: the language chosen for voice (such as <c>tr</c>),
+    /// or <c>auto</c> so speech recognition detects it. The interface language is not a reliable guess:
+    /// people often keep an English interface and speak another language, and a fixed language makes Whisper
+    /// translate speech into it.
     /// </summary>
     /// <param name="settings">The saved settings.</param>
     public static string ResolveSpokenLanguage(ISettingsService settings)
@@ -82,12 +84,19 @@ public static class AiRuntimeConfigurationMapper
         ArgumentNullException.ThrowIfNull(settings);
 
         var voiceLanguage = settings.VoiceLanguage?.Trim();
-        if (!string.IsNullOrEmpty(voiceLanguage))
-        {
-            return voiceLanguage.Equals(AutoSpokenLanguage, StringComparison.OrdinalIgnoreCase)
+        return string.IsNullOrEmpty(voiceLanguage)
+            || voiceLanguage.Equals(AutoSpokenLanguage, StringComparison.OrdinalIgnoreCase)
                 ? AutoSpokenLanguage
                 : voiceLanguage.ToLowerInvariant();
-        }
+    }
+
+    /// <summary>
+    /// Returns the two-letter code of the interface language, or of the system language when none is saved.
+    /// </summary>
+    /// <param name="settings">The saved settings.</param>
+    public static string ResolveInterfaceLanguage(ISettingsService settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
 
         var interfaceLanguage = string.IsNullOrWhiteSpace(settings.Language)
             ? LocalizationService.ResolveDefault(CultureInfo.CurrentUICulture)
