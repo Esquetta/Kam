@@ -517,7 +517,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
         return $"{ModelProviderProfileSecretPrefix}{profileId}:ApiKey";
     }
 
-    private static string GetDefaultSettingsDirectory()
+    internal static string GetDefaultSettingsDirectory()
     {
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         return Path.Combine(appData, "SmartVoiceAgent");

@@ -29,6 +29,12 @@ public class VoiceCommandService : IDisposable
     public event EventHandler<string>? OnTranscriptionResult;
     public event EventHandler<string>? OnError;
 
+    /// <summary>
+    /// Gets or sets a handler that takes a transcribed command, such as the agent chat. When it returns
+    /// <c>true</c> the command is handled and does not go to the legacy command input.
+    /// </summary>
+    public Func<string, bool>? CommandRouter { get; set; }
+
     public bool IsListeningForWakeWord => _wakeWordCts != null && !_wakeWordCts.IsCancellationRequested;
     public bool IsRecording => _isRecording;
 
@@ -297,9 +303,12 @@ public class VoiceCommandService : IDisposable
                 _uiLogService.Log($"🎤 Voice command: '{result.Text}' (Confidence: {result.Confidence:P0})");
                 
                 OnTranscriptionResult?.Invoke(this, result.Text);
-                
-                // Submit to command input service
-                _commandInputService.SubmitCommand(result.Text);
+
+                // The agent chat takes the command when it is running; otherwise use the legacy planner.
+                if (CommandRouter?.Invoke(result.Text) != true)
+                {
+                    _commandInputService.SubmitCommand(result.Text);
+                }
             }
             else if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
             {

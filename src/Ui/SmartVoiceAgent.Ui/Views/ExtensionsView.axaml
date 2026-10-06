@@ -1,0 +1,293 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SmartVoiceAgent.Ui.ViewModels.PageModels"
+             x:Class="SmartVoiceAgent.Ui.Views.ExtensionsView"
+             x:DataType="vm:ExtensionsViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Border.ExtensionRow">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="14,12"/>
+        </Style>
+        <Style Selector="TextBlock.RowTitle">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.ErrorText">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentErrorBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style Selector="TextBlock.EmptyText">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,4,0,0"/>
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Classes="WorkbenchPage" Margin="32,28,32,40" MaxWidth="860">
+
+            <!-- Header -->
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="{Binding Title}" Classes="PageTitle"/>
+                    <TextBlock Text="Give the agent new tools and know-how: MCP servers, skills, plugins and slash commands."
+                               Classes="PageSubtitle"/>
+                    <TextBlock Text="{Binding SummaryText}" Classes="Caption"/>
+                </StackPanel>
+                <Button Grid.Column="1"
+                        Classes="SecondaryAction"
+                        VerticalAlignment="Top"
+                        Command="{Binding RefreshCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
+                        <TextBlock Text="Refresh"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <Border Classes="Surface"
+                    Padding="14,10"
+                    IsVisible="{Binding HasMessage}">
+                <TextBlock Text="{Binding Message}" Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}"/>
+            </Border>
+
+            <!-- MCP servers -->
+            <Border Classes="WorkbenchSection">
+                <StackPanel Spacing="14">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <Border Classes="IconBadge">
+                            <Viewbox><Path Classes="Icon" Data="{StaticResource IconPlug}" Stroke="{DynamicResource AccentBrush}" Fill="Transparent"/></Viewbox>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center" Spacing="2">
+                            <TextBlock Text="MCP servers" Classes="SectionTitle"/>
+                            <TextBlock Text="Same format as Claude Desktop, Claude Code and Cursor. Tools appear as mcp__server__tool."
+                                       Classes="Caption"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Button Classes="SecondaryAction" Command="{Binding OpenMcpConfigCommand}" Content="Open mcp.json"/>
+                            <Button Classes="SecondaryAction" Command="{Binding ReloadServersCommand}" Content="Reload"/>
+                            <Button Classes="PrimaryAction" Command="{Binding ConnectServersCommand}" Content="Connect"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Classes="EmptyText"
+                               IsVisible="{Binding HasNoMcpServers}"
+                               Text="No servers yet. Open mcp.json, paste a server under mcpServers, then press Reload. Use ${secret:NAME} or ${env:NAME} for keys."/>
+
+                    <ItemsControl ItemsSource="{Binding McpServers}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Spacing="8"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:McpServerItemViewModel">
+                                <Border Classes="ExtensionRow">
+                                    <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,Auto">
+                                        <StackPanel Spacing="3">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="{Binding Name}" Classes="RowTitle"/>
+                                                <TextBlock Text="{Binding SourceText}" Classes="Caption" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Detail}" Classes="Caption Mono" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+                                        </StackPanel>
+                                        <Border Grid.Column="1"
+                                                Classes="Pill"
+                                                Classes.Success="{Binding IsReady}"
+                                                Classes.Danger="{Binding IsFailed}"
+                                                Classes.Accent="{Binding IsStarting}"
+                                                Margin="12,0">
+                                            <TextBlock Text="{Binding StatusText}"/>
+                                        </Border>
+                                        <Button Grid.Column="2"
+                                                Classes="IconAction"
+                                                ToolTip.Tip="Restart"
+                                                Command="{Binding RestartCommand}">
+                                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
+                                        </Button>
+                                        <TextBlock Grid.Row="1"
+                                                   Grid.ColumnSpan="3"
+                                                   Classes="ErrorText"
+                                                   Margin="0,8,0,0"
+                                                   IsVisible="{Binding HasError}"
+                                                   Text="{Binding Error}"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- Plugins -->
+            <Border Classes="WorkbenchSection">
+                <StackPanel Spacing="14">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <Border Classes="IconBadge">
+                            <Viewbox><Path Classes="Icon" Data="{StaticResource IconPuzzle}" Stroke="{DynamicResource AccentBrush}" Fill="Transparent"/></Viewbox>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center" Spacing="2">
+                            <TextBlock Text="Plugins" Classes="SectionTitle"/>
+                            <TextBlock Text="Claude Code plugins work as they are: skills, commands and MCP servers in one folder."
+                                       Classes="Caption"/>
+                        </StackPanel>
+                        <Button Grid.Column="2" Classes="SecondaryAction" VerticalAlignment="Center"
+                                Command="{Binding OpenPluginsFolderCommand}" Content="Open folder"/>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <TextBox Text="{Binding PluginSource}"
+                                 PlaceholderText="Folder, https git URL or owner/repo (a marketplace installs all its plugins, turned off)"/>
+                        <Button Grid.Column="1" Classes="PrimaryAction" Command="{Binding InstallPluginCommand}"
+                                IsEnabled="{Binding !IsBusy}" Content="Install"/>
+                    </Grid>
+
+                    <TextBlock Classes="EmptyText" IsVisible="{Binding HasNoPlugins}" Text="No plugins installed."/>
+
+                    <ItemsControl ItemsSource="{Binding Plugins}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Spacing="8"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:ExtensionPluginItemViewModel">
+                                <Border Classes="ExtensionRow">
+                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                                        <StackPanel Spacing="3">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="{Binding Name}" Classes="RowTitle"/>
+                                                <TextBlock Text="{Binding VersionText}" Classes="Caption" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Description}" Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding ComponentsText}" Classes="Caption"/>
+                                            <TextBlock Text="{Binding Error}" Classes="ErrorText" IsVisible="{Binding HasError}"/>
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="1"
+                                                      IsChecked="{Binding IsEnabled}"
+                                                      OnContent="On"
+                                                      OffContent="Off"
+                                                      VerticalAlignment="Center"/>
+                                        <Button Grid.Column="2" Classes="IconAction" ToolTip.Tip="Open folder"
+                                                VerticalAlignment="Center" Command="{Binding OpenFolderCommand}">
+                                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconFolder}"/></Viewbox>
+                                        </Button>
+                                        <Button Grid.Column="3" Classes="IconAction" ToolTip.Tip="Remove plugin"
+                                                VerticalAlignment="Center" Command="{Binding UninstallCommand}">
+                                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconTrash}"/></Viewbox>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- Skills -->
+            <Border Classes="WorkbenchSection">
+                <StackPanel Spacing="14">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <Border Classes="IconBadge">
+                            <Viewbox><Path Classes="Icon" Data="{StaticResource IconSparkles}" Stroke="{DynamicResource AccentBrush}" Fill="Transparent"/></Viewbox>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center" Spacing="2">
+                            <TextBlock Text="Skills" Classes="SectionTitle"/>
+                            <TextBlock Text="Folders with a SKILL.md. The agent sees each name and description, and loads the instructions only when a task needs them."
+                                       Classes="Caption"/>
+                        </StackPanel>
+                        <Button Grid.Column="2" Classes="SecondaryAction" VerticalAlignment="Center"
+                                Command="{Binding OpenSkillsFolderCommand}" Content="Open folder"/>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <TextBox Text="{Binding SkillSource}" PlaceholderText="Folder that contains SKILL.md"/>
+                        <Button Grid.Column="1" Classes="PrimaryAction" Command="{Binding InstallSkillCommand}" Content="Install"/>
+                    </Grid>
+
+                    <TextBlock Classes="EmptyText" IsVisible="{Binding HasNoSkills}"
+                               Text="No skills yet. Install one above, or add .kam/skills or .claude/skills to your workspace."/>
+
+                    <ItemsControl ItemsSource="{Binding Skills}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Spacing="8"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:AgentSkillItemViewModel">
+                                <Border Classes="ExtensionRow">
+                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                                        <StackPanel Spacing="3">
+                                            <TextBlock Text="{Binding Name}" Classes="RowTitle Mono"/>
+                                            <TextBlock Text="{Binding Description}" Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                        </StackPanel>
+                                        <Border Grid.Column="1" Classes="Pill" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding SourceText}"/>
+                                        </Border>
+                                        <Button Grid.Column="2" Classes="IconAction" ToolTip.Tip="Remove skill"
+                                                VerticalAlignment="Center" IsVisible="{Binding CanUninstall}"
+                                                Command="{Binding UninstallCommand}">
+                                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconTrash}"/></Viewbox>
+                                        </Button>
+                                        <Button Grid.Column="3" Classes="IconAction" ToolTip.Tip="Open folder"
+                                                VerticalAlignment="Center" Command="{Binding OpenFolderCommand}">
+                                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconFolder}"/></Viewbox>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- Commands -->
+            <Border Classes="WorkbenchSection">
+                <StackPanel Spacing="14">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <Border Classes="IconBadge">
+                            <Viewbox><Path Classes="Icon" Data="{StaticResource IconWrench}" Stroke="{DynamicResource AccentBrush}" Fill="Transparent"/></Viewbox>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center" Spacing="2">
+                            <TextBlock Text="Slash commands" Classes="SectionTitle"/>
+                            <TextBlock Text="Markdown prompts you run from chat. $ARGUMENTS is replaced with what you type after the command."
+                                       Classes="Caption"/>
+                        </StackPanel>
+                        <Button Grid.Column="2" Classes="SecondaryAction" VerticalAlignment="Center"
+                                Command="{Binding OpenCommandsFolderCommand}" Content="Open folder"/>
+                    </Grid>
+
+                    <TextBlock Classes="EmptyText" IsVisible="{Binding HasNoCommands}"
+                               Text="No commands yet. Save a .md file in the commands folder; review.md becomes /review."/>
+
+                    <ItemsControl ItemsSource="{Binding Commands}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Spacing="8"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:AgentCommandItemViewModel">
+                                <Border Classes="ExtensionRow">
+                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                        <StackPanel Spacing="3">
+                                            <TextBlock Text="{Binding Usage}" Classes="RowTitle Mono"/>
+                                            <TextBlock Text="{Binding Description}" Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                        </StackPanel>
+                                        <Border Grid.Column="1" Classes="Pill" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding SourceText}"/>
+                                        </Border>
+                                        <Button Grid.Column="2" Classes="IconAction" ToolTip.Tip="Open file"
+                                                VerticalAlignment="Center" Command="{Binding OpenFileCommand}">
+                                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconFile}"/></Viewbox>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

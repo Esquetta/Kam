@@ -156,7 +156,13 @@ namespace SmartVoiceAgent.Ui
                     _mainViewModel.SetAgentRuntime(
                         services.GetRequiredService<IAgentRuntime>(),
                         services.GetRequiredService<IToolPermissionService>(),
-                        services.GetRequiredService<IAgentSessionStore>());
+                        services.GetRequiredService<IAgentSessionStore>(),
+                        services.GetService<IAgentCommandCatalog>());
+                    _mainViewModel.SetExtensionServices(
+                        services.GetService<IMcpHost>(),
+                        services.GetService<IAgentPluginCatalog>(),
+                        services.GetService<IAgentSkillCatalog>(),
+                        services.GetService<IAgentCommandCatalog>());
                 }
 
                 // Setup Voice Command Service
@@ -275,6 +281,10 @@ namespace SmartVoiceAgent.Ui
 
                     // Register Smart Voice Agent services
                     services.AddSmartVoiceAgent(configuration);
+
+                    // Lets ${secret:NAME} in mcp.json read secrets saved in Settings.
+                    services.AddSingleton<ISecretValueProvider>(_ =>
+                        new JsonFileSettingsSecretStore(JsonSettingsService.GetDefaultSettingsDirectory()));
 
                     // Register our custom UI Log Service (replaces the dummy one)
                     services.AddSingleton<IUiLogService>(sp => new UiLogService());

@@ -5,13 +5,14 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using SmartVoiceAgent.Core.Interfaces;
 
 namespace SmartVoiceAgent.Ui.Services;
 
 /// <summary>
 /// File-backed local secret store for settings values that must not be written to settings.json.
 /// </summary>
-public sealed class JsonFileSettingsSecretStore : ISettingsSecretStore
+public sealed class JsonFileSettingsSecretStore : ISettingsSecretStore, ISecretValueProvider
 {
     private const string DpapiPrefix = "dpapi:";
     private const string AesGcmPrefix = "aesgcm:";

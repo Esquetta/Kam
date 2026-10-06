@@ -20,6 +20,14 @@ public sealed class SkillToolProvider : IAgentToolProvider
         "agents.run"
     };
 
+    // Imported SKILL.md skills are instructions, so the agent loads them with load_skill instead of
+    // running them through a separate model call.
+    private static readonly HashSet<string> InstructionExecutorTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "local",
+        "skills.sh"
+    };
+
     private readonly ISkillRegistry _registry;
     private readonly ISkillExecutionPipeline _pipeline;
     private readonly IEnumerable<ISkillExecutor> _executors;
@@ -47,6 +55,7 @@ public sealed class SkillToolProvider : IAgentToolProvider
         var tools = _registry.GetAll()
             .Where(manifest => manifest.Enabled && !manifest.ReviewRequired)
             .Where(manifest => !ExcludedSkillIds.Contains(manifest.Id))
+            .Where(manifest => !InstructionExecutorTypes.Contains(manifest.ExecutorType ?? string.Empty))
             .Where(manifest => executors.Any(executor => executor.CanExecute(manifest.Id)))
             .OrderBy(manifest => manifest.Id, StringComparer.Ordinal)
             .Select(manifest => new AgentToolDescriptor(

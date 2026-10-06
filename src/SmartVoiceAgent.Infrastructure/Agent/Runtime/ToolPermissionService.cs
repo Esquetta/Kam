@@ -6,7 +6,7 @@ using SmartVoiceAgent.Core.Models.Agents;
 namespace SmartVoiceAgent.Infrastructure.Agent.Runtime;
 
 /// <summary>
-/// Applies the approval mode and the user's "always allow" rules, saved in
+/// Applies the user's deny rules, then allow rules, then the approval mode. Saved in
 /// <c>%AppData%/Kam/agent-permissions.json</c>.
 /// </summary>
 public sealed class ToolPermissionService : IToolPermissionService
@@ -61,13 +61,25 @@ public sealed class ToolPermissionService : IToolPermissionService
     }
 
     /// <inheritdoc />
-    public IReadOnlyCollection<string> AllowedTools
+    public IReadOnlyCollection<string> AllowRules
     {
         get
         {
             lock (_gate)
             {
-                return _state.AllowedTools.OrderBy(name => name, StringComparer.Ordinal).ToArray();
+                return _state.AllowedTools.OrderBy(rule => rule, StringComparer.Ordinal).ToArray();
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyCollection<string> DenyRules
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _state.DeniedTools.OrderBy(rule => rule, StringComparer.Ordinal).ToArray();
             }
         }
     }
@@ -77,7 +89,12 @@ public sealed class ToolPermissionService : IToolPermissionService
     {
         lock (_gate)
         {
-            if (_state.AllowedTools.Contains(tool.Name))
+            if (Matches(_state.DeniedTools, tool.Name, argumentsJson, isDenyRule: true))
+            {
+                return ToolPermissionDecision.Deny;
+            }
+
+            if (Matches(_state.AllowedTools, tool.Name, argumentsJson, isDenyRule: false))
             {
                 return ToolPermissionDecision.Allow;
             }
@@ -93,11 +110,19 @@ public sealed class ToolPermissionService : IToolPermissionService
     }
 
     /// <inheritdoc />
-    public void AlwaysAllow(string toolName)
+    public string SuggestAllowRule(AgentToolDescriptor tool, string argumentsJson) =>
+        ToolPermissionRule.Suggest(tool.Name, argumentsJson);
+
+    /// <inheritdoc />
+    public void AddRule(string rule, bool allow)
     {
+        var parsed = ToolPermissionRule.TryParse(rule)
+            ?? throw new ArgumentException($"'{rule}' is not a permission rule.", nameof(rule));
+
         lock (_gate)
         {
-            if (_state.AllowedTools.Add(toolName))
+            (allow ? _state.DeniedTools : _state.AllowedTools).Remove(parsed.Text);
+            if ((allow ? _state.AllowedTools : _state.DeniedTools).Add(parsed.Text))
             {
                 Save();
             }
@@ -105,16 +130,20 @@ public sealed class ToolPermissionService : IToolPermissionService
     }
 
     /// <inheritdoc />
-    public void Revoke(string toolName)
+    public void RemoveRule(string rule)
     {
         lock (_gate)
         {
-            if (_state.AllowedTools.Remove(toolName))
+            var removed = _state.AllowedTools.Remove(rule.Trim()) | _state.DeniedTools.Remove(rule.Trim());
+            if (removed)
             {
                 Save();
             }
         }
     }
+
+    private static bool Matches(IEnumerable<string> rules, string toolName, string argumentsJson, bool isDenyRule) =>
+        rules.Any(rule => ToolPermissionRule.TryParse(rule)?.Matches(toolName, argumentsJson, isDenyRule) == true);
 
     private void Save()
     {
@@ -152,7 +181,8 @@ public sealed class ToolPermissionService : IToolPermissionService
                 return null;
             }
 
-            state.AllowedTools = new HashSet<string>(state.AllowedTools, StringComparer.Ordinal);
+            state.AllowedTools = new HashSet<string>(state.AllowedTools ?? [], StringComparer.Ordinal);
+            state.DeniedTools = new HashSet<string>(state.DeniedTools ?? [], StringComparer.Ordinal);
             return state;
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
@@ -170,6 +200,9 @@ public sealed class ToolPermissionService : IToolPermissionService
     {
         public ApprovalMode Mode { get; set; } = ApprovalMode.Ask;
 
+        // Allow rules; the name predates argument patterns and is kept so saved files still load.
         public HashSet<string> AllowedTools { get; set; } = new(StringComparer.Ordinal);
+
+        public HashSet<string> DeniedTools { get; set; } = new(StringComparer.Ordinal);
     }
 }

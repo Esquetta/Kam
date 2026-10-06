@@ -20,6 +20,9 @@ public sealed class AgentRuntime : IAgentRuntime
     private const string DeclinedResult =
         "The user declined this tool call. Do not retry it; continue without it or ask the user how to proceed.";
 
+    private const string BlockedResult =
+        "Blocked: the user's permission rules deny this call. Do not retry it; continue without it or tell the user.";
+
     private const string NotRunResult = "Not run: the turn was stopped before this call finished.";
 
     private readonly Func<IChatClient> _chatClientFactory;
@@ -122,7 +125,7 @@ public sealed class AgentRuntime : IAgentRuntime
             CloseDanglingToolCalls(history);
 
             var chatClient = _chatClientFactory();
-            var systemPrompt = AgentSystemPrompt.Build(_clock(), tools.Count);
+            var systemPrompt = AgentSystemPrompt.Build(_clock(), tools.Count, sections: CollectPromptSections(scope.ServiceProvider));
             var toolTokens = AgentContextWindow.EstimateTokens(tools);
             var usage = new TurnUsage();
 
@@ -365,12 +368,21 @@ public sealed class AgentRuntime : IAgentRuntime
             cancellationToken);
 
         var decision = _permissions.Evaluate(tool, argumentsJson);
+        if (decision == ToolPermissionDecision.Deny)
+        {
+            await events.WriteAsync(
+                new AgentToolCallCompleted(sessionId, call.CallId, tool.Name, false, "Blocked by a deny rule"),
+                cancellationToken);
+            return new FunctionResultContent(call.CallId, BlockedResult);
+        }
+
         if (decision == ToolPermissionDecision.Ask)
         {
-            var answer = await WaitForApprovalAsync(sessionId, call, tool, argumentsJson, events, cancellationToken);
+            var alwaysAllowRule = _permissions.SuggestAllowRule(tool, argumentsJson);
+            var answer = await WaitForApprovalAsync(sessionId, call, tool, argumentsJson, alwaysAllowRule, events, cancellationToken);
             if (answer.Approved && answer.AlwaysAllow)
             {
-                _permissions.AlwaysAllow(tool.Name);
+                _permissions.AddRule(alwaysAllowRule, allow: true);
             }
 
             decision = answer.Approved ? ToolPermissionDecision.Allow : ToolPermissionDecision.Deny;
@@ -417,6 +429,7 @@ public sealed class AgentRuntime : IAgentRuntime
         FunctionCallContent call,
         AgentToolDescriptor tool,
         string argumentsJson,
+        string alwaysAllowRule,
         ChannelWriter<AgentEvent> events,
         CancellationToken cancellationToken)
     {
@@ -435,7 +448,8 @@ public sealed class AgentRuntime : IAgentRuntime
                     tool.Name,
                     tool.DisplayName,
                     argumentsJson,
-                    tool.Risk),
+                    tool.Risk,
+                    alwaysAllowRule),
                 cancellationToken);
             return await pending.Task;
         }
@@ -443,6 +457,27 @@ public sealed class AgentRuntime : IAgentRuntime
         {
             _pendingApprovals.TryRemove(requestId, out _);
         }
+    }
+
+    private List<string> CollectPromptSections(IServiceProvider services)
+    {
+        var sections = new List<string>();
+        foreach (var contributor in services.GetServices<IAgentPromptContributor>())
+        {
+            try
+            {
+                if (contributor.GetPromptSection() is { Length: > 0 } section)
+                {
+                    sections.Add(section);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Prompt section from {Contributor} failed", contributor.GetType().Name);
+            }
+        }
+
+        return sections;
     }
 
     private static async Task<List<AgentToolDescriptor>> CollectToolsAsync(

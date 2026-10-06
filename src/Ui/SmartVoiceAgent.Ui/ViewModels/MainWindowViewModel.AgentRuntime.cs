@@ -102,9 +102,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public void SetAgentRuntime(
             IAgentRuntime agentRuntime,
             IToolPermissionService toolPermissions,
-            IAgentSessionStore sessionStore)
+            IAgentSessionStore sessionStore,
+            IAgentCommandCatalog? agentCommands = null)
         {
             _agentRuntime = agentRuntime;
+            _agentCommands = agentCommands;
             _toolPermissions = toolPermissions;
             _agentSessionStore = sessionStore;
             _selectedApprovalMode = ApprovalModes.FirstOrDefault(option => option.Mode == toolPermissions.Mode) ?? ApprovalModes[0];
@@ -166,7 +168,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                         case AgentApprovalRequested approval:
                             if (steps.TryGetValue(approval.CallId, out var waiting))
                             {
-                                waiting.RequestApproval(approval.RequestId);
+                                waiting.RequestApproval(approval.RequestId, approval.AlwaysAllowRule);
                             }
 
                             AddLog($"TOOL_APPROVAL_NEEDED: {approval.ToolName}");

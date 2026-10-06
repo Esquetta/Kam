@@ -204,9 +204,18 @@ namespace SmartVoiceAgent.Ui.ViewModels
             Content += text;
         }
 
-        public void RequestApproval(string requestId)
+        /// <summary>Gets the tooltip for "Always allow", naming the rule it saves.</summary>
+        public string AlwaysAllowHint { get; private set; } = "Run this tool without asking from now on";
+
+        public void RequestApproval(string requestId, string? alwaysAllowRule = null)
         {
             _approvalRequestId = requestId;
+            if (!string.IsNullOrWhiteSpace(alwaysAllowRule))
+            {
+                AlwaysAllowHint = $"Stop asking for {alwaysAllowRule}";
+                this.RaisePropertyChanged(nameof(AlwaysAllowHint));
+            }
+
             ToolState = AgentToolStepState.AwaitingApproval;
         }
 

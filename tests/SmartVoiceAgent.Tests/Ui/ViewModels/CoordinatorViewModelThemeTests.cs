@@ -21,7 +21,7 @@ public sealed class CoordinatorViewModelThemeTests
 
     private static Color BrushColor(IBrush brush)
     {
-        brush.Should().BeOfType<SolidColorBrush>();
-        return ((SolidColorBrush)brush).Color;
+        brush.Should().BeAssignableTo<ISolidColorBrush>();
+        return ((ISolidColorBrush)brush).Color;
     }
 }

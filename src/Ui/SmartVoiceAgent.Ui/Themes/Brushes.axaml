@@ -23,6 +23,11 @@
     <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource Accent}" />
     <SolidColorBrush x:Key="AccentStrongBrush" Color="{DynamicResource AccentStrong}" />
     <SolidColorBrush x:Key="AccentStrongHoverBrush" Color="{DynamicResource AccentStrongHover}" />
+
+    <!-- Fluent's light theme resolves the switch fill before the accent override, so set it directly -->
+    <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="{DynamicResource AccentStrong}" />
+    <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="{DynamicResource AccentStrongHover}" />
+    <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="{DynamicResource AccentStrong}" />
     <SolidColorBrush x:Key="AccentSubtleBrush" Color="{DynamicResource AccentSubtle}" />
     <SolidColorBrush x:Key="AccentOnBrush" Color="{DynamicResource AccentOn}" />
 

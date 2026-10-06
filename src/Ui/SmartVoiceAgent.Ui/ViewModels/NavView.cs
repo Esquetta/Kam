@@ -6,6 +6,7 @@
         Diagnostics,
         Network,
         Plugins,
+        Extensions,
         Integrations,
         Settings
     }

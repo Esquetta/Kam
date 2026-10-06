@@ -11,6 +11,8 @@ using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Core.Models.Agents;
 using SmartVoiceAgent.Infrastructure.Agent.Agents;
 using SmartVoiceAgent.Infrastructure.Agent.Runtime;
+using SmartVoiceAgent.Infrastructure.Agent.Mcp;
+using SmartVoiceAgent.Infrastructure.Agent.Extensions;
 using SmartVoiceAgent.Infrastructure.Agent.Conf;
 using SmartVoiceAgent.Infrastructure.Agent.Functions;
 using SmartVoiceAgent.Infrastructure.Agent.Tools;
@@ -161,6 +163,44 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IToolPermissionService, ToolPermissionService>();
         services.AddSingleton<IAgentSessionStore, JsonAgentSessionStore>();
         services.AddScoped<IAgentToolProvider, SkillToolProvider>();
+
+        // Extensions in %AppData%/Kam: plugins, Agent Skills and Markdown slash commands.
+        Func<string?> WorkspaceRoot(IServiceProvider sp) => () =>
+        {
+            var coding = sp.GetRequiredService<IOptionsMonitor<CodingAgentOptions>>().CurrentValue;
+            return coding.IsEnabled ? coding.GetWorkspaceRootOrDefault() : null;
+        };
+        services.AddSingleton<IAgentPluginCatalog>(sp => new AgentPluginCatalog(
+            Path.Combine(ExtensionPaths.AppDataRoot, "plugins"),
+            Path.Combine(ExtensionPaths.AppDataRoot, "plugins.json"),
+            sp.GetService<ILogger<AgentPluginCatalog>>()));
+        services.AddSingleton<IAgentSkillCatalog>(sp => new AgentSkillCatalog(
+            Path.Combine(ExtensionPaths.AppDataRoot, "skills"),
+            sp.GetRequiredService<IAgentPluginCatalog>(),
+            sp.GetService<ISkillRegistry>(),
+            WorkspaceRoot(sp),
+            sp.GetService<ILogger<AgentSkillCatalog>>()));
+        services.AddSingleton<IAgentCommandCatalog>(sp => new AgentCommandCatalog(
+            Path.Combine(ExtensionPaths.AppDataRoot, "commands"),
+            sp.GetRequiredService<IAgentPluginCatalog>(),
+            WorkspaceRoot(sp)));
+        services.AddScoped<IAgentToolProvider, AgentSkillToolProvider>();
+        services.AddScoped<IAgentPromptContributor, AgentSkillPromptContributor>();
+
+        // MCP servers from %AppData%/Kam/mcp.json, plugins and the Todoist integration, started on first use.
+        // The user's own entries come first, so they win over a plugin server with the same name.
+        services.AddSingleton(sp => new UserMcpServerSource(
+            UserMcpServerSource.DefaultPath(),
+            sp.GetService<ILogger<UserMcpServerSource>>()));
+        services.AddSingleton<IMcpServerSource>(sp => sp.GetRequiredService<UserMcpServerSource>());
+        services.AddSingleton<IMcpServerSource, PluginMcpServerSource>();
+        services.AddSingleton<IMcpServerSource, TodoistMcpServerSource>();
+        services.AddSingleton<IMcpHost>(sp => new McpHost(
+            sp.GetServices<IMcpServerSource>(),
+            sp.GetRequiredService<UserMcpServerSource>().ConfigPath,
+            sp.GetService<ISecretValueProvider>(),
+            sp.GetService<ILoggerFactory>()));
+        services.AddScoped<IAgentToolProvider, McpToolProvider>();
         services.AddSingleton<IAgentRuntime>(sp =>
         {
             var chatClient = new Lazy<IChatClient>(() =>

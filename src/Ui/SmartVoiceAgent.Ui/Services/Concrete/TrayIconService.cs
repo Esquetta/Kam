@@ -34,6 +34,11 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
         public event EventHandler? ToggleVoiceRequested;
 
         /// <summary>
+        /// Raised when "New task" is clicked: open a new agent chat and show the window.
+        /// </summary>
+        public event EventHandler? NewTaskRequested;
+
+        /// <summary>
         /// Event raised when user requests to show about dialog
         /// </summary>
         public event EventHandler? AboutRequested;
@@ -115,7 +120,11 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
             _menu = new NativeMenu();
 
             _menu.Add(CreateItem("Open Kam", (_, _) => ShowWindowRequested?.Invoke(this, EventArgs.Empty)));
-            _menu.Add(CreateItem("New task", (_, _) => NavigateAndShow(NavView.Coordinator)));
+            _menu.Add(CreateItem("New task", (_, _) =>
+            {
+                NewTaskRequested?.Invoke(this, EventArgs.Empty);
+                ShowWindowRequested?.Invoke(this, EventArgs.Empty);
+            }));
 
             _voiceToggleItem = new NativeMenuItem
             {
@@ -128,6 +137,7 @@ namespace SmartVoiceAgent.Ui.Services.Concrete
 
             _menu.Add(new NativeMenuItemSeparator());
 
+            _menu.Add(CreateItem("Extensions", (_, _) => NavigateAndShow(NavView.Extensions)));
             _menu.Add(CreateItem("Skills", (_, _) => NavigateAndShow(NavView.Plugins)));
             _menu.Add(CreateItem("Diagnostics", (_, _) => NavigateAndShow(NavView.Diagnostics)));
             _menu.Add(CreateItem("Integrations", (_, _) => NavigateAndShow(NavView.Integrations)));
