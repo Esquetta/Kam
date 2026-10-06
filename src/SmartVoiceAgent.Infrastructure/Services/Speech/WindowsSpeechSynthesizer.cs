@@ -53,7 +53,7 @@ public sealed class WindowsSpeechSynthesizer : ISpeechSynthesizer
                     {
                         var id = (string)Get(token, "Id")!;
                         var name = (string)Call(token, "GetDescription", 0)!;
-                        var language = LanguageOf(Call(token, "GetAttribute", "Language") as string);
+                        var language = SapiLanguage.FromAttribute(Call(token, "GetAttribute", "Language") as string);
                         if (!voices.Any(voice => voice.Name == name))
                         {
                             voices.Add(new SpeechVoiceInfo(id, name, language));
@@ -96,29 +96,6 @@ public sealed class WindowsSpeechSynthesizer : ISpeechSynthesizer
         }
 
         await PlayAsync(audio, outputDeviceId, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Returns the two-letter language for a SAPI language attribute such as <c>41F</c> or <c>409;9</c>.
-    /// </summary>
-    /// <param name="attribute">The attribute value.</param>
-    public static string LanguageOf(string? attribute)
-    {
-        var first = attribute?.Split(';')[0].Trim();
-        if (string.IsNullOrEmpty(first)
-            || !int.TryParse(first, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var lcid))
-        {
-            return string.Empty;
-        }
-
-        try
-        {
-            return CultureInfo.GetCultureInfo(lcid).TwoLetterISOLanguageName;
-        }
-        catch (CultureNotFoundException)
-        {
-            return string.Empty;
-        }
     }
 
     private static byte[] Synthesize(string text, string? voiceId, int rate)
@@ -219,6 +196,35 @@ public sealed class WindowsSpeechSynthesizer : ISpeechSynthesizer
         if (comObject is not null && Marshal.IsComObject(comObject))
         {
             Marshal.FinalReleaseComObject(comObject);
+        }
+    }
+}
+
+/// <summary>
+/// Reads the language of a Windows speech voice.
+/// </summary>
+public static class SapiLanguage
+{
+    /// <summary>
+    /// Returns the two-letter language for a SAPI language attribute such as <c>41F</c> or <c>409;9</c>.
+    /// </summary>
+    /// <param name="attribute">The attribute value.</param>
+    public static string FromAttribute(string? attribute)
+    {
+        var first = attribute?.Split(';')[0].Trim();
+        if (string.IsNullOrEmpty(first)
+            || !int.TryParse(first, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var lcid))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            return CultureInfo.GetCultureInfo(lcid).TwoLetterISOLanguageName;
+        }
+        catch (CultureNotFoundException)
+        {
+            return string.Empty;
         }
     }
 }

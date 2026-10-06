@@ -1,3 +1,4 @@
+using SmartVoiceAgent.Infrastructure.Services.Voice;
 using System.Text.RegularExpressions;
 
 namespace SmartVoiceAgent.Infrastructure.Services;
@@ -13,8 +14,8 @@ public static partial class TranscriptCleaner
     /// </summary>
     public const string NoSpeechMessage = "No speech was recognized.";
 
-    private static readonly string[] s_inventedLines =
-    [
+    private static readonly HashSet<string> s_inventedKeys = new[]
+    {
         "altyazı m.k.",
         "altyazı m.k",
         "altyazı",
@@ -25,7 +26,7 @@ public static partial class TranscriptCleaner
         "thank you for watching",
         "subtitles by the amara.org community",
         "you"
-    ];
+    }.Select(WakePhraseMatcher.Key).ToHashSet(StringComparer.Ordinal);
 
     /// <summary>
     /// Returns the spoken text without tags and invented lines; empty when nothing was said.
@@ -40,8 +41,8 @@ public static partial class TranscriptCleaner
 
         var cleaned = Tag().Replace(text, " ");
         cleaned = Spaces().Replace(cleaned, " ").Trim();
-        var bare = cleaned.Trim(' ', '.', '!', '?', ',', '…', '-', '"').ToLowerInvariant();
-        return bare.Length == 0 || s_inventedLines.Contains(bare) ? string.Empty : cleaned;
+        var key = WakePhraseMatcher.Key(cleaned);
+        return key.Length == 0 || s_inventedKeys.Contains(key) ? string.Empty : cleaned;
     }
 
     [GeneratedRegex(@"\[[^\]]*\]|\([^)]*\)|\*[^*]*\*|♪+")]

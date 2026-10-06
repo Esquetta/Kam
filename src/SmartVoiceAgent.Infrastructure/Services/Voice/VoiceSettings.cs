@@ -154,8 +154,12 @@ public sealed record VoiceSettings
             return AutoLanguage;
         }
 
-        var code = value.Split('-', '_')[0].ToLowerInvariant();
-        return code.Length is 2 or 3 && code.All(char.IsAsciiLetterLower) ? code : AutoLanguage;
+        var parts = value.ToLowerInvariant().Split('-', '_');
+        var code = parts[0];
+        var valid = code.Length is 2 or 3
+            && code.All(char.IsAsciiLetterLower)
+            && parts.Skip(1).All(part => part.Length is >= 2 and <= 8 && part.All(char.IsAsciiLetterOrDigit));
+        return valid ? code : AutoLanguage;
     }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
