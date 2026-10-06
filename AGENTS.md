@@ -7,7 +7,8 @@
 **Smart Voice Agent** (also known as KAM Neural Core) is an advanced AI-powered voice assistant with a tool-calling agent, system control, and intelligent task management capabilities. It supports voice recognition, natural language processing, and can control system applications and devices.
 
 ### Key Features
-- **Voice Recognition & Processing**: Multi-platform voice input with STT (Speech-to-Text) providers (HuggingFace, OpenAI Whisper, Ollama)
+- **Voice**: push to talk, a local "Hey Kam" wake phrase and spoken replies; speech-to-text with local Whisper, an OpenAI-compatible API or HuggingFace
+- **Languages**: English and Turkish interface
 - **Agent Runtime**: one tool-calling agent loop over built-in skills, MCP servers, Agent Skills and plugins
 - **System Control**: Application management, device control (volume, brightness, WiFi, Bluetooth), power management
 - **Task Management**: Todoist integration via MCP (Model Context Protocol)
@@ -373,8 +374,9 @@ See `RESPONSIVE_DESIGN.md` for full details.
 ### Common Issues
 
 **Voice Recognition Not Working**
-- Check microphone permissions (Windows: Settings → Privacy → Microphone)
-- Verify Whisper/NAudio native dependencies are present
+- Check microphone permissions (Windows: Settings → Privacy → Microphone) and the microphone picked in Settings > Voice
+- Whisper models download to `%LocalAppData%/Kam/Models` on first use; the composer shows download progress and failures
+- The activity log has `VOICE_PROBLEM:` lines with the technical reason
 
 **API Connection Issues**
 - Verify API keys in User Secrets: `dotnet user-secrets list`
@@ -444,13 +446,24 @@ See `RESPONSIVE_DESIGN.md` for full details.
 - **Model per thread**: the chat header picker saves `ModelId` with the thread (`IAgentSessionStore.SetModelAsync`); `AgentRuntime` reads it each turn and runs that model on the chat profile's connection (`ChatClientCache.WithModel`)
 - **Settings without restart**: Settings and Integrations reload `SettingsConfigurationProvider` (debounced in `App`); `ConfiguredChatClient` resolves the client per request through `ChatClientCache`, so models, web search and Todoist apply to the next message. Email, SMS and GitHub App settings still apply after a restart
 - **Approvals**: when a tool call waits and its chat is not on screen, `ApprovalToastNotifier` shows a corner card and changes the tray tooltip
-- **Shortcuts**: Enter sends, Shift+Enter adds a line, Esc stops the turn, Ctrl+N new chat, Ctrl+K search chats, Ctrl+L composer, F2 rename, Ctrl+, Settings
+- **Shortcuts**: Enter sends, Shift+Enter adds a line, Esc cancels voice or stops the turn, Ctrl+N new chat, Ctrl+K search chats, Ctrl+L composer, F2 rename, Ctrl+, Settings, Ctrl+Alt+Space talk (configurable)
 - **Web search keys**: Integrations > Web search sets `WebResearch:SearchApiKey` (secret store) and `WebResearch:SearchEngineId`
+
+#### Turkish and voice (October 2026)
+- **Languages**: interface text lives in `Assets/Lang/{code}.{Area}.json` (en-US, tr-TR), embedded as `Kam.Lang.{code}.{Area}.json`. XAML uses `{DynamicResource Lang.Key}`, code uses `Loc.Get`/`Loc.Format`, and English fills any missing key. Long-lived view models refresh code-built text on `LocalizationService.Instance.LanguageChanged`; tests never call `Instance.SetLanguage`. `LanguageResourceProductCopyTests` requires every English key in Turkish with the same placeholders. Logs, diagnostics and tool names stay English
+- **Voice in the UI**: `Services/VoiceAssistant` runs push to talk (mic buttons, tray "Talk", and the talk shortcut, which `GlobalTalkShortcut` registers with Windows through `RegisterHotKey`), the wake phrase, and spoken replies (Settings: off, replies to voice commands, all). Commands go to the agent chat, or to the command loop when `AgentRuntime:Enabled=false`
+- **Capture**: `VoiceRecognitionServiceBase` converts any device format to 16 kHz mono (`PcmConverter`) and `VoiceActivityDetector` ends an utterance after 800 ms of silence. Windows records with WASAPI on the selected microphone, Linux with `arecord`, macOS with `rec`
+- **Speech-to-text**: `MultiSTTService` follows `Voice:SpeechEngine`: local Whisper (`WhisperSTTService`, models from `SpeechModelCatalog` downloaded by `WhisperModelStore`) or an OpenAI-compatible `/audio/transcriptions` endpoint (`OpenAiTranscriptionService`); HuggingFace is a fallback when its key is set. Ollama STT was removed. `TranscriptCleaner` drops Whisper's invented lines for silence
+- **Wake phrase**: `WhisperWakeWordDetector` transcribes short utterances with the tiny model and matches them with `WakePhraseMatcher` (Turkish letters folded); "Hey Kam, open Spotify" runs in one breath
+- **Spoken replies**: `TextToSpeechService` reads plain text (`SpeechTextFormatter`) sentence by sentence through SAPI/OneCore voices on Windows (`WindowsSpeechSynthesizer`) or `say`/`spd-say`/`espeak` elsewhere
+- **Settings**: the Voice section writes `ISettingsService` and `AiRuntimeConfigurationMapper` maps it to `Voice:*`; services read `VoiceSettings.Read(configuration)` on each use, so changes apply without a restart. `SettingsViewModel.UseSpeechServices` swaps the model store and speech service in tests
+- **Composer**: voice status (listening, transcribing, model download, problems) shows in a strip above the prompt next to the queued-message strip; Esc cancels voice before it stops a turn
+- **Title bar status**: shows the agent (Ready, Working, Set up a model). With `AgentRuntime:Enabled=false` it shows the command loop, and a click pauses or resumes it
 
 ### Test Status
 ```
 Build: ✅ Success (CI runs on windows-2025)
-Tests: 1227 total; on Linux 13 fail because they assume Windows paths or tessdata
+Tests: 1446 total; on Linux 13 fail because they assume Windows paths or tessdata
 Run locally on Linux: DOTNET_ROLL_FORWARD=Major dotnet test tests/SmartVoiceAgent.Tests -p:EnableWindowsTargeting=true
 ```
 

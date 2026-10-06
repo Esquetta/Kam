@@ -57,7 +57,9 @@ Kam is evolving into a product-grade local agent runtime:
 - Window and accessibility context.
 - Bounded file and workspace inspection.
 - Shell execution with safety policy.
-- Voice activation and microphone workflow.
+- Voice: push to talk (mic button, tray, or `Ctrl+Alt+Space` from anywhere on Windows), an optional "Hey Kam" wake phrase detected on the device, and replies read aloud.
+- Speech recognition with local Whisper models that download on first use, or an OpenAI-compatible transcription API.
+- English and Turkish interface (Settings > Language).
 - Runtime Diagnostics panel for local production checks.
 
 ### Production Readiness
@@ -108,7 +110,8 @@ Optional integrations:
 
 - Todoist MCP token for Todoist task operations.
 - GitHub App installation credentials for read-only coding-agent repository discovery.
-- Hugging Face API key for cloud STT / language detection.
+- OpenAI-compatible speech-to-text endpoint and key, if you prefer it to local Whisper.
+- Hugging Face API key as a fallback speech-to-text provider.
 - SMTP credentials for email sending.
 - Twilio credentials for SMS sending.
 - Google Custom Search key and search engine id for the legacy Google-backed web research service.
