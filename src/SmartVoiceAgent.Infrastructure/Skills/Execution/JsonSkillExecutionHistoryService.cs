@@ -1,6 +1,7 @@
 using System.Text.Json;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Infrastructure.Helpers;
 
 namespace SmartVoiceAgent.Infrastructure.Skills.Execution;
 
@@ -37,12 +38,10 @@ public sealed class JsonSkillExecutionHistoryService : ISkillExecutionHistorySer
                 return [];
             }
 
-            return File.ReadAllLines(_filePath)
-                .Where(line => !string.IsNullOrWhiteSpace(line))
+            return JsonLinesFile.ReadLinesNewestFirst(_filePath)
                 .Select(TryDeserialize)
                 .Where(entry => entry is not null)
                 .Select(entry => entry!)
-                .Reverse()
                 .Take(maxCount)
                 .ToArray();
         }

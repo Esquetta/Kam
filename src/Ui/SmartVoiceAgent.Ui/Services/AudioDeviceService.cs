@@ -12,6 +12,9 @@ namespace SmartVoiceAgent.Ui.Services;
 public class AudioDeviceService : IDisposable
 {
     private MMDeviceEnumerator? _deviceEnumerator;
+    private readonly object _meterGate = new();
+    private MMDevice? _meterDevice;
+    private string? _meterDeviceId;
 
     /// <summary>
     /// Event fired when audio devices change (added, removed, or default changed)
@@ -138,7 +141,7 @@ public class AudioDeviceService : IDisposable
 
         try
         {
-            var device = _deviceEnumerator.GetDevice(deviceId);
+            using var device = _deviceEnumerator.GetDevice(deviceId);
             return device?.State == DeviceState.Active;
         }
         catch
@@ -195,7 +198,7 @@ public class AudioDeviceService : IDisposable
 
         try
         {
-            var device = _deviceEnumerator.GetDevice(deviceId);
+            using var device = _deviceEnumerator.GetDevice(deviceId);
             if (device?.AudioEndpointVolume != null)
             {
                 return device.AudioEndpointVolume.MasterVolumeLevelScalar;
@@ -216,7 +219,7 @@ public class AudioDeviceService : IDisposable
 
         try
         {
-            var device = _deviceEnumerator.GetDevice(deviceId);
+            using var device = _deviceEnumerator.GetDevice(deviceId);
             if (device?.AudioEndpointVolume != null)
             {
                 device.AudioEndpointVolume.MasterVolumeLevelScalar = Math.Clamp(volume, 0f, 1f);
@@ -235,7 +238,7 @@ public class AudioDeviceService : IDisposable
 
         try
         {
-            var device = _deviceEnumerator.GetDevice(deviceId);
+            using var device = _deviceEnumerator.GetDevice(deviceId);
             if (device?.AudioEndpointVolume != null)
             {
                 return device.AudioEndpointVolume.MasterVolumeLevelScalar;
@@ -256,7 +259,7 @@ public class AudioDeviceService : IDisposable
 
         try
         {
-            var device = _deviceEnumerator.GetDevice(deviceId);
+            using var device = _deviceEnumerator.GetDevice(deviceId);
             if (device?.AudioEndpointVolume != null)
             {
                 device.AudioEndpointVolume.MasterVolumeLevelScalar = Math.Clamp(volume, 0f, 1f);
@@ -268,43 +271,48 @@ public class AudioDeviceService : IDisposable
     /// <summary>
     /// Gets the current input level (VU meter) for visualization
     /// </summary>
-    public float GetInputLevel(string deviceId)
-    {
-        if (_deviceEnumerator == null)
-            return 0;
-
-        try
-        {
-            var device = _deviceEnumerator.GetDevice(deviceId);
-            if (device?.AudioMeterInformation != null)
-            {
-                return device.AudioMeterInformation.MasterPeakValue;
-            }
-        }
-        catch { }
-
-        return 0;
-    }
+    public float GetInputLevel(string deviceId) => GetPeakLevel(deviceId);
 
     /// <summary>
     /// Gets the current output level (VU meter) for visualization
     /// </summary>
-    public float GetOutputLevel(string deviceId)
+    public float GetOutputLevel(string deviceId) => GetPeakLevel(deviceId);
+
+    /// <summary>
+    /// Reads a device's peak level. The meter polls ten times a second, so the device handle is
+    /// kept for the device being metered instead of opening a new COM object on every read.
+    /// </summary>
+    private float GetPeakLevel(string deviceId)
     {
         if (_deviceEnumerator == null)
             return 0;
 
-        try
+        lock (_meterGate)
         {
-            var device = _deviceEnumerator.GetDevice(deviceId);
-            if (device?.AudioMeterInformation != null)
+            try
             {
-                return device.AudioMeterInformation.MasterPeakValue;
+                if (_meterDevice is null || _meterDeviceId != deviceId)
+                {
+                    ReleaseMeterDevice();
+                    _meterDevice = _deviceEnumerator.GetDevice(deviceId);
+                    _meterDeviceId = deviceId;
+                }
+
+                return _meterDevice.AudioMeterInformation?.MasterPeakValue ?? 0;
+            }
+            catch
+            {
+                ReleaseMeterDevice();
+                return 0;
             }
         }
-        catch { }
+    }
 
-        return 0;
+    private void ReleaseMeterDevice()
+    {
+        _meterDevice?.Dispose();
+        _meterDevice = null;
+        _meterDeviceId = null;
     }
 
     /// <summary>
@@ -322,6 +330,11 @@ public class AudioDeviceService : IDisposable
 
     public void Dispose()
     {
+        lock (_meterGate)
+        {
+            ReleaseMeterDevice();
+        }
+
         _deviceEnumerator?.Dispose();
         _deviceEnumerator = null;
     }

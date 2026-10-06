@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Audio;
+using System.Buffers.Binary;
 using System.Diagnostics;
 using Whisper.net;
 
@@ -13,26 +14,49 @@ namespace SmartVoiceAgent.Infrastructure.Services;
 /// </summary>
 public class WhisperSTTService : ISpeechToTextService
 {
-    private readonly WhisperFactory _whisperFactory;
-    private readonly WhisperProcessor _processor;
     private readonly ILogger<WhisperSTTService> _logger;
     private readonly string _modelPath;
+    private readonly object _loadGate = new();
+    private WhisperFactory? _whisperFactory;
+    private WhisperProcessor? _processor;
     private bool _disposed = false;
 
+    /// <summary>
+    /// Creates the service. The model loads on the first transcription, not at startup,
+    /// so the app opens without reading a model of several hundred megabytes.
+    /// </summary>
     public WhisperSTTService(ILogger<WhisperSTTService> logger, IConfiguration configuration)
     {
         _logger = logger;
         _modelPath = configuration["Whisper:ModelPath"] ?? "Models/ggml-base.bin";
+    }
 
-        _whisperFactory = WhisperFactory.FromPath(_modelPath);
-        _processor = _whisperFactory.CreateBuilder()
-            .WithLanguage("auto")
-            .WithPrintProgress()
-            .WithNoSpeechThreshold(0.6f)
-            .WithProbabilities()
-            .Build();
+    /// <summary>
+    /// Gets whether the Whisper model has been loaded.
+    /// </summary>
+    public bool IsModelLoaded => _processor is not null;
 
-        _logger.LogInformation($"Local Whisper STT Service initialized with model: {_modelPath}");
+    private WhisperProcessor GetProcessor()
+    {
+        lock (_loadGate)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_processor is not null)
+            {
+                return _processor;
+            }
+
+            _whisperFactory = WhisperFactory.FromPath(_modelPath);
+            _processor = _whisperFactory.CreateBuilder()
+                .WithLanguage("auto")
+                .WithPrintProgress()
+                .WithNoSpeechThreshold(0.6f)
+                .WithProbabilities()
+                .Build();
+
+            _logger.LogInformation("Local Whisper model loaded from {ModelPath}", _modelPath);
+            return _processor;
+        }
     }
 
     public async Task<SpeechResult> ConvertToTextAsync(byte[] audioData, CancellationToken cancellationToken = default)
@@ -48,7 +72,8 @@ public class WhisperSTTService : ISpeechToTextService
 
             // Whisper ile işle
             var segments = new List<SegmentData>();
-            await foreach (var segment in _processor.ProcessAsync(processedAudio, cancellationToken))
+            var processor = await Task.Run(GetProcessor, cancellationToken);
+            await foreach (var segment in processor.ProcessAsync(processedAudio, cancellationToken))
             {
                 segments.Add(segment);
                 _logger.LogDebug($"Segment: {segment.Text} (Confidence: {segment.Probability:F2})");
@@ -96,13 +121,13 @@ public class WhisperSTTService : ISpeechToTextService
         }
 
         // WAV header'ı atla (basit implementasyon)
-        var audioBytes = audioData.Skip(44).ToArray();
+        var audioBytes = audioData.AsSpan(44);
 
         // 16-bit PCM'den float'a çevir
         var samples = new float[audioBytes.Length / 2];
         for (int i = 0; i < samples.Length; i++)
         {
-            var sample = BitConverter.ToInt16(audioBytes, i * 2);
+            var sample = BinaryPrimitives.ReadInt16LittleEndian(audioBytes.Slice(i * 2, 2));
             samples[i] = sample / 32768f; // Normalize to -1.0 to 1.0
         }
 
@@ -111,11 +136,14 @@ public class WhisperSTTService : ISpeechToTextService
 
     public void Dispose()
     {
-        if (!_disposed)
+        lock (_loadGate)
         {
-            _processor?.Dispose();
-            _whisperFactory?.Dispose();
-            _disposed = true;
+            if (!_disposed)
+            {
+                _processor?.Dispose();
+                _whisperFactory?.Dispose();
+                _disposed = true;
+            }
         }
     }
 }

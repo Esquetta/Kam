@@ -212,6 +212,12 @@
 			<Setter Property="Margin" Value="0,0,6,6"/>
 		</Style>
 
+		<Style Selector="Border.QueuedMessageStrip">
+			<Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding" Value="10,4,4,4"/>
+		</Style>
+
 		<Style Selector="Button.ChatSessionItem">
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderBrush" Value="Transparent"/>
@@ -713,9 +719,14 @@
 									</Grid>
 								</StackPanel>
 
-								<!-- Messages -->
+								<!-- Messages; virtualized, so a long thread only builds the rows on screen -->
 								<StackPanel IsVisible="{Binding HasAgentChatMessages}">
-								<ItemsControl ItemsSource="{Binding SelectedAgentChatSession.Messages}">
+								<ItemsControl x:Name="ChatMessageList" ItemsSource="{Binding SelectedAgentChatSession.Messages}">
+									<ItemsControl.ItemsPanel>
+										<ItemsPanelTemplate>
+											<VirtualizingStackPanel/>
+										</ItemsPanelTemplate>
+									</ItemsControl.ItemsPanel>
 									<ItemsControl.ItemTemplate>
 										<DataTemplate DataType="vm:AgentChatMessageViewModel">
 											<Border Classes="ChatMessage">
@@ -936,7 +947,7 @@
 							</Border>
 
 							<Border Classes="ComposerSurface">
-								<Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
+								<Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10">
 
 									<!-- Context files -->
 									<Grid Grid.Row="0"
@@ -990,8 +1001,29 @@
 										</ItemsControl>
 									</Grid>
 
+									<!-- Messages sent while a turn runs -->
+									<Border Grid.Row="1"
+											Classes="QueuedMessageStrip"
+											IsVisible="{Binding HasQueuedAgentMessages}">
+										<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+											<Viewbox Grid.Column="0" Width="13" Height="13" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconClock}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
+											<TextBlock Grid.Column="1"
+													   Text="{Binding QueuedAgentMessagesText}"
+													   FontSize="12"
+													   Foreground="{DynamicResource TextSecondaryBrush}"
+													   VerticalAlignment="Center"
+													   TextTrimming="CharacterEllipsis"/>
+											<Button Grid.Column="2"
+													Classes="CompactAction"
+													ToolTip.Tip="Don't send queued messages"
+													Command="{Binding ClearQueuedAgentMessagesCommand}">
+												<TextBlock Text="Cancel" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+											</Button>
+										</Grid>
+									</Border>
+
 									<!-- Prompt -->
-									<TextBox Grid.Row="1"
+									<TextBox Grid.Row="2"
 											 x:Name="WorkbenchPromptInput"
 											 Classes="BareInput"
 											 PlaceholderText="Ask Kam to inspect, edit, test, or plan..."
@@ -1004,7 +1036,7 @@
 											 KeyDown="OnPromptKeyDown"/>
 
 									<!-- Toolbar -->
-									<Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="6">
+									<Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="6">
 										<Button Grid.Column="0"
 												Classes="IconButton"
 												Width="32" Height="32"

@@ -220,7 +220,8 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<IToolPermissionService>(),
                 sp.GetRequiredService<IAgentSessionStore>(),
                 sp.GetRequiredService<IOptions<AgentRuntimeOptions>>(),
-                sp.GetRequiredService<ILogger<AgentRuntime>>());
+                sp.GetRequiredService<ILogger<AgentRuntime>>(),
+                workspaceRoot: WorkspaceRoot(sp));
         });
 
         // Host control service (must be registered before hosted service)

@@ -79,7 +79,8 @@ namespace SmartVoiceAgent.Ui.Views
                 return;
             }
 
-            if (e.ExtentDelta.Y > 0 && _chatFollowsLatest)
+            // New content, or a taller composer shrinking the view, keeps the newest message in sight.
+            if ((e.ExtentDelta.Y > 0 || e.ViewportDelta.Y < 0) && _chatFollowsLatest)
             {
                 _chatScrollViewer.ScrollToEnd();
                 return;

@@ -685,6 +685,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             AlwaysAllowToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: true, alwaysAllow: true));
             DenyToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: false, alwaysAllow: false));
             StopAgentTurnCommand = ReactiveCommand.Create(StopAgentTurn);
+            ClearQueuedAgentMessagesCommand = ReactiveCommand.Create(ClearQueuedAgentMessages);
             InitializeAgentChatSessions();
 
             Dispatcher.UIThread.Post(() =>
@@ -1160,26 +1161,34 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         private void AddAgentChatMessage(string role, string content)
         {
-            if (SelectedAgentChatSession is null || string.IsNullOrWhiteSpace(content))
+            if (SelectedAgentChatSession is not null)
+            {
+                AddAgentChatMessage(SelectedAgentChatSession, role, content);
+            }
+        }
+
+        private void AddAgentChatMessage(AgentChatSessionViewModel session, string role, string content)
+        {
+            if (string.IsNullOrWhiteSpace(content))
             {
                 return;
             }
 
-            SelectedAgentChatSession.AddMessage(new AgentChatMessageViewModel(
+            session.AddMessage(new AgentChatMessageViewModel(
                 role,
                 content,
                 DateTime.Now.ToString("HH:mm")));
 
             if (role.Equals("You", StringComparison.OrdinalIgnoreCase)
-                && SelectedAgentChatSession.Title is "Workspace chat" or "New chat")
+                && session.Title is "Workspace chat" or "New chat")
             {
-                SelectedAgentChatSession.Title = content.Length <= 40
+                session.Title = content.Length <= 40
                     ? content
                     : content[..40].TrimEnd() + "...";
             }
 
-            SelectedAgentChatSession.Summary = content;
-            SelectedAgentChatSession.RelativeTimeText = "now";
+            session.Summary = content;
+            session.RelativeTimeText = "now";
             RaiseAgentChatStateChanged();
         }
 
@@ -1197,6 +1206,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             var input = CommandInputText.Trim();
             AddLog($"> {input}");
+
+            // A message sent while a turn runs waits for it instead of being dropped.
+            if (TryQueueAgentInput(input))
+            {
+                return;
+            }
+
             AddAgentChatMessage("You", input);
 
             if (TryExecuteLocalSlashCommand(input))
@@ -2029,6 +2045,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         /// <summary>
         /// Runs a voice command as a turn in the selected chat, starting a chat when none is open.
+        /// While another turn runs, the command waits for it.
         /// </summary>
         /// <param name="text">The transcribed command.</param>
         public async Task SubmitVoiceCommandAsync(string text)
@@ -2038,15 +2055,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 CreateNewAgentChat();
             }
 
-            var session = SelectedAgentChatSession!;
-            if (IsAgentTurnRunning)
-            {
-                AddAgentChatMessage("Kam", $"I'm still working on the last request, so I didn't start \"{text}\". Say it again when I'm done.");
-                return;
-            }
-
-            AddAgentChatMessage("You", text);
-            await RunAgentTurnAsync(session, text);
+            await StartOrQueueAgentTurnAsync(SelectedAgentChatSession!, text, text);
         }
 
         /// <summary>

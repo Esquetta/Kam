@@ -16,17 +16,22 @@ public static class AiRuntimeConfigurationMapper
         string activeChatProfileId = "")
     {
         var plannerProfile = SelectProfile(profiles, activePlannerProfileId, ModelProviderRole.Planner);
-        if (plannerProfile is null || !plannerProfile.Enabled || !plannerProfile.Validate().IsValid)
+        var chatProfile = SelectProfile(profiles, activeChatProfileId, ModelProviderRole.Chat);
+
+        // Either usable profile runs everything; a single working key is enough to chat.
+        var usablePlanner = IsUsableProfile(plannerProfile) ? plannerProfile : null;
+        var usableChat = IsUsableProfile(chatProfile) ? chatProfile : null;
+        if (usablePlanner is null && usableChat is null)
         {
             return new Dictionary<string, string?>();
         }
 
+        var basePlanner = usablePlanner ?? usableChat!;
         var overrides = new Dictionary<string, string?>();
-        AddProfileOverrides(overrides, "AIService", plannerProfile);
-        AddProfileOverrides(overrides, "AIService:Planner", plannerProfile);
+        AddProfileOverrides(overrides, "AIService", basePlanner);
+        AddProfileOverrides(overrides, "AIService:Planner", basePlanner);
 
-        var chatProfile = SelectProfile(profiles, activeChatProfileId, ModelProviderRole.Chat);
-        var agentProfile = IsUsableProfile(chatProfile) ? chatProfile! : plannerProfile;
+        var agentProfile = usableChat ?? basePlanner;
         AddProfileOverrides(
             overrides,
             "AIService:Chat",
@@ -36,7 +41,7 @@ public static class AiRuntimeConfigurationMapper
         return overrides;
     }
 
-    private static bool IsUsableProfile(ModelProviderProfile? profile)
+    private static bool IsUsableProfile([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] ModelProviderProfile? profile)
     {
         return profile is not null
             && profile.Enabled

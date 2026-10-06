@@ -163,6 +163,9 @@ namespace SmartVoiceAgent.Ui
                         services.GetService<IAgentPluginCatalog>(),
                         services.GetService<IAgentSkillCatalog>(),
                         services.GetService<IAgentCommandCatalog>());
+
+                    // Start MCP servers now, so the first message does not wait for them.
+                    _ = WarmUpMcpServersAsync(services.GetService<IMcpHost>());
                 }
 
                 // Setup Voice Command Service
@@ -460,6 +463,23 @@ namespace SmartVoiceAgent.Ui
         private IServiceProvider? GetCurrentServiceProvider()
         {
             return _applicationScope?.ServiceProvider ?? _host?.Services;
+        }
+
+        private async Task WarmUpMcpServersAsync(IMcpHost? mcpHost)
+        {
+            if (mcpHost is null)
+            {
+                return;
+            }
+
+            try
+            {
+                await Task.Run(() => mcpHost.GetToolsAsync());
+            }
+            catch (Exception ex)
+            {
+                _errorHandlingService?.LogError(ex, "MCP servers failed to start in the background");
+            }
         }
 
         private void SetupVoiceCommandService(MainWindowViewModel viewModel, IServiceProvider services)

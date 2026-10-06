@@ -15,6 +15,8 @@ namespace SmartVoiceAgent.Infrastructure.Services;
 
 public sealed class SlashCommandService : ISlashCommandService
 {
+    private const int CustomDefinitionsLifetimeMilliseconds = 2000;
+
     private static readonly SlashCommandDefinition[] Definitions =
     [
         new("/help", "Show available slash commands.", "/help", "General", ["/commands"]),
@@ -105,6 +107,9 @@ public sealed class SlashCommandService : ISlashCommandService
     private readonly IApplicationSessionContextStore? _applicationSessionContextStore;
     private readonly IAgentCommandCatalog? _agentCommands;
     private readonly IMcpHost? _mcpHost;
+    private readonly object _customDefinitionsGate = new();
+    private IReadOnlyList<SlashCommandDefinition>? _customDefinitions;
+    private long _customDefinitionsLoadedAt;
     private string? _activeGitHubRepositoryFullName;
     private GitHubWorkflowRunSummary? _activeGitHubWorkflowRun;
     private GitHubPullRequestSummary? _activeGitHubPullRequest;
@@ -1888,6 +1893,23 @@ public sealed class SlashCommandService : ISlashCommandService
             return Definitions;
         }
 
+        // The palette asks on every keystroke; reading every command file and plugin manifest
+        // each time made typing lag, so the list is reused for a moment.
+        lock (_customDefinitionsGate)
+        {
+            if (_customDefinitions is null
+                || Environment.TickCount64 - _customDefinitionsLoadedAt > CustomDefinitionsLifetimeMilliseconds)
+            {
+                _customDefinitions = LoadCustomDefinitions(_agentCommands);
+                _customDefinitionsLoadedAt = Environment.TickCount64;
+            }
+
+            return [.. Definitions, .. _customDefinitions];
+        }
+    }
+
+    private static IReadOnlyList<SlashCommandDefinition> LoadCustomDefinitions(IAgentCommandCatalog agentCommands)
+    {
         var builtIn = Definitions
             .SelectMany(definition => definition.Aliases.Prepend(definition.Name))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -1895,7 +1917,7 @@ public sealed class SlashCommandService : ISlashCommandService
         IReadOnlyList<SlashCommandDefinition> custom;
         try
         {
-            custom = _agentCommands.GetCommands()
+            custom = agentCommands.GetCommands()
                 .Where(command => !builtIn.Contains("/" + command.Name))
                 .Select(command => new SlashCommandDefinition(
                     "/" + command.Name,
@@ -1909,7 +1931,7 @@ public sealed class SlashCommandService : ISlashCommandService
             custom = [];
         }
 
-        return [.. Definitions, .. custom];
+        return custom;
     }
 
     private string FormatCommandList(string? filter)

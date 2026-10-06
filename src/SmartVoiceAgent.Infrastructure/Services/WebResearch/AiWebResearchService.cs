@@ -32,10 +32,9 @@ public class AiWebResearchService : IWebResearchService
         _chatClient = chatClient;
         _logger = logger;
 
-        _searchApiKey = configuration.GetSection("WebResearch:SearchApiKey").Get<string>()
-            ?? throw new NullReferenceException("SearchApiKey section cannot found in configuration.");
-        _searchEngineId = configuration.GetSection("WebResearch:SearchEngineId").Get<string>()
-            ?? throw new NullReferenceException("SearchEngineId section cannot found in configuration.");
+        // Missing keys are reported when a search runs, so the rest of the app still starts without them.
+        _searchApiKey = configuration["WebResearch:SearchApiKey"] ?? string.Empty;
+        _searchEngineId = configuration["WebResearch:SearchEngineId"] ?? string.Empty;
 
         // HttpClient'ı temiz başlat - her method kendi header'larını ayarlayacak
         _httpClient.DefaultRequestHeaders.Clear();
@@ -43,6 +42,12 @@ public class AiWebResearchService : IWebResearchService
 
     public async Task<List<WebResearchResult>> SearchAsync(WebResearchRequest request)
     {
+        if (string.IsNullOrWhiteSpace(_searchApiKey) || string.IsNullOrWhiteSpace(_searchEngineId))
+        {
+            throw new InvalidOperationException(
+                "Web search is not set up. Add a Google Custom Search key and engine ID as WebResearch:SearchApiKey and WebResearch:SearchEngineId.");
+        }
+
         try
         {
             _logger.Info($"'{request.Query}' konusu için AI destekli araştırma başlatılıyor...");

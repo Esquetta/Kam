@@ -323,26 +323,95 @@ public sealed class MainWindowAgentRuntimeTests
     }
 
     [Fact]
-    public async Task SubmitVoiceCommandAsync_WhileTurnRunning_DoesNotStartAnother()
+    public async Task SubmitVoiceCommandAsync_WhileTurnRunning_QueuesCommandUntilTurnEnds()
     {
         var runtime = new ScriptedRuntime();
         var viewModel = CreateViewModel(runtime);
         var session = viewModel.SelectedAgentChatSession!;
-        runtime.Script(
-            new AgentToolCallStarted(session.SessionId, "c1", "shell_run", "Run Shell Command", "{}", ToolRisk.Execute),
-            new AgentApprovalRequested(session.SessionId, "req-1", "c1", "shell_run", "Run Shell Command", "{}", ToolRisk.Execute));
-        viewModel.CommandInputText = "build it";
-        var turn = viewModel.SubmitCommandInputAsync();
+        var turn = StartBlockedTurnAsync(viewModel, runtime, session, "build it");
         await WaitForAsync(() => session.Messages.FirstOrDefault(m => m.IsAwaitingApproval));
 
         await viewModel.SubmitVoiceCommandAsync("open spotify");
 
         runtime.Messages.Should().Equal("build it");
-        session.Messages.Last().Content.Should().Contain("still working").And.Contain("open spotify");
+        viewModel.QueuedAgentMessagesText.Should().Be("Sends next: open spotify");
+        session.Messages.Should().NotContain(m => m.Content == "open spotify", "the request shows up when it runs");
 
-        viewModel.StopAgentTurnCommand.Execute(null);
         runtime.Finish();
         await turn;
+
+        runtime.Messages.Should().Equal("build it", "open spotify");
+        viewModel.HasQueuedAgentMessages.Should().BeFalse();
+        session.Messages.Where(m => !m.IsToolStep).Select(m => $"{m.Role}:{m.Content}")
+            .Should().Equal("You:build it", "You:open spotify");
+    }
+
+    [Fact]
+    public async Task SubmitCommandInputAsync_WhileTurnRunning_SendsMessagesInOrderAfterTheTurn()
+    {
+        var runtime = new ScriptedRuntime();
+        var viewModel = CreateViewModel(runtime);
+        var session = viewModel.SelectedAgentChatSession!;
+        var turn = StartBlockedTurnAsync(viewModel, runtime, session, "build it");
+        await WaitForAsync(() => session.Messages.FirstOrDefault(m => m.IsToolStep));
+
+        viewModel.CommandInputText = "then run the tests";
+        await viewModel.SubmitCommandInputAsync();
+        viewModel.CommandInputText = "and commit";
+        await viewModel.SubmitCommandInputAsync();
+
+        viewModel.CommandInputText.Should().BeEmpty();
+        viewModel.QueuedAgentMessages.Select(m => m.DisplayText).Should().Equal("then run the tests", "and commit");
+        viewModel.QueuedAgentMessagesText.Should().Be("Sends next: then run the tests (+1 more)");
+
+        runtime.Finish();
+        await turn;
+
+        runtime.Messages.Should().Equal("build it", "then run the tests", "and commit");
+        runtime.SessionIds.Should().AllBe(session.SessionId);
+        viewModel.HasQueuedAgentMessages.Should().BeFalse();
+        viewModel.IsAgentTurnRunning.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_PressedWhileTurnRuns_QueuesTheMessage()
+    {
+        var runtime = new ScriptedRuntime();
+        var viewModel = CreateViewModel(runtime);
+        var session = viewModel.SelectedAgentChatSession!;
+        runtime.Script(new AgentToolCallStarted(session.SessionId, "c1", "shell_run", "Run Shell Command", "{}", ToolRisk.Execute));
+        viewModel.CommandInputText = "build it";
+        viewModel.SubmitCommand.Execute(null);
+        await WaitForAsync(() => session.Messages.FirstOrDefault(m => m.IsToolStep));
+
+        // Enter in the composer runs the command again while the first turn is still going.
+        viewModel.CommandInputText = "then run the tests";
+        viewModel.SubmitCommand.Execute(null);
+
+        await WaitForAsync(() => viewModel.HasQueuedAgentMessages ? viewModel : null);
+        runtime.Finish();
+        await WaitForAsync(() => runtime.Messages.Count == 2 && !viewModel.IsAgentTurnRunning ? runtime : null);
+
+        runtime.Messages.Should().Equal("build it", "then run the tests");
+    }
+
+    [Fact]
+    public async Task ClearQueuedAgentMessagesCommand_DropsQueuedMessages()
+    {
+        var runtime = new ScriptedRuntime();
+        var viewModel = CreateViewModel(runtime);
+        var session = viewModel.SelectedAgentChatSession!;
+        var turn = StartBlockedTurnAsync(viewModel, runtime, session, "build it");
+        await WaitForAsync(() => session.Messages.FirstOrDefault(m => m.IsToolStep));
+        viewModel.CommandInputText = "then run the tests";
+        await viewModel.SubmitCommandInputAsync();
+
+        viewModel.ClearQueuedAgentMessagesCommand.Execute(null);
+        runtime.Finish();
+        await turn;
+
+        viewModel.HasQueuedAgentMessages.Should().BeFalse();
+        runtime.Messages.Should().Equal("build it");
     }
 
     [Fact]
@@ -362,6 +431,19 @@ public sealed class MainWindowAgentRuntimeTests
         viewModel.SelectedAgentChatSession.Should().NotBeSameAs(previous);
         viewModel.SelectedAgentChatSession!.Title.Should().Be("New chat");
         viewModel.AgentChatSessions.First().Should().BeSameAs(viewModel.SelectedAgentChatSession);
+    }
+
+    private static Task StartBlockedTurnAsync(
+        MainWindowViewModel viewModel,
+        ScriptedRuntime runtime,
+        AgentChatSessionViewModel session,
+        string message)
+    {
+        runtime.Script(
+            new AgentToolCallStarted(session.SessionId, "c1", "shell_run", "Run Shell Command", "{}", ToolRisk.Execute),
+            new AgentApprovalRequested(session.SessionId, "req-1", "c1", "shell_run", "Run Shell Command", "{}", ToolRisk.Execute));
+        viewModel.CommandInputText = message;
+        return viewModel.SubmitCommandInputAsync();
     }
 
     private static MainWindowViewModel CreateViewModel(ScriptedRuntime runtime)
