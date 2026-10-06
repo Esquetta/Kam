@@ -4,6 +4,7 @@ using Avalonia.Styling;
 using ReactiveUI;
 using SolidColorBrush = Avalonia.Media.SolidColorBrush;
 using SmartVoiceAgent.Core.Interfaces;
+using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.ViewModels;
 using System;
 using System.Threading.Tasks;
@@ -56,7 +57,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /* STATUS DISPLAY (OVERRIDE) */
         /* ========================= */
 
-        private string _statusText = "SYSTEM ONLINE";
+        private string _statusText = Loc.Get("Workbench.Status.SystemOnline");
         private IBrush _statusColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#10B981"));
         private IBrush _orbColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#06B6D4"));
         private IBrush _orbGlowColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#4006B6D4"));
@@ -159,7 +160,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private void UpdateStatusProperties()
         {
             // Use cached brushes to avoid repeated allocations
-            StatusText = IsOnline ? "SYSTEM ONLINE" : "SYSTEM OFFLINE";
+            StatusText = OnlineStatusText(IsOnline);
             StatusColor = IsOnline ? OnlineStatusColor : OfflineStatusColor;
             OrbColor = IsOnline ? OnlineOrbColor : OfflineOrbColor;
             OrbGlowColor = IsOnline ? OnlineOrbGlowColor : OfflineOrbGlowColor;
@@ -170,6 +171,23 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             
             // Raise property change for IsOnline to ensure converters re-evaluate
             this.RaisePropertyChanged(nameof(IsOnline));
+        }
+
+        private static string OnlineStatusText(bool isOnline)
+        {
+            return isOnline
+                ? Loc.Get("Workbench.Status.SystemOnline")
+                : Loc.Get("Workbench.Status.SystemOffline");
+        }
+
+        /// <summary>
+        /// Rebuilds the title and status text in the current interface language.
+        /// The main window calls it after the language changes.
+        /// </summary>
+        public void RefreshLocalizedText()
+        {
+            Title = Loc.Get("Workbench.Page.Workbench");
+            StatusText = OnlineStatusText(IsOnline);
         }
 
         /* ========================= */
@@ -184,7 +202,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         public CoordinatorViewModel()
         {
-            Title = "COORDINATOR";
+            Title = Loc.Get("Workbench.Page.Workbench");
             // Use CreateFromTask for async commands
             ToggleOnlineStateCommand = ReactiveCommand.CreateFromTask(ToggleOnlineStateAsync);
             

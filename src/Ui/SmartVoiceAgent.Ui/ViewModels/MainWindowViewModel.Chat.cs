@@ -129,11 +129,14 @@ namespace SmartVoiceAgent.Ui.ViewModels
             }
         }
 
+        /// <summary>
+        /// Gets the model picker's tooltip, naming the model the selected chat runs on.
+        /// </summary>
         public string AgentChatModelTip => SelectedAgentChatModel switch
         {
-            null => "Model",
-            { IsDefault: true } => "Uses the model chosen in Settings. Pick another model for this chat only.",
-            var option => $"This chat runs on {option.ModelId}. Other chats keep the model chosen in Settings."
+            null => Loc.Get("Workbench.Model.Tip"),
+            { IsDefault: true } => Loc.Get("Workbench.Model.DefaultTip"),
+            var option => Loc.Format("Workbench.Model.ThreadTip", option.ModelId)
         };
 
         [MemberNotNull(
@@ -218,7 +221,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /// <summary>
-        /// Rebuilds the model picker for the selected thread from the current Settings.
+        /// Rebuilds the model picker for the selected thread from the current Settings and interface language.
         /// </summary>
         public void RefreshAgentChatModelOptions()
         {
@@ -226,7 +229,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
             var defaultModel = profile?.ModelId;
             var options = new List<AgentChatModelOption>
             {
-                new(null, string.IsNullOrWhiteSpace(defaultModel) ? "No model set up" : defaultModel, "Settings default")
+                new(
+                    null,
+                    string.IsNullOrWhiteSpace(defaultModel) ? Loc.Get("Workbench.Model.NotSetUp") : defaultModel,
+                    Loc.Get("Workbench.Model.SettingsDefault"))
             };
 
             if (profile is not null)
@@ -240,7 +246,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             if (!string.IsNullOrWhiteSpace(threadModel)
                 && options.All(option => !string.Equals(option.ModelId, threadModel, StringComparison.OrdinalIgnoreCase)))
             {
-                options.Insert(1, new AgentChatModelOption(threadModel, threadModel, "This chat"));
+                options.Insert(1, new AgentChatModelOption(threadModel, threadModel, Loc.Get("Workbench.Model.ThisChat")));
             }
 
             _isRefreshingAgentChatModels = true;

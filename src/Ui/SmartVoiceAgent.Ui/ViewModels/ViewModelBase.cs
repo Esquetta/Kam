@@ -1,5 +1,6 @@
 ﻿using Avalonia.Media;
 using ReactiveUI;
+using SmartVoiceAgent.Ui.Services;
 using SolidColorBrush = Avalonia.Media.SolidColorBrush;
 
 namespace SmartVoiceAgent.Ui.ViewModels
@@ -14,7 +15,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             protected set => this.RaiseAndSetIfChanged(ref _title, value);
         }
 
-        private string _statusText = "Starting";
+        private string _statusText = Loc.Get("Workbench.Status.Starting");
         private IBrush _statusColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#9A9AA8"));
 
         /// <summary>
