@@ -11,7 +11,7 @@ public sealed class OpenAiCompatibleModelCatalogServiceTests
     [Fact]
     public async Task GetModelsAsync_UsesModelsEndpointAndReturnsTextGenerationModels()
     {
-        using var handler = new StubHttpMessageHandler("""{"object":"list","data":[{"id":"gpt-5.2","owned_by":"openai"},{"id":"text-embedding-3-small","owned_by":"openai"},{"id":"gpt-4.1-mini","owned_by":"openai"}]}""");
+        using var handler = new StubHttpMessageHandler("""{"object":"list","data":[{"id":"gpt-5.2","owned_by":"openai"},{"id":"text-embedding-3-small","owned_by":"openai"},{"id":"gpt-live-1","owned_by":"openai"},{"id":"gpt-4.1-mini","owned_by":"openai"}]}""");
         using var httpClient = new HttpClient(handler);
         var service = new OpenAiCompatibleModelCatalogService(httpClient);
 
