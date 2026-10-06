@@ -65,8 +65,7 @@ public sealed class ModelsDevModelCatalogService : IModelCatalogService, IDispos
         return entries
             .Where(model => model.Capabilities.Count == 0
                 || model.Capabilities.Contains("text-output", StringComparer.OrdinalIgnoreCase))
-            .OrderByDescending(model => model.ModelId, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+            .NewestFirst();
     }
 
     public void Dispose()
@@ -143,8 +142,21 @@ public sealed class ModelsDevModelCatalogService : IModelCatalogService, IDispos
             OutputPricePerMillionTokens = GetNestedDecimal(model, "cost", "output"),
             Capabilities = GetCapabilities(model),
             IsAvailable = false,
+            ReleasedAt = GetReleaseDate(model),
             LastCheckedAt = checkedAt
         };
+    }
+
+    private static DateTimeOffset? GetReleaseDate(JsonElement model)
+    {
+        return DateTimeOffset.TryParseExact(
+            GetString(model, "release_date"),
+            ["yyyy-MM-dd", "yyyy-MM"],
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal,
+            out var releasedAt)
+            ? releasedAt
+            : null;
     }
 
     private static IReadOnlyList<string> GetCapabilities(JsonElement model)

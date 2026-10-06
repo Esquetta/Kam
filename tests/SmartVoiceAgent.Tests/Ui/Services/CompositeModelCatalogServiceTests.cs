@@ -54,6 +54,45 @@ public sealed class CompositeModelCatalogServiceTests
     }
 
     [Fact]
+    public async Task GetModelsAsync_ListsNewestFirstUsingMetadataReleaseDates()
+    {
+        var live = new StubModelCatalogService([
+            new ModelCatalogEntry { Provider = ModelProviderType.Anthropic, ModelId = "claude-haiku-4-5-20251001", IsAvailable = true },
+            new ModelCatalogEntry { Provider = ModelProviderType.Anthropic, ModelId = "claude-opus-5-5", IsAvailable = true },
+            new ModelCatalogEntry
+            {
+                Provider = ModelProviderType.Anthropic,
+                ModelId = "claude-sonnet-4-6",
+                IsAvailable = true,
+                ReleasedAt = new DateTimeOffset(2026, 2, 17, 0, 0, 0, TimeSpan.Zero)
+            }
+        ]);
+        var metadata = new StubModelCatalogService([
+            new ModelCatalogEntry
+            {
+                ModelId = "claude-opus-5-5",
+                ReleasedAt = new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero)
+            },
+            new ModelCatalogEntry
+            {
+                ModelId = "claude-haiku-4-5-20251001",
+                ReleasedAt = new DateTimeOffset(2025, 10, 15, 0, 0, 0, TimeSpan.Zero)
+            }
+        ]);
+        var service = new CompositeModelCatalogService(live, metadata);
+
+        var models = await service.GetModelsAsync(new ModelProviderProfile
+        {
+            Provider = ModelProviderType.Anthropic
+        });
+
+        models.Select(model => model.ModelId).Should().Equal(
+            "claude-opus-5-5",
+            "claude-sonnet-4-6",
+            "claude-haiku-4-5-20251001");
+    }
+
+    [Fact]
     public async Task GetModelsAsync_WhenLiveProviderFails_ReturnsModelsDevFallback()
     {
         var live = new FailingModelCatalogService();

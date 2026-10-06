@@ -76,12 +76,11 @@ public sealed class OpenAiCompatibleModelCatalogService : IModelCatalogService, 
 
         var textModels = allModels
             .Where(IsLikelyTextGenerationModel)
-            .OrderByDescending(model => model.ModelId, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+            .NewestFirst();
 
         return textModels.Length > 0
             ? textModels
-            : allModels.OrderByDescending(model => model.ModelId, StringComparer.OrdinalIgnoreCase).ToArray();
+            : allModels.NewestFirst();
     }
 
     public void Dispose()
@@ -131,8 +130,20 @@ public sealed class OpenAiCompatibleModelCatalogService : IModelCatalogService, 
             OutputPricePerMillionTokens = GetNestedDecimal(item, "pricing", "completion", multiplyByMillion: true),
             Capabilities = capabilities,
             IsAvailable = true,
+            ReleasedAt = GetUnixTime(item, "created"),
             LastCheckedAt = checkedAt
         };
+    }
+
+    private static DateTimeOffset? GetUnixTime(JsonElement item, string propertyName)
+    {
+        return item.TryGetProperty(propertyName, out var value)
+            && value.ValueKind == JsonValueKind.Number
+            && value.TryGetInt64(out var seconds)
+            && seconds > 0
+            && seconds <= DateTimeOffset.MaxValue.ToUnixTimeSeconds()
+                ? DateTimeOffset.FromUnixTimeSeconds(seconds)
+                : null;
     }
 
     private static bool IsLikelyTextGenerationModel(ModelCatalogEntry model)
