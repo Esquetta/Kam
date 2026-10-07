@@ -105,7 +105,6 @@ public sealed class VoiceAssistant : IDisposable
     private readonly IWakeWordDetectionService _wakeWord;
     private readonly ISpeechModelStore _models;
     private readonly ITextToSpeechService _speech;
-    private readonly INoiseSuppressionService? _noiseSuppression;
     private readonly IConfiguration _configuration;
     private readonly IUiLogService? _log;
     private readonly object _gate = new();
@@ -125,7 +124,6 @@ public sealed class VoiceAssistant : IDisposable
         ISpeechModelStore models,
         ITextToSpeechService speech,
         IConfiguration configuration,
-        INoiseSuppressionService? noiseSuppression = null,
         IUiLogService? log = null)
     {
         _recorders = recorders;
@@ -134,7 +132,6 @@ public sealed class VoiceAssistant : IDisposable
         _models = models;
         _speech = speech;
         _configuration = configuration;
-        _noiseSuppression = noiseSuppression;
         _log = log;
         _wakeWord.OnWakeWordDetected += OnWakeWordDetected;
         _wakeWord.OnError += OnWakeWordError;
@@ -154,11 +151,6 @@ public sealed class VoiceAssistant : IDisposable
     /// can't take the command.
     /// </summary>
     public Func<string, bool>? CommandRouter { get; set; }
-
-    /// <summary>
-    /// Gets or sets whether noise suppression runs on recordings before recognition.
-    /// </summary>
-    public bool UseNoiseSuppression { get; set; }
 
     /// <summary>Gets what the assistant is doing.</summary>
     /// <summary>
@@ -525,11 +517,7 @@ public sealed class VoiceAssistant : IDisposable
         SetState(VoiceState.Transcribing);
         try
         {
-            if (UseNoiseSuppression && _noiseSuppression is not null)
-            {
-                audio = _noiseSuppression.SuppressNoise(audio, new NoiseSuppressionOptions { SuppressionStrength = 0.5f });
-            }
-
+            // Whisper gets the recording as captured: spectral noise suppression garbles speech it would otherwise get right.
             var result = await _speechToText.ConvertToTextAsync(audio).ConfigureAwait(false);
             var text = result.Text?.Trim() ?? string.Empty;
             if (wakePhraseFirst && text.Length > 0)

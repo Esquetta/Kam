@@ -1298,20 +1298,6 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             private set => this.RaiseAndSetIfChanged(ref _hasTestRecording, value);
         }
 
-        private bool _isNoiseSuppressionEnabled = true;
-        public bool IsNoiseSuppressionEnabled
-        {
-            get => _isNoiseSuppressionEnabled;
-            set
-            {
-                if (_isNoiseSuppressionEnabled != value)
-                {
-                    this.RaiseAndSetIfChanged(ref _isNoiseSuppressionEnabled, value);
-                    _settingsService.IsNoiseSuppressionEnabled = value;
-                }
-            }
-        }
-
         private string? _audioErrorMessage;
 
         /// <summary>
@@ -2115,7 +2101,6 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             // Load saved device selections
             var savedInputId = _settingsService.SelectedInputDeviceId;
             var savedOutputId = _settingsService.SelectedOutputDeviceId;
-            _isNoiseSuppressionEnabled = _settingsService.IsNoiseSuppressionEnabled;
 
             // Validate saved devices are still available
             if (!string.IsNullOrEmpty(savedInputId) && _audioDeviceService.IsDeviceAvailable(savedInputId))

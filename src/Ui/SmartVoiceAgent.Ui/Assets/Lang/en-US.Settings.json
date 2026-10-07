@@ -87,8 +87,6 @@
   "Settings.Voice.MicrophoneTip": "Select the microphone to use for voice commands",
   "Settings.Voice.NoMicrophones": "No microphones detected. Connect a microphone and refresh the device list.",
   "Settings.Voice.InputVolumeTip": "Adjust microphone sensitivity",
-  "Settings.Voice.NoiseSuppression": "Noise suppression",
-  "Settings.Voice.NoiseSuppressionDesc": "Reduce background noise while recording",
   "Settings.Voice.MicTest": "Mic test",
   "Settings.Voice.MicTestDesc": "Record a sample and play it back",
   "Settings.Voice.MicTest.Start": "Test mic",

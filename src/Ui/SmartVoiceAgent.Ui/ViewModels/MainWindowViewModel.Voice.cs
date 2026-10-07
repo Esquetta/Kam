@@ -191,7 +191,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             _voice = voice;
             _voice.CommandRouter = RouteVoiceCommand;
-            _voice.UseNoiseSuppression = _pageSettingsService.IsNoiseSuppressionEnabled;
             _voice.StateChanged += OnVoiceStateChanged;
             _voice.LevelChanged += OnVoiceLevelChanged;
             _voice.CommandRecognized += OnVoiceCommandRecognized;
@@ -449,13 +448,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 case nameof(ISettingsService.SpokenReplies):
                     this.RaisePropertyChanged(nameof(IsSpokenRepliesOn));
                     this.RaisePropertyChanged(nameof(SpokenRepliesToolTip));
-                    break;
-                case nameof(ISettingsService.IsNoiseSuppressionEnabled):
-                    if (_voice is not null)
-                    {
-                        _voice.UseNoiseSuppression = _pageSettingsService.IsNoiseSuppressionEnabled;
-                    }
-
                     break;
             }
         }

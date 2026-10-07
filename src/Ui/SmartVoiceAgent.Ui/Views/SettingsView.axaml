@@ -581,28 +581,6 @@
 
                         <Border Height="1" Background="{DynamicResource BorderSubtleBrush}"/>
 
-                        <!-- Noise suppression -->
-                        <Grid ColumnDefinitions="*, Auto">
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.NoiseSuppression}"
-                                           FontSize="13"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.NoiseSuppressionDesc}"
-                                           FontSize="12"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           Margin="0,2,0,0"
-                                           TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1"
-                                          IsChecked="{Binding IsNoiseSuppressionEnabled, Mode=TwoWay}"
-                                          OnContent=""
-                                          OffContent=""
-                                          VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <Border Height="1" Background="{DynamicResource BorderSubtleBrush}"/>
-
                         <!-- Mic test -->
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTest}"

@@ -155,11 +155,6 @@ public interface ISettingsService
     float OutputVolume { get; set; }
 
     /// <summary>
-    /// Gets or sets whether noise suppression is enabled
-    /// </summary>
-    bool IsNoiseSuppressionEnabled { get; set; }
-
-    /// <summary>
     /// Gets or sets the spoken language: empty follows the interface language, <c>auto</c> detects it,
     /// otherwise a two-letter code such as <c>tr</c>.
     /// </summary>

@@ -394,7 +394,7 @@ public sealed class VoiceAssistantTests
     }
 
     [Fact]
-    public async Task UseNoiseSuppression_IsOffUnlessAsked()
+    public async Task Recording_GoesToSpeechToTextUnchanged()
     {
         var fakes = new VoiceFakes();
         using var voice = fakes.CreateAssistant();
@@ -404,8 +404,7 @@ public sealed class VoiceAssistantTests
         fakes.Recorders.Last.Speak(Speech);
 
         await VoiceFakes.WaitUntilAsync(() => fakes.SpeechToText.Received.Count == 1, "the recording is transcribed");
-        voice.UseNoiseSuppression.Should().BeFalse();
-        fakes.SpeechToText.Received[0].Should().BeSameAs(Speech);
+        fakes.SpeechToText.Received[0].Should().BeSameAs(Speech, "noise suppression garbles speech Whisper would get right");
     }
 
     private static List<string> Route(VoiceAssistant voice)

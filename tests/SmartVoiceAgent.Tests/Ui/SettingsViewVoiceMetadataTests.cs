@@ -66,7 +66,6 @@ public sealed class SettingsViewVoiceMetadataTests
         var section = LoadVoiceSection(localized: false);
 
         Element(section, "ComboBox", "ItemsSource", "{Binding InputDevices}");
-        Element(section, "ToggleSwitch", "IsChecked", "{Binding IsNoiseSuppressionEnabled, Mode=TwoWay}");
         Element(section, "Button", "Command", "{Binding StartMicTestCommand}");
 
         Element(section, "ToggleSwitch", "IsChecked", "{Binding WakeWordEnabled, Mode=TwoWay}");

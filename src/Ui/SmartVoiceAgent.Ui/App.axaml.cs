@@ -562,7 +562,6 @@ namespace SmartVoiceAgent.Ui
                     services.GetRequiredService<ISpeechModelStore>(),
                     services.GetRequiredService<ITextToSpeechService>(),
                     services.GetRequiredService<IConfiguration>(),
-                    services.GetService<INoiseSuppressionService>(),
                     services.GetService<IUiLogService>());
 
                 viewModel.SetVoiceAssistant(voice);

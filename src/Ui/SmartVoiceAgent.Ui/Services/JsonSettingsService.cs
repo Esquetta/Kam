@@ -203,12 +203,6 @@ public class JsonSettingsService : ISettingsService, IDisposable
         set => SetProperty(nameof(OutputVolume), value, v => _data.OutputVolume = v);
     }
 
-    public bool IsNoiseSuppressionEnabled
-    {
-        get => _data.IsNoiseSuppressionEnabled;
-        set => SetProperty(nameof(IsNoiseSuppressionEnabled), value, v => _data.IsNoiseSuppressionEnabled = v);
-    }
-
     public string VoiceLanguage
     {
         get => _data.VoiceLanguage ?? string.Empty;
@@ -435,7 +429,6 @@ public class JsonSettingsService : ISettingsService, IDisposable
             nameof(SelectedOutputDeviceId) => (T?)(object?)_data.SelectedOutputDeviceId,
             nameof(InputVolume) => (T?)(object?)_data.InputVolume,
             nameof(OutputVolume) => (T?)(object?)_data.OutputVolume,
-            nameof(IsNoiseSuppressionEnabled) => (T?)(object?)_data.IsNoiseSuppressionEnabled,
             nameof(VoiceLanguage) => (T?)(object?)_data.VoiceLanguage,
             nameof(SpeechEngine) => (T?)(object?)_data.SpeechEngine,
             nameof(LocalSpeechModel) => (T?)(object?)_data.LocalSpeechModel,
@@ -628,7 +621,6 @@ public class JsonSettingsService : ISettingsService, IDisposable
             SelectedOutputDeviceId = source.SelectedOutputDeviceId,
             InputVolume = source.InputVolume,
             OutputVolume = source.OutputVolume,
-            IsNoiseSuppressionEnabled = source.IsNoiseSuppressionEnabled,
             VoiceLanguage = source.VoiceLanguage,
             SpeechEngine = source.SpeechEngine,
             LocalSpeechModel = source.LocalSpeechModel,
@@ -770,7 +762,6 @@ public class JsonSettingsService : ISettingsService, IDisposable
         public string? SelectedOutputDeviceId { get; set; }
         public float InputVolume { get; set; } = 1.0f;
         public float OutputVolume { get; set; } = 1.0f;
-        public bool IsNoiseSuppressionEnabled { get; set; } = true;
         public string? VoiceLanguage { get; set; }
         public string? SpeechEngine { get; set; }
         public string? LocalSpeechModel { get; set; }

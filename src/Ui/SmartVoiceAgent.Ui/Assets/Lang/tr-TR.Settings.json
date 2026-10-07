@@ -87,8 +87,6 @@
   "Settings.Voice.MicrophoneTip": "Sesli komutlar için kullanılacak mikrofonu seçin",
   "Settings.Voice.NoMicrophones": "Mikrofon bulunamadı. Bir mikrofon bağlayıp cihaz listesini yenileyin.",
   "Settings.Voice.InputVolumeTip": "Mikrofon hassasiyetini ayarlayın",
-  "Settings.Voice.NoiseSuppression": "Gürültü bastırma",
-  "Settings.Voice.NoiseSuppressionDesc": "Kayıt sırasında arka plandaki gürültüyü azalt",
   "Settings.Voice.MicTest": "Mikrofon testi",
   "Settings.Voice.MicTestDesc": "Kısa bir kayıt alıp geri dinleyin",
   "Settings.Voice.MicTest.Start": "Mikrofonu test et",
