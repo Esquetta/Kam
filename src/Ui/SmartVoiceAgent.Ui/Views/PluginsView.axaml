@@ -86,67 +86,6 @@
             <Setter Property="CornerRadius" Value="999"/>
         </Style>
 
-        <Style Selector="Button.PluginActionButton">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Opacity" Value="1"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-        </Style>
-
-        <Style Selector="Button.PluginActionButton:pointerover">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Opacity" Value="1"/>
-        </Style>
-
-        <Style Selector="Button.PluginActionButton:pressed">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-        </Style>
-
-        <Style Selector="Button.PluginActionButton:focus">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-        </Style>
-
-        <Style Selector="Button.PluginActionButton /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-        </Style>
-
-        <Style Selector="Button.PluginActionButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-        </Style>
-
-        <Style Selector="Button.PluginActionButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-        </Style>
-
-        <Style Selector="Button.PluginActionButton Path">
-            <Setter Property="Width" Value="16"/>
-            <Setter Property="Height" Value="16"/>
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Stretch" Value="Uniform"/>
-        </Style>
-
         <Style Selector="Border.EvalSummary">
             <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
@@ -264,17 +203,13 @@
                     </StackPanel>
                     <Button Grid.Column="2"
                             Command="{Binding RunSkillEvalCommand}"
-                            Classes="IconButton PluginActionButton"
+                            Classes="IconButton"
                             ToolTip.Tip="{DynamicResource Lang.Skills.Eval.RunTip}"
                             Width="30"
                             Height="30"
                             Padding="0"
                             VerticalAlignment="Center">
-                        <Path Data="M8,5V19L19,12L8,5Z"
-                              Fill="{DynamicResource AccentBrush}"
-                              Width="13"
-                              Height="13"
-                              Stretch="Uniform"/>
+                        <Viewbox Width="16" Height="16"><Path Classes="Icon Accent" Data="{StaticResource IconPlay}"/></Viewbox>
                     </Button>
                 </Grid>
             </Border>
@@ -416,31 +351,23 @@
                                      PlaceholderText="{DynamicResource Lang.Skills.Policy.ValuePlaceholder}"
                                      MinHeight="32"/>
                             <Button Grid.Column="2"
+                                    Classes="IconAction"
                                     Command="{Binding SaveRuntimePolicyOptionCommand}"
-                                    ToolTip.Tip="{DynamicResource Lang.Skills.Policy.SaveTip}"
-                                    MinHeight="32"
-                                    Padding="10,0">
-                                <Path Data="M9,16.2L4.8,12L3.4,13.4L9,19L21,7L19.6,5.6L9,16.2Z"
-                                      Width="13"
-                                      Height="13"
-                                      Stretch="Uniform"/>
+                                    ToolTip.Tip="{DynamicResource Lang.Skills.Policy.SaveTip}">
+                                <Viewbox Width="16" Height="16"><Path Classes="Icon Accent" Data="{StaticResource IconCheck}"/></Viewbox>
                             </Button>
                         </Grid>
                     </StackPanel>
                     <Button Grid.Column="1"
                             Command="{Binding SelectedPlugin.TestSkillCommand}"
-                            Classes="IconButton PluginActionButton"
+                            Classes="IconButton"
                             IsVisible="{Binding SelectedPlugin.CanTestSkill}"
                             ToolTip.Tip="{DynamicResource Lang.Skills.Test.Tip}"
                             Width="30"
                             Height="30"
                             Padding="0"
                             VerticalAlignment="Top">
-                        <Path Data="M8,5V19L19,12L8,5Z"
-                              Fill="{DynamicResource AccentBrush}"
-                              Width="13"
-                              Height="13"
-                              Stretch="Uniform"/>
+                        <Viewbox Width="16" Height="16"><Path Classes="Icon Accent" Data="{StaticResource IconPlay}"/></Viewbox>
                     </Button>
                 </Grid>
             </Border>
@@ -613,95 +540,60 @@
                                             HorizontalAlignment="Left"
                                             VerticalAlignment="Bottom"
                                             Margin="0,14,0,0">
-                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
+                                    <Button Classes="IconButton CompactIconButton"
                                             Padding="0"
                                             Cursor="Hand"
                                             ToolTip.Tip="{DynamicResource Lang.Skills.Card.Details}"
                                             Command="{Binding SelectCommand}">
-                                        <Path Data="M11,17H13V11H11V17M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,7V9H13V7H11Z"
-                                              Fill="{DynamicResource AccentBrush}"
-                                              Width="16" Height="16"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Stretch="Uniform"/>
+                                        <Viewbox Width="14" Height="14"><Path Classes="Icon Accent" Data="{StaticResource IconInfo}"/></Viewbox>
                                     </Button>
-                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
+                                    <Button Classes="IconButton CompactIconButton"
                                             Padding="0"
                                             Cursor="Hand"
                                             ToolTip.Tip="{DynamicResource Lang.Skills.Test.Tip}"
                                             IsVisible="{Binding CanTestSkill}"
                                             Command="{Binding TestSkillCommand}">
-                                        <Path Data="M8,5V19L19,12L8,5Z"
-                                              Fill="{DynamicResource AccentBrush}"
-                                              Width="16" Height="16"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Stretch="Uniform"/>
+                                        <Viewbox Width="14" Height="14"><Path Classes="Icon Accent" Data="{StaticResource IconPlay}"/></Viewbox>
                                     </Button>
-                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
+                                    <Button Classes="IconButton CompactIconButton"
                                             Padding="0"
                                             Cursor="Hand"
                                             ToolTip.Tip="{DynamicResource Lang.Skills.Card.ApproveReview}"
                                             IsVisible="{Binding CanApproveReview}"
                                             Command="{Binding ApproveReviewCommand}">
-                                        <Path Data="M9,16.17L4.83,12L3.41,13.41L9,19L21,7L19.59,5.59L9,16.17Z"
-                                              Fill="{DynamicResource AccentBrush}"
-                                              Width="16" Height="16"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Stretch="Uniform"/>
+                                        <Viewbox Width="14" Height="14"><Path Classes="Icon Accent" Data="{StaticResource IconCheck}"/></Viewbox>
                                     </Button>
-                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
+                                    <Button Classes="IconButton CompactIconButton"
                                             Padding="0"
                                             Cursor="Hand"
                                             ToolTip.Tip="{DynamicResource Lang.Common.Enable}"
                                             IsVisible="{Binding CanEnable}"
                                             Command="{Binding EnableCommand}">
-                                        <Path Data="M8,5V19L19,12L8,5Z"
-                                              Fill="{DynamicResource AccentGreenBrush}"
-                                              Width="16" Height="16"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Stretch="Uniform"/>
+                                        <Viewbox Width="14" Height="14"><Path Classes="Icon Success" Data="{StaticResource IconPower}"/></Viewbox>
                                     </Button>
-                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
+                                    <Button Classes="IconButton CompactIconButton"
                                             Padding="0"
                                             Cursor="Hand"
                                             ToolTip.Tip="{DynamicResource Lang.Skills.Card.GrantPermissions}"
                                             IsVisible="{Binding CanGrantPermissions}"
                                             Command="{Binding GrantPermissionsCommand}">
-                                        <Path Data="M12,17A2,2 0 0,0 14,15A2,2 0 0,0 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8H17V6A5,5 0 0,0 7,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0,0 18,8M9,8V6A3,3 0 0,1 15,6V8H9Z"
-                                              Fill="{DynamicResource AccentBrush}"
-                                              Width="16" Height="16"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Stretch="Uniform"/>
+                                        <Viewbox Width="14" Height="14"><Path Classes="Icon Accent" Data="{StaticResource IconLockOpen}"/></Viewbox>
                                     </Button>
-                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
+                                    <Button Classes="IconButton CompactIconButton"
                                             Padding="0"
                                             Cursor="Hand"
                                             ToolTip.Tip="{DynamicResource Lang.Common.Disable}"
                                             IsVisible="{Binding CanDisable}"
                                             Command="{Binding DisableCommand}">
-                                        <Path Data="M13,3H11V13H13V3M17.83,5.17L16.41,6.59A6,6 0 1,1 7.59,6.59L6.17,5.17A8,8 0 1,0 17.83,5.17Z"
-                                              Fill="{DynamicResource TextMutedBrush}"
-                                              Width="16" Height="16"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Stretch="Uniform"/>
+                                        <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconPower}"/></Viewbox>
                                     </Button>
-                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
+                                    <Button Classes="IconButton CompactIconButton"
                                             Padding="0"
                                             Cursor="Hand"
                                             ToolTip.Tip="{DynamicResource Lang.Skills.Card.RevokePermissions}"
                                             IsVisible="{Binding CanRevokePermissions}"
                                             Command="{Binding RevokePermissionsCommand}">
-                                        <Path Data="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C14.15,22.47 16.1,21.26 17.64,19.66L16.22,18.24C15.04,19.42 13.6,20.34 12,20.82C7.98,19.57 5,15.28 5,11V6.3L12,3.18L19,6.3V11C19,12.1 18.8,13.2 18.43,14.25L20,15.82C20.64,14.31 21,12.67 21,11V5L12,1M4.27,3L3,4.27L19.73,21L21,19.73L4.27,3Z"
-                                              Fill="{DynamicResource AccentErrorBrush}"
-                                              Width="16" Height="16"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Stretch="Uniform"/>
+                                        <Viewbox Width="14" Height="14"><Path Classes="Icon Danger" Data="{StaticResource IconShieldOff}"/></Viewbox>
                                     </Button>
                                 </StackPanel>
                             </Grid>

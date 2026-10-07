@@ -51,7 +51,6 @@ public sealed class PluginsViewIconLayoutTests
             var classes = AttributeValue(actionButton, "Classes")?.Split(' ') ?? [];
             classes.Should().Contain("IconButton");
             classes.Should().Contain("CompactIconButton");
-            classes.Should().Contain("PluginActionButton");
         }
 
         actionButtons.Should().OnlyContain(element =>
@@ -61,17 +60,20 @@ public sealed class PluginsViewIconLayoutTests
             && AttributeValue(element, "Margin") == null);
 
         var actionGlyphs = actionButtons
-            .SelectMany(element => element.Descendants())
-            .Where(element => element.Name.LocalName == "Path")
+            .SelectMany(element => element.Elements())
             .ToArray();
 
         actionGlyphs.Should().HaveCount(actionButtons.Length);
         actionGlyphs.Should().OnlyContain(element =>
-            AttributeValue(element, "Width") == "16"
-            && AttributeValue(element, "Height") == "16"
-            && AttributeValue(element, "Stretch") == "Uniform"
-            && AttributeValue(element, "HorizontalAlignment") == "Center"
-            && AttributeValue(element, "VerticalAlignment") == "Center");
+            element.Name.LocalName == "Viewbox"
+            && AttributeValue(element, "Width") == "14"
+            && AttributeValue(element, "Height") == "14");
+        actionGlyphs
+            .Select(element => element.Elements().Single())
+            .Should()
+            .OnlyContain(path => path.Name.LocalName == "Path"
+                && (AttributeValue(path, "Classes") ?? string.Empty).Split(' ', StringSplitOptions.None).Contains("Icon")
+                && (AttributeValue(path, "Data") ?? string.Empty).StartsWith("{StaticResource Icon", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -164,65 +166,71 @@ public sealed class PluginsViewIconLayoutTests
         var presenterStyle = controls
             .Descendants()
             .Single(element => element.Name.LocalName == "Style"
-                && AttributeValue(element, "Selector") == "Button.IconButton /template/ ContentPresenter#PART_ContentPresenter");
+                && AttributeValue(element, "Selector") == "Button.IconButton /template/ ContentPresenter#PART_ContentPresenter, Button.IconAction /template/ ContentPresenter#PART_ContentPresenter");
 
-        presenterStyle
-            .Elements()
-            .Where(element => element.Name.LocalName == "Setter")
-            .ToDictionary(element => AttributeValue(element, "Property")!, element => AttributeValue(element, "Value"))
+        // The presenter fills the button, so the hover background covers the whole button rather than a blob around the glyph.
+        Setters(presenterStyle)
             .Should()
-            .Contain("HorizontalAlignment", "Center")
-            .And.Contain("VerticalAlignment", "Center");
+            .Contain("HorizontalAlignment", "Stretch")
+            .And.Contain("VerticalAlignment", "Stretch")
+            .And.Contain("HorizontalContentAlignment", "Center")
+            .And.Contain("VerticalContentAlignment", "Center");
+
+        // Glyphs keep their 24x24 grid; Uniform would fit narrow glyphs to their bounds and push them off-center.
+        var glyphStyle = controls
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Style"
+                && AttributeValue(element, "Selector") == "Button.IconButton Path.Icon, Button.IconAction Path.Icon");
+
+        Setters(glyphStyle).Should().Contain("Stretch", "None");
     }
 
     [Fact]
-    public void PluginActionButtonStyle_RendersFlatAcrossInteractiveStates()
+    public void IconButtons_HighlightTheWholeButtonAndTheGlyphOnHover()
     {
-        var pluginsView = XDocument.Parse(LocalizedXaml.ReadAllText(FindPluginsViewXamlPath())).Root;
+        var controls = XDocument.Load(FindControlsXamlPath()).Root!;
 
-        var flatStyle = pluginsView!
-            .Descendants()
-            .Single(element => element.Name.LocalName == "Style"
-                && AttributeValue(element, "Selector") == "Button.PluginActionButton");
+        Setters(StyleFor(controls, "Button.IconButton:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.IconAction:pointerover /template/ ContentPresenter#PART_ContentPresenter"))
+            .Should().Contain("Background", "{DynamicResource ControlHoverBrush}");
+        Setters(StyleFor(controls, "Button.IconButton:pressed /template/ ContentPresenter#PART_ContentPresenter, Button.IconAction:pressed /template/ ContentPresenter#PART_ContentPresenter"))
+            .Should().Contain("Background", "{DynamicResource ControlPressedBrush}");
+        Setters(StyleFor(controls, "Button.IconButton:pointerover Path.Icon, Button.IconAction:pointerover Path.Icon"))
+            .Should().Contain("Stroke", "{DynamicResource TextPrimaryBrush}");
 
-        var setters = flatStyle
-            .Elements()
-            .Where(element => element.Name.LocalName == "Setter")
-            .ToDictionary(element => AttributeValue(element, "Property")!, element => AttributeValue(element, "Value"));
-
-        setters["Background"].Should().Be("Transparent");
-        setters["BorderBrush"].Should().Be("Transparent");
-        setters["BorderThickness"].Should().Be("0");
-        setters.Should().NotContainKey("BoxShadow");
-
-        var hoverStyle = pluginsView
-            .Descendants()
-            .Single(element => element.Name.LocalName == "Style"
-                && AttributeValue(element, "Selector") == "Button.PluginActionButton:pointerover");
-
-        hoverStyle
-            .Elements()
-            .Where(element => element.Name.LocalName == "Setter")
-            .ToDictionary(element => AttributeValue(element, "Property")!, element => AttributeValue(element, "Value"))
+        var pluginsView = XDocument.Parse(LocalizedXaml.ReadAllText(FindPluginsViewXamlPath())).Root!;
+        pluginsView.Descendants()
+            .Where(element => element.Name.LocalName == "Style")
+            .Select(element => AttributeValue(element, "Selector") ?? string.Empty)
             .Should()
-            .Contain("Background", "Transparent")
-            .And.Contain("BorderBrush", "Transparent")
-            .And.Contain("BorderThickness", "0");
+            .NotContain(selector => selector.Contains("IconButton", StringComparison.Ordinal) || selector.Contains("PluginActionButton", StringComparison.Ordinal),
+                "a page style must not switch the shared icon button hover off");
+    }
 
-        var presenterStyle = pluginsView
-            .Descendants()
-            .Single(element => element.Name.LocalName == "Style"
-                && AttributeValue(element, "Selector") == "Button.PluginActionButton /template/ ContentPresenter#PART_ContentPresenter");
+    [Theory]
+    [InlineData("MainWindow.axaml")]
+    [InlineData("PluginsView.axaml")]
+    [InlineData("ExtensionsView.axaml")]
+    [InlineData("SettingsView.axaml")]
+    [InlineData("IntegrationsView.axaml")]
+    [InlineData("RuntimeDiagnosticsView.axaml")]
+    public void IconButtons_DrawStrokeGlyphsTheHoverStyleCanRecolor(string viewFileName)
+    {
+        var view = XDocument.Parse(LocalizedXaml.ReadAllText(FindRepoFile("src", "Ui", "SmartVoiceAgent.Ui", "Views", viewFileName))).Root!;
 
-        presenterStyle
-            .Elements()
-            .Where(element => element.Name.LocalName == "Setter")
-            .ToDictionary(element => AttributeValue(element, "Property")!, element => AttributeValue(element, "Value"))
-            .Should()
-            .Contain("Background", "Transparent")
-            .And.Contain("BorderBrush", "Transparent")
-            .And.Contain("BorderThickness", "0")
-            .And.Contain("Padding", "0");
+        var glyphs = view.Descendants()
+            .Where(element => element.Name.LocalName == "Button")
+            .Where(element => (AttributeValue(element, "Classes") ?? string.Empty)
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Intersect(["IconButton", "IconAction"])
+                .Any())
+            .SelectMany(button => button.Descendants().Where(element => element.Name.LocalName == "Path"))
+            .ToArray();
+
+        glyphs.Should().OnlyContain(path =>
+            (AttributeValue(path, "Classes") ?? string.Empty).Split(' ', StringSplitOptions.None).Contains("Icon")
+            && AttributeValue(path, "Fill") == null
+            && AttributeValue(path, "Stroke") == null,
+            "icon buttons use Path.Icon glyphs; a local Fill or Stroke would keep the glyph from brightening on hover");
     }
 
     [Fact]
@@ -254,6 +262,19 @@ public sealed class PluginsViewIconLayoutTests
     private static string? AttributeValue(XElement element, string attributeName)
     {
         return element.Attributes().FirstOrDefault(attribute => attribute.Name.LocalName == attributeName)?.Value;
+    }
+
+    private static XElement StyleFor(XElement root, string selector)
+    {
+        return root.Descendants()
+            .Single(element => element.Name.LocalName == "Style" && AttributeValue(element, "Selector") == selector);
+    }
+
+    private static Dictionary<string, string?> Setters(XElement style)
+    {
+        return style.Elements()
+            .Where(element => element.Name.LocalName == "Setter")
+            .ToDictionary(element => AttributeValue(element, "Property")!, element => AttributeValue(element, "Value"));
     }
 
     private static string FindPluginsViewXamlPath()

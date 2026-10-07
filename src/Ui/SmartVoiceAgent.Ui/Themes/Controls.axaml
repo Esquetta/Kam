@@ -167,6 +167,11 @@
         <Setter Property="Fill" Value="{DynamicResource AccentOnBrush}" />
     </Style>
 
+    <Style Selector="Button.PrimaryAction Path.Icon">
+        <Setter Property="Fill" Value="{x:Null}" />
+        <Setter Property="Stroke" Value="{DynamicResource AccentOnBrush}" />
+    </Style>
+
     <Style Selector="Button.PrimaryAction:disabled">
         <Setter Property="Opacity" Value="0.45" />
     </Style>
@@ -194,6 +199,10 @@
         <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+
+    <Style Selector="Button.SecondaryAction:pointerover Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
 
     <!-- Disabled actions keep their shape and fade instead of turning into grey slabs -->
@@ -238,33 +247,104 @@
     </Style>
 
     <Style Selector="Button.GhostAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}" />
+        <Setter Property="Background" Value="{DynamicResource ControlHoverBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
 
-    <Style Selector="Button.IconAction">
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="8" />
+    <!--
+        Icon buttons. IconButton is a ghost square or circle; IconAction adds a hairline border.
+        The hover and pressed fills cover the whole button, and the glyph brightens with them.
+        Glyphs are Path.Icon in a Viewbox: they keep their 24x24 grid (Stretch None), so narrow
+        icons such as the mic or the play triangle stay centered instead of hugging the left edge.
+        Tint a glyph with Accent, Success or Danger; leave it plain for the muted default.
+    -->
+    <Style Selector="Button.IconButton">
+        <Setter Property="MinWidth" Value="28" />
+        <Setter Property="MinHeight" Value="28" />
         <Setter Property="Padding" Value="0" />
-        <Setter Property="MinWidth" Value="32" />
-        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="8" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Cursor" Value="Hand" />
     </Style>
 
-    <Style Selector="Button.IconAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}" />
+    <Style Selector="Button.IconAction">
+        <Setter Property="MinWidth" Value="32" />
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
     </Style>
 
-    <Style Selector="Button.IconAction Path">
-        <Setter Property="Width" Value="15" />
-        <Setter Property="Height" Value="15" />
-        <Setter Property="Stretch" Value="Uniform" />
-        <Setter Property="HorizontalAlignment" Value="Center" />
-        <Setter Property="VerticalAlignment" Value="Center" />
+    <Style Selector="Button.IconButton /template/ ContentPresenter#PART_ContentPresenter, Button.IconAction /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="Button.IconButton:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.IconAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ControlHoverBrush}" />
+    </Style>
+
+    <Style Selector="Button.IconAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}" />
+    </Style>
+
+    <Style Selector="Button.IconButton:pressed /template/ ContentPresenter#PART_ContentPresenter, Button.IconAction:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ControlPressedBrush}" />
+    </Style>
+
+    <Style Selector="Button.IconButton:disabled, Button.IconAction:disabled">
+        <Setter Property="Opacity" Value="0.4" />
+    </Style>
+
+    <Style Selector="Button.IconButton:disabled /template/ ContentPresenter#PART_ContentPresenter, Button.IconAction:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="Button.IconButton Path.Icon, Button.IconAction Path.Icon">
+        <Setter Property="Stretch" Value="None" />
+        <Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Stroke" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="Button.IconButton:pointerover Path.Icon, Button.IconAction:pointerover Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+
+    <!-- Tinted glyphs keep their color on hover; the fill behind them still changes. -->
+    <Style Selector="Path.Icon.Accent">
+        <Setter Property="Stroke" Value="{DynamicResource AccentBrush}" />
+    </Style>
+
+    <Style Selector="Path.Icon.Success">
+        <Setter Property="Stroke" Value="{DynamicResource AccentGreenBrush}" />
+    </Style>
+
+    <Style Selector="Path.Icon.Danger">
+        <Setter Property="Stroke" Value="{DynamicResource AccentErrorBrush}" />
+    </Style>
+
+    <Style Selector="Path.Icon.Muted">
+        <Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}" />
     </Style>
 
     <Style Selector="Border.IconBadge">
@@ -281,44 +361,12 @@
         <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
     </Style>
 
-    <Style Selector="Button.IconButton">
-        <Setter Property="MinWidth" Value="28" />
-        <Setter Property="MinHeight" Value="28" />
-        <Setter Property="Padding" Value="0" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="Cursor" Value="Hand" />
+    <Style Selector="Border.IconBadge Path.Icon">
+        <Setter Property="Fill" Value="{x:Null}" />
+        <Setter Property="Stroke" Value="{DynamicResource AccentBrush}" />
     </Style>
 
-    <Style Selector="Button.IconButton /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="HorizontalAlignment" Value="Center" />
-        <Setter Property="VerticalAlignment" Value="Center" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="Padding" Value="0" />
-    </Style>
-
-    <Style Selector="Button.IconButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}" />
-    </Style>
-
-    <Style Selector="Button.IconButton Path">
-        <Setter Property="HorizontalAlignment" Value="Center" />
-        <Setter Property="VerticalAlignment" Value="Center" />
-        <Setter Property="Stretch" Value="Uniform" />
-    </Style>
-
-    <!-- Talk button: the whole round button turns red while recording a command, not just the icon's box. -->
-    <Style Selector="Button.TalkButton /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="HorizontalAlignment" Value="Stretch" />
-        <Setter Property="VerticalAlignment" Value="Stretch" />
-    </Style>
-
-    <!-- Draw the 24x24 glyph as designed: Uniform stretch fits the narrow mic to its own bounds and leaves it off-center. -->
-    <Style Selector="Button.TalkButton Path.Icon, Button.SpokenRepliesButton Path.Icon">
-        <Setter Property="Stretch" Value="None" />
-    </Style>
-
+    <!-- Talk button: the whole round button turns red while recording a command. -->
     <Style Selector="Button.TalkButton.listening /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource AccentErrorBrush}" />
     </Style>
@@ -329,11 +377,6 @@
 
     <Style Selector="Button.TalkButton.listening Path.Icon">
         <Setter Property="Stroke" Value="{DynamicResource AccentOnBrush}" />
-    </Style>
-
-    <Style Selector="Button.TalkButton:disabled Path.Icon">
-        <Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}" />
-        <Setter Property="Opacity" Value="0.5" />
     </Style>
 
     <Style Selector="ProgressBar.VoiceMeter">
@@ -366,7 +409,7 @@
     </Style>
 
     <Style Selector="Button.CompactAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}" />
+        <Setter Property="Background" Value="{DynamicResource ControlHoverBrush}" />
     </Style>
 
     <!-- ========================= -->
@@ -632,12 +675,16 @@
     </Style>
 
     <Style Selector="Button.MarkdownCopy:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}" />
+        <Setter Property="Background" Value="{DynamicResource ControlHoverBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
 
     <Style Selector="Button.MarkdownCopy Path.Icon">
         <Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}" />
+    </Style>
+
+    <Style Selector="Button.MarkdownCopy:pointerover Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
 
     <Style Selector="Border.MarkdownTable">

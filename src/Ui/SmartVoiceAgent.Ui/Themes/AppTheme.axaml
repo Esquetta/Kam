@@ -67,6 +67,25 @@
     <StreamGeometry x:Key="IconMore">M5 12h.01 M12 12h.01 M19 12h.01</StreamGeometry>
     <StreamGeometry x:Key="IconChevronDown">M6 9l6 6 6-6</StreamGeometry>
     <StreamGeometry x:Key="IconCpu">M9 2v2 M15 2v2 M9 20v2 M15 20v2 M2 9h2 M2 15h2 M20 9h2 M20 15h2 M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M9 9h6v6H9z</StreamGeometry>
+    <StreamGeometry x:Key="IconPlay">M6 3l14 9-14 9z</StreamGeometry>
+    <StreamGeometry x:Key="IconInfo">M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z M12 16v-4 M12 8h.01</StreamGeometry>
+    <StreamGeometry x:Key="IconPower">M12 2v10 M18.4 6.6a9 9 0 1 1-12.77.04</StreamGeometry>
+    <StreamGeometry x:Key="IconLockOpen">M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z M7 11V7a5 5 0 0 1 9.9-1</StreamGeometry>
+    <StreamGeometry x:Key="IconShieldOff">M2 2l20 20 M5 5a1 1 0 0 0-1 1v7c0 5 3.5 7.5 7.67 8.94a1 1 0 0 0 .67.01c2.35-.82 4.48-1.97 5.9-3.71 M9.31 3.65a12.25 12.25 0 0 0 1.93-1.37a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1v7a9.78 9.78 0 0 1-.08 1.26</StreamGeometry>
+    <StreamGeometry x:Key="IconTerminal">M4 17l6-6-6-6 M12 19h8</StreamGeometry>
+    <StreamGeometry x:Key="IconAlertCircle">M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z M12 8v4 M12 16h.01</StreamGeometry>
+    <StreamGeometry x:Key="IconMonitor">M4 3h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M8 21h8 M12 17v4</StreamGeometry>
+    <StreamGeometry x:Key="IconAppWindow">M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M2 9h20 M6 4v5 M10 4v5</StreamGeometry>
+    <StreamGeometry x:Key="IconAudioLines">M2 10v3 M6 6v11 M10 3v18 M14 8v7 M18 5v13 M22 10v3</StreamGeometry>
+    <StreamGeometry x:Key="IconRadio">M4.9 19.1C1 15.2 1 8.8 4.9 4.9 M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5 M12 10a2 2 0 1 0 0 4a2 2 0 1 0 0-4z M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5 M19.1 4.9C23 8.8 23 15.1 19.1 19.1</StreamGeometry>
+    <StreamGeometry x:Key="IconLanguages">M5 8l6 6 M4 14l6-6 2-3 M2 5h12 M7 2h1 M22 22l-5-10-5 10 M14 18h6</StreamGeometry>
+    <StreamGeometry x:Key="IconListTodo">M4 5h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z M3 17l2 2 4-4 M13 6h8 M13 12h8 M13 18h8</StreamGeometry>
+    <StreamGeometry x:Key="IconSave">M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7 M7 3v4a1 1 0 0 0 1 1h7</StreamGeometry>
+    <StreamGeometry x:Key="IconMail">M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M22 7l-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7</StreamGeometry>
+    <StreamGeometry x:Key="IconSmartphone">M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z M12 18h.01</StreamGeometry>
+    <StreamGeometry x:Key="IconLightbulb">M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5 M9 18h6 M10 22h4</StreamGeometry>
+    <StreamGeometry x:Key="IconHistory">M3 12a9 9 0 1 0 9-9a9.75 9.75 0 0 0-6.74 2.74L3 8 M3 3v5h5 M12 7v5l4 2</StreamGeometry>
+    <StreamGeometry x:Key="IconListTree">M21 12h-8 M21 6H8 M21 18h-8 M3 6v4c0 1.1.9 2 2 2h3 M3 10v6c0 1.1.9 2 2 2h3</StreamGeometry>
 
     <!-- SunIcon - Simplified for Avalonia -->
     <StreamGeometry x:Key="SunIconGeometry">
