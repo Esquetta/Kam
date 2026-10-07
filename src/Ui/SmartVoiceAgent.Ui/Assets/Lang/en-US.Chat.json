@@ -21,7 +21,7 @@
   "Chat.Suggestion.Tests.Title": "Inspect failing tests",
   "Chat.Suggestion.Tests.Caption": "Find the root cause",
   "Chat.Suggestion.Tests.Prompt": "Inspect the failing tests and explain the root cause.",
-  "Chat.Suggestion.Plan.Title": "Plan next implementation",
+  "Chat.Suggestion.Plan.Title": "Plan the next step",
   "Chat.Suggestion.Plan.Caption": "Break work into steps",
   "Chat.Suggestion.Plan.Prompt": "Plan the next implementation step for this project.",
 
