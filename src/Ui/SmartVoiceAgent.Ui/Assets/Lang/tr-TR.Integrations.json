@@ -15,7 +15,10 @@
   "Integrations.Todoist.ApiKeyPlaceholder": "Todoist API anahtarınızı girin...",
 
   "Integrations.WebSearch.Title": "Web araması",
-  "Integrations.WebSearch.Description": "Ajanın web'de arama yapmasını sağlar. programmablesearchengine.google.com adresinde bir arama motoru, ardından Google Cloud'da bir Custom Search JSON API anahtarı oluşturun. Değişiklikler bir sonraki mesajda geçerli olur.",
+  "Integrations.WebSearch.Description": "Ajanın web'de arama yapmasını sağlar. Anahtar gerekmez: Kam DuckDuckGo'da arar, olmazsa Bing'e geçer. Daha istikrarlı sonuç için programmablesearchengine.google.com'dan bir Google Custom Search anahtarı ve arama motoru kimliği ekleyebilirsiniz. Değişiklikler bir sonraki mesajda geçerli olur.",
+  "Integrations.WebSearch.Subtitle": "Anahtar gerekmez · Google isteğe bağlı",
+  "Integrations.WebSearch.Status.Keyless": "ANAHTARSIZ",
+  "Integrations.WebSearch.Status.Google": "GOOGLE",
   "Integrations.WebSearch.ApiKey": "API anahtarı",
   "Integrations.WebSearch.ApiKeyPlaceholder": "Custom Search JSON API anahtarı",
   "Integrations.WebSearch.EngineId": "Arama motoru kimliği",

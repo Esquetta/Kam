@@ -37,7 +37,7 @@ public sealed class IntegrationsViewModelTests : IDisposable
         var viewModel = new IntegrationsViewModel(settingsService);
 
         viewModel.IsWebSearchConfigured.Should().BeFalse();
-        viewModel.WebSearchStatusText.Should().Be("NOT CONFIGURED");
+        viewModel.WebSearchStatusText.Should().Be("NO KEY", "search works without a key");
         viewModel.WebSearchApiKey = " search-key ";
         viewModel.CanSaveWebSearch.Should().BeFalse("both the key and the engine id are needed");
         viewModel.WebSearchEngineId = "engine-1";
@@ -46,7 +46,7 @@ public sealed class IntegrationsViewModelTests : IDisposable
         settingsService.WebSearchApiKey.Should().Be("search-key");
         settingsService.WebSearchEngineId.Should().Be("engine-1");
         viewModel.IsWebSearchConfigured.Should().BeTrue();
-        viewModel.WebSearchStatusText.Should().Be("ACTIVE");
+        viewModel.WebSearchStatusText.Should().Be("GOOGLE");
         using (var reloaded = new JsonSettingsService(_settingsDirectory))
         {
             new IntegrationsViewModel(reloaded).IsWebSearchConfigured.Should().BeTrue();
@@ -57,6 +57,7 @@ public sealed class IntegrationsViewModelTests : IDisposable
         settingsService.WebSearchApiKey.Should().BeEmpty();
         settingsService.WebSearchEngineId.Should().BeEmpty();
         viewModel.IsWebSearchConfigured.Should().BeFalse();
+        viewModel.WebSearchStatusText.Should().Be("NO KEY");
     }
 
     [Fact]

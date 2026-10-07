@@ -15,7 +15,10 @@
   "Integrations.Todoist.ApiKeyPlaceholder": "Enter your Todoist API key...",
 
   "Integrations.WebSearch.Title": "Web search",
-  "Integrations.WebSearch.Description": "Lets the agent search the web. Create a search engine at programmablesearchengine.google.com, then a Custom Search JSON API key in Google Cloud. Changes apply to the next message.",
+  "Integrations.WebSearch.Description": "Lets the agent search the web. It works without a key: Kam searches DuckDuckGo, with Bing as a backup. For steadier results, add a Google Custom Search key and engine ID from programmablesearchengine.google.com. Changes apply to the next message.",
+  "Integrations.WebSearch.Subtitle": "No key needed · Google optional",
+  "Integrations.WebSearch.Status.Keyless": "NO KEY",
+  "Integrations.WebSearch.Status.Google": "GOOGLE",
   "Integrations.WebSearch.ApiKey": "API key",
   "Integrations.WebSearch.ApiKeyPlaceholder": "Custom Search JSON API key",
   "Integrations.WebSearch.EngineId": "Search engine ID",

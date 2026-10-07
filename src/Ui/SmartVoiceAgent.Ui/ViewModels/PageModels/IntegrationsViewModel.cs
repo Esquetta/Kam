@@ -215,7 +215,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
         }
 
-        /// <summary>Gets whether a saved key and engine ID let the agent search the web.</summary>
+        /// <summary>Gets whether a saved Google key and engine ID replace keyless search.</summary>
         public bool IsWebSearchConfigured
         {
             get => _isWebSearchConfigured;
@@ -232,9 +232,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         public string WebSearchDescription => Loc.Get("Integrations.WebSearch.Description");
 
+        /// <summary>Gets which search the agent uses: Google with a saved key, otherwise keyless search.</summary>
         public string WebSearchStatusText => IsWebSearchConfigured
-            ? Loc.Get("Integrations.Status.Active")
-            : Loc.Get("Integrations.Status.NotConfigured");
+            ? Loc.Get("Integrations.WebSearch.Status.Google")
+            : Loc.Get("Integrations.WebSearch.Status.Keyless");
 
         #endregion
 

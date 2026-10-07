@@ -25,7 +25,7 @@
 | **MCP** | ModelContextProtocol 1.4.0 |
 | **CQRS** | Cortex.Mediator 3.1.2 |
 | **Validation** | FluentValidation 12.1.1 |
-| **Audio** | NAudio 2.2.1, Whisper.net 1.9.0 |
+| **Audio** | NAudio 2.2.1, Whisper.net 1.9.0 (CPU and Vulkan runtimes) |
 | **OCR** | Tesseract 5.2.0 |
 | **Logging** | Serilog 4.3 with a local file sink; MongoDB when configured |
 | **Testing** | xUnit 2.9.3, Moq 4.20.72, FluentAssertions 8.8.0 |
@@ -424,7 +424,7 @@ See `RESPONSIVE_DESIGN.md` for full details.
 - **Roadmap**: `docs/architecture/agent-platform.md` (MCP host, Agent Skills, plugins, coding mode, subagents)
 
 #### Reliability and performance (October 2026)
-- **Missing config never breaks startup**: `LoggerServiceBase` is MongoDB only when `MongoDbConfiguration:ConnectionString` is set, otherwise `LocalFileLogger` (`%LocalAppData%/Kam/Logs/pipeline-*.log`); web search and HuggingFace services report missing keys when used. `CompositionRootTests` resolves every registered service, so a throwing constructor fails CI
+- **Missing config never breaks startup**: `LoggerServiceBase` is MongoDB only when `MongoDbConfiguration:ConnectionString` is set, otherwise `LocalFileLogger` (`%LocalAppData%/Kam/Logs/pipeline-*.log`); HuggingFace reports a missing key when used. `CompositionRootTests` resolves every registered service, so a throwing constructor fails CI
 - **Chat**: messages sent during a turn queue (`QueuedAgentMessages`) and run after it; streamed text refreshes at most every 50 ms; the message list uses `VirtualizingStackPanel`
 - **Startup**: MCP servers warm up in the background and a turn waits at most 5 s for them (`McpHost` `turnWait`); Whisper loads on first transcription
 - **JSONL stores** read from the end with `JsonLinesFile.ReadLinesNewestFirst`
@@ -448,13 +448,13 @@ See `RESPONSIVE_DESIGN.md` for full details.
 - **Settings without restart**: Settings and Integrations reload `SettingsConfigurationProvider` (debounced in `App`); `ConfiguredChatClient` resolves the client per request through `ChatClientCache`, so models, web search and Todoist apply to the next message. Email, SMS and GitHub App settings still apply after a restart
 - **Approvals**: when a tool call waits and its chat is not on screen, `ApprovalToastNotifier` shows a corner card and changes the tray tooltip
 - **Shortcuts**: Enter sends, Shift+Enter adds a line, Esc cancels voice or stops the turn, Ctrl+N new chat, Ctrl+K search chats, Ctrl+L composer, F2 rename, Ctrl+, Settings, Ctrl+Alt+Space talk (configurable)
-- **Web search keys**: Integrations > Web search sets `WebResearch:SearchApiKey` (secret store) and `WebResearch:SearchEngineId`
+- **Web search**: without keys `AiWebResearchService` searches DuckDuckGo's HTML page (`DuckDuckGoHtmlSearch`, at least 2 s between searches) and falls back to Bing's RSS feed (`BingRssSearch`); Integrations > Web search can add an optional Google Custom Search key (`WebResearch:SearchApiKey`, secret store) and `WebResearch:SearchEngineId`
 
 #### Turkish and voice (October 2026)
 - **Languages**: interface text lives in `Assets/Lang/{code}.{Area}.json` (en-US, tr-TR), embedded as `Kam.Lang.{code}.{Area}.json`. XAML uses `{DynamicResource Lang.Key}`, code uses `Loc.Get`/`Loc.Format`, and English fills any missing key. Long-lived view models refresh code-built text on `LocalizationService.Instance.LanguageChanged`; tests never call `Instance.SetLanguage`. `LanguageResourceProductCopyTests` requires every English key in Turkish with the same placeholders. Logs, diagnostics and tool names stay English
 - **Voice in the UI**: `Services/VoiceAssistant` runs push to talk (mic buttons, tray "Talk", and the talk shortcut, which `GlobalTalkShortcut` registers with Windows through `RegisterHotKey`), the wake phrase, and spoken replies (Settings: off, replies to voice commands, all). Commands go to the agent chat, or to the command loop when `AgentRuntime:Enabled=false`
 - **Capture**: `VoiceRecognitionServiceBase` converts any device format to 16 kHz mono (`PcmConverter`) and `VoiceActivityDetector` ends an utterance after 800 ms of silence. Windows records with WASAPI on the selected microphone, Linux with `arecord`, macOS with `rec`
-- **Speech-to-text**: `MultiSTTService` follows `Voice:SpeechEngine`: local Whisper (`WhisperSTTService`, models from `SpeechModelCatalog` downloaded by `WhisperModelStore`) or an OpenAI-compatible `/audio/transcriptions` endpoint (`OpenAiTranscriptionService`); HuggingFace is a fallback when its key is set. Ollama STT was removed. `TranscriptCleaner` drops Whisper's invented lines for silence. The spoken language defaults to detection (`Voice:Language=auto`), because a fixed language makes Whisper translate other speech into it
+- **Speech-to-text**: `MultiSTTService` follows `Voice:SpeechEngine`: local Whisper (`WhisperSTTService`, models from `SpeechModelCatalog` downloaded by `WhisperModelStore`) or an OpenAI-compatible `/audio/transcriptions` endpoint (`OpenAiTranscriptionService`); HuggingFace is a fallback when its key is set. Ollama STT was removed. `TranscriptCleaner` drops Whisper's invented lines for silence. The spoken language defaults to detection (`Voice:Language=auto`), because a fixed language makes Whisper translate other speech into it. Whisper runs on the GPU through the Vulkan runtime when a driver is present and falls back to the CPU; large-v3-turbo is the accurate choice for Turkish but needs the GPU (about 0.4 s a sentence on an RTX 4070 Ti, 19 s on the CPU). Recordings reach Whisper unprocessed: spectral noise suppression garbled Turkish speech
 - **Wake phrase**: `WhisperWakeWordDetector` transcribes short utterances with the tiny model and matches them with `WakePhraseMatcher` (Turkish letters folded); "Hey Kam, open Spotify" runs in one breath
 - **Spoken replies**: `TextToSpeechService` reads plain text (`SpeechTextFormatter`) sentence by sentence through SAPI/OneCore voices on Windows (`WindowsSpeechSynthesizer`) or `say`/`spd-say`/`espeak` elsewhere
 - **Settings**: the Voice section writes `ISettingsService` and `AiRuntimeConfigurationMapper` maps it to `Voice:*`; services read `VoiceSettings.Read(configuration)` on each use, so changes apply without a restart. `SettingsViewModel.UseSpeechServices` swaps the model store and speech service in tests
@@ -464,7 +464,7 @@ See `RESPONSIVE_DESIGN.md` for full details.
 ### Test Status
 ```
 Build: ✅ Success (CI runs on windows-2025)
-Tests: 1453 total; on Linux 13 fail because they assume Windows paths or tessdata
+Tests: 1470 total; on Linux 13 fail because they assume Windows paths or tessdata
 Run locally on Linux: DOTNET_ROLL_FORWARD=Major dotnet test tests/SmartVoiceAgent.Tests -p:EnableWindowsTargeting=true
 ```
 

@@ -41,7 +41,7 @@ public sealed class IntegrationsViewMetadataTests
         var xaml = LocalizedXaml.ReadAllText(Path.GetFullPath(ViewPath));
 
         xaml.Should().Contain("Text=\"Web search\"");
-        xaml.Should().Contain("Google Programmable Search");
+        xaml.Should().Contain("No key needed · Google optional");
         xaml.Should().Contain("Text=\"{Binding WebSearchApiKey, Mode=TwoWay}\"");
         xaml.Should().Contain("Text=\"{Binding WebSearchEngineId, Mode=TwoWay}\"");
         xaml.Should().Contain("SaveWebSearchCommand");
