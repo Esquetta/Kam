@@ -86,6 +86,14 @@
     <StreamGeometry x:Key="IconLightbulb">M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5 M9 18h6 M10 22h4</StreamGeometry>
     <StreamGeometry x:Key="IconHistory">M3 12a9 9 0 1 0 9-9a9.75 9.75 0 0 0-6.74 2.74L3 8 M3 3v5h5 M12 7v5l4 2</StreamGeometry>
     <StreamGeometry x:Key="IconListTree">M21 12h-8 M21 6H8 M21 18h-8 M3 6v4c0 1.1.9 2 2 2h3 M3 10v6c0 1.1.9 2 2 2h3</StreamGeometry>
+    <StreamGeometry x:Key="IconGlobe">M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z M12 2a14.5 14.5 0 0 0 0 20a14.5 14.5 0 0 0 0-20 M2 12h20</StreamGeometry>
+    <StreamGeometry x:Key="IconGitBranch">M6 3v12 M18 3a3 3 0 1 0 0 6a3 3 0 1 0 0-6z M6 15a3 3 0 1 0 0 6a3 3 0 1 0 0-6z M18 9a9 9 0 0 1-9 9</StreamGeometry>
+    <StreamGeometry x:Key="IconGraduationCap">M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z M22 10v6 M6 12.5V16a6 3 0 0 0 12 0v-3.5</StreamGeometry>
+    <StreamGeometry x:Key="IconBookOpen">M12 7v14 M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4a4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3a3 3 0 0 0-3-3z</StreamGeometry>
+    <StreamGeometry x:Key="IconNetwork">M17 16h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z M3 16h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z M10 2h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3 M12 12V8</StreamGeometry>
+    <StreamGeometry x:Key="IconCode">M16 18l6-6-6-6 M8 6l-6 6 6 6</StreamGeometry>
+    <StreamGeometry x:Key="IconExternalLink">M15 3h6v6 M10 14L21 3 M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6</StreamGeometry>
+    <StreamGeometry x:Key="IconCompass">M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36z</StreamGeometry>
 
     <!-- SunIcon - Simplified for Avalonia -->
     <StreamGeometry x:Key="SunIconGeometry">

@@ -132,42 +132,6 @@
 			<Setter Property="TextWrapping" Value="Wrap"/>
 		</Style>
 
-		<!-- Segmented control used for the activity drawer tabs -->
-		<Style Selector="Border.Segmented">
-			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
-			<Setter Property="CornerRadius" Value="8"/>
-			<Setter Property="Padding" Value="3"/>
-		</Style>
-
-		<Style Selector="Button.DrawerTab">
-			<Setter Property="MinHeight" Value="28"/>
-			<Setter Property="Padding" Value="8,0"/>
-			<Setter Property="FontSize" Value="12"/>
-			<Setter Property="FontWeight" Value="Medium"/>
-			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="CornerRadius" Value="6"/>
-			<Setter Property="HorizontalAlignment" Value="Stretch"/>
-			<Setter Property="HorizontalContentAlignment" Value="Center"/>
-			<Setter Property="VerticalContentAlignment" Value="Center"/>
-			<Setter Property="Cursor" Value="Hand"/>
-		</Style>
-
-		<Style Selector="Button.DrawerTab:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-		</Style>
-
-		<Style Selector="Button.DrawerTab.Selected">
-			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-		</Style>
-
-		<Style Selector="Button.DrawerTab.Selected /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
-			<Setter Property="BoxShadow" Value="0 1 2 0 #1F000000"/>
-		</Style>
-
 		<!-- ========================= -->
 		<!-- SLASH COMMAND PALETTE -->
 		<!-- ========================= -->

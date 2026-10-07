@@ -251,6 +251,14 @@
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
 
+    <Style Selector="Button.GhostAction Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextSecondaryBrush}" />
+    </Style>
+
+    <Style Selector="Button.GhostAction:pointerover Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+
     <!--
         Icon buttons. IconButton is a ghost square or circle; IconAction adds a hairline border.
         The hover and pressed fills cover the whole button, and the glyph brightens with them.
@@ -440,6 +448,90 @@
 
     <Style Selector="Button.PillButton:pointerover Border.Pill">
         <Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}" />
+    </Style>
+
+    <!-- Segmented control: the activity drawer tabs and the Extensions tabs -->
+    <Style Selector="Border.Segmented">
+        <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="3"/>
+    </Style>
+
+    <Style Selector="Button.DrawerTab">
+        <Setter Property="MinHeight" Value="28"/>
+        <Setter Property="Padding" Value="8,0"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+
+    <Style Selector="Button.DrawerTab:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+
+    <Style Selector="Button.DrawerTab.Selected">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+
+    <Style Selector="Button.DrawerTab.Selected /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
+        <Setter Property="BoxShadow" Value="0 1 2 0 #1F000000"/>
+    </Style>
+
+    <Style Selector="Button.DrawerTab Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}"/>
+    </Style>
+
+    <Style Selector="Button.DrawerTab:pointerover Path.Icon, Button.DrawerTab.Selected Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+
+    <!-- Filter chips, such as the kinds on the Extensions page -->
+    <Style Selector="Button.Chip">
+        <Setter Property="MinHeight" Value="28"/>
+        <Setter Property="Padding" Value="12,0"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="14"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+
+    <Style Selector="Button.Chip:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+
+    <Style Selector="Button.Chip.Selected">
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+    </Style>
+
+    <Style Selector="Button.Chip.Selected /template/ ContentPresenter#PART_ContentPresenter, Button.Chip.Selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+    </Style>
+
+    <Style Selector="Button.Chip TextBlock.ChipCount">
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+    </Style>
+
+    <Style Selector="Button.Chip.Selected TextBlock.ChipCount">
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
     </Style>
 
     <Style Selector="Border.Pill">

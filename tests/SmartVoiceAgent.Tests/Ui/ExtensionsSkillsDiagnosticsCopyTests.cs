@@ -1,4 +1,5 @@
 using FluentAssertions;
+using SmartVoiceAgent.Infrastructure.Agent.Extensions;
 using SmartVoiceAgent.Ui.Services;
 using System.Text.RegularExpressions;
 
@@ -33,6 +34,20 @@ public sealed partial class ExtensionsSkillsDiagnosticsCopyTests
         turkish["Diagnostics.Title"].Should().Be("Çalışma zamanı tanılaması");
         turkish["Diagnostics.Status.ActionNeeded"].Should().Be("İŞLEM GEREKLİ");
         turkish["Skills.Card.ApproveReview"].Should().Be("İncelemeyi onayla");
+    }
+
+    [Fact]
+    public void ExtensionCatalog_HasCopyForEveryEntryInBothLanguages()
+    {
+        var english = LocalizationService.LoadDictionary("en-US");
+        var turkish = LocalizationService.LoadDictionary("tr-TR");
+        var ids = ExtensionCatalog.McpServers.Select(entry => entry.Name).Concat(ExtensionCatalog.Plugins.Select(entry => entry.Id));
+
+        foreach (var id in ids)
+        {
+            english.Should().ContainKey("Extensions.Catalog." + id);
+            turkish.Should().ContainKey("Extensions.Catalog." + id);
+        }
     }
 
     [Fact]

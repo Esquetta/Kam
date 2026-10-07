@@ -1,21 +1,135 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:SmartVoiceAgent.Ui.ViewModels.PageModels"
+             xmlns:converters="clr-namespace:SmartVoiceAgent.Ui.Converters"
              x:Class="SmartVoiceAgent.Ui.Views.ExtensionsView"
              x:DataType="vm:ExtensionsViewModel">
 
+    <UserControl.Resources>
+        <converters:IconResourceConverter x:Key="IconResource"/>
+    </UserControl.Resources>
+
     <UserControl.Styles>
+        <!-- Rows the search hides take no space, including the list spacing around them -->
+        <Style Selector="ItemsControl.Filtered > ContentPresenter" x:DataType="vm:ExtensionRowViewModel">
+            <Setter Property="IsVisible" Value="{Binding IsVisible}"/>
+        </Style>
+
+        <!-- Narrow pages (the code-behind sets "narrow"): one card per row, search under the tabs -->
+        <Style Selector="UniformGrid.CatalogGrid">
+            <Setter Property="Columns" Value="2"/>
+        </Style>
+        <Style Selector="StackPanel.narrow UniformGrid.CatalogGrid">
+            <Setter Property="Columns" Value="1"/>
+        </Style>
+        <Style Selector="TextBox.ExtensionSearch">
+            <Setter Property="Grid.Column" Value="1"/>
+            <Setter Property="Width" Value="280"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="StackPanel.narrow TextBox.ExtensionSearch">
+            <Setter Property="Grid.Row" Value="1"/>
+            <Setter Property="Grid.Column" Value="0"/>
+            <Setter Property="Grid.ColumnSpan" Value="2"/>
+            <Setter Property="Width" Value="NaN"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="Margin" Value="0,10,0,0"/>
+        </Style>
+
         <Style Selector="Border.ExtensionRow">
-            <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.12"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border.ExtensionRow:pointerover">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+        </Style>
+
+        <Style Selector="Border.KindIcon">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
             <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="14,12"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+        </Style>
+        <Style Selector="Border.KindIcon Path.Icon">
+            <Setter Property="Stroke" Value="{DynamicResource AccentBrush}"/>
+        </Style>
+
+        <Style Selector="Border.CatalogCard">
+            <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="16,14"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.12"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border.CatalogCard:pointerover">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+        </Style>
+
+        <Style Selector="Border.CatalogIcon">
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+        </Style>
+        <Style Selector="Border.CatalogIcon Path.Icon">
+            <Setter Property="Stroke" Value="{DynamicResource AccentBrush}"/>
+        </Style>
+
+        <Style Selector="Border.StatusDot">
+            <Setter Property="Width" Value="7"/>
+            <Setter Property="Height" Value="7"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Background" Value="{DynamicResource TextMutedBrush}"/>
+        </Style>
+        <Style Selector="Border.StatusDot.Success">
+            <Setter Property="Background" Value="{DynamicResource AccentGreenBrush}"/>
+        </Style>
+        <Style Selector="Border.StatusDot.Danger">
+            <Setter Property="Background" Value="{DynamicResource AccentErrorBrush}"/>
+        </Style>
+        <Style Selector="Border.StatusDot.Accent">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+        </Style>
+
+        <Style Selector="TextBlock.GroupTitle">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBlock.GroupCount">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
         <Style Selector="TextBlock.RowTitle">
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.RowText">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
         </Style>
         <Style Selector="TextBlock.ErrorText">
             <Setter Property="FontSize" Value="12"/>
@@ -26,94 +140,237 @@
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="Margin" Value="0,4,0,0"/>
+        </Style>
+        <Style Selector="TextBlock.TabCount">
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+        </Style>
+
+        <Style Selector="Button.CatalogAdd">
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="Padding" Value="12,4"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <Style Selector="Button.LinkAction">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="2,0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.LinkAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentStrongBrush}"/>
+        </Style>
+
+        <Style Selector="ToggleSwitch.RowToggle">
+            <Setter Property="OnContent" Value=""/>
+            <Setter Property="OffContent" Value=""/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel Classes="WorkbenchPage" Margin="32,28,32,40" MaxWidth="860">
+        <StackPanel x:Name="Page" Classes="WorkbenchPage" Margin="32,28,32,40" MaxWidth="900" Spacing="20">
 
             <!-- Header -->
             <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Spacing="6">
                     <TextBlock Text="{DynamicResource Lang.Extensions.Title}" Classes="PageTitle"/>
-                    <TextBlock Text="{DynamicResource Lang.Extensions.Subtitle}"
-                               Classes="PageSubtitle"/>
-                    <TextBlock Text="{Binding SummaryText}" Classes="Caption"/>
+                    <TextBlock Text="{DynamicResource Lang.Extensions.Subtitle}" Classes="PageSubtitle"/>
                 </StackPanel>
                 <Button Grid.Column="1"
-                        Classes="SecondaryAction"
+                        Classes="IconAction"
                         VerticalAlignment="Top"
+                        ToolTip.Tip="{DynamicResource Lang.Common.Refresh}"
                         Command="{Binding RefreshCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
-                        <TextBlock Text="{DynamicResource Lang.Common.Refresh}"/>
-                    </StackPanel>
+                    <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
                 </Button>
             </Grid>
 
-            <Border Classes="Surface"
-                    Padding="14,10"
-                    IsVisible="{Binding HasMessage}">
-                <TextBlock Text="{Binding Message}" Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}"/>
+            <!-- Tabs and search -->
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="16">
+                <Border Classes="Segmented" VerticalAlignment="Center" HorizontalAlignment="Left">
+                    <StackPanel Orientation="Horizontal" Spacing="2">
+                        <Button Classes="DrawerTab"
+                                Classes.Selected="{Binding IsInstalledTab}"
+                                MinWidth="112"
+                                Command="{Binding ShowInstalledCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="{DynamicResource Lang.Extensions.Tab.Installed}"/>
+                                <TextBlock Text="{Binding InstalledCount}" Classes="TabCount"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="DrawerTab"
+                                Classes.Selected="{Binding IsDiscoverTab}"
+                                MinWidth="112"
+                                Command="{Binding ShowDiscoverCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Viewbox Width="13" Height="13"><Path Classes="Icon" Data="{StaticResource IconCompass}"/></Viewbox>
+                                <TextBlock Text="{DynamicResource Lang.Extensions.Tab.Discover}"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+                <TextBox Classes="ExtensionSearch"
+                         Text="{Binding SearchText}"
+                         PlaceholderText="{DynamicResource Lang.Extensions.Search.Placeholder}">
+                    <TextBox.InnerLeftContent>
+                        <Viewbox Width="14" Height="14" Margin="10,0,0,0">
+                            <Path Classes="Icon Muted" Data="{StaticResource IconSearch}"/>
+                        </Viewbox>
+                    </TextBox.InnerLeftContent>
+                </TextBox>
+            </Grid>
+
+            <Border Classes="Surface" Padding="14,10" IsVisible="{Binding HasMessage}">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                    <Viewbox Width="14" Height="14" VerticalAlignment="Top" Margin="0,1,0,0">
+                        <Path Classes="Icon Accent" Data="{StaticResource IconInfo}"/>
+                    </Viewbox>
+                    <TextBlock Grid.Column="1" Text="{Binding Message}" Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                </Grid>
             </Border>
 
-            <!-- MCP servers -->
-            <Border Classes="WorkbenchSection">
-                <StackPanel Spacing="14">
-                    <Grid ColumnDefinitions="Auto,*,Auto">
-                        <Border Classes="IconBadge">
-                            <Viewbox><Path Classes="Icon" Data="{StaticResource IconPlug}" Stroke="{DynamicResource AccentBrush}" Fill="Transparent"/></Viewbox>
-                        </Border>
-                        <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center" Spacing="2">
-                            <TextBlock Text="{DynamicResource Lang.Extensions.Mcp.Title}" Classes="SectionTitle"/>
-                            <TextBlock Text="{DynamicResource Lang.Extensions.Mcp.Caption}"
-                                       Classes="Caption"/>
+            <!-- Installed -->
+            <StackPanel Spacing="22" IsVisible="{Binding IsInstalledTab}">
+                <WrapPanel ItemSpacing="8" LineSpacing="8">
+                    <Button Classes="Chip" Classes.Selected="{Binding IsFilterAll}" Command="{Binding SetFilterCommand}" CommandParameter="All">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{DynamicResource Lang.Extensions.Filter.All}"/>
+                            <TextBlock Text="{Binding InstalledCount}" Classes="ChipCount"/>
                         </StackPanel>
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <Button Classes="SecondaryAction" Command="{Binding OpenMcpConfigCommand}" Content="{DynamicResource Lang.Extensions.Mcp.OpenConfig}"/>
-                            <Button Classes="SecondaryAction" Command="{Binding ReloadServersCommand}" Content="{DynamicResource Lang.Extensions.Mcp.Reload}"/>
-                            <Button Classes="PrimaryAction" Command="{Binding ConnectServersCommand}" Content="{DynamicResource Lang.Extensions.Mcp.Connect}"/>
+                    </Button>
+                    <Button Classes="Chip" Classes.Selected="{Binding IsFilterMcpServers}" Command="{Binding SetFilterCommand}" CommandParameter="McpServers">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{DynamicResource Lang.Extensions.Mcp.Title}"/>
+                            <TextBlock Text="{Binding McpServerCount}" Classes="ChipCount"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="Chip" Classes.Selected="{Binding IsFilterPlugins}" Command="{Binding SetFilterCommand}" CommandParameter="Plugins">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{DynamicResource Lang.Extensions.Plugins.Title}"/>
+                            <TextBlock Text="{Binding PluginCount}" Classes="ChipCount"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="Chip" Classes.Selected="{Binding IsFilterSkills}" Command="{Binding SetFilterCommand}" CommandParameter="Skills">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{DynamicResource Lang.Extensions.Skills.Title}"/>
+                            <TextBlock Text="{Binding SkillCount}" Classes="ChipCount"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="Chip" Classes.Selected="{Binding IsFilterCommands}" Command="{Binding SetFilterCommand}" CommandParameter="Commands">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{DynamicResource Lang.Extensions.Commands.Title}"/>
+                            <TextBlock Text="{Binding CommandCount}" Classes="ChipCount"/>
+                        </StackPanel>
+                    </Button>
+                </WrapPanel>
+
+                <!-- Nothing to list -->
+                <Border Classes="WorkbenchSection" Padding="32,28" IsVisible="{Binding HasNoInstalledMatches}">
+                    <StackPanel Spacing="12" HorizontalAlignment="Center" MaxWidth="380">
+                        <Border Classes="IconBadge" HorizontalAlignment="Center">
+                            <Viewbox><Path Classes="Icon" Data="{StaticResource IconPuzzle}"/></Viewbox>
+                        </Border>
+                        <StackPanel Spacing="4" IsVisible="{Binding IsNothingInstalled}">
+                            <TextBlock Text="{DynamicResource Lang.Extensions.Empty.Title}" Classes="SectionTitle" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource Lang.Extensions.Empty.Body}" Classes="Caption" TextAlignment="Center" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Spacing="4" IsVisible="{Binding IsSearchWithoutMatches}">
+                            <TextBlock Text="{DynamicResource Lang.Extensions.NoMatches.Title}" Classes="SectionTitle" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding NoMatchesText}" Classes="Caption" TextAlignment="Center" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <Button Classes="PrimaryAction" HorizontalAlignment="Center" Command="{Binding ShowDiscoverCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconCompass}"/></Viewbox>
+                                <TextBlock Text="{DynamicResource Lang.Extensions.Empty.Browse}"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+
+                <!-- MCP servers -->
+                <StackPanel Spacing="10" IsVisible="{Binding ShowMcpSection}">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{DynamicResource Lang.Extensions.Mcp.Title}" Classes="GroupTitle"/>
+                            <TextBlock Text="{Binding VisibleMcpServerCount}" Classes="GroupCount"/>
+                            <Border Background="Transparent" VerticalAlignment="Center" ToolTip.Tip="{DynamicResource Lang.Extensions.Mcp.Caption}">
+                                <Viewbox Width="13" Height="13"><Path Classes="Icon Muted" Data="{StaticResource IconInfo}"/></Viewbox>
+                            </Border>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
+                            <Button Classes="GhostAction" Command="{Binding OpenMcpConfigCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Viewbox Width="13" Height="13"><Path Classes="Icon" Data="{StaticResource IconFile}"/></Viewbox>
+                                    <TextBlock Text="{DynamicResource Lang.Extensions.Mcp.OpenConfig}" FontSize="12"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="GhostAction" Command="{Binding ConnectServersCommand}" IsEnabled="{Binding !IsBusy}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Viewbox Width="13" Height="13"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
+                                    <TextBlock Text="{DynamicResource Lang.Extensions.Mcp.Reconnect}" FontSize="12"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </Grid>
 
-                    <TextBlock Classes="EmptyText"
-                               IsVisible="{Binding HasNoMcpServers}"
-                               Text="{DynamicResource Lang.Extensions.Mcp.Empty}"/>
+                    <TextBlock Classes="EmptyText" IsVisible="{Binding HasNoMcpServers}" Text="{DynamicResource Lang.Extensions.Mcp.Empty}"/>
 
-                    <ItemsControl ItemsSource="{Binding McpServers}">
+                    <ItemsControl Classes="Filtered" ItemsSource="{Binding McpServers}">
                         <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate><StackPanel Spacing="8"/></ItemsPanelTemplate>
+                            <ItemsPanelTemplate><StackPanel Spacing="6"/></ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="vm:McpServerItemViewModel">
                                 <Border Classes="ExtensionRow">
-                                    <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,Auto">
-                                        <StackPanel Spacing="3">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12">
+                                        <Border Classes="KindIcon">
+                                            <Viewbox><Path Classes="Icon" Data="{StaticResource IconPlug}"/></Viewbox>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal" Spacing="8">
                                                 <TextBlock Text="{Binding Name}" Classes="RowTitle"/>
                                                 <TextBlock Text="{Binding SourceText}" Classes="Caption" VerticalAlignment="Center"/>
                                             </StackPanel>
                                             <TextBlock Text="{Binding Detail}" Classes="Caption Mono" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
                                         </StackPanel>
-                                        <Border Grid.Column="1"
-                                                Classes="Pill"
-                                                Classes.Success="{Binding IsReady}"
-                                                Classes.Danger="{Binding IsFailed}"
-                                                Classes.Accent="{Binding IsStarting}"
-                                                Margin="12,0">
-                                            <TextBlock Text="{Binding StatusText}"/>
-                                        </Border>
-                                        <Button Grid.Column="2"
-                                                Classes="IconAction"
-                                                ToolTip.Tip="{DynamicResource Lang.Extensions.Mcp.Restart}"
-                                                Command="{Binding RestartCommand}">
-                                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <Border Classes="StatusDot"
+                                                    Classes.Success="{Binding IsReady}"
+                                                    Classes.Danger="{Binding IsFailed}"
+                                                    Classes.Accent="{Binding IsStarting}"/>
+                                            <TextBlock Text="{Binding StatusText}" Classes="Caption" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="3"
+                                                      Classes="RowToggle"
+                                                      IsVisible="{Binding CanToggle}"
+                                                      IsChecked="{Binding IsEnabled}"/>
+                                        <Button Grid.Column="4"
+                                                Classes="IconButton"
+                                                VerticalAlignment="Center"
+                                                ToolTip.Tip="{DynamicResource Lang.Extensions.MoreActions}">
+                                            <Button.Flyout>
+                                                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                    <MenuItem Header="{DynamicResource Lang.Extensions.Mcp.Restart}" Command="{Binding RestartCommand}"/>
+                                                    <MenuItem Header="{DynamicResource Lang.Extensions.Mcp.OpenConfig}" Command="{Binding OpenConfigCommand}" IsVisible="{Binding IsUserServer}"/>
+                                                    <MenuItem Header="{DynamicResource Lang.Extensions.Mcp.Remove}" Command="{Binding RemoveCommand}" IsVisible="{Binding CanRemove}"/>
+                                                </MenuFlyout>
+                                            </Button.Flyout>
+                                            <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconMore}" StrokeThickness="3"/></Viewbox>
                                         </Button>
                                         <TextBlock Grid.Row="1"
-                                                   Grid.ColumnSpan="3"
+                                                   Grid.Column="1"
+                                                   Grid.ColumnSpan="4"
                                                    Classes="ErrorText"
-                                                   Margin="0,8,0,0"
+                                                   Margin="0,6,0,0"
                                                    IsVisible="{Binding HasError}"
                                                    Text="{Binding Error}"/>
                                     </Grid>
@@ -122,62 +379,59 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
-            </Border>
 
-            <!-- Plugins -->
-            <Border Classes="WorkbenchSection">
-                <StackPanel Spacing="14">
-                    <Grid ColumnDefinitions="Auto,*,Auto">
-                        <Border Classes="IconBadge">
-                            <Viewbox><Path Classes="Icon" Data="{StaticResource IconPuzzle}" Stroke="{DynamicResource AccentBrush}" Fill="Transparent"/></Viewbox>
-                        </Border>
-                        <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center" Spacing="2">
-                            <TextBlock Text="{DynamicResource Lang.Extensions.Plugins.Title}" Classes="SectionTitle"/>
-                            <TextBlock Text="{DynamicResource Lang.Extensions.Plugins.Caption}"
-                                       Classes="Caption"/>
+                <!-- Plugins -->
+                <StackPanel Spacing="10" IsVisible="{Binding ShowPluginsSection}">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{DynamicResource Lang.Extensions.Plugins.Title}" Classes="GroupTitle"/>
+                            <TextBlock Text="{Binding VisiblePluginCount}" Classes="GroupCount"/>
+                            <Border Background="Transparent" VerticalAlignment="Center" ToolTip.Tip="{DynamicResource Lang.Extensions.Plugins.Caption}">
+                                <Viewbox Width="13" Height="13"><Path Classes="Icon Muted" Data="{StaticResource IconInfo}"/></Viewbox>
+                            </Border>
                         </StackPanel>
-                        <Button Grid.Column="2" Classes="SecondaryAction" VerticalAlignment="Center"
-                                Command="{Binding OpenPluginsFolderCommand}" Content="{DynamicResource Lang.Extensions.OpenFolder}"/>
-                    </Grid>
-
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                        <TextBox Text="{Binding PluginSource}"
-                                 PlaceholderText="{DynamicResource Lang.Extensions.Plugins.SourcePlaceholder}"/>
-                        <Button Grid.Column="1" Classes="PrimaryAction" Command="{Binding InstallPluginCommand}"
-                                IsEnabled="{Binding !IsBusy}" Content="{DynamicResource Lang.Common.Install}"/>
+                        <Button Grid.Column="1" Classes="GhostAction" Command="{Binding OpenPluginsFolderCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Viewbox Width="13" Height="13"><Path Classes="Icon" Data="{StaticResource IconFolder}"/></Viewbox>
+                                <TextBlock Text="{DynamicResource Lang.Extensions.OpenFolder}" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
                     </Grid>
 
                     <TextBlock Classes="EmptyText" IsVisible="{Binding HasNoPlugins}" Text="{DynamicResource Lang.Extensions.Plugins.Empty}"/>
 
-                    <ItemsControl ItemsSource="{Binding Plugins}">
+                    <ItemsControl Classes="Filtered" ItemsSource="{Binding Plugins}">
                         <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate><StackPanel Spacing="8"/></ItemsPanelTemplate>
+                            <ItemsPanelTemplate><StackPanel Spacing="6"/></ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="vm:ExtensionPluginItemViewModel">
                                 <Border Classes="ExtensionRow">
-                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-                                        <StackPanel Spacing="3">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
+                                        <Border Classes="KindIcon">
+                                            <Viewbox><Path Classes="Icon" Data="{StaticResource IconPuzzle}"/></Viewbox>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal" Spacing="8">
                                                 <TextBlock Text="{Binding Name}" Classes="RowTitle"/>
                                                 <TextBlock Text="{Binding VersionText}" Classes="Caption" VerticalAlignment="Center"/>
                                             </StackPanel>
-                                            <TextBlock Text="{Binding Description}" Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding Description}" Classes="RowText"/>
                                             <TextBlock Text="{Binding ComponentsText}" Classes="Caption"/>
                                             <TextBlock Text="{Binding Error}" Classes="ErrorText" IsVisible="{Binding HasError}"/>
                                         </StackPanel>
-                                        <ToggleSwitch Grid.Column="1"
-                                                      IsChecked="{Binding IsEnabled}"
-                                                      OnContent="{DynamicResource Lang.Common.On}"
-                                                      OffContent="{DynamicResource Lang.Common.Off}"
-                                                      VerticalAlignment="Center"/>
-                                        <Button Grid.Column="2" Classes="IconAction" ToolTip.Tip="{DynamicResource Lang.Extensions.OpenFolder}"
-                                                VerticalAlignment="Center" Command="{Binding OpenFolderCommand}">
-                                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconFolder}"/></Viewbox>
-                                        </Button>
-                                        <Button Grid.Column="3" Classes="IconAction" ToolTip.Tip="{DynamicResource Lang.Extensions.Plugins.Remove}"
-                                                VerticalAlignment="Center" Command="{Binding UninstallCommand}">
-                                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconTrash}"/></Viewbox>
+                                        <ToggleSwitch Grid.Column="2" Classes="RowToggle" IsChecked="{Binding IsEnabled}"/>
+                                        <Button Grid.Column="3"
+                                                Classes="IconButton"
+                                                VerticalAlignment="Center"
+                                                ToolTip.Tip="{DynamicResource Lang.Extensions.MoreActions}">
+                                            <Button.Flyout>
+                                                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                    <MenuItem Header="{DynamicResource Lang.Extensions.OpenFolder}" Command="{Binding OpenFolderCommand}"/>
+                                                    <MenuItem Header="{DynamicResource Lang.Extensions.Plugins.Remove}" Command="{Binding UninstallCommand}"/>
+                                                </MenuFlyout>
+                                            </Button.Flyout>
+                                            <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconMore}" StrokeThickness="3"/></Viewbox>
                                         </Button>
                                     </Grid>
                                 </Border>
@@ -185,55 +439,54 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
-            </Border>
 
-            <!-- Skills -->
-            <Border Classes="WorkbenchSection">
-                <StackPanel Spacing="14">
-                    <Grid ColumnDefinitions="Auto,*,Auto">
-                        <Border Classes="IconBadge">
-                            <Viewbox><Path Classes="Icon" Data="{StaticResource IconSparkles}" Stroke="{DynamicResource AccentBrush}" Fill="Transparent"/></Viewbox>
-                        </Border>
-                        <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center" Spacing="2">
-                            <TextBlock Text="{DynamicResource Lang.Extensions.Skills.Title}" Classes="SectionTitle"/>
-                            <TextBlock Text="{DynamicResource Lang.Extensions.Skills.Caption}"
-                                       Classes="Caption"/>
+                <!-- Skills -->
+                <StackPanel Spacing="10" IsVisible="{Binding ShowSkillsSection}">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{DynamicResource Lang.Extensions.Skills.Title}" Classes="GroupTitle"/>
+                            <TextBlock Text="{Binding VisibleSkillCount}" Classes="GroupCount"/>
+                            <Border Background="Transparent" VerticalAlignment="Center" ToolTip.Tip="{DynamicResource Lang.Extensions.Skills.Caption}">
+                                <Viewbox Width="13" Height="13"><Path Classes="Icon Muted" Data="{StaticResource IconInfo}"/></Viewbox>
+                            </Border>
                         </StackPanel>
-                        <Button Grid.Column="2" Classes="SecondaryAction" VerticalAlignment="Center"
-                                Command="{Binding OpenSkillsFolderCommand}" Content="{DynamicResource Lang.Extensions.OpenFolder}"/>
+                        <Button Grid.Column="1" Classes="GhostAction" Command="{Binding OpenSkillsFolderCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Viewbox Width="13" Height="13"><Path Classes="Icon" Data="{StaticResource IconFolder}"/></Viewbox>
+                                <TextBlock Text="{DynamicResource Lang.Extensions.OpenFolder}" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
                     </Grid>
 
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                        <TextBox Text="{Binding SkillSource}" PlaceholderText="{DynamicResource Lang.Extensions.Skills.SourcePlaceholder}"/>
-                        <Button Grid.Column="1" Classes="PrimaryAction" Command="{Binding InstallSkillCommand}" Content="{DynamicResource Lang.Common.Install}"/>
-                    </Grid>
+                    <TextBlock Classes="EmptyText" IsVisible="{Binding HasNoSkills}" Text="{DynamicResource Lang.Extensions.Skills.Empty}"/>
 
-                    <TextBlock Classes="EmptyText" IsVisible="{Binding HasNoSkills}"
-                               Text="{DynamicResource Lang.Extensions.Skills.Empty}"/>
-
-                    <ItemsControl ItemsSource="{Binding Skills}">
+                    <ItemsControl Classes="Filtered" ItemsSource="{Binding Skills}">
                         <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate><StackPanel Spacing="8"/></ItemsPanelTemplate>
+                            <ItemsPanelTemplate><StackPanel Spacing="6"/></ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="vm:AgentSkillItemViewModel">
                                 <Border Classes="ExtensionRow">
-                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-                                        <StackPanel Spacing="3">
-                                            <TextBlock Text="{Binding Name}" Classes="RowTitle Mono"/>
-                                            <TextBlock Text="{Binding Description}" Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                        </StackPanel>
-                                        <Border Grid.Column="1" Classes="Pill" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding SourceText}"/>
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
+                                        <Border Classes="KindIcon">
+                                            <Viewbox><Path Classes="Icon" Data="{StaticResource IconSparkles}"/></Viewbox>
                                         </Border>
-                                        <Button Grid.Column="2" Classes="IconAction" ToolTip.Tip="{DynamicResource Lang.Extensions.Skills.Remove}"
-                                                VerticalAlignment="Center" IsVisible="{Binding CanUninstall}"
-                                                Command="{Binding UninstallCommand}">
-                                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconTrash}"/></Viewbox>
-                                        </Button>
-                                        <Button Grid.Column="3" Classes="IconAction" ToolTip.Tip="{DynamicResource Lang.Extensions.OpenFolder}"
-                                                VerticalAlignment="Center" Command="{Binding OpenFolderCommand}">
-                                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconFolder}"/></Viewbox>
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" Classes="RowTitle Mono"/>
+                                            <TextBlock Text="{Binding Description}" Classes="RowText"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2" Text="{Binding SourceText}" Classes="Caption" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="3"
+                                                Classes="IconButton"
+                                                VerticalAlignment="Center"
+                                                ToolTip.Tip="{DynamicResource Lang.Extensions.MoreActions}">
+                                            <Button.Flyout>
+                                                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                    <MenuItem Header="{DynamicResource Lang.Extensions.OpenFolder}" Command="{Binding OpenFolderCommand}"/>
+                                                    <MenuItem Header="{DynamicResource Lang.Extensions.Skills.Remove}" Command="{Binding UninstallCommand}" IsVisible="{Binding CanUninstall}"/>
+                                                </MenuFlyout>
+                                            </Button.Flyout>
+                                            <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconMore}" StrokeThickness="3"/></Viewbox>
                                         </Button>
                                     </Grid>
                                 </Border>
@@ -241,44 +494,48 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
-            </Border>
 
-            <!-- Commands -->
-            <Border Classes="WorkbenchSection">
-                <StackPanel Spacing="14">
-                    <Grid ColumnDefinitions="Auto,*,Auto">
-                        <Border Classes="IconBadge">
-                            <Viewbox><Path Classes="Icon" Data="{StaticResource IconWrench}" Stroke="{DynamicResource AccentBrush}" Fill="Transparent"/></Viewbox>
-                        </Border>
-                        <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center" Spacing="2">
-                            <TextBlock Text="{DynamicResource Lang.Extensions.Commands.Title}" Classes="SectionTitle"/>
-                            <TextBlock Text="{DynamicResource Lang.Extensions.Commands.Caption}"
-                                       Classes="Caption"/>
+                <!-- Commands -->
+                <StackPanel Spacing="10" IsVisible="{Binding ShowCommandsSection}">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{DynamicResource Lang.Extensions.Commands.Title}" Classes="GroupTitle"/>
+                            <TextBlock Text="{Binding VisibleCommandCount}" Classes="GroupCount"/>
+                            <Border Background="Transparent" VerticalAlignment="Center" ToolTip.Tip="{DynamicResource Lang.Extensions.Commands.Caption}">
+                                <Viewbox Width="13" Height="13"><Path Classes="Icon Muted" Data="{StaticResource IconInfo}"/></Viewbox>
+                            </Border>
                         </StackPanel>
-                        <Button Grid.Column="2" Classes="SecondaryAction" VerticalAlignment="Center"
-                                Command="{Binding OpenCommandsFolderCommand}" Content="{DynamicResource Lang.Extensions.OpenFolder}"/>
+                        <Button Grid.Column="1" Classes="GhostAction" Command="{Binding OpenCommandsFolderCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Viewbox Width="13" Height="13"><Path Classes="Icon" Data="{StaticResource IconFolder}"/></Viewbox>
+                                <TextBlock Text="{DynamicResource Lang.Extensions.OpenFolder}" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
                     </Grid>
 
-                    <TextBlock Classes="EmptyText" IsVisible="{Binding HasNoCommands}"
-                               Text="{DynamicResource Lang.Extensions.Commands.Empty}"/>
+                    <TextBlock Classes="EmptyText" IsVisible="{Binding HasNoCommands}" Text="{DynamicResource Lang.Extensions.Commands.Empty}"/>
 
-                    <ItemsControl ItemsSource="{Binding Commands}">
+                    <ItemsControl Classes="Filtered" ItemsSource="{Binding Commands}">
                         <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate><StackPanel Spacing="8"/></ItemsPanelTemplate>
+                            <ItemsPanelTemplate><StackPanel Spacing="6"/></ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="vm:AgentCommandItemViewModel">
                                 <Border Classes="ExtensionRow">
-                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                        <StackPanel Spacing="3">
-                                            <TextBlock Text="{Binding Usage}" Classes="RowTitle Mono"/>
-                                            <TextBlock Text="{Binding Description}" Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                        </StackPanel>
-                                        <Border Grid.Column="1" Classes="Pill" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding SourceText}"/>
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
+                                        <Border Classes="KindIcon">
+                                            <Viewbox><Path Classes="Icon" Data="{StaticResource IconTerminal}"/></Viewbox>
                                         </Border>
-                                        <Button Grid.Column="2" Classes="IconAction" ToolTip.Tip="{DynamicResource Lang.Extensions.Commands.OpenFile}"
-                                                VerticalAlignment="Center" Command="{Binding OpenFileCommand}">
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Usage}" Classes="RowTitle Mono"/>
+                                            <TextBlock Text="{Binding Description}" Classes="RowText"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2" Text="{Binding SourceText}" Classes="Caption" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="3"
+                                                Classes="IconButton"
+                                                VerticalAlignment="Center"
+                                                ToolTip.Tip="{DynamicResource Lang.Extensions.Commands.OpenFile}"
+                                                Command="{Binding OpenFileCommand}">
                                             <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconFile}"/></Viewbox>
                                         </Button>
                                     </Grid>
@@ -287,7 +544,157 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
-            </Border>
+            </StackPanel>
+
+            <!-- Discover -->
+            <StackPanel Spacing="28" IsVisible="{Binding IsDiscoverTab}">
+                <StackPanel Spacing="12">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{DynamicResource Lang.Extensions.Discover.Servers}" Classes="SectionTitle"/>
+                        <TextBlock Text="{DynamicResource Lang.Extensions.Discover.Servers.Caption}" Classes="Caption"/>
+                    </StackPanel>
+
+                    <TextBlock Classes="EmptyText" IsVisible="{Binding HasNoCatalogServerMatches}" Text="{Binding NoMatchesText}"/>
+
+                    <ItemsControl Classes="Filtered" ItemsSource="{Binding CatalogServers}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><UniformGrid Classes="CatalogGrid" ColumnSpacing="12" RowSpacing="12"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:McpCatalogItemViewModel">
+                                <Border Classes="CatalogCard">
+                                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="*,Auto" ColumnSpacing="12">
+                                        <Border Classes="CatalogIcon">
+                                            <Viewbox><Path Classes="Icon" Data="{Binding Icon, Converter={StaticResource IconResource}}"/></Viewbox>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Spacing="3">
+                                            <TextBlock Text="{Binding Title}" Classes="RowTitle"/>
+                                            <TextBlock Text="{Binding Description}" Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,12,0,0">
+                                            <WrapPanel ItemSpacing="6" LineSpacing="6" VerticalAlignment="Center">
+                                                <Border Classes="Pill" IsVisible="{Binding IsRuntimeReady}"><TextBlock Text="{Binding RuntimeText}"/></Border>
+                                                <Border Classes="Pill Warning" IsVisible="{Binding IsRuntimeMissing}"><TextBlock Text="{Binding MissingText}"/></Border>
+                                                <Border Classes="Pill" IsVisible="{Binding NeedsFolder}"><TextBlock Text="{DynamicResource Lang.Extensions.Catalog.AsksForFolder}"/></Border>
+                                                <Button Classes="LinkAction" IsVisible="{Binding IsRuntimeMissing}" Command="{Binding GetRuntimeCommand}" Content="{Binding GetRuntimeText}"/>
+                                                <Button Classes="LinkAction" Command="{Binding OpenHomepageCommand}" Content="{DynamicResource Lang.Extensions.Catalog.Docs}"/>
+                                            </WrapPanel>
+                                            <Button Grid.Column="1"
+                                                    Classes="SecondaryAction CatalogAdd"
+                                                    VerticalAlignment="Center"
+                                                    IsVisible="{Binding CanAdd}"
+                                                    Command="{Binding AddCommand}">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <Viewbox Width="12" Height="12"><Path Classes="Icon" Data="{StaticResource IconPlus}"/></Viewbox>
+                                                    <TextBlock Text="{DynamicResource Lang.Extensions.Catalog.Add}"/>
+                                                </StackPanel>
+                                            </Button>
+                                            <Border Grid.Column="1" Classes="Pill Success" VerticalAlignment="Center" IsVisible="{Binding IsAdded}">
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <Viewbox Width="10" Height="10"><Path Classes="Icon Success" Data="{StaticResource IconCheck}" StrokeThickness="3"/></Viewbox>
+                                                    <TextBlock Text="{DynamicResource Lang.Extensions.Catalog.Added}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Border Classes="Surface" Padding="14,10">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                            <Viewbox Width="16" Height="16" VerticalAlignment="Center"><Path Classes="Icon Muted" Data="{StaticResource IconFile}"/></Viewbox>
+                            <TextBlock Grid.Column="1" Text="{DynamicResource Lang.Extensions.Discover.Custom}" Classes="Caption" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                            <Button Grid.Column="2" Classes="SecondaryAction" Command="{Binding OpenMcpConfigCommand}" Content="{DynamicResource Lang.Extensions.Mcp.OpenConfig}"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Spacing="12" IsVisible="{Binding ShowCatalogPlugins}">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{DynamicResource Lang.Extensions.Discover.Plugins}" Classes="SectionTitle"/>
+                        <TextBlock Text="{DynamicResource Lang.Extensions.Discover.Plugins.Caption}" Classes="Caption" TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <ItemsControl Classes="Filtered" ItemsSource="{Binding CatalogPlugins}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><UniformGrid Classes="CatalogGrid" ColumnSpacing="12" RowSpacing="12"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:PluginCatalogItemViewModel">
+                                <Border Classes="CatalogCard">
+                                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="*,Auto" ColumnSpacing="12">
+                                        <Border Classes="CatalogIcon">
+                                            <Viewbox><Path Classes="Icon" Data="{Binding Icon, Converter={StaticResource IconResource}}"/></Viewbox>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Spacing="3">
+                                            <TextBlock Text="{Binding Title}" Classes="RowTitle"/>
+                                            <TextBlock Text="{Binding Description}" Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,12,0,0">
+                                            <WrapPanel ItemSpacing="6" LineSpacing="6" VerticalAlignment="Center">
+                                                <Border Classes="Pill"><TextBlock Text="{Binding Entry.Source}" Classes="Mono"/></Border>
+                                                <Border Classes="Pill Warning" IsVisible="{Binding IsRuntimeMissing}"><TextBlock Text="{Binding MissingText}"/></Border>
+                                                <Button Classes="LinkAction" IsVisible="{Binding IsRuntimeMissing}" Command="{Binding GetRuntimeCommand}" Content="{Binding GetRuntimeText}"/>
+                                                <Button Classes="LinkAction" Command="{Binding OpenHomepageCommand}" Content="{DynamicResource Lang.Extensions.Catalog.Docs}"/>
+                                            </WrapPanel>
+                                            <Button Grid.Column="1"
+                                                    Classes="SecondaryAction CatalogAdd"
+                                                    VerticalAlignment="Center"
+                                                    IsVisible="{Binding CanAdd}"
+                                                    Command="{Binding AddCommand}">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <Viewbox Width="12" Height="12"><Path Classes="Icon" Data="{StaticResource IconPlus}"/></Viewbox>
+                                                    <TextBlock Text="{DynamicResource Lang.Extensions.Catalog.Add}"/>
+                                                </StackPanel>
+                                            </Button>
+                                            <Border Grid.Column="1" Classes="Pill Accent" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">
+                                                <TextBlock Text="{DynamicResource Lang.Extensions.Catalog.Installing}"/>
+                                            </Border>
+                                            <Border Grid.Column="1" Classes="Pill Success" VerticalAlignment="Center" IsVisible="{Binding IsAdded}">
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <Viewbox Width="10" Height="10"><Path Classes="Icon Success" Data="{StaticResource IconCheck}" StrokeThickness="3"/></Viewbox>
+                                                    <TextBlock Text="{DynamicResource Lang.Extensions.Catalog.Added}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- Install from a source -->
+                <StackPanel Spacing="12">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{DynamicResource Lang.Extensions.Discover.FromSource}" Classes="SectionTitle"/>
+                        <TextBlock Text="{DynamicResource Lang.Extensions.Discover.FromSource.Caption}" Classes="Caption" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <Border Classes="WorkbenchSection" Padding="16">
+                        <StackPanel Spacing="14">
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{DynamicResource Lang.Extensions.Plugins.Title}" Classes="GroupTitle"/>
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                    <TextBox Text="{Binding PluginSource}" PlaceholderText="{DynamicResource Lang.Extensions.Plugins.SourcePlaceholder}"/>
+                                    <Button Grid.Column="1" Classes="PrimaryAction" Command="{Binding InstallPluginCommand}"
+                                            IsEnabled="{Binding !IsBusy}" Content="{DynamicResource Lang.Common.Install}"/>
+                                </Grid>
+                            </StackPanel>
+                            <Border Classes="Divider"/>
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{DynamicResource Lang.Extensions.Skills.Title}" Classes="GroupTitle"/>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                    <TextBox Text="{Binding SkillSource}" PlaceholderText="{DynamicResource Lang.Extensions.Skills.SourcePlaceholder}"/>
+                                    <Button Grid.Column="1" Classes="SecondaryAction" Command="{Binding BrowseSkillFolderCommand}" Content="{DynamicResource Lang.Extensions.Skills.Browse}"/>
+                                    <Button Grid.Column="2" Classes="PrimaryAction" Command="{Binding InstallSkillCommand}" Content="{DynamicResource Lang.Common.Install}"/>
+                                </Grid>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>
