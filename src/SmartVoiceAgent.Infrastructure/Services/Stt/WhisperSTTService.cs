@@ -5,6 +5,7 @@ using SmartVoiceAgent.Core.Models.Audio;
 using SmartVoiceAgent.Infrastructure.Services.Voice;
 using System.Diagnostics;
 using Whisper.net;
+using Whisper.net.LibraryLoader;
 
 namespace SmartVoiceAgent.Infrastructure.Services;
 
@@ -173,7 +174,10 @@ public class WhisperSTTService : ISpeechToTextService
             {
                 factory = WhisperFactory.FromPath(path);
                 _factories[path] = factory;
-                _logger.LogInformation("Local speech model loaded from {ModelPath}", path);
+                _logger.LogInformation(
+                    "Local speech model loaded from {ModelPath} on the {WhisperRuntime} runtime",
+                    path,
+                    RuntimeOptions.LoadedLibrary?.ToString() ?? "unknown");
             }
         }
 
