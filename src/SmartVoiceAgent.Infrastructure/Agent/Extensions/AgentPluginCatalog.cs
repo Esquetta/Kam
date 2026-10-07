@@ -16,6 +16,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Extensions;
 /// </summary>
 public sealed class AgentPluginCatalog : IAgentPluginCatalog
 {
+    private static readonly string[] ListedComponents = ["skills", "commands", "agents"];
     private static readonly Regex GitHubShorthand = new(@"^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$", RegexOptions.Compiled);
     private static readonly JsonDocumentOptions DocumentOptions = new()
     {
@@ -334,6 +335,12 @@ public sealed class AgentPluginCatalog : IAgentPluginCatalog
             }
 
             var fallback = ReadText(entry, "name") is { Length: > 0 } entryName ? entryName : Path.GetFileName(path);
+            if (!HasManifest(path) && ListsComponents(entry))
+            {
+                installed.Add(InstallFromEntry(path, entry, fallback));
+                continue;
+            }
+
             var plugin = ReadPlugin(path, fallback);
             installed.Add(InstallPlugin(path, plugin.Name, enabled: false));
         }
@@ -351,6 +358,76 @@ public sealed class AgentPluginCatalog : IAgentPluginCatalog
 
         return new AgentPluginInstallResult(true, message, installed);
     }
+
+    /// <summary>
+    /// Installs a plugin that a marketplace entry defines by listing its skills, commands and agents, as in
+    /// anthropics/skills where several plugins share the repository root. Only the listed parts are copied, so
+    /// each plugin holds just its own skills.
+    /// </summary>
+    private string InstallFromEntry(string root, JsonObject entry, string name)
+    {
+        var staging = Path.Combine(Path.GetTempPath(), "kam-plugin-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            foreach (var component in ListedComponents)
+            {
+                foreach (var relative in ListedPaths(entry, component))
+                {
+                    var path = ResolveInside(root, relative);
+                    if (path is null)
+                    {
+                        continue;
+                    }
+
+                    var target = Path.Combine(staging, component, Path.GetFileName(Path.TrimEndingDirectorySeparator(path)));
+                    if (Directory.Exists(path))
+                    {
+                        ExtensionPaths.CopyDirectory(path, target);
+                    }
+                    else if (File.Exists(path))
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                        File.Copy(path, target, overwrite: true);
+                    }
+                }
+            }
+
+            var manifest = new JsonObject { ["name"] = name };
+            foreach (var key in new[] { "version", "description", "author" })
+            {
+                if (entry[key] is { } value)
+                {
+                    manifest[key] = value.DeepClone();
+                }
+            }
+
+            if (entry["mcpServers"] is JsonObject servers)
+            {
+                manifest["mcpServers"] = servers.DeepClone();
+            }
+
+            Directory.CreateDirectory(Path.Combine(staging, ".claude-plugin"));
+            File.WriteAllText(Path.Combine(staging, ".claude-plugin", "plugin.json"), manifest.ToJsonString());
+            return InstallPlugin(staging, name, enabled: false);
+        }
+        finally
+        {
+            ExtensionPaths.DeleteDirectory(staging);
+        }
+    }
+
+    private static bool HasManifest(string directory) =>
+        File.Exists(Path.Combine(directory, ".claude-plugin", "plugin.json")) || File.Exists(Path.Combine(directory, "plugin.json"));
+
+    private static bool ListsComponents(JsonObject entry) =>
+        ListedComponents.Any(component => ListedPaths(entry, component).Count > 0);
+
+    private static IReadOnlyList<string> ListedPaths(JsonObject entry, string component) => entry[component] switch
+    {
+        JsonValue value when value.TryGetValue<string>(out var single) => [single],
+        JsonArray array => array.OfType<JsonValue>().Select(item => item.TryGetValue<string>(out var text) ? text : null).OfType<string>().ToArray(),
+        _ => []
+    };
 
     private string InstallPlugin(string source, string name, bool enabled)
     {

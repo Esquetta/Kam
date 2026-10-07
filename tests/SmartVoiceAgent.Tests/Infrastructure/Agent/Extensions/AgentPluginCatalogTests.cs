@@ -110,6 +110,36 @@ public sealed class AgentPluginCatalogTests : IDisposable
     }
 
     [Fact]
+    public async Task InstallAsync_MarketplaceEntriesThatListSkills_EachInstallOnlyTheirOwn()
+    {
+        // The anthropics/skills layout: every plugin points at the repository root and lists its skills.
+        foreach (var skill in new[] { "pdf", "xlsx", "skill-creator" })
+        {
+            _folder.Write($"market/skills/{skill}/SKILL.md", $"---\nname: {skill}\ndescription: The {skill} skill\n---\nBody");
+        }
+
+        _folder.Write("market/.claude-plugin/marketplace.json", """
+            {
+              "name": "anthropic-agent-skills",
+              "plugins": [
+                { "name": "document-skills", "description": "Office files", "source": "./", "strict": false, "skills": ["./skills/pdf", "./skills/xlsx"] },
+                { "name": "example-skills", "source": "./", "strict": false, "skills": ["./skills/skill-creator", "../outside"] }
+              ]
+            }
+            """);
+        var catalog = CreateCatalog();
+
+        var result = await catalog.InstallAsync(_folder.Path("market"));
+
+        result.Success.Should().BeTrue();
+        result.Installed.Should().Equal("document-skills", "example-skills");
+        var plugins = catalog.GetPlugins();
+        plugins.Select(plugin => $"{plugin.Name}|{plugin.Description}|{string.Join(',', plugin.SkillDirectories.Select(Path.GetFileName))}|{plugin.Enabled}")
+            .Should().Equal("document-skills|Office files|pdf,xlsx|False", "example-skills||skill-creator|False");
+        Directory.Exists(Path.Combine(catalog.PluginsDirectory, "document-skills", ".claude-plugin", "marketplace.json")).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task InstallAsync_GitUrl_ClonesThenInstalls()
     {
         string? clonedUrl = null;
