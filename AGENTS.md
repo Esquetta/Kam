@@ -439,6 +439,8 @@ See `RESPONSIVE_DESIGN.md` for full details.
 - **Shell**: icon sidebar that collapses at compact width, per-page title bar, chat workbench with bubbles, suggestion cards and a floating composer
 - **WindowStateManager**: use `{x:Static services:WindowStateManager.Instance}` in XAML; never declare a new instance as a resource
 - **XAML metadata tests** in `tests/SmartVoiceAgent.Tests/Ui/` parse `.axaml` text and pin copy and structure, so update them together with markup changes
+- **List pages** (Extensions, Skills): rows share `ListRow`, `KindIcon`, `StatusDot` (`Success`, `Warning`, `Danger`, `Accent`), `GroupTitle`, `RowToggle` and `LinkAction` from `Themes/Controls.axaml`, plus the `Chip` filters and `Segmented`/`DrawerTab` tabs. Hide filtered rows with a page style `ItemsControl.X > ContentPresenter` bound to the row's `IsVisible`, so list spacing collapses with them. `IconResourceConverter` turns an icon key from a view model (`IconFolder`) into its geometry. Pages that reflow set a `narrow` class on their root panel from code-behind and move controls with styles, never local `Grid.Row`/`Width` values
+- **Extensions Discover** lists `ExtensionCatalog` (keyless MCP servers written to `mcp.json` through `UserMcpServerSource.AddServer`, and plugin marketplaces); copy for each entry lives under `Extensions.Catalog.{id}`
 
 #### Chat experience (October 2026)
 - **Markdown**: agent replies render through `Controls/MarkdownView` (Markdig): headings, lists, task lists, code blocks with a copy button, tables and links. Links open only for http, https and mailto (`TryGetSafeLink`). Parsing happens during layout, and a block whose text did not change keeps its controls, so streaming rebuilds only the last block

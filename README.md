@@ -50,6 +50,8 @@ Kam is evolving into a product-grade local agent runtime:
 - Local skill imports from folders containing `SKILL.md`.
 - Adapter direction for skills.sh, local skills, Codex-style skills, Claude-style skills, and MCP-backed tools.
 - Skill health, smoke evals, execution history, replay controls, and policy guardrails.
+- Skills page: skills grouped by area with search, state filters, an on/off switch per skill, one-click approve or grant, and details that open in place.
+- Extensions page: installed MCP servers, plugins, Agent Skills and slash commands, plus a Discover tab that adds well-known MCP servers that need no key (Fetch, Filesystem, Git, Playwright, Context7, Microsoft Learn, DeepWiki and more) and Anthropic's skill and plugin collections in one click.
 
 ### Desktop Agent Runtime
 
