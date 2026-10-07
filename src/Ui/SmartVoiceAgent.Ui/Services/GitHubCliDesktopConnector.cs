@@ -17,8 +17,7 @@ public sealed class GitHubCliDesktopConnector : IGitHubDesktopConnector
         var status = await RunGhAsync(["auth", "status", "--hostname", "github.com"], cancellationToken);
         if (status.ExitCode != 0)
         {
-            return GitHubDesktopConnectionResult.Failed(
-                "GitHub CLI is not signed in. Run `gh auth login --web` once, then connect again.");
+            return GitHubDesktopConnectionResult.Failed(Loc.Get("Integrations.GitHub.Cli.NotSignedIn"));
         }
 
         return await ListRepositoriesAsync(cancellationToken);
@@ -35,20 +34,20 @@ public sealed class GitHubCliDesktopConnector : IGitHubDesktopConnector
                 ? result.Output
                 : result.Error;
             return GitHubDesktopConnectionResult.Failed(
-                $"GitHub repository listing failed: {SecretRedactor.Redact(message)}");
+                Loc.Format("Integrations.GitHub.Cli.ListFailed", SecretRedactor.Redact(message)));
         }
 
         try
         {
             var repositories = ParseRepositories(result.Output);
             return GitHubDesktopConnectionResult.Connected(
-                $"{repositories.Count} repositories visible through your GitHub sign-in.",
+                Loc.Format("Integrations.GitHub.Detail.SignInRepositoriesVisible", repositories.Count),
                 repositories);
         }
         catch (JsonException ex)
         {
             return GitHubDesktopConnectionResult.Failed(
-                $"GitHub repository response could not be parsed: {ex.Message}");
+                Loc.Format("Integrations.GitHub.Cli.ParseFailed", ex.Message));
         }
     }
 
@@ -124,7 +123,7 @@ public sealed class GitHubCliDesktopConnector : IGitHubDesktopConnector
 
             if (!process.Start())
             {
-                return new ProcessResult(1, string.Empty, "GitHub CLI could not be started.");
+                return new ProcessResult(1, string.Empty, Loc.Get("Integrations.GitHub.Cli.NotStarted"));
             }
 
             process.BeginOutputReadLine();
@@ -135,7 +134,7 @@ public sealed class GitHubCliDesktopConnector : IGitHubDesktopConnector
         }
         catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
         {
-            return new ProcessResult(1, string.Empty, $"GitHub CLI is unavailable: {ex.Message}");
+            return new ProcessResult(1, string.Empty, Loc.Format("Integrations.GitHub.Cli.Unavailable", ex.Message));
         }
     }
 

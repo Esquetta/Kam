@@ -2,9 +2,9 @@ using Microsoft.Extensions.AI;
 using ReactiveUI;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Agents;
+using SmartVoiceAgent.Ui.Services;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -14,13 +14,49 @@ using System.Windows.Input;
 namespace SmartVoiceAgent.Ui.ViewModels
 {
     /// <summary>
-    /// An approval mode as offered in the chat header.
+    /// An approval mode as offered in the composer. Its name and description follow the interface
+    /// language when the main window calls <see cref="RefreshLocalizedText"/>.
     /// </summary>
-    /// <param name="Mode">The mode.</param>
-    /// <param name="Label">Short name.</param>
-    /// <param name="Description">What runs without asking.</param>
-    public sealed record ApprovalModeOption(ApprovalMode Mode, string Label, string Description)
+    public sealed class ApprovalModeOption : ReactiveObject
     {
+        /// <summary>
+        /// Creates the option for <paramref name="mode"/>.
+        /// </summary>
+        /// <param name="mode">The mode.</param>
+        public ApprovalModeOption(ApprovalMode mode)
+        {
+            Mode = mode;
+        }
+
+        /// <summary>Gets the mode.</summary>
+        public ApprovalMode Mode { get; }
+
+        /// <summary>Gets the short name, such as "Ask first".</summary>
+        public string Label => Mode switch
+        {
+            ApprovalMode.AutoEdit => Loc.Get("Workbench.Approval.AutoEdit"),
+            ApprovalMode.FullAuto => Loc.Get("Workbench.Approval.FullAuto"),
+            _ => Loc.Get("Workbench.Approval.Ask")
+        };
+
+        /// <summary>Gets what runs without asking.</summary>
+        public string Description => Mode switch
+        {
+            ApprovalMode.AutoEdit => Loc.Get("Workbench.Approval.AutoEditDescription"),
+            ApprovalMode.FullAuto => Loc.Get("Workbench.Approval.FullAutoDescription"),
+            _ => Loc.Get("Workbench.Approval.AskDescription")
+        };
+
+        /// <summary>
+        /// Re-reads the name and description after the interface language changes.
+        /// </summary>
+        public void RefreshLocalizedText()
+        {
+            this.RaisePropertyChanged(nameof(Label));
+            this.RaisePropertyChanged(nameof(Description));
+        }
+
+        /// <inheritdoc />
         public override string ToString() => Label;
     }
 
@@ -30,15 +66,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
     /// <param name="Session">The chat the message was sent in.</param>
     /// <param name="DisplayText">What the user typed or said, shown in the thread when it runs.</param>
     /// <param name="Message">What goes to the agent, with attachments or command expansion applied.</param>
-    public sealed record QueuedAgentMessage(AgentChatSessionViewModel Session, string DisplayText, string Message);
+    public sealed record QueuedAgentMessage(AgentChatSessionViewModel Session, string DisplayText, string Message, bool FromVoice = false);
 
     /// <summary>
     /// Chat side of the tool-calling agent runtime: streaming replies, tool steps and approval cards.
     /// </summary>
     public partial class MainWindowViewModel
     {
-        private const string CompactedNotice = "Earlier messages were summarized to save context.";
-
         private IAgentRuntime? _agentRuntime;
         private IToolPermissionService? _toolPermissions;
         private IAgentSessionStore? _agentSessionStore;
@@ -52,10 +86,15 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// </summary>
         public static IReadOnlyList<ApprovalModeOption> ApprovalModes { get; } =
         [
-            new(ApprovalMode.Ask, "Ask first", "Reading and web lookups run on their own. Edits, programs and messages ask first."),
-            new(ApprovalMode.AutoEdit, "Auto-edit", "File and clipboard edits run on their own. Programs and messages ask first."),
-            new(ApprovalMode.FullAuto, "Full auto", "Every tool runs without asking.")
+            new(ApprovalMode.Ask),
+            new(ApprovalMode.AutoEdit),
+            new(ApprovalMode.FullAuto)
         ];
+
+        /// <summary>
+        /// Gets the notice shown where earlier messages were summarized.
+        /// </summary>
+        private static string CompactedNotice => Loc.Get("Workbench.Chat.Compacted");
 
         public ICommand ApproveToolCallCommand { get; }
 
@@ -82,6 +121,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 this.RaiseAndSetIfChanged(ref _isAgentTurnRunning, value);
                 this.RaisePropertyChanged(nameof(IsSendVisible));
+                UpdateStatusProperties();
             }
         }
 
@@ -103,8 +143,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public string QueuedAgentMessagesText => _queuedAgentMessages.Count switch
         {
             0 => string.Empty,
-            1 => $"Sends next: {_queuedAgentMessages[0].DisplayText}",
-            var count => $"Sends next: {_queuedAgentMessages[0].DisplayText} (+{count - 1} more)"
+            1 => Loc.Format("Workbench.Composer.SendsNext", _queuedAgentMessages[0].DisplayText),
+            var count => Loc.Format("Workbench.Composer.SendsNextMore", _queuedAgentMessages[0].DisplayText, count - 1)
         };
 
         public ApprovalModeOption SelectedApprovalMode
@@ -142,13 +182,17 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _selectedApprovalMode = ApprovalModes.FirstOrDefault(option => option.Mode == toolPermissions.Mode) ?? ApprovalModes[0];
             this.RaisePropertyChanged(nameof(SelectedApprovalMode));
             this.RaisePropertyChanged(nameof(IsAgentRuntimeEnabled));
+            UpdateStatusProperties();
             _ = LoadSavedAgentSessionsAsync();
         }
 
         /// <summary>
         /// Runs one agent turn in a thread and renders its events as they arrive.
         /// </summary>
-        public async Task RunAgentTurnAsync(AgentChatSessionViewModel session, string message)
+        /// <param name="session">The chat to run the turn in.</param>
+        /// <param name="message">What goes to the agent.</param>
+        /// <param name="fromVoice">Whether the turn started from a voice command, so its reply can be read aloud.</param>
+        public async Task RunAgentTurnAsync(AgentChatSessionViewModel session, string message, bool fromVoice = false)
         {
             if (_agentRuntime is null || IsAgentTurnRunning)
             {
@@ -246,6 +290,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                             if (!string.IsNullOrWhiteSpace(done.FinalText))
                             {
                                 session.Summary = done.FinalText.ReplaceLineEndings(" ");
+                                ReadReplyAloud(done.FinalText, fromVoice);
                             }
 
                             AddLog($"AGENT_TURN_DONE: {done.ToolCallCount} tool calls, {done.InputTokens + done.OutputTokens} tokens");
@@ -254,14 +299,16 @@ namespace SmartVoiceAgent.Ui.ViewModels
                         case AgentTurnFailed failed:
                             FinishStreaming(session, ref streaming);
                             session.AddMessage(AgentChatMessageViewModel.System(
-                                failed.Message == "Stopped." ? "Stopped." : $"Error: {failed.Message}"));
+                                failed.Message == "Stopped."
+                                    ? Loc.Get("Workbench.Chat.Stopped")
+                                    : Loc.Format("Workbench.Chat.Error", failed.Message)));
                             AddLog($"AGENT_TURN_FAILED: {failed.Message}");
                             break;
                     }
 
                     if (timelineChanged)
                     {
-                        session.RelativeTimeText = "now";
+                        session.MarkActivity(DateTimeOffset.Now);
                         RaiseAgentChatStateChanged();
                     }
                 }
@@ -269,7 +316,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             catch (Exception ex)
             {
                 FinishStreaming(session, ref streaming);
-                session.AddMessage(AgentChatMessageViewModel.System($"Error: {ex.Message}"));
+                session.AddMessage(AgentChatMessageViewModel.System(Loc.Format("Workbench.Chat.Error", ex.Message)));
                 AddLog($"AGENT_TURN_FAILED: {ex.Message}");
             }
             finally
@@ -300,18 +347,23 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// <param name="session">The chat to run the turn in.</param>
         /// <param name="displayText">What the user typed or said.</param>
         /// <param name="message">What goes to the agent.</param>
-        private async Task StartOrQueueAgentTurnAsync(AgentChatSessionViewModel session, string displayText, string message)
+        /// <param name="fromVoice">Whether the turn started from a voice command.</param>
+        private async Task StartOrQueueAgentTurnAsync(
+            AgentChatSessionViewModel session,
+            string displayText,
+            string message,
+            bool fromVoice = false)
         {
             if (IsAgentTurnRunning)
             {
-                _queuedAgentMessages.Add(new QueuedAgentMessage(session, displayText, message));
+                _queuedAgentMessages.Add(new QueuedAgentMessage(session, displayText, message, fromVoice));
                 RaiseQueuedAgentMessagesChanged();
                 AddLog($"QUEUED: {displayText}");
                 return;
             }
 
-            AddAgentChatMessage(session, "You", displayText);
-            await RunAgentTurnAsync(session, message);
+            AddAgentChatMessage(session, AgentChatMessageViewModel.UserRole, displayText);
+            await RunAgentTurnAsync(session, message, fromVoice);
         }
 
         /// <summary>
@@ -372,10 +424,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     continue;
                 }
 
-                AddAgentChatMessage(next.Session, "You", next.DisplayText);
+                AddAgentChatMessage(next.Session, AgentChatMessageViewModel.UserRole, next.DisplayText);
 
                 // That turn runs whatever is still queued when it finishes.
-                await RunAgentTurnAsync(next.Session, next.Message);
+                await RunAgentTurnAsync(next.Session, next.Message, next.FromVoice);
                 return;
             }
         }
@@ -460,7 +512,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
                         FormatRelativeTime(summary.UpdatedAt, DateTimeOffset.Now),
                         summary.MessageCount,
                         summary.ModelId,
-                        summary.HasCustomTitle));
+                        summary.HasCustomTitle,
+                        summary.UpdatedAt));
                 }
 
                 ApplyAgentChatSearch();
@@ -512,7 +565,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 {
                     if (!string.IsNullOrWhiteSpace(message.Text))
                     {
-                        items.Add(new AgentChatMessageViewModel("You", message.Text, string.Empty));
+                        items.Add(new AgentChatMessageViewModel(AgentChatMessageViewModel.UserRole, message.Text, string.Empty));
                     }
 
                     continue;
@@ -580,32 +633,20 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /// <summary>
-        /// Formats a thread's last activity like "5m", "3h", "Yesterday" or "Oct 2".
+        /// Formats a thread's last activity like "5m", "3h", "Yesterday" or "Oct 2" in the interface language.
         /// </summary>
         public static string FormatRelativeTime(DateTimeOffset value, DateTimeOffset now)
         {
-            var elapsed = now - value;
-            if (elapsed < TimeSpan.FromMinutes(1))
-            {
-                return "now";
-            }
+            return AgentChatSessionViewModel.FormatRelativeTime(value, now);
+        }
 
-            if (elapsed < TimeSpan.FromHours(1))
-            {
-                return $"{(int)elapsed.TotalMinutes}m";
-            }
-
-            if (elapsed < TimeSpan.FromHours(24) && value.ToLocalTime().Date == now.ToLocalTime().Date)
-            {
-                return $"{(int)elapsed.TotalHours}h";
-            }
-
-            if (value.ToLocalTime().Date == now.ToLocalTime().Date.AddDays(-1))
-            {
-                return "Yesterday";
-            }
-
-            return value.ToLocalTime().ToString("MMM d", CultureInfo.InvariantCulture);
+        /// <summary>
+        /// Formats a thread's last activity in the language of <paramref name="localization"/>,
+        /// such as "5 dk önce" or "Dün" in Turkish.
+        /// </summary>
+        public static string FormatRelativeTime(DateTimeOffset value, DateTimeOffset now, LocalizationService localization)
+        {
+            return AgentChatSessionViewModel.FormatRelativeTime(value, now, localization);
         }
 
         private static void FlushText(List<AgentChatMessageViewModel> items, StringBuilder text)
@@ -619,7 +660,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             text.Clear();
             if (!string.IsNullOrWhiteSpace(content))
             {
-                items.Add(new AgentChatMessageViewModel("Kam", content, string.Empty));
+                items.Add(new AgentChatMessageViewModel(AgentChatMessageViewModel.AgentRole, content, string.Empty));
             }
         }
 

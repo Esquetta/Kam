@@ -16,6 +16,8 @@ namespace SmartVoiceAgent.Infrastructure.Services.WebResearch;
 /// </summary>
 public class AiWebResearchService : IWebResearchService
 {
+    private static readonly TimeSpan KeylessSearchTimeout = TimeSpan.FromSeconds(15);
+
     private readonly HttpClient _httpClient;
     private readonly IChatClient _chatClient;
     private readonly LoggerServiceBase _logger;
@@ -42,18 +44,12 @@ public class AiWebResearchService : IWebResearchService
 
     public async Task<List<WebResearchResult>> SearchAsync(WebResearchRequest request)
     {
-        if (string.IsNullOrWhiteSpace(_searchApiKey) || string.IsNullOrWhiteSpace(_searchEngineId))
-        {
-            throw new InvalidOperationException(
-                "Web search is not set up. Add a Google Custom Search key and engine ID as WebResearch:SearchApiKey and WebResearch:SearchEngineId.");
-        }
-
         try
         {
             _logger.Info($"'{request.Query}' konusu için AI destekli araştırma başlatılıyor...");
             if (request.MaxResults <= 1)
             {
-                var directResults = await PerformGoogleSearchAsync(new WebResearchRequest
+                var directResults = await PerformSearchAsync(new WebResearchRequest
                 {
                     Query = request.Query,
                     Language = request.Language,
@@ -72,7 +68,7 @@ public class AiWebResearchService : IWebResearchService
             var keywordLimit = Math.Clamp(request.MaxResults, 1, 3);
             foreach (var keyword in researchPlan.Keywords.Take(keywordLimit))
             {
-                var keywordResults = await PerformGoogleSearchAsync(new WebResearchRequest
+                var keywordResults = await PerformSearchAsync(new WebResearchRequest
                 {
                     Query = keyword,
                     Language = request.Language,
@@ -397,6 +393,100 @@ SADECE JSON formatında yanıt ver:
         {
             _logger.Error($"AI provider chat call failed: {ex.Message}");
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Searches with Google Custom Search when its key and engine ID are set, otherwise without a key.
+    /// </summary>
+    private Task<List<WebResearchResult>> PerformSearchAsync(WebResearchRequest request)
+    {
+        return string.IsNullOrWhiteSpace(_searchApiKey) || string.IsNullOrWhiteSpace(_searchEngineId)
+            ? PerformKeylessSearchAsync(request)
+            : PerformGoogleSearchAsync(request);
+    }
+
+    /// <summary>
+    /// Searches DuckDuckGo, and Bing's RSS feed when DuckDuckGo blocks, fails or finds nothing.
+    /// </summary>
+    private async Task<List<WebResearchResult>> PerformKeylessSearchAsync(WebResearchRequest request)
+    {
+        var maxResults = Math.Max(request.MaxResults, 1);
+        string? duckDuckGoProblem = null;
+        try
+        {
+            var html = await FetchKeylessAsync(
+                DuckDuckGoHtmlSearch.CreateRequest(request.Query, request.Language),
+                DuckDuckGoHtmlSearch.WaitForTurnAsync);
+            if (DuckDuckGoHtmlSearch.IsBotCheck(html))
+            {
+                duckDuckGoProblem = "DuckDuckGo is limiting searches from this computer";
+            }
+            else
+            {
+                var results = DuckDuckGoHtmlSearch.Parse(html, maxResults);
+                _logger.Info($"DuckDuckGo search returned {results.Count} results");
+                if (results.Count > 0)
+                {
+                    return results;
+                }
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            duckDuckGoProblem = $"DuckDuckGo failed: {ex.Message}";
+        }
+
+        if (duckDuckGoProblem is not null)
+        {
+            _logger.Warn($"{duckDuckGoProblem}; trying Bing");
+        }
+
+        try
+        {
+            var bingRequest = new HttpRequestMessage(HttpMethod.Get, BingRssSearch.CreateUri(request.Query, request.Language));
+            bingRequest.Headers.TryAddWithoutValidation("User-Agent", DuckDuckGoHtmlSearch.UserAgent);
+            var results = BingRssSearch.Parse(await FetchKeylessAsync(bingRequest, waitForTurn: null), maxResults);
+            _logger.Info($"Bing search returned {results.Count} results");
+            if (results.Count > 0 || duckDuckGoProblem is null)
+            {
+                return results;
+            }
+        }
+        catch (HttpRequestException ex) when (duckDuckGoProblem is not null)
+        {
+            _logger.Warn($"Bing failed: {ex.Message}");
+        }
+
+        throw new HttpRequestException(
+            $"Web search without a key is unavailable right now ({duckDuckGoProblem}, and Bing found nothing). Try again in a few minutes, or add a Google Custom Search key in Integrations.");
+    }
+
+    /// <summary>
+    /// Sends a keyless search request with a timeout and returns the page; failures become <see cref="HttpRequestException"/>.
+    /// </summary>
+    private async Task<string> FetchKeylessAsync(HttpRequestMessage request, Func<CancellationToken, Task>? waitForTurn)
+    {
+        using var httpRequest = request;
+        using var timeout = new CancellationTokenSource(KeylessSearchTimeout);
+        try
+        {
+            if (waitForTurn is not null)
+            {
+                await waitForTurn(timeout.Token);
+            }
+
+            using var response = await _httpClient.SendAsync(httpRequest, timeout.Token);
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new HttpRequestException($"HTTP {(int)response.StatusCode}");
+            }
+
+            return await response.Content.ReadAsStringAsync(timeout.Token);
+        }
+        catch (OperationCanceledException) when (timeout.IsCancellationRequested)
+        {
+            throw new HttpRequestException($"no answer within {KeylessSearchTimeout.TotalSeconds:0} seconds");
         }
     }
 

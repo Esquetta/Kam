@@ -1,149 +1,234 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Audio;
-using System.Buffers.Binary;
+using SmartVoiceAgent.Infrastructure.Services.Voice;
 using System.Diagnostics;
 using Whisper.net;
+using Whisper.net.LibraryLoader;
 
 namespace SmartVoiceAgent.Infrastructure.Services;
 
 /// <summary>
-/// Local Whisper.NET implementation for Speech-to-Text service
-/// Runs completely offline without API calls
+/// Transcribes speech on this computer with Whisper. The spoken language and model come from Settings
+/// (<c>Voice:Language</c>, <c>Voice:LocalModel</c>) on each call; models load on first use and stay loaded.
 /// </summary>
 public class WhisperSTTService : ISpeechToTextService
 {
     private readonly ILogger<WhisperSTTService> _logger;
-    private readonly string _modelPath;
-    private readonly object _loadGate = new();
-    private WhisperFactory? _whisperFactory;
-    private WhisperProcessor? _processor;
-    private bool _disposed = false;
+    private readonly IConfiguration _configuration;
+    private readonly ISpeechModelStore _modelStore;
+    private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly Dictionary<string, WhisperFactory> _factories = new(StringComparer.Ordinal);
+    private readonly Dictionary<(string Path, string Language, string Prompt), WhisperProcessor> _processors = [];
+    private bool _disposed;
 
     /// <summary>
-    /// Creates the service. The model loads on the first transcription, not at startup,
-    /// so the app opens without reading a model of several hundred megabytes.
+    /// Creates the service. Models load on the first transcription, not at startup.
     /// </summary>
-    public WhisperSTTService(ILogger<WhisperSTTService> logger, IConfiguration configuration)
+    /// <param name="logger">The logger.</param>
+    /// <param name="configuration">The configuration Settings write to.</param>
+    /// <param name="modelStore">Where downloaded models are kept.</param>
+    public WhisperSTTService(
+        ILogger<WhisperSTTService> logger,
+        IConfiguration configuration,
+        ISpeechModelStore? modelStore = null)
     {
         _logger = logger;
-        _modelPath = configuration["Whisper:ModelPath"] ?? "Models/ggml-base.bin";
+        _configuration = configuration;
+        _modelStore = modelStore ?? new WhisperModelStore(Microsoft.Extensions.Logging.Abstractions.NullLogger<WhisperModelStore>.Instance);
     }
 
     /// <summary>
-    /// Gets whether the Whisper model has been loaded.
+    /// Gets whether a Whisper model has been loaded.
     /// </summary>
-    public bool IsModelLoaded => _processor is not null;
-
-    private WhisperProcessor GetProcessor()
+    public bool IsModelLoaded
     {
-        lock (_loadGate)
+        get
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
-            if (_processor is not null)
+            lock (_factories)
             {
-                return _processor;
+                return _factories.Count > 0;
             }
-
-            _whisperFactory = WhisperFactory.FromPath(_modelPath);
-            _processor = _whisperFactory.CreateBuilder()
-                .WithLanguage("auto")
-                .WithPrintProgress()
-                .WithNoSpeechThreshold(0.6f)
-                .WithProbabilities()
-                .Build();
-
-            _logger.LogInformation("Local Whisper model loaded from {ModelPath}", _modelPath);
-            return _processor;
         }
     }
 
-    public async Task<SpeechResult> ConvertToTextAsync(byte[] audioData, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Returns the model file Settings select, or null when it isn't on this computer.
+    /// </summary>
+    /// <param name="model">A model name to use instead of the one in Settings.</param>
+    public string? ResolveModelPath(string? model = null)
+    {
+        var settings = VoiceSettings.Read(_configuration);
+        if (model is null && settings.LocalModelPath is not null)
+        {
+            return File.Exists(settings.LocalModelPath) ? settings.LocalModelPath : null;
+        }
+
+        var name = model ?? settings.LocalModel;
+        return _modelStore.IsDownloaded(name) ? _modelStore.GetModelPath(name) : null;
+    }
+
+    /// <inheritdoc />
+    public Task<SpeechResult> ConvertToTextAsync(byte[] audioData, CancellationToken cancellationToken = default)
+    {
+        return TranscribeAsync(audioData, model: null, language: null, prompt: null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Transcribes raw 16 kHz mono 16-bit PCM or WAV audio.
+    /// </summary>
+    /// <param name="audioData">The audio.</param>
+    /// <param name="model">The model to use, or null for the one in Settings.</param>
+    /// <param name="language">A two-letter language or <c>auto</c>, or null for the one in Settings.</param>
+    /// <param name="prompt">Text that steers recognition toward expected words, such as the wake phrase.</param>
+    /// <param name="cancellationToken">Stops the transcription.</param>
+    public async Task<SpeechResult> TranscribeAsync(
+        byte[] audioData,
+        string? model,
+        string? language,
+        string? prompt,
+        CancellationToken cancellationToken = default)
     {
         var stopwatch = Stopwatch.StartNew();
-
         try
         {
-            _logger.LogInformation($"Processing audio data: {audioData.Length} bytes");
-
-            // Audio data'yı WAV formatına çevir (gerekirse)
-            var processedAudio = await PreprocessAudioAsync(audioData);
-
-            // Whisper ile işle
-            var segments = new List<SegmentData>();
-            var processor = await Task.Run(GetProcessor, cancellationToken);
-            await foreach (var segment in processor.ProcessAsync(processedAudio, cancellationToken))
+            ArgumentNullException.ThrowIfNull(audioData);
+            var settings = VoiceSettings.Read(_configuration);
+            var path = ResolveModelPath(model)
+                ?? throw new FileNotFoundException(
+                    $"The speech model '{model ?? settings.LocalModel}' isn't downloaded.",
+                    model is null && settings.LocalModelPath is not null
+                        ? settings.LocalModelPath
+                        : _modelStore.GetModelPath(model ?? settings.LocalModel));
+            var samples = WaveAudio.ToSamples(audioData);
+            if (samples.Length < WaveAudio.SampleRate / 10)
             {
-                segments.Add(segment);
-                _logger.LogDebug($"Segment: {segment.Text} (Confidence: {segment.Probability:F2})");
+                return new SpeechResult { ProcessingTime = stopwatch.Elapsed, ErrorMessage = "The recording is too short." };
             }
 
-            stopwatch.Stop();
+            var segments = new List<SegmentData>();
+            await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                ObjectDisposedException.ThrowIf(_disposed, this);
+                var processor = await Task.Run(
+                        () => GetProcessor(path, language ?? settings.Language, prompt ?? string.Empty),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                await foreach (var segment in processor.ProcessAsync(samples, cancellationToken).ConfigureAwait(false))
+                {
+                    if (segment.NoSpeechProbability < 0.8f)
+                    {
+                        segments.Add(segment);
+                    }
+                }
+            }
+            finally
+            {
+                _gate.Release();
+            }
 
-            // Sonuçları birleştir
-            var fullText = string.Join(" ", segments.Select(s => s.Text.Trim())).Trim();
-            var avgConfidence = segments.Any() ? segments.Average(s => s.Probability) : 0f;
-
-            _logger.LogInformation($"STT completed in {stopwatch.ElapsedMilliseconds}ms: '{fullText}'");
+            var text = TranscriptCleaner.Clean(string.Join(" ", segments.Select(segment => segment.Text.Trim())));
+            var confidence = segments.Count > 0 ? segments.Average(segment => segment.Probability) : 0f;
+            _logger.LogInformation(
+                "Local transcription took {Elapsed} ms: {Characters} characters",
+                stopwatch.ElapsedMilliseconds,
+                text.Length);
 
             return new SpeechResult
             {
-                Text = fullText,
-                Confidence = avgConfidence,
+                Text = text,
+                Confidence = text.Length == 0 ? 0f : Math.Max(confidence, 0.31f),
                 ProcessingTime = stopwatch.Elapsed,
-                ErrorMessage = string.Empty
+                ErrorMessage = text.Length == 0 ? TranscriptCleaner.NoSpeechMessage : string.Empty
             };
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            stopwatch.Stop();
-            _logger.LogError(ex, "Error in local Whisper STT conversion");
-
+            _logger.LogWarning(ex, "Local transcription failed");
             return new SpeechResult
             {
-                Text = string.Empty,
-                Confidence = 0f,
                 ProcessingTime = stopwatch.Elapsed,
                 ErrorMessage = ex.Message
             };
         }
     }
 
-    private async Task<float[]> PreprocessAudioAsync(byte[] audioData)
+    private WhisperProcessor GetProcessor(string path, string language, string prompt)
     {
-        // Audio preprocessing - WAV formatından float array'e çevir
-        // Bu basit bir implementasyon, gerçek projede NAudio kullanabilirsiniz
-
-        if (audioData.Length < 44) // WAV header minimum size
+        var key = (path, language, prompt);
+        if (_processors.TryGetValue(key, out var processor))
         {
-            throw new ArgumentException("Invalid audio data - too short");
+            return processor;
         }
 
-        // WAV header'ı atla (basit implementasyon)
-        var audioBytes = audioData.AsSpan(44);
-
-        // 16-bit PCM'den float'a çevir
-        var samples = new float[audioBytes.Length / 2];
-        for (int i = 0; i < samples.Length; i++)
+        WhisperFactory factory;
+        lock (_factories)
         {
-            var sample = BinaryPrimitives.ReadInt16LittleEndian(audioBytes.Slice(i * 2, 2));
-            samples[i] = sample / 32768f; // Normalize to -1.0 to 1.0
-        }
-
-        return samples;
-    }
-
-    public void Dispose()
-    {
-        lock (_loadGate)
-        {
-            if (!_disposed)
+            if (!_factories.TryGetValue(path, out factory!))
             {
-                _processor?.Dispose();
-                _whisperFactory?.Dispose();
-                _disposed = true;
+                factory = WhisperFactory.FromPath(path);
+                _factories[path] = factory;
+                _logger.LogInformation(
+                    "Local speech model loaded from {ModelPath} on the {WhisperRuntime} runtime",
+                    path,
+                    RuntimeOptions.LoadedLibrary?.ToString() ?? "unknown");
             }
         }
+
+        var builder = factory.CreateBuilder()
+            .WithLanguage(language)
+            .WithNoSpeechThreshold(0.6f)
+            .WithProbabilities()
+            .WithThreads(Math.Clamp(Environment.ProcessorCount / 2, 1, 8));
+        if (prompt.Length > 0)
+        {
+            builder = builder.WithPrompt(prompt);
+        }
+
+        processor = builder.Build();
+        _processors[key] = processor;
+        return processor;
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        _gate.Wait();
+        try
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            foreach (var processor in _processors.Values)
+            {
+                processor.Dispose();
+            }
+
+            _processors.Clear();
+            lock (_factories)
+            {
+                foreach (var factory in _factories.Values)
+                {
+                    factory.Dispose();
+                }
+
+                _factories.Clear();
+            }
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        GC.SuppressFinalize(this);
     }
 }

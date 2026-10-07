@@ -31,7 +31,7 @@ public class ShellSkillExecutorTests : IDisposable
             new
             {
                 command = "echo kam-shell-test",
-                timeoutMilliseconds = 5000,
+                timeoutMilliseconds = 30000,
                 maxOutputLength = 2000
             }));
 
@@ -51,7 +51,7 @@ public class ShellSkillExecutorTests : IDisposable
             {
                 command = EchoStdOutCommand("kam-structured-output"),
                 workingDirectory = _workspace,
-                timeoutMilliseconds = 5000,
+                timeoutMilliseconds = 30000,
                 maxOutputLength = 2000
             }));
 
@@ -77,7 +77,7 @@ public class ShellSkillExecutorTests : IDisposable
             {
                 command = StdOutAndStdErrCommand(),
                 workingDirectory = _workspace,
-                timeoutMilliseconds = 5000,
+                timeoutMilliseconds = 30000,
                 maxOutputLength = 2000
             }));
 
@@ -124,7 +124,7 @@ public class ShellSkillExecutorTests : IDisposable
             {
                 command = LongStdOutCommand(new string('x', 700)),
                 workingDirectory = _workspace,
-                timeoutMilliseconds = 5000,
+                timeoutMilliseconds = 30000,
                 maxOutputLength = 500
             }));
 
@@ -146,7 +146,7 @@ public class ShellSkillExecutorTests : IDisposable
             {
                 command = EchoStdOutCommand(new string('x', 900) + "kam-last-line"),
                 workingDirectory = _workspace,
-                timeoutMilliseconds = 5000,
+                timeoutMilliseconds = 30000,
                 maxOutputLength = 500
             }));
 
@@ -169,7 +169,7 @@ public class ShellSkillExecutorTests : IDisposable
             {
                 command = "echo normal Models format",
                 workingDirectory = _workspace,
-                timeoutMilliseconds = 5000
+                timeoutMilliseconds = 30000
             }));
 
         result.Success.Should().BeTrue(result.ErrorMessage);

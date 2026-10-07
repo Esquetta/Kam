@@ -66,6 +66,35 @@ public sealed class ModelsDevModelCatalogServiceTests
     }
 
     [Fact]
+    public async Task GetModelsAsync_ReadsReleaseDatesAndListsNewestFirst()
+    {
+        using var handler = new StubHttpMessageHandler("""
+            {
+              "openai": {
+                "id": "openai",
+                "models": {
+                  "gpt-4o": { "id": "gpt-4o", "release_date": "2024-05-13" },
+                  "gpt-5.5": { "id": "gpt-5.5", "release_date": "2026-04-23" },
+                  "gpt-5": { "id": "gpt-5", "release_date": "2025-08" },
+                  "gpt-legacy": { "id": "gpt-legacy" }
+                }
+              }
+            }
+            """);
+        using var httpClient = new HttpClient(handler);
+        var service = new ModelsDevModelCatalogService(httpClient);
+
+        var models = await service.GetModelsAsync(new ModelProviderProfile
+        {
+            Provider = ModelProviderType.OpenAI
+        });
+
+        models.Select(model => model.ModelId).Should().Equal("gpt-5.5", "gpt-5", "gpt-4o", "gpt-legacy");
+        models[1].ReleasedAt.Should().Be(new DateTimeOffset(2025, 8, 1, 0, 0, 0, TimeSpan.Zero));
+        models[^1].ReleasedAt.Should().BeNull();
+    }
+
+    [Fact]
     public async Task GetModelsAsync_OpenRouter_UsesProviderQualifiedModelIds()
     {
         using var handler = new StubHttpMessageHandler("""

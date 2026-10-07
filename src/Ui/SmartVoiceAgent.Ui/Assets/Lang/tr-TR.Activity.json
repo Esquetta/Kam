@@ -1,0 +1,30 @@
+{
+  "Activity.Title": "Etkinlik",
+  "Activity.Subtitle": "Oturum",
+  "Activity.Live": "Canlı",
+  "Activity.Tab.Runs": "Çalıştırmalar",
+  "Activity.Tab.Events": "Olay akışı",
+  "Activity.Context": "Bağlam",
+
+  "Activity.ApprovalNeeded": "Onay gerekiyor",
+  "Activity.Reject": "Reddet",
+
+  "Activity.Runs.Title": "Ajan çalıştırmaları",
+  "Activity.Runs.Empty": "Henüz ajan çalıştırması yok.",
+  "Activity.RunDetail.Title": "Çalıştırma ayrıntısı",
+  "Activity.RunDetail.Model": "Model",
+  "Activity.RunDetail.Duration": "Süre",
+
+  "Activity.PlanTrace.Title": "Plan izi",
+  "Activity.PlanTrace.Clear": "Plan izini temizle",
+
+  "Activity.SkillResults.Title": "Yetenek sonuçları",
+  "Activity.SkillResults.Clear": "Sonuç geçmişini temizle",
+  "Activity.SkillResults.Filter": "Sonuç geçmişini filtreleyin...",
+  "Activity.SkillResults.ClearFilters": "Filtreleri temizle",
+  "Activity.SkillResults.NoMatches": "Eşleşen çalıştırma yok",
+  "Activity.SkillResults.CopyResult": "Sonucu kopyala",
+  "Activity.SkillResults.CopyStdOut": "stdout'u kopyala",
+  "Activity.SkillResults.CopyStdErr": "stderr'i kopyala",
+  "Activity.SkillResults.Rerun": "Yeteneği yeniden çalıştır"
+}

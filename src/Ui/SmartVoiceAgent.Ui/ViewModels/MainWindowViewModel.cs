@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using ReactiveUI;
@@ -71,16 +72,62 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private const int MaxSkillExecutionHistoryDisplayCount = 8;
         private const int MaxSkillPlannerTraceDisplayCount = 5;
         private const int MaxRuntimeAgentActivityDisplayCount = 6;
-        private const string SkillExecutionHistoryAllStatusFilter = "All";
+
+        /// <summary>
+        /// The statuses the execution history can be filtered by, in menu order; null is "All".
+        /// </summary>
+        private static readonly SkillExecutionStatus?[] SkillExecutionHistoryFilterStatuses =
+        [
+            null,
+            SkillExecutionStatus.Succeeded,
+            SkillExecutionStatus.Failed,
+            SkillExecutionStatus.TimedOut,
+            SkillExecutionStatus.PermissionDenied,
+            SkillExecutionStatus.ValidationFailed,
+            SkillExecutionStatus.ReviewRequired
+        ];
 
         private static readonly JsonSerializerOptions SkillPlanJsonOptions = new(JsonSerializerDefaults.Web);
+
+        /// <summary>
+        /// What the title bar status shows; the text follows the interface language.
+        /// </summary>
+        public enum HeaderStatus
+        {
+            /// <summary>The app is still connecting the agent or the command loop.</summary>
+            Starting,
+
+            /// <summary>The agent has a model and waits for a message.</summary>
+            AgentReady,
+
+            /// <summary>An agent turn is running.</summary>
+            AgentWorking,
+
+            /// <summary>The agent is on but Settings have no usable model.</summary>
+            NeedsModel,
+
+            /// <summary>The agent is off (<c>AgentRuntime:Enabled=false</c>) and the command loop runs commands.</summary>
+            CommandModeOn,
+
+            /// <summary>The agent is off and the command loop is paused.</summary>
+            CommandModePaused,
+
+            /// <summary>The background host failed to start.</summary>
+            FailedToStart
+        }
+
+        private HeaderStatus _headerStatus = HeaderStatus.Starting;
+        private string? _hostFailureReason;
 
         /* ========================= */
         /* CACHED BRUSHES */
         /* ========================= */
         // Static brushes to avoid repeated allocations
-        private static readonly IBrush OnlineStatusColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#10B981"));
-        private static readonly IBrush OfflineStatusColor = new SolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
+        private static readonly IBrush OnlineStatusColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#10B981"));
+        private static readonly IBrush OfflineStatusColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#EF4444"));
+        private static readonly IBrush WorkingStatusColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#8B7CFF"));
+        private static readonly IBrush AttentionStatusColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#F59E0B"));
+        private static readonly IBrush IdleStatusColor = new ImmutableSolidColorBrush(Avalonia.Media.Color.Parse("#8A8A99"));
 
         /* ========================= */
         /* NAVIGATION */
@@ -111,12 +158,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// </summary>
         public string ActivePageTitle => ActiveView switch
         {
-            NavView.Coordinator => "Workbench",
-            NavView.Diagnostics => "Diagnostics",
-            NavView.Network => "Network",
-            NavView.Plugins => "Skills",
-            NavView.Integrations => "Integrations",
-            NavView.Settings => "Settings",
+            NavView.Coordinator => Loc.Get("Workbench.Page.Workbench"),
+            NavView.Diagnostics => Loc.Get("Workbench.Page.Diagnostics"),
+            NavView.Network => Loc.Get("Workbench.Page.Network"),
+            NavView.Plugins => Loc.Get("Workbench.Page.Skills"),
+            NavView.Extensions => Loc.Get("Workbench.Page.Extensions"),
+            NavView.Integrations => Loc.Get("Workbench.Page.Integrations"),
+            NavView.Settings => Loc.Get("Workbench.Page.Settings"),
             _ => string.Empty
         };
 
@@ -144,7 +192,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /// <summary>
-        /// Status text for header display - reflects VoiceAgent Host state
+        /// Gets the title bar status: the agent's state, or the command loop's when the agent is off.
         /// </summary>
         public override string StatusText
         {
@@ -153,7 +201,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /// <summary>
-        /// Status color for header display indicator
+        /// Gets the color of the title bar status dot.
         /// </summary>
         public override IBrush StatusColor
         {
@@ -161,16 +209,99 @@ namespace SmartVoiceAgent.Ui.ViewModels
             protected set => base.StatusColor = value;
         }
 
+        /// <summary>
+        /// Gets what the title bar status shows.
+        /// </summary>
+        public HeaderStatus CurrentHeaderStatus => _headerStatus;
+
+        /// <summary>
+        /// Gets the title bar status tooltip, which says what the state means and what a click does.
+        /// </summary>
+        public string? StatusToolTip => _headerStatus switch
+        {
+            HeaderStatus.AgentReady => Loc.Format(
+                "Workbench.Status.AgentReadyTip",
+                AiRuntimeConfigurationMapper.ResolveChatProfile(_pageSettingsService)?.ModelId),
+            HeaderStatus.AgentWorking => Loc.Get("Workbench.Status.AgentWorkingTip"),
+            HeaderStatus.NeedsModel => Loc.Get("Workbench.Status.NeedsModelTip"),
+            HeaderStatus.CommandModeOn => Loc.Get("Workbench.Status.CommandModeOnTip"),
+            HeaderStatus.CommandModePaused => Loc.Get("Workbench.Status.CommandModePausedTip"),
+            HeaderStatus.FailedToStart => _hostFailureReason,
+            _ => null
+        };
+
+        /// <summary>
+        /// Acts on the title bar status: opens Settings when a model is missing, pauses or resumes the
+        /// command loop when the agent is off, and otherwise shows the chat.
+        /// </summary>
+        public ICommand HeaderStatusCommand { get; }
+
         private void UpdateStatusProperties()
         {
-            // Use cached brushes to avoid repeated allocations
-            base.StatusText = IsHostRunning ? "Agent online" : "Agent offline";
-            base.StatusColor = IsHostRunning ? OnlineStatusColor : OfflineStatusColor;
+            _headerStatus = ResolveHeaderStatus();
+            base.StatusText = FormatHeaderStatus(_headerStatus);
+            base.StatusColor = _headerStatus switch
+            {
+                HeaderStatus.AgentReady or HeaderStatus.CommandModeOn => OnlineStatusColor,
+                HeaderStatus.AgentWorking => WorkingStatusColor,
+                HeaderStatus.NeedsModel => AttentionStatusColor,
+                HeaderStatus.FailedToStart => OfflineStatusColor,
+                _ => IdleStatusColor
+            };
 
-            // Also explicitly raise property changed for this class
             this.RaisePropertyChanged(nameof(StatusText));
             this.RaisePropertyChanged(nameof(StatusColor));
+            this.RaisePropertyChanged(nameof(StatusToolTip));
+            this.RaisePropertyChanged(nameof(CurrentHeaderStatus));
             StatusChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        private HeaderStatus ResolveHeaderStatus()
+        {
+            if (_hostFailureReason is not null)
+            {
+                return HeaderStatus.FailedToStart;
+            }
+
+            if (_agentRuntime is not null)
+            {
+                if (IsAgentTurnRunning)
+                {
+                    return HeaderStatus.AgentWorking;
+                }
+
+                return AiRuntimeConfigurationMapper.ResolveChatProfile(_pageSettingsService) is null
+                    ? HeaderStatus.NeedsModel
+                    : HeaderStatus.AgentReady;
+            }
+
+            if (_hostControl is null)
+            {
+                return HeaderStatus.Starting;
+            }
+
+            return IsHostRunning ? HeaderStatus.CommandModeOn : HeaderStatus.CommandModePaused;
+        }
+
+        private void OnHeaderStatusClicked()
+        {
+            switch (_headerStatus)
+            {
+                case HeaderStatus.NeedsModel:
+                    NavigateTo(NavView.Settings);
+                    break;
+                case HeaderStatus.CommandModeOn:
+                case HeaderStatus.CommandModePaused:
+                    _ = ToggleHostAsync();
+                    break;
+                case HeaderStatus.FailedToStart:
+                    NavigateTo(NavView.Diagnostics);
+                    break;
+                case HeaderStatus.AgentReady:
+                case HeaderStatus.AgentWorking:
+                    NavigateTo(NavView.Coordinator);
+                    break;
+            }
         }
 
         /// <summary>
@@ -179,15 +310,31 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// <param name="reason">Short reason shown to the user.</param>
         public void ReportHostStartFailure(string reason)
         {
-            Dispatcher.UIThread.Post(() =>
+            _hostFailureReason = string.IsNullOrWhiteSpace(reason) ? Loc.Get("Workbench.Status.AgentFailed") : reason;
+            if (Dispatcher.UIThread.CheckAccess())
             {
-                base.StatusText = "Agent failed to start";
-                base.StatusColor = OfflineStatusColor;
-                this.RaisePropertyChanged(nameof(StatusText));
-                this.RaisePropertyChanged(nameof(StatusColor));
-            });
+                UpdateStatusProperties();
+            }
+            else
+            {
+                Dispatcher.UIThread.Post(UpdateStatusProperties);
+            }
 
             AddLog($"Agent host failed to start: {reason}");
+        }
+
+        private static string FormatHeaderStatus(HeaderStatus status)
+        {
+            return status switch
+            {
+                HeaderStatus.AgentReady => Loc.Get("Workbench.Status.AgentReady"),
+                HeaderStatus.AgentWorking => Loc.Get("Workbench.Status.AgentWorking"),
+                HeaderStatus.NeedsModel => Loc.Get("Workbench.Status.NeedsModel"),
+                HeaderStatus.CommandModeOn => Loc.Get("Workbench.Status.CommandModeOn"),
+                HeaderStatus.CommandModePaused => Loc.Get("Workbench.Status.CommandModePaused"),
+                HeaderStatus.FailedToStart => Loc.Get("Workbench.Status.AgentFailed"),
+                _ => Loc.Get("Workbench.Status.Starting")
+            };
         }
 
         /* ========================= */
@@ -287,17 +434,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /* ========================= */
-        /* LANGUAGE */
-        /* ========================= */
-
-        private int _selectedLanguageIndex;
-        public int SelectedLanguageIndex
-        {
-            get => _selectedLanguageIndex;
-            set => this.RaiseAndSetIfChanged(ref _selectedLanguageIndex, value);
-        }
-
-        /* ========================= */
         /* COMMAND INPUT */
         /* ========================= */
 
@@ -393,18 +529,18 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public string AgentChatSessionCountText =>
             AgentChatSessions.Count == 1
-                ? "1 thread"
-                : $"{AgentChatSessions.Count} threads";
+                ? Loc.Get("Workbench.Thread.OneThread")
+                : Loc.Format("Workbench.Thread.Threads", AgentChatSessions.Count);
 
         public string SelectedAgentChatMessageCountText =>
-            SelectedAgentChatSession?.MessageCountText ?? "No messages";
+            SelectedAgentChatSession?.MessageCountText ?? Loc.Get("Workbench.Thread.NoMessages");
 
         public string ActiveComposerContextText =>
             ComposerAttachments.Count == 0
-                ? "No files"
+                ? Loc.Get("Workbench.Composer.NoFiles")
                 : ComposerAttachments.Count == 1
-                    ? "1 file"
-                    : $"{ComposerAttachments.Count} files";
+                    ? Loc.Get("Workbench.Composer.OneFile")
+                    : Loc.Format("Workbench.Composer.Files", ComposerAttachments.Count);
 
         private ActivityPanelMode _selectedActivityPanelMode = ActivityPanelMode.Runs;
         public ActivityPanelMode SelectedActivityPanelMode
@@ -488,16 +624,35 @@ namespace SmartVoiceAgent.Ui.ViewModels
             set => this.RaiseAndSetIfChanged(ref _skillPlannerTraces, value);
         }
 
-        public IReadOnlyList<string> SkillExecutionHistoryStatusFilters { get; } =
-        [
-            SkillExecutionHistoryAllStatusFilter,
-            "Succeeded",
-            "Failed",
-            "Timed Out",
-            "Permission Denied",
-            "Validation Failed",
-            "Review Required"
-        ];
+        private IReadOnlyList<string> _skillExecutionHistoryStatusFilters = BuildSkillExecutionHistoryStatusFilters();
+        private bool _isRefreshingSkillExecutionHistoryStatusFilters;
+
+        /// <summary>
+        /// Gets the status filter choices in the interface language, starting with "All".
+        /// </summary>
+        public IReadOnlyList<string> SkillExecutionHistoryStatusFilters
+        {
+            get => _skillExecutionHistoryStatusFilters;
+            private set => this.RaiseAndSetIfChanged(ref _skillExecutionHistoryStatusFilters, value);
+        }
+
+        private static IReadOnlyList<string> BuildSkillExecutionHistoryStatusFilters()
+        {
+            return SkillExecutionHistoryFilterStatuses
+                .Select(status => status is { } value
+                    ? SkillExecutionHistoryItemViewModel.FormatStatusText(value)
+                    : Loc.Get("Workbench.History.All"))
+                .ToArray();
+        }
+
+        /// <summary>
+        /// Returns whether a status filter value means "All", in English or in the interface language.
+        /// </summary>
+        private static bool IsAllStatusFilter(string value)
+        {
+            return value.Equals(Loc.Get("Workbench.History.All"), StringComparison.OrdinalIgnoreCase)
+                || value.Equals(EnglishText.Service.Get("Workbench.History.All"), StringComparison.OrdinalIgnoreCase);
+        }
 
         private string _skillExecutionHistoryFilterText = string.Empty;
         public string SkillExecutionHistoryFilterText
@@ -517,14 +672,25 @@ namespace SmartVoiceAgent.Ui.ViewModels
             }
         }
 
-        private string _skillExecutionHistoryStatusFilter = SkillExecutionHistoryAllStatusFilter;
+        private string _skillExecutionHistoryStatusFilter = Loc.Get("Workbench.History.All");
+
+        /// <summary>
+        /// Gets or sets the status the execution history is filtered by, as listed in
+        /// <see cref="SkillExecutionHistoryStatusFilters"/>; English names such as "Failed" also work.
+        /// </summary>
         public string SkillExecutionHistoryStatusFilter
         {
             get => _skillExecutionHistoryStatusFilter;
             set
             {
+                // The picker clears its selection while its list is replaced after a language change.
+                if (_isRefreshingSkillExecutionHistoryStatusFilters)
+                {
+                    return;
+                }
+
                 var normalizedValue = string.IsNullOrWhiteSpace(value)
-                    ? SkillExecutionHistoryAllStatusFilter
+                    ? Loc.Get("Workbench.History.All")
                     : value;
                 if (_skillExecutionHistoryStatusFilter == normalizedValue)
                 {
@@ -560,9 +726,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public bool HasSkillExecutionHistoryFilter =>
             !string.IsNullOrWhiteSpace(SkillExecutionHistoryFilterText)
-            || !SkillExecutionHistoryStatusFilter.Equals(
-                SkillExecutionHistoryAllStatusFilter,
-                StringComparison.OrdinalIgnoreCase);
+            || !IsAllStatusFilter(SkillExecutionHistoryStatusFilter);
 
         public bool HasSkillExecutionHistoryMatches => SkillExecutionHistoryVisibleCount > 0;
 
@@ -575,15 +739,22 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 if (SkillExecutionHistoryTotalCount == 0)
                 {
-                    return "No executions";
+                    return Loc.Get("Workbench.History.NoExecutions");
                 }
 
                 if (HasSkillExecutionHistoryFilter)
                 {
-                    return $"{SkillExecutionHistoryVisibleCount}/{SkillExecutionHistoryMatchCount} matches in last {SkillExecutionHistoryTotalCount}";
+                    return Loc.Format(
+                        "Workbench.History.Matches",
+                        SkillExecutionHistoryVisibleCount,
+                        SkillExecutionHistoryMatchCount,
+                        SkillExecutionHistoryTotalCount);
                 }
 
-                return $"{SkillExecutionHistoryVisibleCount}/{SkillExecutionHistoryTotalCount} recent executions";
+                return Loc.Format(
+                    "Workbench.History.Recent",
+                    SkillExecutionHistoryVisibleCount,
+                    SkillExecutionHistoryTotalCount);
             }
         }
 
@@ -600,57 +771,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
             get => _hasSkillPlannerTraces;
             private set => this.RaiseAndSetIfChanged(ref _hasSkillPlannerTraces, value);
         }
-
-        /* ========================= */
-        /* VOICE COMMAND */
-        /* ========================= */
-
-        private VoiceCommandService? _voiceCommandService;
-
-        // Performance: Cache brushes to avoid parsing on every status change
-        private static readonly IBrush s_voiceListeningColor = Brush.Parse("#10B981"); // Green
-        private static readonly IBrush s_voiceWakeWordColor = Brush.Parse("#F59E0B"); // Orange
-        private static readonly IBrush s_voiceRecordingColor = Brush.Parse("#EF4444"); // Red
-        private static readonly IBrush s_voiceProcessingColor = Brush.Parse("#3B82F6"); // Blue
-        private static readonly IBrush s_voiceIdleColor = Brush.Parse("#6B7280"); // Gray
-        
-        private bool _isVoiceEnabled = false;
-        public bool IsVoiceEnabled
-        {
-            get => _isVoiceEnabled;
-            private set => this.RaiseAndSetIfChanged(ref _isVoiceEnabled, value);
-        }
-
-        private bool _isListeningForWakeWord = false;
-        public bool IsListeningForWakeWord
-        {
-            get => _isListeningForWakeWord;
-            private set => this.RaiseAndSetIfChanged(ref _isListeningForWakeWord, value);
-        }
-
-        private bool _isRecordingVoice = false;
-        public bool IsRecordingVoice
-        {
-            get => _isRecordingVoice;
-            private set => this.RaiseAndSetIfChanged(ref _isRecordingVoice, value);
-        }
-
-        private string _voiceStatusText = "Voice: Off";
-        public string VoiceStatusText
-        {
-            get => _voiceStatusText;
-            private set => this.RaiseAndSetIfChanged(ref _voiceStatusText, value);
-        }
-
-        private IBrush _voiceStatusColor = Brush.Parse("#6B7280"); // Gray
-        public IBrush VoiceStatusColor
-        {
-            get => _voiceStatusColor;
-            private set => this.RaiseAndSetIfChanged(ref _voiceStatusColor, value);
-        }
-
-        public ICommand ToggleVoiceCommand { get; }
-        public ICommand StartVoiceRecordingCommand { get; }
 
         /* ========================= */
         /* CONSTRUCTOR */
@@ -677,6 +797,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             NavigateToIntegrationsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Integrations));
             NavigateToSettingsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Settings));
             ToggleThemeCommand = ReactiveCommand.Create(ToggleTheme);
+            HeaderStatusCommand = ReactiveCommand.Create(OnHeaderStatusClicked);
             ClearSkillExecutionHistoryCommand = ReactiveCommand.Create(ClearSkillExecutionHistory);
             ClearSkillExecutionHistoryFiltersCommand = ReactiveCommand.Create(ClearSkillExecutionHistoryFilters);
             ClearSkillPlannerTraceCommand = ReactiveCommand.Create(ClearSkillPlannerTrace);
@@ -691,8 +812,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ShowContextCommand = ReactiveCommand.Create(() => SelectedActivityPanelMode = ActivityPanelMode.Context);
             ShowEventsCommand = ReactiveCommand.Create(() => SelectedActivityPanelMode = ActivityPanelMode.Events);
             UseComposerSuggestionCommand = ReactiveCommand.Create<string?>(UseComposerSuggestion);
-            ToggleVoiceCommand = ReactiveCommand.Create(ToggleVoiceEnabled);
-            StartVoiceRecordingCommand = ReactiveCommand.CreateFromTask(StartVoiceRecordingAsync);
             ApproveToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: true, alwaysAllow: false));
             AlwaysAllowToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: true, alwaysAllow: true));
             DenyToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: false, alwaysAllow: false));
@@ -700,6 +819,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ClearQueuedAgentMessagesCommand = ReactiveCommand.Create(ClearQueuedAgentMessages);
             InitializeChatExperience();
             InitializeAgentChatSessions();
+            InitializeVoice();
+
+            // Text built in code follows the interface language; Cleanup unsubscribes.
+            LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
 
             Dispatcher.UIThread.Post(() =>
             {
@@ -1088,10 +1211,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 NavigateTo(view);
             };
 
-            service.ToggleVoiceRequested += (s, e) =>
-            {
-                ToggleVoiceEnabled();
-            };
+            service.ToggleVoiceRequested += (s, e) => ToggleWakeWordCommand.Execute(null);
+            service.TalkRequested += (s, e) => ToggleTalk();
 
             service.NewTaskRequested += (s, e) => StartNewTask();
 
@@ -1112,7 +1233,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             };
 
             // Sync initial voice state
-            service.SetVoiceEnabled(IsVoiceEnabled);
+            service.SetVoiceEnabled(IsWakeWordEnabled);
         }
 
         public void SetCommandInputService(ICommandInputService commandInput)
@@ -1126,10 +1247,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         private void InitializeAgentChatSessions()
         {
-            var session = AgentChatSessionViewModel.Create(
-                "Workspace chat",
-                "Ready for a focused agent task",
-                "now");
+            var session = AgentChatSessionViewModel.CreateWorkspaceChat(DateTimeOffset.Now);
             AgentChatSessions.Add(session);
             SelectedAgentChatSession = session;
             RaiseAgentChatStateChanged();
@@ -1139,10 +1257,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             // A new chat matches no search yet, so the search is cleared to show it.
             AgentChatSearchText = string.Empty;
-            var session = AgentChatSessionViewModel.Create(
-                "New chat",
-                "No messages yet",
-                "now");
+            var session = AgentChatSessionViewModel.CreateNewChat(DateTimeOffset.Now);
             AgentChatSessions.Insert(0, session);
             SelectAgentChat(session);
             RaiseAgentChatStateChanged();
@@ -1192,11 +1307,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
             session.AddMessage(new AgentChatMessageViewModel(
                 role,
                 content,
-                DateTime.Now.ToString("HH:mm")));
+                AgentChatMessageViewModel.FormatTime(DateTime.Now)));
 
-            if (role.Equals("You", StringComparison.OrdinalIgnoreCase)
+            if (role.Equals(AgentChatMessageViewModel.UserRole, StringComparison.OrdinalIgnoreCase)
                 && !session.HasCustomTitle
-                && session.Title is "Workspace chat" or "New chat")
+                && session.HasPlaceholderTitle)
             {
                 session.Title = content.Length <= 40
                     ? content
@@ -1204,7 +1319,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             }
 
             session.Summary = content;
-            session.RelativeTimeText = "now";
+            session.MarkActivity(DateTimeOffset.Now);
             RaiseAgentChatStateChanged();
         }
 
@@ -1229,11 +1344,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 return;
             }
 
-            AddAgentChatMessage("You", input);
+            AddAgentChatMessage(AgentChatMessageViewModel.UserRole, input);
 
             if (TryExecuteLocalSlashCommand(input))
             {
-                AddAgentChatMessage("Kam", "Command handled locally.");
+                AddAgentChatMessage(AgentChatMessageViewModel.AgentRole, Loc.Get("Workbench.Chat.HandledLocally"));
                 CommandInputText = string.Empty;
                 SlashCommandSuggestions.Clear();
                 IsSlashCommandPaletteVisible = false;
@@ -1272,7 +1387,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 AddLog(slashResult.Success
                     ? $"✅ {slashResult.Message}"
                     : $"❌ Error: {slashResult.Message}");
-                AddAgentChatMessage("Kam", slashResult.Message);
+                AddAgentChatMessage(AgentChatMessageViewModel.AgentRole, slashResult.Message);
                 CommandInputText = string.Empty;
                 SlashCommandSuggestions.Clear();
                 IsSlashCommandPaletteVisible = false;
@@ -1291,7 +1406,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             if (_commandInput is null)
             {
                 AddLog("COMMAND_INPUT_UNAVAILABLE");
-                AddAgentChatMessage("Kam", "Command input service is not available.");
+                AddAgentChatMessage(AgentChatMessageViewModel.AgentRole, Loc.Get("Workbench.Chat.CommandInputUnavailable"));
                 return;
             }
 
@@ -1503,8 +1618,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     AddLog($"THEME_SET: {(IsDarkMode ? "DARK" : "LIGHT")}");
                     return true;
                 case "/voice":
-                    ToggleVoiceEnabled();
-                    AddLog($"VOICE_SET: {(IsVoiceEnabled ? "ON" : "OFF")}");
+                    ToggleWakeWordCommand.Execute(null);
                     return true;
                 default:
                     return false;
@@ -1518,12 +1632,15 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 if (e.Success)
                 {
                     AddLog($"✅ {e.Result}");
-                    AddAgentChatMessage("Kam", e.Result);
+                    AddAgentChatMessage(AgentChatMessageViewModel.AgentRole, e.Result);
+                    ReadCommandLoopReplyAloud(e.Result);
                 }
                 else
                 {
                     AddLog($"❌ Error: {e.Result}");
-                    AddAgentChatMessage("Kam", $"Error: {e.Result}");
+                    var error = Loc.Format("Workbench.Chat.Error", e.Result);
+                    AddAgentChatMessage(AgentChatMessageViewModel.AgentRole, error);
+                    ReadCommandLoopReplyAloud(error);
                 }
             });
         }
@@ -1620,7 +1737,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private void ClearSkillExecutionHistoryFilters()
         {
             SkillExecutionHistoryFilterText = string.Empty;
-            SkillExecutionHistoryStatusFilter = SkillExecutionHistoryAllStatusFilter;
+            SkillExecutionHistoryStatusFilter = Loc.Get("Workbench.History.All");
             RefreshSkillExecutionHistory();
         }
 
@@ -1672,15 +1789,15 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         private bool MatchesSkillExecutionHistoryStatusFilter(SkillExecutionHistoryEntry entry)
         {
-            if (SkillExecutionHistoryStatusFilter.Equals(
-                    SkillExecutionHistoryAllStatusFilter,
-                    StringComparison.OrdinalIgnoreCase))
+            if (IsAllStatusFilter(SkillExecutionHistoryStatusFilter))
             {
                 return true;
             }
 
             return SkillExecutionHistoryItemViewModel.FormatStatusText(entry.Status)
-                .Equals(SkillExecutionHistoryStatusFilter, StringComparison.OrdinalIgnoreCase);
+                    .Equals(SkillExecutionHistoryStatusFilter, StringComparison.OrdinalIgnoreCase)
+                || SkillExecutionHistoryItemViewModel.FormatStatusText(entry.Status, EnglishText.Service)
+                    .Equals(SkillExecutionHistoryStatusFilter, StringComparison.OrdinalIgnoreCase);
         }
 
         private bool MatchesSkillExecutionHistoryTextFilter(SkillExecutionHistoryEntry entry)
@@ -1693,6 +1810,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             return ContainsIgnoreCase(entry.SkillId, query)
                 || ContainsIgnoreCase(SkillExecutionHistoryItemViewModel.FormatStatusText(entry.Status), query)
+                || ContainsIgnoreCase(SkillExecutionHistoryItemViewModel.FormatStatusText(entry.Status, EnglishText.Service), query)
                 || ContainsIgnoreCase(entry.ResultSummary, query)
                 || ContainsIgnoreCase(entry.ArgumentsSummary, query)
                 || ContainsIgnoreCase(entry.ErrorCode, query)
@@ -1984,139 +2102,107 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public event EventHandler? StatusChanged;
 
         /* ========================= */
-        /* VOICE COMMAND METHODS */
+        /* LANGUAGE */
         /* ========================= */
 
-        /// <summary>
-        /// Sets the voice command service
-        /// </summary>
-        public void SetVoiceCommandService(VoiceCommandService voiceCommandService)
+        private void OnLanguageChanged(object? sender, EventArgs e)
         {
-            _voiceCommandService = voiceCommandService;
-            
-            // Subscribe to voice events
-            _voiceCommandService.StatusChanged += OnVoiceStatusChanged;
-            _voiceCommandService.OnTranscriptionResult += OnVoiceTranscriptionResult;
-            _voiceCommandService.OnError += OnVoiceError;
-            _voiceCommandService.CommandRouter = RouteVoiceCommand;
-
-            IsVoiceEnabled = false;
-            IsListeningForWakeWord = false;
-            VoiceStatusText = "Voice: Off";
-            VoiceStatusColor = s_voiceIdleColor;
-            _trayIconService?.SetVoiceEnabled(false);
-            _trayIconService?.UpdateStatus("Ready", false);
-        }
-
-        private void OnVoiceStatusChanged(object? sender, VoiceStatusEventArgs e)
-        {
-            Dispatcher.UIThread.Post(() =>
+            if (!Dispatcher.UIThread.CheckAccess())
             {
-                IsListeningForWakeWord = e.Status == VoiceStatus.ListeningForWakeWord;
-                IsRecordingVoice = e.Status == VoiceStatus.Recording;
-                VoiceStatusText = e.Message;
-                
-                // Update status color based on state (using cached brushes)
-                VoiceStatusColor = e.Status switch
-                {
-                    VoiceStatus.ListeningForWakeWord => s_voiceListeningColor,
-                    VoiceStatus.WakeWordDetected => s_voiceWakeWordColor,
-                    VoiceStatus.Recording => s_voiceRecordingColor,
-                    VoiceStatus.Processing or VoiceStatus.Transcribing => s_voiceProcessingColor,
-                    VoiceStatus.Error => s_voiceRecordingColor, // Red (reuse)
-                    _ => s_voiceIdleColor
-                };
-                
-                // Add to log for important states
-                if (e.Status is VoiceStatus.WakeWordDetected or VoiceStatus.Error)
-                {
-                    AddLog(e.Message);
-                }
-            });
-        }
-
-        private void OnVoiceTranscriptionResult(object? sender, string text)
-        {
-            Dispatcher.UIThread.Post(() =>
-            {
-                AddLog($"🎤 Voice: '{text}'");
-            });
-        }
-
-        /// <summary>
-        /// Sends a transcribed voice command to the agent chat when the agent runtime is on.
-        /// </summary>
-        /// <param name="text">The transcribed command.</param>
-        /// <returns><c>true</c> when the agent chat takes the command.</returns>
-        public bool RouteVoiceCommand(string text)
-        {
-            if (_agentRuntime is null || string.IsNullOrWhiteSpace(text))
-            {
-                return false;
-            }
-
-            Dispatcher.UIThread.Post(() => _ = SubmitVoiceCommandAsync(text.Trim()));
-            return true;
-        }
-
-        /// <summary>
-        /// Runs a voice command as a turn in the selected chat, starting a chat when none is open.
-        /// While another turn runs, the command waits for it.
-        /// </summary>
-        /// <param name="text">The transcribed command.</param>
-        public async Task SubmitVoiceCommandAsync(string text)
-        {
-            if (SelectedAgentChatSession is null)
-            {
-                CreateNewAgentChat();
-            }
-
-            await StartOrQueueAgentTurnAsync(SelectedAgentChatSession!, text, text);
-        }
-
-        /// <summary>
-        /// Opens a new agent chat on the chat page, as the tray's "New task" does.
-        /// </summary>
-        public void StartNewTask()
-        {
-            NavigateTo(NavView.Coordinator);
-            CreateNewAgentChat();
-        }
-
-        private void OnVoiceError(object? sender, string error)
-        {
-            Dispatcher.UIThread.Post(() =>
-            {
-                AddLog($"❌ Voice Error: {error}");
-            });
-        }
-
-        private void ToggleVoiceEnabled()
-        {
-            if (_voiceCommandService == null)
-            {
-                AddLog("⚠️ Voice service not available");
+                Dispatcher.UIThread.Post(RefreshLocalizedText);
                 return;
             }
 
-            if (IsVoiceEnabled)
+            RefreshLocalizedText();
+        }
+
+        /// <summary>
+        /// Rebuilds the text this view model makes in code after the interface language changes:
+        /// the title bar, counters, thread rows, approval cards and tool steps, the model and approval
+        /// pickers, slash command suggestions and the activity panel. Rows and cards do not listen for the
+        /// change themselves; this refreshes them. Messages and activity log lines already written stay as they are.
+        /// </summary>
+        public void RefreshLocalizedText()
+        {
+            UpdateStatusProperties();
+            RaiseVoiceStateChanged();
+            this.RaisePropertyChanged(nameof(ActivePageTitle));
+            this.RaisePropertyChanged(nameof(ActiveComposerContextText));
+            this.RaisePropertyChanged(nameof(QueuedAgentMessagesText));
+            RaiseAgentChatStateChanged();
+
+            var now = DateTimeOffset.Now;
+            foreach (var session in AgentChatSessions)
             {
-                _voiceCommandService.StopWakeWordDetection();
-                IsVoiceEnabled = false;
-                VoiceStatusText = "Voice: Off";
-                VoiceStatusColor = Brush.Parse("#6B7280");
-                AddLog("🛑 Voice control disabled");
-            }
-            else
-            {
-                _voiceCommandService.StartWakeWordDetection();
-                IsVoiceEnabled = true;
-                AddLog("🎤 Voice control enabled - Say 'Hey Kam'");
+                session.RefreshLocalizedText(now);
             }
 
-            // Sync tray icon menu state
-            _trayIconService?.SetVoiceEnabled(IsVoiceEnabled);
-            _trayIconService?.UpdateStatus(IsVoiceEnabled ? "Listening" : "Ready", IsVoiceEnabled);
+            foreach (var option in ApprovalModes)
+            {
+                option.RefreshLocalizedText();
+            }
+
+            RefreshAgentChatModelOptions();
+
+            foreach (var suggestion in SlashCommandSuggestions)
+            {
+                suggestion.RefreshLocalizedText();
+            }
+
+            foreach (var activity in RuntimeAgentActivities)
+            {
+                activity.RefreshLocalizedText();
+            }
+
+            RefreshSelectedRuntimeAgentRun();
+            RefreshSkillExecutionHistoryStatusFilters();
+            RefreshSkillExecutionHistory();
+            RefreshSkillPlannerTrace();
+
+            var coordinators = _viewModelCache.Values.OfType<CoordinatorViewModel>().ToList();
+            if (CurrentViewModel is CoordinatorViewModel current && !coordinators.Contains(current))
+            {
+                coordinators.Add(current);
+            }
+
+            foreach (var coordinator in coordinators)
+            {
+                coordinator.RefreshLocalizedText();
+            }
+        }
+
+        /// <summary>
+        /// Replaces the status filter choices with the current language's and keeps the chosen status selected.
+        /// </summary>
+        private void RefreshSkillExecutionHistoryStatusFilters()
+        {
+            var selectedIndex = -1;
+            for (var index = 0; index < SkillExecutionHistoryStatusFilters.Count; index++)
+            {
+                if (SkillExecutionHistoryStatusFilters[index].Equals(_skillExecutionHistoryStatusFilter, StringComparison.OrdinalIgnoreCase))
+                {
+                    selectedIndex = index;
+                    break;
+                }
+            }
+
+            var filters = BuildSkillExecutionHistoryStatusFilters();
+            _isRefreshingSkillExecutionHistoryStatusFilters = true;
+            try
+            {
+                SkillExecutionHistoryStatusFilters = filters;
+                if (selectedIndex >= 0)
+                {
+                    _skillExecutionHistoryStatusFilter = filters[selectedIndex];
+                }
+            }
+            finally
+            {
+                _isRefreshingSkillExecutionHistoryStatusFilters = false;
+            }
+
+            this.RaisePropertyChanged(nameof(SkillExecutionHistoryStatusFilter));
+            RaiseSkillExecutionHistoryFilterStateChanged();
         }
 
         private void ShowMainWindow()
@@ -2133,17 +2219,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
             }
         }
 
-        private async Task StartVoiceRecordingAsync()
-        {
-            if (_voiceCommandService == null)
-            {
-                AddLog("⚠️ Voice service not available");
-                return;
-            }
-
-            await _voiceCommandService.StartVoiceRecordingAsync();
-        }
-
         /* ========================= */
         /* SIMULATION - DISABLED */
         /* ========================= */
@@ -2154,6 +2229,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public void Cleanup()
         {
+            LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
             _resultListenerCts?.Cancel();
             _resultListenerCts?.Dispose();
             
@@ -2177,7 +2253,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 _skillPlannerTraceStore.Changed -= OnSkillPlannerTraceChanged;
             }
 
-            _voiceCommandService?.Dispose();
+            CleanupVoice();
             foreach (var viewModel in _viewModelCache.Values.OfType<IDisposable>().Distinct())
             {
                 viewModel.Dispose();
@@ -2210,7 +2286,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             Reason = request.Reason;
             Preview = request.Preview;
             HasPreview = !string.IsNullOrWhiteSpace(request.Preview);
-            CreatedAtText = request.CreatedAt.ToLocalTime().ToString("HH:mm:ss");
+            CreatedAtText = request.CreatedAt.ToLocalTime().ToString("HH:mm:ss", LocalizationService.Instance.Culture);
             ApproveCommand = ReactiveCommand.CreateFromTask(() => approve(this));
             RejectCommand = ReactiveCommand.Create(() => reject(this));
         }
@@ -2234,24 +2310,38 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public ICommand RejectCommand { get; }
     }
 
+    /// <summary>
+    /// A slash command offered in the composer palette. Built-in commands show their description and
+    /// category in the interface language; commands from plugins and Markdown files show theirs as written.
+    /// </summary>
     public sealed class SlashCommandSuggestionViewModel
         : ReactiveObject
     {
+        private const string SummaryKeyPrefix = "Workbench.Slash.";
+        private const string CategoryKeyPrefix = "Workbench.SlashCategory.";
+
+        private readonly SlashCommandDefinition _definition;
+
         public SlashCommandSuggestionViewModel(SlashCommandDefinition definition)
         {
+            _definition = definition;
             Name = definition.Name;
-            Summary = definition.Summary;
             Usage = definition.Usage;
-            Category = definition.Category;
         }
 
         public string Name { get; }
 
-        public string Summary { get; }
+        /// <summary>
+        /// Gets what the command does, in the interface language for built-in commands.
+        /// </summary>
+        public string Summary => Translate(GetSummaryKey(_definition.Name), _definition.Summary);
 
         public string Usage { get; }
 
-        public string Category { get; }
+        /// <summary>
+        /// Gets the command's group, such as "Runtime", in the interface language.
+        /// </summary>
+        public string Category => Translate(CategoryKeyPrefix + _definition.Category, _definition.Category);
 
         private bool _isSelected;
         public bool IsSelected
@@ -2259,6 +2349,54 @@ namespace SmartVoiceAgent.Ui.ViewModels
             get => _isSelected;
             set => this.RaiseAndSetIfChanged(ref _isSelected, value);
         }
+
+        /// <summary>
+        /// Returns the text key of a built-in command's description: "/github app run" is
+        /// <c>Workbench.Slash.Github.App.Run</c> and "/github-app" is <c>Workbench.Slash.GithubApp</c>.
+        /// </summary>
+        /// <param name="commandName">The command name with its slash.</param>
+        public static string GetSummaryKey(string commandName)
+        {
+            var segments = (commandName ?? string.Empty)
+                .TrimStart('/')
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Select(segment => string.Concat(segment
+                    .Split('-', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(part => char.ToUpperInvariant(part[0]) + part[1..])));
+
+            return SummaryKeyPrefix + string.Join('.', segments);
+        }
+
+        /// <summary>
+        /// Re-reads the description and category after the interface language changes.
+        /// </summary>
+        public void RefreshLocalizedText()
+        {
+            this.RaisePropertyChanged(nameof(Summary));
+            this.RaisePropertyChanged(nameof(Category));
+        }
+
+        /// <summary>
+        /// Translates <paramref name="english"/> only when it is the built-in English text of
+        /// <paramref name="key"/>, so a plugin command that reuses a built-in name keeps its own text.
+        /// </summary>
+        private static string Translate(string key, string english)
+        {
+            return string.Equals(EnglishText.Service.Get(key), english, StringComparison.Ordinal)
+                ? LocalizationService.Instance.Get(key)
+                : english;
+        }
+    }
+
+    /// <summary>
+    /// The English interface text, for values that are compared in English whatever the current language.
+    /// </summary>
+    internal static class EnglishText
+    {
+        /// <summary>
+        /// Gets a localization service that always reads English.
+        /// </summary>
+        public static LocalizationService Service { get; } = new();
     }
 
     public sealed class ComposerAttachmentViewModel
@@ -2297,26 +2435,40 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
     }
 
-    public sealed class RuntimeAgentActivityViewModel
+    /// <summary>
+    /// A task agent run in the activity panel. Its state and default message follow the interface
+    /// language when the main window calls <see cref="RefreshLocalizedText"/>.
+    /// </summary>
+    public sealed class RuntimeAgentActivityViewModel : ReactiveObject
     {
         private static readonly IBrush RunningBrush = new SolidColorBrush(Color.Parse("#38BDF8"));
         private static readonly IBrush CompletedBrush = new SolidColorBrush(Color.Parse("#10B981"));
         private static readonly IBrush FailedBrush = new SolidColorBrush(Color.Parse("#EF4444"));
 
+        private readonly ActivityState _state;
+        private readonly string? _message;
+
+        private enum ActivityState
+        {
+            Running,
+            Done,
+            Failed
+        }
+
         private RuntimeAgentActivityViewModel(
             string? runId,
             string agentName,
             string displayName,
-            string statusText,
-            string lastMessage,
+            ActivityState state,
+            string? message,
             string updatedText,
             IBrush statusBrush)
         {
             RunId = runId;
             AgentName = agentName;
             DisplayName = displayName;
-            StatusText = statusText;
-            LastMessage = lastMessage;
+            _state = state;
+            _message = message;
             UpdatedText = updatedText;
             StatusBrush = statusBrush;
         }
@@ -2327,13 +2479,33 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public string DisplayName { get; }
 
-        public string StatusText { get; }
+        /// <summary>
+        /// Gets the run state, such as "Running", in the interface language.
+        /// </summary>
+        public string StatusText => _state switch
+        {
+            ActivityState.Failed => Loc.Get("Workbench.State.Failed"),
+            ActivityState.Done => Loc.Get("Workbench.State.Done"),
+            _ => Loc.Get("Workbench.State.Running")
+        };
 
-        public string LastMessage { get; }
+        /// <summary>
+        /// Gets the agent's last message, or "Working on the request." before it has one.
+        /// </summary>
+        public string LastMessage => _message ?? Loc.Get("Workbench.Run.Working");
 
         public string UpdatedText { get; }
 
         public IBrush StatusBrush { get; }
+
+        /// <summary>
+        /// Re-reads the state and default message after the interface language changes.
+        /// </summary>
+        public void RefreshLocalizedText()
+        {
+            this.RaisePropertyChanged(nameof(StatusText));
+            this.RaisePropertyChanged(nameof(LastMessage));
+        }
 
         public static RuntimeAgentActivityViewModel Create(
             string agentName,
@@ -2342,14 +2514,14 @@ namespace SmartVoiceAgent.Ui.ViewModels
             string? runId = null)
         {
             var normalizedMessage = string.IsNullOrWhiteSpace(message)
-                ? "Working on the request."
+                ? null
                 : message.Trim();
-            var failed = normalizedMessage.Contains("failed", StringComparison.OrdinalIgnoreCase);
-            var statusText = failed
-                ? "Failed"
+            var failed = normalizedMessage?.Contains("failed", StringComparison.OrdinalIgnoreCase) == true;
+            var state = failed
+                ? ActivityState.Failed
                 : isComplete
-                    ? "Done"
-                    : "Running";
+                    ? ActivityState.Done
+                    : ActivityState.Running;
             var statusBrush = failed
                 ? FailedBrush
                 : isComplete
@@ -2360,7 +2532,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 string.IsNullOrWhiteSpace(runId) ? null : runId.Trim(),
                 agentName.Trim(),
                 FormatAgentDisplayName(agentName),
-                statusText,
+                state,
                 normalizedMessage,
                 DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture),
                 statusBrush);
@@ -2490,11 +2662,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 run.RunId,
                 RuntimeAgentActivityViewModel.Create(run.AgentName, run.LastMessage, run.Status is not RuntimeAgentRunStatus.Running, run.RunId).DisplayName,
                 FormatStatus(run.Status),
-                string.IsNullOrWhiteSpace(run.ModelId) ? "Default model" : run.ModelId.Trim(),
-                string.IsNullOrWhiteSpace(run.Role) ? "General task" : run.Role.Trim(),
+                string.IsNullOrWhiteSpace(run.ModelId) ? Loc.Get("Workbench.Run.DefaultModel") : run.ModelId.Trim(),
+                string.IsNullOrWhiteSpace(run.Role) ? Loc.Get("Workbench.Run.GeneralTask") : run.Role.Trim(),
                 TrimForDisplay(run.Task, 260),
                 FormatDuration(run.StartedAt, run.CompletedAt),
-                string.IsNullOrWhiteSpace(run.LastMessage) ? "Working on the request." : run.LastMessage.Trim(),
+                string.IsNullOrWhiteSpace(run.LastMessage) ? Loc.Get("Workbench.Run.Working") : run.LastMessage.Trim(),
                 TrimForDisplay(run.Response, 360),
                 TrimForDisplay(run.ErrorMessage, 260),
                 observations);
@@ -2504,11 +2676,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             return status switch
             {
-                RuntimeAgentRunStatus.Running => "Running",
-                RuntimeAgentRunStatus.Succeeded => "Completed",
-                RuntimeAgentRunStatus.Failed => "Failed",
-                RuntimeAgentRunStatus.Canceled => "Canceled",
-                _ => "Unknown"
+                RuntimeAgentRunStatus.Running => Loc.Get("Workbench.State.Running"),
+                RuntimeAgentRunStatus.Succeeded => Loc.Get("Workbench.State.Completed"),
+                RuntimeAgentRunStatus.Failed => Loc.Get("Workbench.State.Failed"),
+                RuntimeAgentRunStatus.Canceled => Loc.Get("Workbench.State.Canceled"),
+                _ => Loc.Get("Workbench.State.Unknown")
             };
         }
 
@@ -2523,11 +2695,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             if (duration.TotalMinutes >= 1)
             {
-                return $"{Math.Floor(duration.TotalMinutes):0}m {duration.Seconds:00}s";
+                return Loc.Format("Workbench.Run.MinutesSeconds", Math.Floor(duration.TotalMinutes), duration.Seconds);
             }
 
             var seconds = Math.Max(1, (int)Math.Round(duration.TotalSeconds, MidpointRounding.AwayFromZero));
-            return $"{seconds}s";
+            return Loc.Format("Workbench.Run.Seconds", seconds);
         }
 
         private static string TrimForDisplay(string? value, int maxLength)
@@ -2566,7 +2738,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             return new RuntimeAgentObservationDetailViewModel(
                 FormatToolName(observation.SkillId),
-                observation.Success ? "Ready" : "Unavailable",
+                observation.Success ? Loc.Get("Workbench.State.Ready") : Loc.Get("Workbench.State.Unavailable"),
                 TrimForDisplay(observation.Summary, 220));
         }
 
@@ -2574,11 +2746,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             return (tool ?? string.Empty).Trim().ToLowerInvariant() switch
             {
-                "file.read_lines" => "Read file",
-                "workspace.search_text" => "Search text",
-                "git.diff_summary" => "Diff summary",
-                "workspace.map" => "Workspace map",
-                _ => "Context"
+                "file.read_lines" => Loc.Get("Workbench.Run.Tool.ReadFile"),
+                "workspace.search_text" => Loc.Get("Workbench.Run.Tool.SearchText"),
+                "git.diff_summary" => Loc.Get("Workbench.Run.Tool.DiffSummary"),
+                "workspace.map" => Loc.Get("Workbench.Run.Tool.WorkspaceMap"),
+                _ => Loc.Get("Workbench.Run.Tool.Context")
             };
         }
 
@@ -3170,22 +3342,20 @@ namespace SmartVoiceAgent.Ui.ViewModels
     {
         public SkillPlannerTraceItemViewModel(SkillPlannerTraceEntry entry)
         {
-            TimestampText = entry.Timestamp.ToLocalTime().ToString("HH:mm:ss");
-            StatusText = entry.IsValid ? "Valid" : "Invalid";
+            TimestampText = entry.Timestamp.ToLocalTime().ToString("HH:mm:ss", LocalizationService.Instance.Culture);
+            StatusText = entry.IsValid ? Loc.Get("Workbench.Trace.Valid") : Loc.Get("Workbench.Trace.Invalid");
             SkillIdText = string.IsNullOrWhiteSpace(entry.SkillId)
-                ? "no skill"
+                ? Loc.Get("Workbench.Trace.NoSkill")
                 : entry.SkillId;
             ConfidenceText = entry.Confidence > 0
-                ? $"confidence {entry.Confidence:0.00}"
-                : "confidence n/a";
-            DurationText = entry.DurationMilliseconds <= 0
-                ? "<1 ms"
-                : $"{entry.DurationMilliseconds} ms";
+                ? Loc.Format("Workbench.Trace.Confidence", entry.Confidence)
+                : Loc.Get("Workbench.Trace.ConfidenceUnknown");
+            DurationText = SkillExecutionHistoryItemViewModel.FormatDuration(entry.DurationMilliseconds);
             UserRequestText = entry.UserRequest;
             RawResponseText = entry.RawResponse;
             ErrorText = entry.ErrorMessage;
             ReasoningText = entry.Reasoning;
-            AvailableSkillCountText = $"{entry.AvailableSkillCount} skills";
+            AvailableSkillCountText = Loc.Format("Workbench.Trace.SkillCount", entry.AvailableSkillCount);
         }
 
         public string TimestampText { get; }
@@ -3224,16 +3394,14 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             SkillId = entry.SkillId;
             StatusText = FormatStatusText(entry.Status);
-            TimestampText = entry.Timestamp.ToLocalTime().ToString("HH:mm:ss");
-            DurationText = entry.DurationMilliseconds <= 0
-                ? "<1 ms"
-                : $"{entry.DurationMilliseconds} ms";
+            TimestampText = entry.Timestamp.ToLocalTime().ToString("HH:mm:ss", LocalizationService.Instance.Culture);
+            DurationText = FormatDuration(entry.DurationMilliseconds);
             ResultSummary = entry.ResultSummary;
             ArgumentsSummary = entry.ArgumentsSummary;
             ErrorCode = entry.ErrorCode;
             StdOut = entry.StdOut;
             StdErr = entry.StdErr;
-            ExitCodeText = entry.ExitCode.HasValue ? $"exit {entry.ExitCode.Value}" : string.Empty;
+            ExitCodeText = entry.ExitCode.HasValue ? Loc.Format("Workbench.History.ExitCode", entry.ExitCode.Value) : string.Empty;
             RuntimeFlagsText = FormatRuntimeFlags(entry);
             DetailText = FormatDetailText(entry);
             ReplayPlanJson = entry.ReplayPlanJson;
@@ -3306,22 +3474,48 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public ICommand RerunCommand { get; }
 
+        /// <summary>
+        /// Names an execution status, such as "Timed Out", in the interface language.
+        /// </summary>
+        /// <param name="status">The status.</param>
         public static string FormatStatusText(SkillExecutionStatus status)
         {
+            return FormatStatusText(status, LocalizationService.Instance);
+        }
+
+        /// <summary>
+        /// Names an execution status in the language of <paramref name="localization"/>.
+        /// </summary>
+        /// <param name="status">The status.</param>
+        /// <param name="localization">The text to read.</param>
+        public static string FormatStatusText(SkillExecutionStatus status, LocalizationService localization)
+        {
+            ArgumentNullException.ThrowIfNull(localization);
             return status switch
             {
-                SkillExecutionStatus.Cancelled => "Cancelled",
-                SkillExecutionStatus.Disabled => "Disabled",
-                SkillExecutionStatus.ExecutorNotFound => "Executor Missing",
-                SkillExecutionStatus.Failed => "Failed",
-                SkillExecutionStatus.PermissionDenied => "Permission Denied",
-                SkillExecutionStatus.ReviewRequired => "Review Required",
-                SkillExecutionStatus.SkillNotFound => "Skill Missing",
-                SkillExecutionStatus.Succeeded => "Succeeded",
-                SkillExecutionStatus.TimedOut => "Timed Out",
-                SkillExecutionStatus.ValidationFailed => "Validation Failed",
+                SkillExecutionStatus.Cancelled => localization.Get("Workbench.History.Status.Cancelled"),
+                SkillExecutionStatus.Disabled => localization.Get("Workbench.History.Status.Disabled"),
+                SkillExecutionStatus.ExecutorNotFound => localization.Get("Workbench.History.Status.ExecutorMissing"),
+                SkillExecutionStatus.Failed => localization.Get("Workbench.History.Status.Failed"),
+                SkillExecutionStatus.PermissionDenied => localization.Get("Workbench.History.Status.PermissionDenied"),
+                SkillExecutionStatus.ReviewRequired => localization.Get("Workbench.History.Status.ReviewRequired"),
+                SkillExecutionStatus.SkillNotFound => localization.Get("Workbench.History.Status.SkillMissing"),
+                SkillExecutionStatus.Succeeded => localization.Get("Workbench.History.Status.Succeeded"),
+                SkillExecutionStatus.TimedOut => localization.Get("Workbench.History.Status.TimedOut"),
+                SkillExecutionStatus.ValidationFailed => localization.Get("Workbench.History.Status.ValidationFailed"),
                 _ => status.ToString()
             };
+        }
+
+        /// <summary>
+        /// Formats a duration in milliseconds, such as "42 ms" or "&lt;1 ms".
+        /// </summary>
+        /// <param name="milliseconds">The duration.</param>
+        public static string FormatDuration(long milliseconds)
+        {
+            return milliseconds <= 0
+                ? Loc.Get("Workbench.Duration.UnderOneMillisecond")
+                : Loc.Format("Workbench.Duration.Milliseconds", milliseconds);
         }
 
         private static string FormatRuntimeFlags(SkillExecutionHistoryEntry entry)
@@ -3329,17 +3523,17 @@ namespace SmartVoiceAgent.Ui.ViewModels
             var flags = new List<string>();
             if (entry.TimedOut)
             {
-                flags.Add("timed out");
+                flags.Add(Loc.Get("Workbench.History.Flag.TimedOut"));
             }
 
             if (entry.Cancelled)
             {
-                flags.Add("cancelled");
+                flags.Add(Loc.Get("Workbench.History.Flag.Cancelled"));
             }
 
             if (entry.Truncated)
             {
-                flags.Add("truncated");
+                flags.Add(Loc.Get("Workbench.History.Flag.Truncated"));
             }
 
             return string.Join(", ", flags);
@@ -3355,22 +3549,22 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             if (!string.IsNullOrWhiteSpace(entry.ErrorCode))
             {
-                lines.Add($"error: {entry.ErrorCode}");
+                lines.Add(Loc.Format("Workbench.History.Detail.Error", entry.ErrorCode));
             }
 
             if (!string.IsNullOrWhiteSpace(entry.ArgumentsSummary))
             {
-                lines.Add($"args: {entry.ArgumentsSummary}");
+                lines.Add(Loc.Format("Workbench.History.Detail.Arguments", entry.ArgumentsSummary));
             }
 
             if (!string.IsNullOrWhiteSpace(entry.Command))
             {
-                lines.Add($"command: {entry.Command}");
+                lines.Add(Loc.Format("Workbench.History.Detail.Command", entry.Command));
             }
 
             if (!string.IsNullOrWhiteSpace(entry.WorkingDirectory))
             {
-                lines.Add($"cwd: {entry.WorkingDirectory}");
+                lines.Add(Loc.Format("Workbench.History.Detail.WorkingDirectory", entry.WorkingDirectory));
             }
 
             return string.Join(Environment.NewLine, lines);
@@ -3384,9 +3578,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             var lines = new List<string>
             {
-                $"Skill: {entry.SkillId}",
-                $"Status: {statusText}",
-                $"Duration: {durationText}"
+                Loc.Format("Workbench.History.Copy.Skill", entry.SkillId),
+                Loc.Format("Workbench.History.Copy.Status", statusText),
+                Loc.Format("Workbench.History.Copy.Duration", durationText)
             };
 
             if (!string.IsNullOrWhiteSpace(detailText))

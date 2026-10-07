@@ -22,52 +22,50 @@ public static class ModelCatalogDefaults
         {
             ModelProviderType.OpenAI =>
             [
+                "gpt-6.1-sol",
+                "gpt-6-sol",
+                "gpt-6-luna",
+                "gpt-6-astra",
                 "gpt-5.5",
-                "gpt-5.4",
                 "gpt-5.4-mini",
-                "gpt-5.4-nano",
-                "gpt-4.1",
-                "gpt-4.1-mini",
-                "gpt-4o",
-                "gpt-4o-mini"
+                "gpt-5.4-nano"
             ],
             ModelProviderType.Anthropic =>
             [
-                "claude-opus-4-7",
-                "claude-sonnet-4-6",
-                "claude-haiku-4-5-20251001",
-                "claude-opus-4-6",
-                "claude-sonnet-4-5-20250929"
+                "claude-opus-5-5",
+                "claude-sonnet-5-5",
+                "claude-fable-5-1",
+                "claude-haiku-4-5-20251001"
             ],
             ModelProviderType.OpenRouter =>
             [
+                "openai/gpt-6.1-sol",
+                "openai/gpt-6-sol",
                 "openai/gpt-5.5",
-                "openai/gpt-5.4",
                 "openai/gpt-5.4-mini",
-                "openai/gpt-5.4-nano",
-                "openai/gpt-4.1-mini",
-                "openai/gpt-4o-mini",
-                "anthropic/claude-opus-4-7",
-                "anthropic/claude-sonnet-4-6",
-                "anthropic/claude-haiku-4-5-20251001",
-                "google/gemini-2.0-flash-001"
+                "anthropic/claude-opus-5.5",
+                "anthropic/claude-sonnet-5.5",
+                "anthropic/claude-haiku-4.5",
+                "google/gemini-3.8-flash"
             ],
             ModelProviderType.Ollama =>
             [
-                "llama3.1",
-                "llama3.2",
-                "mistral",
-                "qwen2.5-coder"
+                "qwen3",
+                "gpt-oss",
+                "llama4",
+                "gemma3",
+                "qwen3-coder",
+                "deepseek-r1"
             ],
             _ =>
             [
+                "openai/gpt-6.1-sol",
                 "openai/gpt-5.5",
                 "openai/gpt-5.4-mini",
-                "openai/gpt-4o-mini",
-                "anthropic/claude-opus-4-7",
-                "anthropic/claude-sonnet-4-6",
-                "anthropic/claude-haiku-4-5-20251001",
-                "google/gemini-2.0-flash-001"
+                "anthropic/claude-opus-5.5",
+                "anthropic/claude-sonnet-5.5",
+                "anthropic/claude-haiku-4.5",
+                "google/gemini-3.8-flash"
             ]
         };
 

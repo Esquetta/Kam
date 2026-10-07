@@ -19,6 +19,7 @@ namespace SmartVoiceAgent.Ui.Views
         private ScrollViewer? _chatScrollViewer;
         private TextBox? _workbenchPromptInput;
         private TextBox? _chatSearchInput;
+        private GlobalTalkShortcut? _talkShortcut;
         private bool _chatFollowsLatest = true;
 
         public MainWindow()
@@ -52,17 +53,63 @@ namespace SmartVoiceAgent.Ui.Views
 
             // Attach WindowStateManager for responsive design
             WindowStateManager.Instance.AttachToWindow(this);
+
+            // The talk shortcut works while Kam is in the background, through the window's message loop.
+            _talkShortcut = new GlobalTalkShortcut(this, () => _viewModel?.ToggleTalk());
+            RegisterTalkShortcut();
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            _talkShortcut?.Dispose();
+            _talkShortcut = null;
+            base.OnClosed(e);
+        }
+
+        private void RegisterTalkShortcut()
+        {
+            if (_talkShortcut is null)
+            {
+                return;
+            }
+
+            var shortcut = _viewModel?.TalkShortcut;
+            if (_talkShortcut.Register(shortcut) || _viewModel is null)
+            {
+                return;
+            }
+
+            // On Windows a valid shortcut fails only when another app holds it.
+            if (OperatingSystem.IsWindows() && GlobalTalkShortcut.TryParse(shortcut, out _, out _))
+            {
+                _viewModel.ReportTalkShortcutUnavailable(shortcut!);
+            }
+        }
+
+        private void OnTalkShortcutChanged(object? sender, EventArgs e)
+        {
+            RegisterTalkShortcut();
         }
 
         /// <summary>
         /// Window shortcuts: Ctrl+N new chat, Ctrl+K search chats, Ctrl+L composer, F2 rename,
-        /// Ctrl+, Settings, and Esc to stop the running turn.
+        /// Ctrl+, Settings, the talk shortcut when Windows doesn't deliver it globally, and Esc to cancel
+        /// voice or stop the running turn.
         /// </summary>
         protected override void OnKeyDown(KeyEventArgs e)
         {
             base.OnKeyDown(e);
             if (e.Handled || DataContext is not MainWindowViewModel vm)
             {
+                return;
+            }
+
+            if (_talkShortcut?.IsRegistered != true
+                && GlobalTalkShortcut.TryParseGesture(vm.TalkShortcut, out var talk)
+                && talk.Matches(e))
+            {
+                vm.ToggleTalk();
+                e.Handled = true;
                 return;
             }
 
@@ -107,6 +154,10 @@ namespace SmartVoiceAgent.Ui.Views
                 vm.RenameAgentChatCommand.Execute(null);
                 e.Handled = true;
             }
+            else if (e.Key == Key.Escape && vm.CancelVoice())
+            {
+                e.Handled = true;
+            }
             else if (e.Key == Key.Escape && vm.IsAgentTurnRunning)
             {
                 vm.StopAgentTurnCommand.Execute(null);
@@ -120,6 +171,7 @@ namespace SmartVoiceAgent.Ui.Views
             if (_viewModel != null)
             {
                 _viewModel.LogUpdated -= OnLogUpdated;
+                _viewModel.TalkShortcutChanged -= OnTalkShortcutChanged;
             }
 
             // Subscribe to new view model
@@ -127,7 +179,10 @@ namespace SmartVoiceAgent.Ui.Views
             if (_viewModel != null)
             {
                 _viewModel.LogUpdated += OnLogUpdated;
+                _viewModel.TalkShortcutChanged += OnTalkShortcutChanged;
             }
+
+            RegisterTalkShortcut();
         }
 
         private void OnLogUpdated(object? sender, EventArgs e)
@@ -209,6 +264,10 @@ namespace SmartVoiceAgent.Ui.Views
                 if (vm.IsSlashCommandPaletteVisible)
                 {
                     vm.HideSlashCommandSuggestions();
+                    e.Handled = true;
+                }
+                else if (vm.CancelVoice())
+                {
                     e.Handled = true;
                 }
                 else if (vm.IsAgentTurnRunning)
@@ -346,7 +405,7 @@ namespace SmartVoiceAgent.Ui.Views
 
             var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = "Attach files",
+                Title = Loc.Get("Chat.Composer.AttachFiles"),
                 AllowMultiple = true
             });
 

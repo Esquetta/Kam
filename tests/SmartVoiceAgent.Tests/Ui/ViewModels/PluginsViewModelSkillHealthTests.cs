@@ -1,4 +1,5 @@
 using FluentAssertions;
+using System.Reactive.Linq;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Infrastructure.Skills.Adapters;
@@ -52,19 +53,19 @@ public class PluginsViewModelSkillHealthTests
         healthy.Name.Should().Be("Read File");
         healthy.SkillId.Should().Be("files.read");
         healthy.Source.Should().Be("builtin");
-        healthy.Status.Should().Be("Healthy");
+        healthy.Status.Should().Be("Ready");
         healthy.HealthDetail.Should().Be("Executor available.");
         healthy.IsActive.Should().BeTrue();
 
         var missing = viewModel.Plugins[1];
         missing.Name.Should().Be("Add Todoist Task");
-        missing.Status.Should().Be("Missing Executor");
+        missing.Status.Should().Be("Not available");
         missing.HealthDetail.Should().Contain("No executor");
         missing.IsActive.Should().BeFalse();
 
         var reviewRequired = viewModel.Plugins[2];
         reviewRequired.Name.Should().Be("Desktop Navigation");
-        reviewRequired.Status.Should().Be("Review Required");
+        reviewRequired.Status.Should().Be("Needs review");
         reviewRequired.HealthDetail.Should().Contain("requires review");
         reviewRequired.IsActive.Should().BeFalse();
         reviewRequired.CanApproveReview.Should().BeTrue();
@@ -595,7 +596,7 @@ public class PluginsViewModelSkillHealthTests
         viewModel.ImportStatus.Should().Be("Imported 1 skill. Review required before use.");
         viewModel.Plugins.Should().Contain(plugin =>
             plugin.SkillId == "local.desktop-navigation"
-            && plugin.Status == "Review Required");
+            && plugin.Status == "Needs review");
     }
 
     [Fact]
@@ -615,6 +616,219 @@ public class PluginsViewModelSkillHealthTests
         importService.LastSource.Should().NotBeNull();
         importService.LastSource!.Kind.Should().Be(SkillSourceKind.SkillsSh);
         viewModel.ImportStatus.Should().Be("Imported 1 skill. Review required before use.");
+    }
+
+    [Fact]
+    public void Groups_ListSkillsByAreaAndSearchHidesRowsAndEmptyGroups()
+    {
+        var viewModel = new PluginsViewModel(
+        [
+            Report("web.search", "Search Web"),
+            Report("files.read", "Read File"),
+            Report("local.desktop-navigation", "Desktop Navigation"),
+            Report("apps.open", "Open Application"),
+            Report("file.patch", "Patch File")
+        ]);
+
+        viewModel.Groups.Select(group => group.Category).Should().Equal(
+            SkillCategory.Apps, SkillCategory.Files, SkillCategory.Web, SkillCategory.Other);
+        viewModel.Groups.Single(group => group.Category == SkillCategory.Files).Items
+            .Select(item => item.Name).Should().Equal("Patch File", "Read File");
+        viewModel.Groups[0].Title.Should().Be("Apps");
+
+        viewModel.SearchText = "file";
+
+        viewModel.Plugins.Where(item => item.IsVisible).Select(item => item.SkillId)
+            .Should().BeEquivalentTo(["files.read", "file.patch"]);
+        viewModel.Groups.Where(group => group.IsVisible).Select(group => group.Category)
+            .Should().Equal(SkillCategory.Files);
+        viewModel.Groups.Single(group => group.Category == SkillCategory.Files).VisibleCount.Should().Be(2);
+        viewModel.HasNoMatches.Should().BeFalse();
+
+        viewModel.SearchText = "zzz";
+
+        viewModel.HasNoMatches.Should().BeTrue();
+        viewModel.NoMatchesText.Should().Be("Nothing matches “zzz”.");
+
+        viewModel.SearchText = string.Empty;
+
+        viewModel.Plugins.Should().OnlyContain(item => item.IsVisible);
+    }
+
+    [Fact]
+    public void Filter_CountsAndShowsSkillsByState()
+    {
+        var viewModel = new PluginsViewModel(
+        [
+            Report("files.read", "Read File"),
+            Report("media.play", "Play Media", SkillHealthStatus.Disabled),
+            Report("local.desktop-navigation", "Desktop Navigation", SkillHealthStatus.ReviewRequired),
+            Report("shell.run", "Run Shell Command", SkillHealthStatus.PermissionDenied)
+        ]);
+
+        viewModel.SkillCount.Should().Be(4);
+        viewModel.OnCount.Should().Be(1);
+        viewModel.OffCount.Should().Be(1);
+        viewModel.AttentionCount.Should().Be(2);
+        viewModel.HasAttention.Should().BeTrue();
+
+        viewModel.SetFilterCommand.Execute("Attention").Subscribe();
+
+        viewModel.IsFilterAttention.Should().BeTrue();
+        viewModel.Plugins.Where(item => item.IsVisible).Select(item => item.SkillId)
+            .Should().BeEquivalentTo(["local.desktop-navigation", "shell.run"]);
+
+        viewModel.SetFilterCommand.Execute("Off").Subscribe();
+
+        viewModel.Plugins.Where(item => item.IsVisible).Select(item => item.SkillId).Should().Equal("media.play");
+        viewModel.Plugins.Single(item => item.SkillId == "media.play").Status.Should().Be("Off");
+    }
+
+    [Fact]
+    public void Summary_ShowsWhatNeedsFixingOrThePermissionsASkillUses()
+    {
+        var viewModel = new PluginsViewModel(
+        [
+            new SkillHealthReport
+            {
+                SkillId = "apps.open",
+                DisplayName = "Open Application",
+                Status = SkillHealthStatus.Healthy,
+                RiskLevel = SkillRiskLevel.Medium,
+                Details = "Built-in skill configured.",
+                RequiredPermissions = [SkillPermission.ProcessLaunch]
+            },
+            new SkillHealthReport
+            {
+                SkillId = "apps.list",
+                DisplayName = "List Applications",
+                Status = SkillHealthStatus.Healthy,
+                Details = "Built-in skill configured.",
+                RequiredPermissions = [SkillPermission.None]
+            },
+            new SkillHealthReport
+            {
+                SkillId = "local.desktop-navigation",
+                DisplayName = "Desktop Navigation",
+                Description = "Moves between windows.",
+                Status = SkillHealthStatus.ReviewRequired,
+                Details = "Skill requires review before it can be enabled."
+            }
+        ]);
+
+        viewModel.Plugins[0].Summary.Should().Be("Uses ProcessLaunch · Risk: Medium");
+        viewModel.Plugins[0].IconKey.Should().Be("IconAppWindow");
+        viewModel.Plugins[1].Summary.Should().Be("No special permissions · Risk: Low");
+        viewModel.Plugins[2].Summary.Should().Be("Skill requires review before it can be enabled.");
+        viewModel.Plugins[2].ShowsDescriptionInDetails.Should().BeTrue();
+        viewModel.Plugins[2].HasQuickFix.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SelectCommand_OpensAndClosesTheRowDetails()
+    {
+        var viewModel = new PluginsViewModel([Report("files.read", "Read File"), Report("web.search", "Search Web")]);
+        var row = viewModel.Plugins[0];
+
+        viewModel.HasSelectedPlugin.Should().BeFalse("no row starts open");
+
+        row.SelectCommand!.Execute(null);
+
+        row.IsSelected.Should().BeTrue();
+        viewModel.SelectedSkillId.Should().Be("files.read");
+
+        viewModel.Plugins[1].SelectCommand!.Execute(null);
+
+        row.IsSelected.Should().BeFalse();
+        viewModel.Plugins[1].IsSelected.Should().BeTrue();
+
+        viewModel.Plugins[1].SelectCommand!.Execute(null);
+
+        viewModel.Plugins.Should().OnlyContain(item => !item.IsSelected);
+        viewModel.HasSelectedPlugin.Should().BeFalse();
+    }
+
+    [Fact]
+    public void RowSwitch_TurnsTheSkillOffAndRefreshesTheList()
+    {
+        var policyManager = new RecordingSkillPolicyManager();
+        var healthService = new SequencedSkillHealthService(
+            [Report("files.read", "Read File")],
+            [Report("files.read", "Read File", SkillHealthStatus.Disabled)]);
+        var viewModel = new PluginsViewModel(healthService, policyManager);
+        var row = viewModel.Plugins.Single();
+
+        row.CanToggle.Should().BeTrue();
+        row.IsOn.Should().BeTrue();
+
+        row.IsOn = false;
+
+        policyManager.DisabledSkillIds.Should().Equal("files.read");
+        var refreshed = viewModel.Plugins.Single();
+        refreshed.IsOff.Should().BeTrue();
+        refreshed.IsOn.Should().BeFalse();
+        refreshed.CanEnable.Should().BeTrue();
+        viewModel.OffCount.Should().Be(1);
+    }
+
+    [Fact]
+    public void RowSwitch_FlipsBackWhenTheChangeFails()
+    {
+        var policyManager = new RecordingSkillPolicyManager { Succeeds = false };
+        var viewModel = new PluginsViewModel(
+            new StaticSkillHealthService([Report("files.read", "Read File")]),
+            policyManager);
+        var row = viewModel.Plugins.Single();
+
+        row.IsOn = false;
+
+        policyManager.DisabledSkillIds.Should().Equal("files.read");
+        row.IsOn.Should().BeTrue();
+    }
+
+    [Fact]
+    public void RowSwitch_IsHiddenWithoutAPolicyManagerOrWhileReviewIsPending()
+    {
+        var withoutManager = new PluginsViewModel([Report("files.read", "Read File")]);
+        withoutManager.Plugins.Single().CanToggle.Should().BeFalse();
+
+        var pendingReview = new PluginsViewModel(
+            new StaticSkillHealthService([Report("local.x", "Imported", SkillHealthStatus.ReviewRequired)]),
+            new RecordingSkillPolicyManager());
+        pendingReview.Plugins.Single().CanToggle.Should().BeFalse();
+        pendingReview.Plugins.Single().CanApproveReview.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task BrowseImportFolderCommand_FillsTheImportPathWithThePickedFolder()
+    {
+        var viewModel = new PluginsViewModel();
+        string? title = null;
+        viewModel.PickFolderAsync = pickerTitle =>
+        {
+            title = pickerTitle;
+            return Task.FromResult<string?>("C:\\skills\\desktop-navigation");
+        };
+
+        await ((ReactiveUI.ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit>)viewModel.BrowseImportFolderCommand).Execute();
+
+        title.Should().Be("Choose a folder with SKILL.md");
+        viewModel.ImportLocation.Should().Be("C:\\skills\\desktop-navigation");
+    }
+
+    private static SkillHealthReport Report(
+        string skillId,
+        string displayName,
+        SkillHealthStatus status = SkillHealthStatus.Healthy)
+    {
+        return new SkillHealthReport
+        {
+            SkillId = skillId,
+            DisplayName = displayName,
+            Source = "builtin",
+            Status = status,
+            Details = status == SkillHealthStatus.Healthy ? "Executor available." : $"{status}."
+        };
     }
 
     private sealed class RecordingSkillImportService : ISkillImportService
@@ -695,16 +909,25 @@ public class PluginsViewModelSkillHealthTests
     private sealed class RecordingSkillPolicyManager : ISkillPolicyManager
     {
         public List<string> GrantedSkillIds { get; } = [];
+        public List<string> EnabledSkillIds { get; } = [];
+        public List<string> DisabledSkillIds { get; } = [];
         public List<(string SkillId, string Key, string Value)> SavedRuntimeOptions { get; } = [];
+        public bool Succeeds { get; set; } = true;
 
         public Task<bool> ApproveReviewAsync(string skillId, CancellationToken cancellationToken = default) =>
             Task.FromResult(true);
 
-        public Task<bool> EnableAsync(string skillId, CancellationToken cancellationToken = default) =>
-            Task.FromResult(true);
+        public Task<bool> EnableAsync(string skillId, CancellationToken cancellationToken = default)
+        {
+            EnabledSkillIds.Add(skillId);
+            return Task.FromResult(Succeeds);
+        }
 
-        public Task<bool> DisableAsync(string skillId, CancellationToken cancellationToken = default) =>
-            Task.FromResult(true);
+        public Task<bool> DisableAsync(string skillId, CancellationToken cancellationToken = default)
+        {
+            DisabledSkillIds.Add(skillId);
+            return Task.FromResult(Succeeds);
+        }
 
         public Task<bool> RevokePermissionsAsync(string skillId, CancellationToken cancellationToken = default) =>
             Task.FromResult(true);

@@ -60,8 +60,7 @@ public sealed class CompositeModelCatalogService : IModelCatalogService, IDispos
             .Select(model => metadataById.TryGetValue(NormalizeModelId(model.ModelId), out var metadata)
                 ? Enrich(model, metadata)
                 : model)
-            .OrderByDescending(model => model.ModelId, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+            .NewestFirst();
     }
 
     public void Dispose()
@@ -113,7 +112,8 @@ public sealed class CompositeModelCatalogService : IModelCatalogService, IDispos
                 .Concat(metadata.Capabilities)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray(),
-            IsAvailable = true
+            IsAvailable = true,
+            ReleasedAt = liveModel.ReleasedAt ?? metadata.ReleasedAt
         };
     }
 

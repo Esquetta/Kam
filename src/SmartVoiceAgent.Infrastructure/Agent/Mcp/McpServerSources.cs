@@ -1,3 +1,6 @@
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SmartVoiceAgent.Core.Interfaces;
@@ -11,6 +14,18 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Mcp;
 /// </summary>
 public sealed class UserMcpServerSource : IMcpServerSource
 {
+    private static readonly JsonDocumentOptions EditOptions = new()
+    {
+        AllowTrailingCommas = true,
+        CommentHandling = JsonCommentHandling.Skip
+    };
+
+    private static readonly JsonSerializerOptions WriteOptions = new()
+    {
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+
     private readonly ILogger<UserMcpServerSource>? _logger;
 
     /// <summary>
@@ -88,6 +103,104 @@ public sealed class UserMcpServerSource : IMcpServerSource
               }
             }
             """);
+    }
+
+    /// <summary>
+    /// Adds a server under <c>mcpServers</c>, or replaces the one with the same name. Other entries and settings
+    /// in the file are kept; comments are not.
+    /// </summary>
+    /// <param name="name">The server name.</param>
+    /// <param name="entry">The entry, in the <c>mcpServers</c> format.</param>
+    /// <exception cref="InvalidOperationException">The file is not a JSON object.</exception>
+    public void AddServer(string name, JsonObject entry)
+    {
+        Edit(servers =>
+        {
+            servers[name] = entry.DeepClone();
+            return true;
+        });
+    }
+
+    /// <summary>
+    /// Removes a server from the file.
+    /// </summary>
+    /// <param name="name">The server name.</param>
+    /// <returns>Whether the server was there.</returns>
+    /// <exception cref="InvalidOperationException">The file is not a JSON object.</exception>
+    public bool RemoveServer(string name) => File.Exists(ConfigPath) && Edit(servers => servers.Remove(name));
+
+    /// <summary>
+    /// Turns a server on or off with its <c>disabled</c> flag.
+    /// </summary>
+    /// <param name="name">The server name.</param>
+    /// <param name="enabled">Whether the server should run.</param>
+    /// <returns>Whether the server was there.</returns>
+    /// <exception cref="InvalidOperationException">The file is not a JSON object.</exception>
+    public bool SetServerEnabled(string name, bool enabled) => File.Exists(ConfigPath) && Edit(servers =>
+    {
+        if (servers[name] is not JsonObject entry)
+        {
+            return false;
+        }
+
+        entry.Remove("enabled");
+        if (enabled)
+        {
+            entry.Remove("disabled");
+        }
+        else
+        {
+            entry["disabled"] = true;
+        }
+
+        return true;
+    });
+
+    private bool Edit(Func<JsonObject, bool> change)
+    {
+        JsonObject root;
+        if (File.Exists(ConfigPath) && File.ReadAllText(ConfigPath) is { } text && !string.IsNullOrWhiteSpace(text))
+        {
+            try
+            {
+                root = JsonNode.Parse(text, documentOptions: EditOptions) as JsonObject
+                    ?? throw new InvalidOperationException("mcp.json must contain a JSON object.");
+            }
+            catch (JsonException ex)
+            {
+                throw new InvalidOperationException($"mcp.json is not valid JSON: {ex.Message}", ex);
+            }
+        }
+        else
+        {
+            root = new JsonObject();
+        }
+
+        // Servers live under mcpServers, or at the root in files that list them there.
+        var servers = root["mcpServers"] as JsonObject;
+        if (servers is null)
+        {
+            var listsServersAtRoot = root.Count > 0 && root.All(property =>
+                property.Value is JsonObject server && (server.ContainsKey("command") || server.ContainsKey("url")));
+            if (listsServersAtRoot)
+            {
+                servers = root;
+            }
+            else
+            {
+                servers = new JsonObject();
+                root["mcpServers"] = servers;
+            }
+        }
+
+        if (!change(servers))
+        {
+            return false;
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(ConfigPath))!);
+        File.WriteAllText(ConfigPath, root.ToJsonString(WriteOptions) + Environment.NewLine);
+        return true;
     }
 }
 

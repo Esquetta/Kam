@@ -24,5 +24,10 @@ public sealed record ModelCatalogEntry
 
     public bool IsAvailable { get; init; }
 
+    /// <summary>
+    /// Gets when the provider released or listed the model, when the catalog says.
+    /// </summary>
+    public DateTimeOffset? ReleasedAt { get; init; }
+
     public DateTimeOffset LastCheckedAt { get; init; } = DateTimeOffset.UtcNow;
 }

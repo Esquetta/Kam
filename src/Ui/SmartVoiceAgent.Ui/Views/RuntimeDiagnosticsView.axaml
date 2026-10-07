@@ -62,14 +62,14 @@
 
             <Grid Grid.Row="0" ColumnDefinitions="*, Auto" ColumnSpacing="16">
                 <StackPanel Spacing="6">
-                    <TextBlock Text="Runtime diagnostics"
+                    <TextBlock Text="{DynamicResource Lang.Diagnostics.Title}"
                                Classes="PageTitle"/>
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="Live readiness of the model, host, skills and integrations."
+                        <TextBlock Text="{DynamicResource Lang.Diagnostics.Subtitle}"
                                    Classes="PageSubtitle"
                                    VerticalAlignment="Center"/>
                         <Border Classes="Pill Accent">
-                            <TextBlock Text="{Binding CoreReadinessStatus}"/>
+                            <TextBlock Text="{Binding CoreReadinessStatusText}"/>
                         </Border>
                     </StackPanel>
                 </StackPanel>
@@ -83,13 +83,8 @@
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Path Data="M12,4V1L8,5L12,9V6C15.31,6 18,8.69 18,12C18,13.01 17.75,13.96 17.3,14.8L18.76,16.26C19.54,15.03 20,13.57 20,12C20,7.58 16.42,4 12,4M6.7,9.2L5.24,7.74C4.46,8.97 4,10.43 4,12C4,16.42 7.58,20 12,20V23L16,19L12,15V18C8.69,18 6,15.31 6,12C6,10.99 6.25,10.04 6.7,9.2Z"
-                              Width="14"
-                              Height="14"
-                              Stretch="Uniform"
-                              Fill="{DynamicResource AccentBrush}"
-                              VerticalAlignment="Center"/>
-                        <TextBlock Text="Refresh"
+                        <Viewbox Width="14" Height="14" VerticalAlignment="Center"><Path Classes="Icon Accent" Data="{StaticResource IconRefresh}"/></Viewbox>
+                        <TextBlock Text="{DynamicResource Lang.Common.Refresh}"
                                    Foreground="{DynamicResource TextPrimaryBrush}"
                                    FontSize="12"
                                    FontWeight="SemiBold"
@@ -143,7 +138,7 @@
                 <Grid RowDefinitions="Auto, Auto" RowSpacing="14">
                     <Grid ColumnDefinitions="*, Auto, Auto" ColumnSpacing="12">
                         <StackPanel Spacing="6">
-                            <TextBlock Text="Live production test"
+                            <TextBlock Text="{DynamicResource Lang.Diagnostics.LiveTest.Title}"
                                        Classes="SectionTitle"/>
                             <TextBlock Text="{Binding LiveTestNextAction}"
                                        FontSize="13"
@@ -161,7 +156,7 @@
                                 Height="34"
                                 Padding="12,0"
                                 VerticalAlignment="Top">
-                            <TextBlock Text="Copy Report"
+                            <TextBlock Text="{DynamicResource Lang.Diagnostics.LiveTest.CopyReport}"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                        FontSize="12"
                                        FontWeight="SemiBold"
@@ -171,7 +166,7 @@
                                 Classes="Pill"
                                 VerticalAlignment="Top"
                                 Margin="0,8,0,0">
-                            <TextBlock Text="{Binding LiveTestStatus}"/>
+                            <TextBlock Text="{Binding LiveTestStatusText}"/>
                         </Border>
                     </Grid>
 
@@ -215,7 +210,7 @@
                     Classes="DiagnosticPanel"
                     IsVisible="{Binding HasSetupActionItems}">
                 <StackPanel Spacing="12">
-                    <TextBlock Text="Setup actions"
+                    <TextBlock Text="{DynamicResource Lang.Diagnostics.SetupActions.Title}"
                                Classes="SectionTitle"/>
                     <ItemsControl ItemsSource="{Binding SetupActionItems}">
                         <ItemsControl.ItemTemplate>
@@ -259,7 +254,7 @@
                 <Grid RowDefinitions="Auto, Auto" RowSpacing="14">
                     <Grid ColumnDefinitions="*, Auto, Auto, Auto" ColumnSpacing="12">
                         <StackPanel Spacing="6">
-                            <TextBlock Text="App updates"
+                            <TextBlock Text="{DynamicResource Lang.Diagnostics.Updates.Title}"
                                        Classes="SectionTitle"/>
                             <TextBlock Text="{Binding ApplicationUpdateActionStatus}"
                                        FontSize="13"
@@ -277,7 +272,7 @@
                                 Height="34"
                                 Padding="12,0"
                                 VerticalAlignment="Top">
-                            <TextBlock Text="Check"
+                            <TextBlock Text="{DynamicResource Lang.Diagnostics.Updates.Check}"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                        FontSize="12"
                                        FontWeight="SemiBold"
@@ -290,7 +285,7 @@
                                 Height="34"
                                 Padding="12,0"
                                 VerticalAlignment="Top">
-                            <TextBlock Text="Download"
+                            <TextBlock Text="{DynamicResource Lang.Diagnostics.Updates.Download}"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                        FontSize="12"
                                        FontWeight="SemiBold"
@@ -303,7 +298,7 @@
                                 Height="34"
                                 Padding="12,0"
                                 VerticalAlignment="Top">
-                            <TextBlock Text="Restart Plan"
+                            <TextBlock Text="{DynamicResource Lang.Diagnostics.Updates.RestartPlan}"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                        FontSize="12"
                                        FontWeight="SemiBold"
@@ -353,7 +348,7 @@
                     Classes="DiagnosticPanel"
                     IsVisible="{Binding HasBlockingItems}">
                 <StackPanel Spacing="10">
-                    <TextBlock Text="Blocking items"
+                    <TextBlock Text="{DynamicResource Lang.Diagnostics.BlockingItems.Title}"
                                Classes="SectionTitle"
                                Foreground="{DynamicResource AccentErrorBrush}"/>
                     <ItemsControl ItemsSource="{Binding BlockingItems}">
@@ -377,7 +372,7 @@
                   RowSpacing="16">
                 <Border Grid.Row="0" Grid.Column="0" Classes="DiagnosticPanel">
                     <StackPanel Spacing="12">
-                        <TextBlock Text="AI runtime"
+                        <TextBlock Text="{DynamicResource Lang.Diagnostics.AiRuntime.Title}"
                                    Classes="SectionTitle"/>
                         <ItemsControl ItemsSource="{Binding AiRuntimeItems}">
                             <ItemsControl.ItemTemplate>
@@ -419,7 +414,7 @@
 
                 <Border Grid.Row="0" Grid.Column="1" Classes="DiagnosticPanel">
                     <StackPanel Spacing="12">
-                        <TextBlock Text="Integrations"
+                        <TextBlock Text="{DynamicResource Lang.Diagnostics.Integrations.Title}"
                                    Classes="SectionTitle"/>
                         <ItemsControl ItemsSource="{Binding IntegrationItems}">
                             <ItemsControl.ItemTemplate>
@@ -458,7 +453,7 @@
                 <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="DiagnosticPanel">
                     <Grid RowDefinitions="Auto, Auto" RowSpacing="12">
                         <Grid ColumnDefinitions="*, Auto, Auto" ColumnSpacing="12">
-                            <TextBlock Text="Local runtime"
+                            <TextBlock Text="{DynamicResource Lang.Diagnostics.LocalRuntime.Title}"
                                        Classes="SectionTitle"/>
                             <StackPanel Grid.Column="1"
                                         Orientation="Horizontal"
@@ -475,7 +470,7 @@
                                         Height="34"
                                         Padding="12,0"
                                         >
-                                    <TextBlock Text="Run Skill Smoke"
+                                    <TextBlock Text="{DynamicResource Lang.Diagnostics.SkillSmoke.Run}"
                                                Foreground="{DynamicResource TextPrimaryBrush}"
                                                FontSize="11"
                                                FontWeight="SemiBold"

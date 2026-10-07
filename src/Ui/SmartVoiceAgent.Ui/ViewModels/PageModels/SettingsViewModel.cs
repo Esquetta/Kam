@@ -25,7 +25,6 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private readonly bool _ownsModelConnectionTestService;
         private readonly AudioDeviceService _audioDeviceService;
         private readonly VoiceTestService? _voiceTestService;
-        private int _selectedLanguageIndex;
         private CancellationTokenSource? _inputLevelCts;
 
         public ReactiveCommand<Unit, Unit> StartMicTestCommand { get; }
@@ -83,8 +82,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             IAutoStartRegistrationService? autoStartRegistrationService)
         {
             _mainViewModel = mainViewModel;
-            Title = "SETTINGS";
-            _selectedLanguageIndex = mainViewModel?.SelectedLanguageIndex ?? 0;
+            Title = Loc.Get("Settings.Title");
             _settingsService = settingsService;
             _modelCatalogService = modelCatalogService ?? CompositeModelCatalogService.CreateDefault();
             _modelConnectionTestService = modelConnectionTestService ?? new ModelConnectionTestService();
@@ -107,12 +105,16 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             TestAiConnectionCommand = ReactiveCommand.CreateFromTask(TestAiProfileSettingsAsync);
             RefreshAiModelsCommand = ReactiveCommand.CreateFromTask(RefreshPlannerModelsAsync);
             RefreshChatModelsCommand = ReactiveCommand.CreateFromTask(RefreshChatModelsAsync);
+            DownloadSpeechModelCommand = ReactiveCommand.CreateFromTask(DownloadSpeechModelAsync);
+            PreviewSpeechCommand = ReactiveCommand.CreateFromTask(PreviewSpeechAsync);
+            StopSpeechPreviewCommand = ReactiveCommand.Create(StopSpeechPreview);
             
             // Load saved settings
             _settingsService.Load();
             InitializeAiSettings();
             RefreshStartupSettings();
-            
+            LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
+
             // Subscribe to setting changes
             _settingsService.SettingChanged += (s, e) =>
             {
@@ -128,20 +130,21 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private bool _isInitializingAiSettings;
         private string _aiProvider = "OpenRouter";
         private string _aiEndpoint = "https://openrouter.ai/api/v1";
-        private string _aiModelId = "openai/gpt-4.1-mini";
+        private string _aiModelId = "openai/gpt-5.4-mini";
         private string _aiApiKey = string.Empty;
         private string _activePlannerProfileId = "openrouter-primary";
         private string _chatProvider = "OpenRouter";
         private string _chatEndpoint = "https://openrouter.ai/api/v1";
-        private string _chatModelId = "openai/gpt-4.1-mini";
+        private string _chatModelId = "openai/gpt-5.4-mini";
         private string _chatApiKey = string.Empty;
         private string _activeChatProfileId = "openrouter-chat";
-        private string _aiProfileStatus = "Profile not tested.";
+        private Func<string> _aiProfileStatusText = static () => Loc.Get("Settings.Status.NotTested");
+        private string _aiProfileStatus = Loc.Get("Settings.Status.NotTested");
         private bool _isAiProfileValid;
-        private IReadOnlyList<string> _aiModelOptions = CreateDefaultModelOptions("OpenRouter", "openai/gpt-4.1-mini");
-        private IReadOnlyList<string> _chatModelOptions = CreateDefaultModelOptions("OpenRouter", "openai/gpt-4.1-mini");
-        private IReadOnlyList<ModelCatalogEntry> _aiModelCatalogEntries = CreateDefaultModelCatalogEntries("OpenRouter", "openai/gpt-4.1-mini");
-        private IReadOnlyList<ModelCatalogEntry> _chatModelCatalogEntries = CreateDefaultModelCatalogEntries("OpenRouter", "openai/gpt-4.1-mini");
+        private IReadOnlyList<string> _aiModelOptions = CreateDefaultModelOptions("OpenRouter", "openai/gpt-5.4-mini");
+        private IReadOnlyList<string> _chatModelOptions = CreateDefaultModelOptions("OpenRouter", "openai/gpt-5.4-mini");
+        private IReadOnlyList<ModelCatalogEntry> _aiModelCatalogEntries = CreateDefaultModelCatalogEntries("OpenRouter", "openai/gpt-5.4-mini");
+        private IReadOnlyList<ModelCatalogEntry> _chatModelCatalogEntries = CreateDefaultModelCatalogEntries("OpenRouter", "openai/gpt-5.4-mini");
         private bool _isRefreshingAiModels;
         private bool _isRefreshingChatModels;
         private bool _isTestingAiConnection;
@@ -341,8 +344,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         }
 
         public string AiConnectionTestButtonText => IsTestingAiConnection
-            ? "Testing..."
-            : "Test Connection";
+            ? Loc.Get("Settings.Testing")
+            : Loc.Get("Settings.TestConnection");
 
         public string ActiveChatProfileId
         {
@@ -361,6 +364,16 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             get => _aiProfileStatus;
             private set => this.RaiseAndSetIfChanged(ref _aiProfileStatus, value);
+        }
+
+        /// <summary>
+        /// Shows a profile status and keeps how it was built, so it can be shown again in another language.
+        /// </summary>
+        /// <param name="text">Builds the status text in the current language.</param>
+        private void SetAiProfileStatus(Func<string> text)
+        {
+            _aiProfileStatusText = text;
+            AiProfileStatus = text();
         }
 
         public bool IsAiProfileValid
@@ -444,13 +457,13 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             var chatProfile = CreateChatProfile();
             var targets = CreateConnectionTestTargets(profile, chatProfile);
             var validationErrors = targets
-                .SelectMany(target => ValidateProfileForConnectionTest(target.Label, target.Profile, target.Required))
+                .SelectMany(ValidateProfileForConnectionTest)
                 .ToArray();
 
             if (validationErrors.Length > 0)
             {
                 IsAiProfileValid = false;
-                AiProfileStatus = string.Join(" ", validationErrors);
+                SetAiProfileStatus(() => string.Join(" ", validationErrors.Select(error => error())));
                 SaveAiProfileSettings();
                 return;
             }
@@ -458,8 +471,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             try
             {
                 IsTestingAiConnection = true;
-                AiProfileStatus = $"Testing {profile.Provider} planner connection for {profile.ModelId}...";
-                var results = new List<string>();
+                var testedProvider = profile.Provider;
+                var testedModelId = profile.ModelId;
+                SetAiProfileStatus(() => Loc.Format("Settings.Status.Testing", testedProvider, testedModelId));
+                var results = new List<Func<string>>();
 
                 foreach (var target in targets.Where(target => target.Required || ShouldTestOptionalProfile(target.Profile)))
                 {
@@ -467,7 +482,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     if (!result.Success)
                     {
                         IsAiProfileValid = false;
-                        AiProfileStatus = FormatConnectionFailure(target, result);
+                        SetAiProfileStatus(FormatConnectionFailure(target, result));
                         SaveAiProfileSettings();
                         return;
                     }
@@ -476,7 +491,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 }
 
                 IsAiProfileValid = true;
-                AiProfileStatus = $"Connection verified and validated: {string.Join("; ", results)}. Changes apply to the next message.";
+                var verified = results.ToArray();
+                SetAiProfileStatus(() => Loc.Format(
+                    "Settings.Status.Verified",
+                    string.Join("; ", verified.Select(text => text()))));
                 SaveAiProfileSettings();
             }
             finally
@@ -504,7 +522,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 SetModelOptions(role, CreateDefaultModelOptions(profile.Provider.ToString(), profile.ModelId));
                 SetCatalogBacked(role, false);
-                AiProfileStatus = "Custom OpenAI-compatible providers keep manual model entry enabled.";
+                SetAiProfileStatus(static () => Loc.Get("Settings.Status.ManualModelEntry"));
                 return;
             }
 
@@ -519,15 +537,17 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     : CreateDefaultModelCatalogEntries(profile.Provider.ToString(), profile.ModelId));
 
                 var hasLiveAvailability = models.Any(model => model.IsAvailable);
-                AiProfileStatus = hasLiveAvailability
-                    ? $"{(isPlanner ? "Planner" : "Chat")} model list loaded from {profile.Provider}."
-                    : $"{(isPlanner ? "Planner" : "Chat")} model registry loaded. Add an API key to verify live availability.";
+                var provider = profile.Provider;
+                SetAiProfileStatus(hasLiveAvailability
+                    ? () => Loc.Format("Settings.Status.ModelListLoaded", GetRoleLabel(role), provider)
+                    : () => Loc.Format("Settings.Status.ModelRegistryLoaded", GetRoleLabel(role)));
                 SaveAiProfileSettings();
             }
             catch (Exception ex)
             {
                 SetModelOptions(role, CreateDefaultModelCatalogEntries(profile.Provider.ToString(), profile.ModelId));
-                AiProfileStatus = $"Model list could not be loaded: {SanitizeProviderMessage(ex.Message, profile)}";
+                var message = DescribeProviderMessage(ex.Message, profile);
+                SetAiProfileStatus(() => Loc.Format("Settings.Status.ModelListFailed", message()));
             }
             finally
             {
@@ -577,7 +597,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 Provider = ModelProviderType.OpenRouter,
                 DisplayName = "OpenRouter Planner",
                 Endpoint = "https://openrouter.ai/api/v1",
-                ModelId = "openai/gpt-4.1-mini",
+                ModelId = "openai/gpt-5.4-mini",
                 Roles = [ModelProviderRole.Planner],
                 Enabled = false
             };
@@ -591,7 +611,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 Provider = ModelProviderType.OpenRouter,
                 DisplayName = "OpenRouter Chat",
                 Endpoint = "https://openrouter.ai/api/v1",
-                ModelId = "openai/gpt-4.1-mini",
+                ModelId = "openai/gpt-5.4-mini",
                 Roles = [ModelProviderRole.Chat],
                 Enabled = false
             };
@@ -718,30 +738,59 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             return
             [
-                new ConnectionTestTarget("Planner", plannerProfile, Required: true),
-                new ConnectionTestTarget("Chat", chatProfile, Required: false)
+                new ConnectionTestTarget(ModelProviderRole.Planner, plannerProfile, Required: true),
+                new ConnectionTestTarget(ModelProviderRole.Chat, chatProfile, Required: false)
             ];
         }
 
-        private static IEnumerable<string> ValidateProfileForConnectionTest(
-            string label,
-            ModelProviderProfile profile,
-            bool required)
+        private static IEnumerable<Func<string>> ValidateProfileForConnectionTest(ConnectionTestTarget target)
         {
-            if (!required && !ShouldTestOptionalProfile(profile))
+            var profile = target.Profile;
+            if (!target.Required && !ShouldTestOptionalProfile(profile))
             {
                 yield break;
             }
 
             foreach (var error in profile.Validate().Errors)
             {
-                yield return $"{label}: {error}";
+                yield return () => Loc.Format(
+                    "Settings.Status.ProfileError",
+                    GetRoleLabel(target.Role),
+                    LocalizeProfileError(error));
             }
 
             if (profile.Provider != ModelProviderType.Ollama && string.IsNullOrWhiteSpace(profile.ApiKey))
             {
-                yield return $"{label}: API key is required to test this provider.";
+                yield return () => Loc.Format("Settings.Status.ApiKeyRequired", GetRoleLabel(target.Role));
             }
+        }
+
+        /// <summary>
+        /// Returns the name of a model role as the status messages show it.
+        /// </summary>
+        private static string GetRoleLabel(ModelProviderRole role)
+        {
+            return role == ModelProviderRole.Planner
+                ? Loc.Get("Settings.Role.Planner")
+                : Loc.Get("Settings.Role.Chat");
+        }
+
+        /// <summary>
+        /// Translates a known <see cref="ModelProviderProfile.Validate"/> error; any other message is shown as it is.
+        /// </summary>
+        private static string LocalizeProfileError(string error)
+        {
+            return error switch
+            {
+                "Profile id is required." => Loc.Get("Settings.ProfileError.IdRequired"),
+                "A valid endpoint is required." => Loc.Get("Settings.ProfileError.EndpointRequired"),
+                "API key is required for enabled profiles." => Loc.Get("Settings.ProfileError.ApiKeyRequired"),
+                "Model id is required." => Loc.Get("Settings.ProfileError.ModelRequired"),
+                "At least one model role is required." => Loc.Get("Settings.ProfileError.RoleRequired"),
+                "Max tokens must be greater than zero." => Loc.Get("Settings.ProfileError.MaxTokens"),
+                "Temperature must be between 0 and 2." => Loc.Get("Settings.ProfileError.Temperature"),
+                _ => error
+            };
         }
 
         private static bool ShouldTestOptionalProfile(ModelProviderProfile profile)
@@ -751,11 +800,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         }
 
         private sealed record ConnectionTestTarget(
-            string Label,
+            ModelProviderRole Role,
             ModelProviderProfile Profile,
             bool Required);
 
-        private static string FormatConnectionSuccess(
+        private static Func<string> FormatConnectionSuccess(
             ConnectionTestTarget target,
             ModelConnectionTestResult result)
         {
@@ -765,11 +814,17 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             var modelId = string.IsNullOrWhiteSpace(result.ModelId)
                 ? target.Profile.ModelId
                 : result.ModelId;
+            var liveModelCount = result.LiveModelCount;
 
-            return $"{target.Label} returned {result.LiveModelCount} live models; {provider} {modelId} validated";
+            return () => Loc.Format(
+                "Settings.Status.TargetVerified",
+                GetRoleLabel(target.Role),
+                liveModelCount,
+                provider,
+                modelId);
         }
 
-        private static string FormatConnectionFailure(
+        private static Func<string> FormatConnectionFailure(
             ConnectionTestTarget target,
             ModelConnectionTestResult result)
         {
@@ -779,28 +834,38 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             var modelId = string.IsNullOrWhiteSpace(result.ModelId)
                 ? target.Profile.ModelId
                 : result.ModelId;
-            var message = SanitizeProviderMessage(result.Message, target.Profile);
+            var message = DescribeProviderMessage(result.Message, target.Profile);
+            var failureCategory = result.FailureCategory;
 
-            if (string.Equals(result.FailureCategory, "Connection", StringComparison.OrdinalIgnoreCase)
+            if (string.Equals(failureCategory, "Connection", StringComparison.OrdinalIgnoreCase)
                 && result.Provider == ModelProviderType.OpenAICompatible
                 && string.IsNullOrWhiteSpace(result.ModelId))
             {
-                return $"{target.Label} connection failed: {message}";
+                return () => Loc.Format("Settings.Status.ConnectionFailed", GetRoleLabel(target.Role), message());
             }
 
-            return $"{target.Label} connection failed ({result.FailureCategory}): {provider} {modelId} - {message}";
+            return () => Loc.Format(
+                "Settings.Status.ConnectionFailedDetail",
+                GetRoleLabel(target.Role),
+                failureCategory,
+                provider,
+                modelId,
+                message());
         }
 
-        private static string SanitizeProviderMessage(string message, ModelProviderProfile profile)
+        /// <summary>
+        /// Removes the profile's API key and endpoint from a provider message; an empty message becomes a generic failure.
+        /// </summary>
+        private static Func<string> DescribeProviderMessage(string message, ModelProviderProfile profile)
         {
             if (string.IsNullOrWhiteSpace(message))
             {
-                return "Provider connection failed.";
+                return static () => Loc.Get("Settings.Status.ProviderFailed");
             }
 
             var sanitized = ReplaceIfPresent(message, profile.ApiKey);
             sanitized = ReplaceIfPresent(sanitized, profile.Endpoint);
-            return sanitized;
+            return () => sanitized;
         }
 
         private static string ReplaceIfPresent(string value, string secret)
@@ -832,7 +897,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 }
 
                 return string.IsNullOrWhiteSpace(modelId) || modelId.Contains('/', StringComparison.Ordinal)
-                    ? "gpt-4.1-mini"
+                    ? "gpt-5.4-mini"
                     : modelId;
             }
 
@@ -844,19 +909,19 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 }
 
                 return string.IsNullOrWhiteSpace(modelId) || modelId.Contains('/', StringComparison.Ordinal)
-                    ? "claude-sonnet-4-6"
+                    ? "claude-sonnet-5-5"
                     : modelId;
             }
 
             if (provider == ModelProviderType.Ollama)
             {
                 return string.IsNullOrWhiteSpace(modelId) || modelId.Contains('/', StringComparison.Ordinal)
-                    ? "llama3.1"
+                    ? "qwen3"
                     : modelId;
             }
 
             return string.IsNullOrWhiteSpace(modelId)
-                ? "openai/gpt-4.1-mini"
+                ? "openai/gpt-5.4-mini"
                 : modelId;
         }
 
@@ -956,6 +1021,171 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         #endregion
 
         #region Voice Settings
+
+        private const string LocalSpeechEngineValue = "Local";
+        private const string ApiSpeechEngineValue = "OpenAI";
+        private const string WakeWordModelName = SmartVoiceAgent.Infrastructure.Services.SpeechModelCatalog.WakeWordModel;
+
+        /// <summary>
+        /// Gets the talk shortcuts offered in Settings, as Avalonia key gesture strings.
+        /// </summary>
+        public static IReadOnlyList<string> TalkShortcutPresets { get; } =
+        [
+            "Ctrl+Alt+Space",
+            "Ctrl+Shift+Space",
+            "Ctrl+Alt+K",
+            "Pause"
+        ];
+
+        /// <summary>
+        /// Gets the command that downloads the selected local Whisper model.
+        /// </summary>
+        public ReactiveCommand<Unit, Unit> DownloadSpeechModelCommand { get; }
+
+        /// <summary>
+        /// Gets the command that reads a sample sentence with the chosen voice and rate.
+        /// </summary>
+        public ReactiveCommand<Unit, Unit> PreviewSpeechCommand { get; }
+
+        /// <summary>
+        /// Gets the command that stops the sample sentence.
+        /// </summary>
+        public ReactiveCommand<Unit, Unit> StopSpeechPreviewCommand { get; }
+
+        private ISpeechModelStore? _speechModelStore;
+        private ITextToSpeechService? _textToSpeech;
+        private bool _isTextToSpeechAvailable;
+        private Func<string>? _audioErrorText;
+
+        /// <summary>
+        /// A choice in one of the voice lists, such as a spoken language or a talk shortcut. Its label follows
+        /// the interface language when <see cref="RefreshLocalizedText"/> runs.
+        /// </summary>
+        public sealed class VoiceOption : ReactiveObject
+        {
+            private readonly Func<string> _label;
+
+            /// <summary>
+            /// Creates a choice.
+            /// </summary>
+            /// <param name="value">The value saved in settings.</param>
+            /// <param name="label">Builds the label in the current language.</param>
+            public VoiceOption(string value, Func<string> label)
+            {
+                Value = value;
+                _label = label;
+            }
+
+            /// <summary>
+            /// Gets the value saved in settings.
+            /// </summary>
+            public string Value { get; }
+
+            /// <summary>
+            /// Gets the label in the interface language.
+            /// </summary>
+            public string Label => _label();
+
+            /// <summary>
+            /// Re-reads the label after the interface language changes.
+            /// </summary>
+            public void RefreshLocalizedText() => this.RaisePropertyChanged(nameof(Label));
+
+            /// <inheritdoc />
+            public override string ToString() => Label;
+        }
+
+        /// <summary>
+        /// A local Whisper model as the model list shows it: its name and download size, such as
+        /// "base · 148 MB", and a one-line hint.
+        /// </summary>
+        public sealed class SpeechModelOption : ReactiveObject
+        {
+            private readonly Func<string> _hint;
+
+            /// <summary>
+            /// Creates the option for a model.
+            /// </summary>
+            /// <param name="name">The model name settings store, such as <c>base</c>.</param>
+            /// <param name="approximateBytes">The download size.</param>
+            /// <param name="hint">Builds the hint in the current language.</param>
+            public SpeechModelOption(string name, long approximateBytes, Func<string> hint)
+            {
+                Name = name;
+                ApproximateBytes = approximateBytes;
+                _hint = hint;
+            }
+
+            /// <summary>
+            /// Gets the model name settings store.
+            /// </summary>
+            public string Name { get; }
+
+            /// <summary>
+            /// Gets the download size in bytes.
+            /// </summary>
+            public long ApproximateBytes { get; }
+
+            /// <summary>
+            /// Gets the name and size, such as "base · 148 MB".
+            /// </summary>
+            public string Label => $"{Name} · {FormatModelSize(ApproximateBytes)}";
+
+            /// <summary>
+            /// Gets what the model is good for, such as "Fast".
+            /// </summary>
+            public string Hint => _hint();
+
+            /// <summary>
+            /// Re-reads the size and hint after the interface language changes.
+            /// </summary>
+            public void RefreshLocalizedText()
+            {
+                this.RaisePropertyChanged(nameof(Label));
+                this.RaisePropertyChanged(nameof(Hint));
+            }
+
+            /// <inheritdoc />
+            public override string ToString() => Label;
+        }
+
+        /// <summary>
+        /// Formats a download size in megabytes, such as "148 MB".
+        /// </summary>
+        /// <param name="bytes">The size in bytes.</param>
+        public static string FormatModelSize(long bytes)
+        {
+            return Loc.Format("Settings.Voice.Model.Size", Math.Round(bytes / 1_000_000d));
+        }
+
+        /// <summary>
+        /// Returns the sentence Preview reads: Turkish when the spoken language is Turkish, otherwise English.
+        /// </summary>
+        /// <param name="spokenLanguage">The two-letter spoken language, such as <c>tr</c>.</param>
+        public static string GetSpeechPreviewSample(string spokenLanguage)
+        {
+            var languageCode = string.Equals(spokenLanguage, "tr", StringComparison.OrdinalIgnoreCase)
+                ? "tr-TR"
+                : LocalizationService.DefaultLanguage;
+            return LocalizationService.LoadDictionary(languageCode).TryGetValue("Settings.Voice.Preview.Sample", out var sample)
+                ? sample
+                : "Hi, I'm Kam.";
+        }
+
+        /// <summary>
+        /// Uses these speech services instead of the ones from the application's services. Tests pass fakes;
+        /// either may be null, and the section then shows what it cannot do.
+        /// </summary>
+        /// <param name="speechModelStore">Downloads and finds the local Whisper models.</param>
+        /// <param name="textToSpeech">Reads replies aloud.</param>
+        public void UseSpeechServices(ISpeechModelStore? speechModelStore, ITextToSpeechService? textToSpeech)
+        {
+            _speechModelStore = speechModelStore;
+            _textToSpeech = textToSpeech;
+            LoadSpeechVoices();
+            RefreshSpeechModelState();
+            this.RaisePropertyChanged(nameof(HasSpeechModelStore));
+        }
 
         private List<AudioDeviceInfo> _inputDevices = new();
         public List<AudioDeviceInfo> InputDevices
@@ -1068,25 +1298,25 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             private set => this.RaiseAndSetIfChanged(ref _hasTestRecording, value);
         }
 
-        private bool _isNoiseSuppressionEnabled = true;
-        public bool IsNoiseSuppressionEnabled
-        {
-            get => _isNoiseSuppressionEnabled;
-            set
-            {
-                if (_isNoiseSuppressionEnabled != value)
-                {
-                    this.RaiseAndSetIfChanged(ref _isNoiseSuppressionEnabled, value);
-                    _settingsService.IsNoiseSuppressionEnabled = value;
-                }
-            }
-        }
-
         private string? _audioErrorMessage;
+
+        /// <summary>
+        /// Gets the audio device problem shown above the voice cards, in the interface language, or null.
+        /// </summary>
         public string? AudioErrorMessage
         {
             get => _audioErrorMessage;
             private set => this.RaiseAndSetIfChanged(ref _audioErrorMessage, value);
+        }
+
+        /// <summary>
+        /// Shows an audio device problem and keeps how it was built, so it can be shown again in another language.
+        /// </summary>
+        /// <param name="text">Builds the message in the current language, or null to clear it.</param>
+        private void SetAudioError(Func<string>? text)
+        {
+            _audioErrorText = text;
+            AudioErrorMessage = text?.Invoke();
         }
 
         private bool _hasInputDevices;
@@ -1110,13 +1340,748 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             private set => this.RaiseAndSetIfChanged(ref _isAudioAvailable, value);
         }
 
+        #region Speech recognition
+
+        private IReadOnlyList<VoiceOption> _voiceLanguageOptions = [];
+        private VoiceOption? _selectedVoiceLanguage;
+        private VoiceOption? _selectedSpeechEngine;
+        private IReadOnlyList<SpeechModelOption> _localSpeechModelOptions = [];
+        private SpeechModelOption? _selectedLocalSpeechModel;
+        private bool _isSpeechModelDownloaded;
+        private bool _isDownloadingSpeechModel;
+        private double _speechModelDownloadProgress;
+        private Func<string>? _speechModelDownloadError;
+        private string _speechApiEndpoint = string.Empty;
+        private string _speechApiModel = string.Empty;
+        private string _speechApiKey = string.Empty;
+
+        /// <summary>
+        /// Gets the spoken languages: the interface language, automatic detection, Turkish and English.
+        /// </summary>
+        public IReadOnlyList<VoiceOption> VoiceLanguageOptions
+        {
+            get => _voiceLanguageOptions;
+            private set => this.RaiseAndSetIfChanged(ref _voiceLanguageOptions, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the spoken language. Changing it saves <see cref="ISettingsService.VoiceLanguage"/>.
+        /// </summary>
+        public VoiceOption? SelectedVoiceLanguage
+        {
+            get => _selectedVoiceLanguage;
+            set
+            {
+                if (value is null || ReferenceEquals(_selectedVoiceLanguage, value))
+                {
+                    return;
+                }
+
+                this.RaiseAndSetIfChanged(ref _selectedVoiceLanguage, value);
+                _settingsService.VoiceLanguage = value.Value;
+            }
+        }
+
+        /// <summary>
+        /// Gets where speech is turned into text: on this computer or through an OpenAI-compatible API.
+        /// </summary>
+        public IReadOnlyList<VoiceOption> SpeechEngineOptions { get; } =
+        [
+            new(LocalSpeechEngineValue, static () => Loc.Get("Settings.Voice.Engine.Local")),
+            new(ApiSpeechEngineValue, static () => Loc.Get("Settings.Voice.Engine.Api"))
+        ];
+
+        /// <summary>
+        /// Gets or sets the speech engine. Changing it saves <see cref="ISettingsService.SpeechEngine"/>.
+        /// </summary>
+        public VoiceOption? SelectedSpeechEngine
+        {
+            get => _selectedSpeechEngine;
+            set
+            {
+                if (value is null || ReferenceEquals(_selectedSpeechEngine, value))
+                {
+                    return;
+                }
+
+                this.RaiseAndSetIfChanged(ref _selectedSpeechEngine, value);
+                _settingsService.SpeechEngine = value.Value;
+                this.RaisePropertyChanged(nameof(IsLocalSpeechEngine));
+                this.RaisePropertyChanged(nameof(IsApiSpeechEngine));
+            }
+        }
+
+        /// <summary>
+        /// Gets whether Whisper runs on this computer.
+        /// </summary>
+        public bool IsLocalSpeechEngine => !IsApiSpeechEngine;
+
+        /// <summary>
+        /// Gets whether recordings go to the OpenAI-compatible API.
+        /// </summary>
+        public bool IsApiSpeechEngine => _selectedSpeechEngine?.Value == ApiSpeechEngineValue;
+
+        /// <summary>
+        /// Gets the local models that transcribe commands. The tiny model is kept for the wake phrase.
+        /// </summary>
+        public IReadOnlyList<SpeechModelOption> LocalSpeechModelOptions
+        {
+            get => _localSpeechModelOptions;
+            private set => this.RaiseAndSetIfChanged(ref _localSpeechModelOptions, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the local model. Changing it saves <see cref="ISettingsService.LocalSpeechModel"/>.
+        /// </summary>
+        public SpeechModelOption? SelectedLocalSpeechModel
+        {
+            get => _selectedLocalSpeechModel;
+            set
+            {
+                if (value is null || ReferenceEquals(_selectedLocalSpeechModel, value))
+                {
+                    return;
+                }
+
+                this.RaiseAndSetIfChanged(ref _selectedLocalSpeechModel, value);
+                _settingsService.LocalSpeechModel = value.Name;
+                SetSpeechModelDownloadError(null);
+                RefreshSpeechModelState();
+            }
+        }
+
+        /// <summary>
+        /// Gets whether models can be downloaded from here.
+        /// </summary>
+        public bool HasSpeechModelStore => _speechModelStore is not null;
+
+        /// <summary>
+        /// Gets whether the selected local model is on this computer.
+        /// </summary>
+        public bool IsSpeechModelDownloaded
+        {
+            get => _isSpeechModelDownloaded;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _isSpeechModelDownloaded, value);
+                RaiseSpeechModelStateChanged();
+            }
+        }
+
+        /// <summary>
+        /// Gets whether a model download started here is running.
+        /// </summary>
+        public bool IsDownloadingSpeechModel
+        {
+            get => _isDownloadingSpeechModel;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _isDownloadingSpeechModel, value);
+                RaiseSpeechModelStateChanged();
+            }
+        }
+
+        /// <summary>
+        /// Gets the download progress from 0 to 1.
+        /// </summary>
+        public double SpeechModelDownloadProgress
+        {
+            get => _speechModelDownloadProgress;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _speechModelDownloadProgress, value);
+                this.RaisePropertyChanged(nameof(SpeechModelDownloadPercent));
+            }
+        }
+
+        /// <summary>
+        /// Gets the download progress as a percentage, such as "42%".
+        /// </summary>
+        public string SpeechModelDownloadPercent => Loc.Format("Settings.Voice.Model.Percent", _speechModelDownloadProgress);
+
+        /// <summary>
+        /// Gets whether the Download button can start a download.
+        /// </summary>
+        public bool CanDownloadSpeechModel => HasSpeechModelStore
+            && !_isDownloadingSpeechModel
+            && !_isSpeechModelDownloaded
+            && _selectedLocalSpeechModel is not null;
+
+        /// <summary>
+        /// Gets whether the selected model is on this computer, being downloaded or downloads on first use.
+        /// </summary>
+        public string SpeechModelStatus => _isDownloadingSpeechModel
+            ? Loc.Get("Settings.Voice.Model.Downloading")
+            : _isSpeechModelDownloaded
+                ? Loc.Get("Settings.Voice.Model.Downloaded")
+                : Loc.Get("Settings.Voice.Model.NotDownloaded");
+
+        /// <summary>
+        /// Gets why the last download failed, or null.
+        /// </summary>
+        public string? SpeechModelDownloadError => _speechModelDownloadError?.Invoke();
+
+        /// <summary>
+        /// Gets whether the last download failed.
+        /// </summary>
+        public bool HasSpeechModelDownloadError => _speechModelDownloadError is not null;
+
+        /// <summary>
+        /// Gets or sets the base URL of the OpenAI-compatible transcription API.
+        /// </summary>
+        public string SpeechApiEndpoint
+        {
+            get => _speechApiEndpoint;
+            set
+            {
+                if (_speechApiEndpoint != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _speechApiEndpoint, value);
+                    _settingsService.SpeechApiEndpoint = value ?? string.Empty;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the transcription model of the OpenAI-compatible API.
+        /// </summary>
+        public string SpeechApiModel
+        {
+            get => _speechApiModel;
+            set
+            {
+                if (_speechApiModel != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _speechApiModel, value);
+                    _settingsService.SpeechApiModel = value ?? string.Empty;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the API key of the transcription API. It is saved in the secret store.
+        /// </summary>
+        public string SpeechApiKey
+        {
+            get => _speechApiKey;
+            set
+            {
+                if (_speechApiKey != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _speechApiKey, value);
+                    this.RaisePropertyChanged(nameof(MaskedSpeechApiKey));
+                    _settingsService.SpeechApiKey = value ?? string.Empty;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the transcription API key with most characters hidden.
+        /// </summary>
+        public string MaskedSpeechApiKey => new ModelProviderProfile { ApiKey = _speechApiKey }.MaskedApiKey;
+
+        /// <summary>
+        /// Downloads the selected local model. Does nothing when it is already on this computer or a download runs.
+        /// </summary>
+        public async Task DownloadSpeechModelAsync()
+        {
+            var store = _speechModelStore;
+            var model = _selectedLocalSpeechModel;
+            if (store is null || model is null || _isDownloadingSpeechModel)
+            {
+                return;
+            }
+
+            SetSpeechModelDownloadError(null);
+            if (store.IsDownloaded(model.Name))
+            {
+                RefreshSpeechModelState();
+                return;
+            }
+
+            SpeechModelDownloadProgress = 0;
+            IsDownloadingSpeechModel = true;
+            var progress = new Progress<double>(value =>
+            {
+                if (_isDownloadingSpeechModel)
+                {
+                    SpeechModelDownloadProgress = Math.Clamp(value, 0, 1);
+                }
+            });
+
+            try
+            {
+                await store.EnsureModelAsync(model.Name, progress).ConfigureAwait(true);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                var message = ex.Message;
+                SetSpeechModelDownloadError(() => Loc.Format("Settings.Voice.Model.DownloadFailed", message));
+            }
+            finally
+            {
+                IsDownloadingSpeechModel = false;
+                RefreshSpeechModelState();
+            }
+        }
+
+        private void SetSpeechModelDownloadError(Func<string>? text)
+        {
+            _speechModelDownloadError = text;
+            this.RaisePropertyChanged(nameof(SpeechModelDownloadError));
+            this.RaisePropertyChanged(nameof(HasSpeechModelDownloadError));
+        }
+
+        private void RefreshSpeechModelState()
+        {
+            var model = _selectedLocalSpeechModel?.Name;
+            bool downloaded;
+            try
+            {
+                downloaded = model is not null && _speechModelStore?.IsDownloaded(model) == true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Speech model state could not be read: {ex.Message}");
+                downloaded = false;
+            }
+
+            IsSpeechModelDownloaded = downloaded;
+        }
+
+        private void RaiseSpeechModelStateChanged()
+        {
+            this.RaisePropertyChanged(nameof(SpeechModelStatus));
+            this.RaisePropertyChanged(nameof(CanDownloadSpeechModel));
+        }
+
+        private static IReadOnlyList<VoiceOption> CreateVoiceLanguageOptions(string savedLanguage)
+        {
+            var options = new List<VoiceOption>
+            {
+                new(AiRuntimeConfigurationMapper.AutoSpokenLanguage, static () => Loc.Get("Settings.Voice.Language.Auto")),
+                new("tr", static () => "Türkçe"),
+                new("en", static () => "English")
+            };
+
+            if (!options.Any(option => option.Value.Equals(savedLanguage, StringComparison.OrdinalIgnoreCase)))
+            {
+                options.Add(new VoiceOption(savedLanguage, () => savedLanguage));
+            }
+
+            return options;
+        }
+
+        private static IReadOnlyList<SpeechModelOption> CreateLocalSpeechModelOptions(string savedModel)
+        {
+            return SmartVoiceAgent.Infrastructure.Services.SpeechModelCatalog.All
+                .Where(model => model.Name != WakeWordModelName || model.Name == savedModel)
+                .Select(model => new SpeechModelOption(model.Name, model.ApproximateBytes, GetSpeechModelHint(model.Name)))
+                .ToArray();
+        }
+
+        private static Func<string> GetSpeechModelHint(string model)
+        {
+            return model switch
+            {
+                WakeWordModelName => static () => Loc.Get("Settings.Voice.Model.Hint.Tiny"),
+                "small" => static () => Loc.Get("Settings.Voice.Model.Hint.Small"),
+                "large-v3-turbo" => static () => Loc.Get("Settings.Voice.Model.Hint.LargeV3Turbo"),
+                _ => static () => Loc.Get("Settings.Voice.Model.Hint.Base")
+            };
+        }
+
+        private void InitializeSpeechRecognitionSettings()
+        {
+            // Nothing saved means detect automatically.
+            var savedLanguage = _settingsService.VoiceLanguage?.Trim() is { Length: > 0 } language
+                ? language
+                : AiRuntimeConfigurationMapper.AutoSpokenLanguage;
+            _voiceLanguageOptions = CreateVoiceLanguageOptions(savedLanguage);
+            _selectedVoiceLanguage = _voiceLanguageOptions.First(option =>
+                option.Value.Equals(savedLanguage, StringComparison.OrdinalIgnoreCase));
+
+            _selectedSpeechEngine = SpeechEngineOptions.FirstOrDefault(option =>
+                    option.Value.Equals(_settingsService.SpeechEngine?.Trim(), StringComparison.OrdinalIgnoreCase))
+                ?? SpeechEngineOptions[0];
+
+            var savedModel = SmartVoiceAgent.Infrastructure.Services.SpeechModelCatalog.Normalize(_settingsService.LocalSpeechModel);
+            _localSpeechModelOptions = CreateLocalSpeechModelOptions(savedModel);
+            _selectedLocalSpeechModel = _localSpeechModelOptions.First(option => option.Name == savedModel);
+
+            _speechApiEndpoint = _settingsService.SpeechApiEndpoint ?? string.Empty;
+            _speechApiModel = _settingsService.SpeechApiModel ?? string.Empty;
+            _speechApiKey = _settingsService.SpeechApiKey ?? string.Empty;
+        }
+
+        #endregion
+
+        #region Hands-free
+
+        private bool _wakeWordEnabled;
+        private string _wakeWord = string.Empty;
+        private IReadOnlyList<VoiceOption> _talkShortcutOptions = [];
+        private VoiceOption? _selectedTalkShortcut;
+
+        /// <summary>
+        /// Gets or sets whether Kam listens for the wake phrase. Changing it saves <see cref="ISettingsService.WakeWordEnabled"/>.
+        /// </summary>
+        public bool WakeWordEnabled
+        {
+            get => _wakeWordEnabled;
+            set
+            {
+                if (_wakeWordEnabled != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _wakeWordEnabled, value);
+                    _settingsService.WakeWordEnabled = value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the wake phrase, such as "Hey Kam".
+        /// </summary>
+        public string WakeWord
+        {
+            get => _wakeWord;
+            set
+            {
+                if (_wakeWord != value)
+                {
+                    this.RaiseAndSetIfChanged(ref _wakeWord, value);
+                    _settingsService.WakeWord = value ?? string.Empty;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets what the wake phrase listener does with audio, including the size of the model it downloads.
+        /// </summary>
+        public string WakeWordNote => Loc.Format(
+            "Settings.Voice.WakeWord.Note",
+            FormatModelSize(SmartVoiceAgent.Infrastructure.Services.SpeechModelCatalog.Get(WakeWordModelName).ApproximateBytes));
+
+        /// <summary>
+        /// Gets the talk shortcuts: the presets, a saved shortcut that is not one of them, and Off.
+        /// </summary>
+        public IReadOnlyList<VoiceOption> TalkShortcutOptions
+        {
+            get => _talkShortcutOptions;
+            private set => this.RaiseAndSetIfChanged(ref _talkShortcutOptions, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the talk shortcut. Changing it saves <see cref="ISettingsService.TalkShortcut"/>; Off saves an empty value.
+        /// </summary>
+        public VoiceOption? SelectedTalkShortcut
+        {
+            get => _selectedTalkShortcut;
+            set
+            {
+                if (value is null || ReferenceEquals(_selectedTalkShortcut, value))
+                {
+                    return;
+                }
+
+                this.RaiseAndSetIfChanged(ref _selectedTalkShortcut, value);
+                _settingsService.TalkShortcut = value.Value;
+            }
+        }
+
+        private static IReadOnlyList<VoiceOption> CreateTalkShortcutOptions(string savedShortcut)
+        {
+            var options = TalkShortcutPresets
+                .Select(shortcut => new VoiceOption(shortcut, () => shortcut))
+                .ToList();
+
+            if (!string.IsNullOrWhiteSpace(savedShortcut) && FindShortcut(options, savedShortcut) is null)
+            {
+                options.Add(new VoiceOption(savedShortcut, () => savedShortcut));
+            }
+
+            options.Add(new VoiceOption(string.Empty, static () => Loc.Get("Settings.Voice.Shortcut.Off")));
+            return options;
+        }
+
+        private static VoiceOption? FindShortcut(IEnumerable<VoiceOption> options, string shortcut)
+        {
+            var wanted = shortcut.Replace(" ", string.Empty, StringComparison.Ordinal);
+            return options.FirstOrDefault(option =>
+                option.Value.Replace(" ", string.Empty, StringComparison.Ordinal).Equals(wanted, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private void InitializeHandsFreeSettings()
+        {
+            _wakeWordEnabled = _settingsService.WakeWordEnabled;
+            _wakeWord = _settingsService.WakeWord ?? string.Empty;
+
+            var savedShortcut = _settingsService.TalkShortcut?.Trim() ?? string.Empty;
+            _talkShortcutOptions = CreateTalkShortcutOptions(savedShortcut);
+            _selectedTalkShortcut = FindShortcut(_talkShortcutOptions, savedShortcut) ?? _talkShortcutOptions[^1];
+        }
+
+        #endregion
+
+        #region Spoken replies
+
+        private VoiceOption? _selectedSpokenReplies;
+        private IReadOnlyList<VoiceOption> _speechVoiceOptions = [];
+        private VoiceOption? _selectedSpeechVoice;
+        private int _installedSpeechVoiceCount;
+        private int _speechRate;
+        private bool _isPreviewingSpeech;
+
+        /// <summary>
+        /// Gets which replies are read aloud: none, replies to voice commands, or all replies.
+        /// </summary>
+        public IReadOnlyList<VoiceOption> SpokenRepliesOptions { get; } =
+        [
+            new("Off", static () => Loc.Get("Settings.Voice.SpokenReplies.Off")),
+            new("Voice", static () => Loc.Get("Settings.Voice.SpokenReplies.Voice")),
+            new("All", static () => Loc.Get("Settings.Voice.SpokenReplies.All"))
+        ];
+
+        /// <summary>
+        /// Gets or sets which replies are read aloud. Changing it saves <see cref="ISettingsService.SpokenReplies"/>.
+        /// </summary>
+        public VoiceOption? SelectedSpokenReplies
+        {
+            get => _selectedSpokenReplies;
+            set
+            {
+                if (value is null || ReferenceEquals(_selectedSpokenReplies, value))
+                {
+                    return;
+                }
+
+                this.RaiseAndSetIfChanged(ref _selectedSpokenReplies, value);
+                _settingsService.SpokenReplies = value.Value;
+            }
+        }
+
+        /// <summary>
+        /// Gets the voices replies can be read in: Automatic, then the installed voices.
+        /// </summary>
+        public IReadOnlyList<VoiceOption> SpeechVoiceOptions
+        {
+            get => _speechVoiceOptions;
+            private set => this.RaiseAndSetIfChanged(ref _speechVoiceOptions, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the voice. Changing it saves <see cref="ISettingsService.SpeechVoice"/>; Automatic saves an empty value.
+        /// </summary>
+        public VoiceOption? SelectedSpeechVoice
+        {
+            get => _selectedSpeechVoice;
+            set
+            {
+                if (value is null || ReferenceEquals(_selectedSpeechVoice, value))
+                {
+                    return;
+                }
+
+                this.RaiseAndSetIfChanged(ref _selectedSpeechVoice, value);
+                _settingsService.SpeechVoice = value.Value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the speaking rate from -5 (slow) to 5 (fast). Changing it saves <see cref="ISettingsService.SpeechRate"/>.
+        /// </summary>
+        public double SpeechRate
+        {
+            get => _speechRate;
+            set
+            {
+                var rate = (int)Math.Round(Math.Clamp(double.IsNaN(value) ? 0 : value, -5, 5), MidpointRounding.AwayFromZero);
+                if (_speechRate != rate)
+                {
+                    _speechRate = rate;
+                    this.RaisePropertyChanged();
+                    this.RaisePropertyChanged(nameof(SpeechRateText));
+                    _settingsService.SpeechRate = rate;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the speaking rate as shown next to the slider: "Normal" or a signed step such as "+2".
+        /// </summary>
+        public string SpeechRateText => _speechRate == 0
+            ? Loc.Get("Settings.Voice.Rate.Normal")
+            : _speechRate.ToString("+0;-0", LocalizationService.Instance.Culture);
+
+        /// <summary>
+        /// Gets whether this computer has a speech engine.
+        /// </summary>
+        public bool IsTextToSpeechAvailable => _isTextToSpeechAvailable;
+
+        /// <summary>
+        /// Gets whether replies can be read aloud: a speech engine with at least one voice.
+        /// </summary>
+        public bool CanUseSpeechOutput => _isTextToSpeechAvailable && _installedSpeechVoiceCount > 0;
+
+        /// <summary>
+        /// Gets why replies cannot be read aloud, or null when they can.
+        /// </summary>
+        public string? SpeechOutputProblem => !_isTextToSpeechAvailable
+            ? Loc.Get("Settings.Voice.Tts.Unavailable")
+            : _installedSpeechVoiceCount == 0
+                ? Loc.Get("Settings.Voice.Tts.NoVoices")
+                : null;
+
+        /// <summary>
+        /// Gets whether <see cref="SpeechOutputProblem"/> has a message.
+        /// </summary>
+        public bool HasSpeechOutputProblem => !CanUseSpeechOutput;
+
+        /// <summary>
+        /// Gets whether the preview sentence is being read.
+        /// </summary>
+        public bool IsPreviewingSpeech
+        {
+            get => _isPreviewingSpeech;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _isPreviewingSpeech, value);
+                this.RaisePropertyChanged(nameof(CanPreviewSpeech));
+            }
+        }
+
+        /// <summary>
+        /// Gets whether Preview can start.
+        /// </summary>
+        public bool CanPreviewSpeech => CanUseSpeechOutput && !_isPreviewingSpeech;
+
+        /// <summary>
+        /// Gets the two-letter language the preview is spoken in: the chosen spoken language, or the interface
+        /// language when the spoken language is detected automatically.
+        /// </summary>
+        public string EffectiveSpokenLanguage
+        {
+            get
+            {
+                var language = AiRuntimeConfigurationMapper.ResolveSpokenLanguage(_settingsService);
+                return language == AiRuntimeConfigurationMapper.AutoSpokenLanguage
+                    ? AiRuntimeConfigurationMapper.ResolveInterfaceLanguage(_settingsService)
+                    : language;
+            }
+        }
+
+        /// <summary>
+        /// Reads a short sample sentence in the spoken language with the chosen voice and rate.
+        /// </summary>
+        public async Task PreviewSpeechAsync()
+        {
+            var speech = _textToSpeech;
+            if (speech is null || !CanUseSpeechOutput)
+            {
+                return;
+            }
+
+            IsPreviewingSpeech = true;
+            try
+            {
+                await speech.SpeakAsync(GetSpeechPreviewSample(EffectiveSpokenLanguage)).ConfigureAwait(true);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Speech preview failed: {ex.Message}");
+            }
+            finally
+            {
+                IsPreviewingSpeech = false;
+            }
+        }
+
+        /// <summary>
+        /// Stops the preview sentence.
+        /// </summary>
+        public void StopSpeechPreview()
+        {
+            _textToSpeech?.Stop();
+        }
+
+        private void LoadSpeechVoices()
+        {
+            IReadOnlyList<SpeechVoiceInfo> voices = [];
+            try
+            {
+                _isTextToSpeechAvailable = _textToSpeech?.IsAvailable == true;
+                if (_isTextToSpeechAvailable)
+                {
+                    voices = _textToSpeech!.GetVoices();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Speech voices could not be listed: {ex.Message}");
+                _isTextToSpeechAvailable = false;
+            }
+
+            _installedSpeechVoiceCount = voices.Count;
+            var savedVoice = _settingsService.SpeechVoice?.Trim() ?? string.Empty;
+            var options = new List<VoiceOption>
+            {
+                new(string.Empty, static () => Loc.Get("Settings.Voice.Voice.Automatic"))
+            };
+
+            foreach (var voice in voices.Where(voice => !string.IsNullOrWhiteSpace(voice.Id)))
+            {
+                var label = string.IsNullOrWhiteSpace(voice.Language)
+                    ? voice.Name
+                    : $"{voice.Name} ({voice.Language})";
+                options.Add(new VoiceOption(voice.Id, () => label));
+            }
+
+            if (savedVoice.Length > 0 && options.All(option => option.Value != savedVoice))
+            {
+                var name = savedVoice.Split('\\', '/').Last();
+                options.Add(new VoiceOption(savedVoice, () => Loc.Format("Settings.Voice.Voice.Missing", name)));
+            }
+
+            _speechVoiceOptions = options;
+            _selectedSpeechVoice = options.First(option => option.Value == savedVoice);
+            this.RaisePropertyChanged(nameof(SpeechVoiceOptions));
+            this.RaisePropertyChanged(nameof(SelectedSpeechVoice));
+            this.RaisePropertyChanged(nameof(IsTextToSpeechAvailable));
+            this.RaisePropertyChanged(nameof(CanUseSpeechOutput));
+            this.RaisePropertyChanged(nameof(SpeechOutputProblem));
+            this.RaisePropertyChanged(nameof(HasSpeechOutputProblem));
+            this.RaisePropertyChanged(nameof(CanPreviewSpeech));
+        }
+
+        private void InitializeSpokenRepliesSettings()
+        {
+            _selectedSpokenReplies = SpokenRepliesOptions.FirstOrDefault(option =>
+                    option.Value.Equals(_settingsService.SpokenReplies?.Trim(), StringComparison.OrdinalIgnoreCase))
+                ?? SpokenRepliesOptions[1];
+            _speechRate = Math.Clamp(_settingsService.SpeechRate, -5, 5);
+            LoadSpeechVoices();
+        }
+
+        #endregion
+
         private void InitializeVoiceSettings()
         {
+            _speechModelStore = App.Services?.GetService(typeof(ISpeechModelStore)) as ISpeechModelStore;
+            _textToSpeech = App.Services?.GetService(typeof(ITextToSpeechService)) as ITextToSpeechService;
+
+            InitializeSpeechRecognitionSettings();
+            InitializeHandsFreeSettings();
+            InitializeSpokenRepliesSettings();
+            RefreshSpeechModelState();
+
             // Check audio availability
             IsAudioAvailable = _audioDeviceService.IsAvailable;
             if (!IsAudioAvailable)
             {
-                AudioErrorMessage = _audioDeviceService.LastError ?? "Audio system is not available.";
+                SetAudioError(static () => Loc.Get("Settings.Voice.AudioUnavailable"));
             }
 
             // Subscribe to device changes
@@ -1136,7 +2101,6 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             // Load saved device selections
             var savedInputId = _settingsService.SelectedInputDeviceId;
             var savedOutputId = _settingsService.SelectedOutputDeviceId;
-            _isNoiseSuppressionEnabled = _settingsService.IsNoiseSuppressionEnabled;
 
             // Validate saved devices are still available
             if (!string.IsNullOrEmpty(savedInputId) && _audioDeviceService.IsDeviceAvailable(savedInputId))
@@ -1159,15 +2123,98 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 _settingsService.SelectedOutputDeviceId = string.Empty;
             }
 
+            _settingsService.SettingChanged += OnVoiceSettingChanged;
+            LocalizationService.Instance.LanguageChanged += OnVoiceLanguageChanged;
+
             // The input meter runs only while the Settings page is open; see OnNavigatedTo.
         }
 
         /// <summary>
-        /// Starts the microphone level meter while the page is shown.
+        /// Keeps the toggles in step when the tray or the chat changes a voice setting while the page is open.
+        /// </summary>
+        private void OnVoiceSettingChanged(object? sender, SettingChangedEventArgs e)
+        {
+            if (e.SettingName != nameof(ISettingsService.WakeWordEnabled)
+                && e.SettingName != nameof(ISettingsService.SpokenReplies))
+            {
+                return;
+            }
+
+            if (_wakeWordEnabled == _settingsService.WakeWordEnabled
+                && string.Equals(_selectedSpokenReplies?.Value, _settingsService.SpokenReplies, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(() => OnVoiceSettingChanged(sender, e));
+                return;
+            }
+
+            if (_wakeWordEnabled != _settingsService.WakeWordEnabled)
+            {
+                _wakeWordEnabled = _settingsService.WakeWordEnabled;
+                this.RaisePropertyChanged(nameof(WakeWordEnabled));
+            }
+
+            var spokenReplies = SpokenRepliesOptions.FirstOrDefault(option =>
+                option.Value.Equals(_settingsService.SpokenReplies, StringComparison.OrdinalIgnoreCase));
+            if (spokenReplies is not null && !ReferenceEquals(spokenReplies, _selectedSpokenReplies))
+            {
+                _selectedSpokenReplies = spokenReplies;
+                this.RaisePropertyChanged(nameof(SelectedSpokenReplies));
+            }
+        }
+
+        /// <summary>
+        /// Rebuilds the voice text built in code when the interface language changes.
+        /// </summary>
+        private void OnVoiceLanguageChanged(object? sender, EventArgs e)
+        {
+            foreach (var option in _voiceLanguageOptions
+                         .Concat(SpeechEngineOptions)
+                         .Concat(_talkShortcutOptions)
+                         .Concat(SpokenRepliesOptions)
+                         .Concat(_speechVoiceOptions))
+            {
+                option.RefreshLocalizedText();
+            }
+
+            foreach (var model in _localSpeechModelOptions)
+            {
+                model.RefreshLocalizedText();
+            }
+
+            AudioErrorMessage = _audioErrorText?.Invoke();
+            this.RaisePropertyChanged(nameof(SpeechModelStatus));
+            this.RaisePropertyChanged(nameof(SpeechModelDownloadPercent));
+            this.RaisePropertyChanged(nameof(SpeechModelDownloadError));
+            this.RaisePropertyChanged(nameof(WakeWordNote));
+            this.RaisePropertyChanged(nameof(SpeechRateText));
+            this.RaisePropertyChanged(nameof(SpeechOutputProblem));
+        }
+
+        /// <summary>
+        /// Stops listening for setting and language changes and stops a running preview.
+        /// </summary>
+        private void DisposeVoiceSettings()
+        {
+            _settingsService.SettingChanged -= OnVoiceSettingChanged;
+            LocalizationService.Instance.LanguageChanged -= OnVoiceLanguageChanged;
+            if (_isPreviewingSpeech)
+            {
+                _textToSpeech?.Stop();
+            }
+        }
+
+        /// <summary>
+        /// Starts the microphone level meter while the page is shown and re-reads whether the model is downloaded.
         /// </summary>
         public override void OnNavigatedTo()
         {
             base.OnNavigatedTo();
+            RefreshSpeechModelState();
             StartInputLevelMonitoring();
         }
 
@@ -1194,12 +2241,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 {
                     // Device disconnected, select default
                     RefreshAudioDevices();
-                    AudioErrorMessage = "Selected microphone was disconnected. Switched to default device.";
+                    SetAudioError(static () => Loc.Get("Settings.Voice.MicrophoneDisconnected"));
                 }
                 else if (SelectedOutputDevice != null && !_audioDeviceService.IsDeviceAvailable(SelectedOutputDevice.Id))
                 {
                     RefreshAudioDevices();
-                    AudioErrorMessage = "Selected output device was disconnected. Switched to default device.";
+                    SetAudioError(static () => Loc.Get("Settings.Voice.OutputDisconnected"));
                 }
                 else
                 {
@@ -1222,7 +2269,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 SelectedInputDevice = InputDevices.FirstOrDefault(d => d.IsDefault) ?? InputDevices.FirstOrDefault();
             }
-            
+
             if (SelectedOutputDevice == null || !OutputDevices.Any(d => d.Id == SelectedOutputDevice.Id))
             {
                 SelectedOutputDevice = OutputDevices.FirstOrDefault(d => d.IsDefault) ?? OutputDevices.FirstOrDefault();
@@ -1231,7 +2278,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             // Clear error if devices are now available
             if (HasInputDevices && HasOutputDevices)
             {
-                AudioErrorMessage = null;
+                SetAudioError(null);
             }
         }
 
@@ -1253,7 +2300,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     if (SelectedInputDevice != null && !IsRecordingTest)
                     {
                         var level = _audioDeviceService.GetInputLevel(SelectedInputDevice.Id);
-                        
+
                         // Only update UI if level changed significantly (> 0.05) or on every 5th update
                         // This reduces unnecessary UI refreshes
                         if (Math.Abs(level - lastLevel) > 0.05f || Environment.TickCount % 5 == 0)
@@ -1324,40 +2371,43 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         #region Language
 
-        public int SelectedLanguageIndex
+        /// <summary>
+        /// Gets the languages the interface can be shown in.
+        /// </summary>
+        public IReadOnlyList<LanguageOption> Languages => LocalizationService.SupportedLanguages;
+
+        /// <summary>
+        /// Gets or sets the interface language. Changing it saves the choice and switches the text at once.
+        /// </summary>
+        public LanguageOption SelectedLanguage
         {
-            get => _selectedLanguageIndex;
+            get
+            {
+                var code = LocalizationService.Instance.CurrentLanguage;
+                return Languages.FirstOrDefault(language => language.Code == code) ?? Languages[0];
+            }
             set
             {
-                if (_selectedLanguageIndex != value)
+                if (value is null || value.Code == LocalizationService.Instance.CurrentLanguage)
                 {
-                    this.RaiseAndSetIfChanged(ref _selectedLanguageIndex, value);
-
-                    // Store in main view model for persistence
-                    if (_mainViewModel != null)
-                    {
-                        _mainViewModel.SelectedLanguageIndex = value;
-                    }
-
-                    UpdateLanguage();
+                    return;
                 }
+
+                _settingsService.Language = value.Code;
+                LocalizationService.Instance.SetLanguage(value.Code);
+                this.RaisePropertyChanged();
             }
         }
 
-        private void UpdateLanguage()
+        /// <summary>
+        /// Rebuilds the text this view model writes in code when the interface language changes.
+        /// </summary>
+        private void OnLanguageChanged(object? sender, EventArgs e)
         {
-            string langCode = _selectedLanguageIndex switch
-            {
-                0 => "en-US",
-                1 => "es-ES",
-                2 => "fr-FR",
-                3 => "de-DE",
-                4 => "zh-CN",
-                5 => "ja-JP",
-                6 => "tr-TR",
-                _ => "en-US"
-            };
-            LocalizationService.Instance.SetLanguage(langCode);
+            Title = Loc.Get("Settings.Title");
+            AiProfileStatus = _aiProfileStatusText();
+            this.RaisePropertyChanged(nameof(AiConnectionTestButtonText));
+            this.RaisePropertyChanged(nameof(SelectedLanguage));
         }
 
         #endregion
@@ -1534,6 +2584,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
             
             _voiceTestService?.Dispose();
+            DisposeVoiceSettings();
             if (_ownsModelCatalogService && _modelCatalogService is IDisposable disposableModelCatalogService)
             {
                 disposableModelCatalogService.Dispose();
@@ -1543,6 +2594,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 disposableConnectionTestService.Dispose();
             }
+
+            LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
         }
     }
 }

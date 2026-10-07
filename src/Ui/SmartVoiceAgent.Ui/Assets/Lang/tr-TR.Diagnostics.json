@@ -1,0 +1,44 @@
+{
+  "Diagnostics.Title": "Çalışma zamanı tanılaması",
+  "Diagnostics.Subtitle": "Model, ajan hizmeti, yetenekler ve entegrasyonların anlık hazırlık durumu.",
+
+  "Diagnostics.Status.Ready": "HAZIR",
+  "Diagnostics.Status.ActionNeeded": "İŞLEM GEREKLİ",
+
+  "Diagnostics.LiveTest.Title": "Canlı üretim testi",
+  "Diagnostics.LiveTest.Ready": "CANLI TESTE HAZIR",
+  "Diagnostics.LiveTest.NeedsAction": "İŞLEM GEREKLİ",
+  "Diagnostics.LiveTest.CopyReport": "Raporu kopyala",
+
+  "Diagnostics.Report.NotCopied": "Rapor kopyalanmadı.",
+  "Diagnostics.Report.Copied": "Hazırlık raporu kopyalandı.",
+  "Diagnostics.Report.ClipboardUnavailable": "Pano kullanılamıyor.",
+
+  "Diagnostics.SetupActions.Title": "Kurulum adımları",
+  "Diagnostics.BlockingItems.Title": "Engelleyen sorunlar",
+  "Diagnostics.AiRuntime.Title": "Yapay zekâ çalışma zamanı",
+  "Diagnostics.Integrations.Title": "Entegrasyonlar",
+
+  "Diagnostics.Updates.Title": "Uygulama güncellemeleri",
+  "Diagnostics.Updates.Check": "Denetle",
+  "Diagnostics.Updates.Download": "İndir",
+  "Diagnostics.Updates.RestartPlan": "Yeniden başlatma planı",
+  "Diagnostics.Updates.NotChecked": "Güncellemeler denetlenmedi.",
+  "Diagnostics.Updates.Checking": "Kam güncellemeleri için GitHub Releases denetleniyor.",
+  "Diagnostics.Updates.Downloading": "En son Kam sürüm paketi indiriliyor.",
+  "Diagnostics.Updates.Downloaded": "Kam güncelleme paketi indirildi.",
+  "Diagnostics.Updates.VerifyBeforeRestart": "Yeniden başlatmaya geçmeden önce indirilen paketi doğrulayın.",
+
+  "Diagnostics.LocalRuntime.Title": "Yerel çalışma zamanı",
+  "Diagnostics.SkillSmoke.Run": "Duman testini çalıştır",
+  "Diagnostics.SkillSmoke.NotRun": "Çalıştırılmadı",
+  "Diagnostics.SkillSmoke.ServicesUnavailable": "Duman testi hizmetleri kullanılamıyor",
+  "Diagnostics.SkillSmoke.FailedToRun": "Duman testleri çalıştırılamadı",
+  "Diagnostics.SkillSmoke.NoneConfigured": "Yapılandırılmış duman testi yok",
+  "Diagnostics.SkillSmoke.Passing": "{0}/{1} duman testi geçiyor",
+
+  "Diagnostics.Refresh.Never": "Yenilenmedi",
+  "Diagnostics.Refresh.Updated": "Güncellendi: {0}",
+  "Diagnostics.Refresh.SkillSmoke": "Duman testi: {0}",
+  "Diagnostics.Refresh.Updates": "Güncellemeler: {0}"
+}

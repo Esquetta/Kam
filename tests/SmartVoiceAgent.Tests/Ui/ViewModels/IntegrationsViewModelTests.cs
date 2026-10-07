@@ -37,7 +37,7 @@ public sealed class IntegrationsViewModelTests : IDisposable
         var viewModel = new IntegrationsViewModel(settingsService);
 
         viewModel.IsWebSearchConfigured.Should().BeFalse();
-        viewModel.WebSearchStatusText.Should().Be("NOT CONFIGURED");
+        viewModel.WebSearchStatusText.Should().Be("NO KEY", "search works without a key");
         viewModel.WebSearchApiKey = " search-key ";
         viewModel.CanSaveWebSearch.Should().BeFalse("both the key and the engine id are needed");
         viewModel.WebSearchEngineId = "engine-1";
@@ -46,7 +46,7 @@ public sealed class IntegrationsViewModelTests : IDisposable
         settingsService.WebSearchApiKey.Should().Be("search-key");
         settingsService.WebSearchEngineId.Should().Be("engine-1");
         viewModel.IsWebSearchConfigured.Should().BeTrue();
-        viewModel.WebSearchStatusText.Should().Be("ACTIVE");
+        viewModel.WebSearchStatusText.Should().Be("GOOGLE");
         using (var reloaded = new JsonSettingsService(_settingsDirectory))
         {
             new IntegrationsViewModel(reloaded).IsWebSearchConfigured.Should().BeTrue();
@@ -57,6 +57,27 @@ public sealed class IntegrationsViewModelTests : IDisposable
         settingsService.WebSearchApiKey.Should().BeEmpty();
         settingsService.WebSearchEngineId.Should().BeEmpty();
         viewModel.IsWebSearchConfigured.Should().BeFalse();
+        viewModel.WebSearchStatusText.Should().Be("NO KEY");
+    }
+
+    [Fact]
+    public void SelectedEmailProviderOption_SavesTheProviderNameAndIgnoresAClearedPicker()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        using var viewModel = new IntegrationsViewModel(settingsService);
+
+        viewModel.EmailProviderOptions.Select(option => option.DisplayName)
+            .Should().Equal("Gmail", "Outlook", "Yahoo", "Custom");
+        viewModel.SelectedEmailProviderOption!.Id.Should().Be(viewModel.EmailProvider);
+
+        viewModel.SelectedEmailProviderOption = viewModel.EmailProviderOptions.Single(option => option.Id == "Outlook");
+
+        viewModel.EmailProvider.Should().Be("Outlook");
+        viewModel.SmtpHost.Should().Be("smtp.office365.com");
+
+        viewModel.SelectedEmailProviderOption = null;
+
+        viewModel.EmailProvider.Should().Be("Outlook", "the picker clears its selection while its list is rebuilt");
     }
 
     [Fact]

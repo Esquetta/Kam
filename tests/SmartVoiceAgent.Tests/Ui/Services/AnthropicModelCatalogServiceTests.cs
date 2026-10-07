@@ -42,6 +42,35 @@ public sealed class AnthropicModelCatalogServiceTests
     }
 
     [Fact]
+    public async Task GetModelsAsync_ListsNewestModelsFirst()
+    {
+        using var handler = new StubHttpMessageHandler("""
+            {
+              "data": [
+                { "id": "claude-haiku-4-5-20251001", "created_at": "2025-10-15T00:00:00Z" },
+                { "id": "claude-sonnet-5-5", "created_at": "2026-08-20T00:00:00Z" },
+                { "id": "claude-opus-4-7", "created_at": "2026-04-16T00:00:00Z" }
+              ]
+            }
+            """);
+        using var httpClient = new HttpClient(handler);
+        var service = new AnthropicModelCatalogService(httpClient);
+
+        var models = await service.GetModelsAsync(new ModelProviderProfile
+        {
+            Provider = ModelProviderType.Anthropic,
+            Endpoint = "https://api.anthropic.com",
+            ApiKey = "sk-ant-test"
+        });
+
+        models.Select(model => model.ModelId).Should().Equal(
+            "claude-sonnet-5-5",
+            "claude-opus-4-7",
+            "claude-haiku-4-5-20251001");
+        models[0].ReleasedAt.Should().Be(new DateTimeOffset(2026, 8, 20, 0, 0, 0, TimeSpan.Zero));
+    }
+
+    [Fact]
     public async Task GetModelsAsync_WhenEndpointAlreadyIncludesV1_DoesNotDuplicatePath()
     {
         using var handler = new StubHttpMessageHandler("""{"data":[]}""");

@@ -1,714 +1,474 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:SmartVoiceAgent.Ui.ViewModels.PageModels"
-             xmlns:services="clr-namespace:SmartVoiceAgent.Ui.Services"
              xmlns:converters="clr-namespace:SmartVoiceAgent.Ui.Converters"
              x:Class="SmartVoiceAgent.Ui.Views.PluginsView"
              x:DataType="vm:PluginsViewModel">
 
     <UserControl.Resources>
+        <converters:IconResourceConverter x:Key="IconResource"/>
     </UserControl.Resources>
 
     <UserControl.Styles>
-        <!-- Plugin Card Style -->
-        <Style Selector="Border.PluginCard">
-            <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="20"/>
-            <Setter Property="MinHeight" Value="300"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="BorderBrush" Duration="0:0:0.3"/>
-                    <BrushTransition Property="Background" Duration="0:0:0.3"/>
-                </Transitions>
-            </Setter>
+        <!-- Rows and groups the search hides take no space, including the list spacing around them -->
+        <Style Selector="ItemsControl.SkillRows > ContentPresenter" x:DataType="vm:PluginItem">
+            <Setter Property="IsVisible" Value="{Binding IsVisible}"/>
+        </Style>
+        <Style Selector="ItemsControl.SkillGroups > ContentPresenter" x:DataType="vm:SkillGroupViewModel">
+            <Setter Property="IsVisible" Value="{Binding IsVisible}"/>
         </Style>
 
-        <Style Selector="Border.PluginCard:pointerover">
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+        <!-- Narrow pages (the code-behind sets "narrow"): search under the filters -->
+        <Style Selector="TextBox.SkillSearch">
+            <Setter Property="Grid.Column" Value="1"/>
+            <Setter Property="Width" Value="260"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="StackPanel.narrow TextBox.SkillSearch">
+            <Setter Property="Grid.Row" Value="1"/>
+            <Setter Property="Grid.Column" Value="0"/>
+            <Setter Property="Grid.ColumnSpan" Value="2"/>
+            <Setter Property="Width" Value="NaN"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="Margin" Value="0,10,0,0"/>
         </Style>
 
-        <!-- Inactive Plugin Card -->
-        <Style Selector="Border.PluginCardInactive">
-            <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="20"/>
-            <Setter Property="MinHeight" Value="300"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="BorderBrush" Duration="0:0:0.3"/>
-                </Transitions>
-            </Setter>
+        <!-- Narrow pages: eval actions under the status, the import source on its own line, status shown by its dot -->
+        <Style Selector="StackPanel.EvalActions">
+            <Setter Property="Grid.Column" Value="2"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="StackPanel.narrow StackPanel.EvalActions">
+            <Setter Property="Grid.Row" Value="1"/>
+            <Setter Property="Grid.Column" Value="1"/>
+            <Setter Property="Margin" Value="-10,6,0,0"/>
+        </Style>
+        <Style Selector="ComboBox.ImportSource">
+            <Setter Property="Width" Value="150"/>
+        </Style>
+        <Style Selector="StackPanel.narrow ComboBox.ImportSource">
+            <Setter Property="Grid.ColumnSpan" Value="4"/>
+            <Setter Property="Width" Value="NaN"/>
+        </Style>
+        <Style Selector="TextBox.ImportPath">
+            <Setter Property="Grid.Column" Value="1"/>
+        </Style>
+        <Style Selector="StackPanel.narrow TextBox.ImportPath">
+            <Setter Property="Grid.Row" Value="1"/>
+            <Setter Property="Grid.Column" Value="0"/>
+            <Setter Property="Grid.ColumnSpan" Value="2"/>
+        </Style>
+        <Style Selector="StackPanel.narrow Button.ImportAction">
+            <Setter Property="Grid.Row" Value="1"/>
+        </Style>
+        <Style Selector="StackPanel.narrow TextBlock.StatusText">
+            <Setter Property="IsVisible" Value="False"/>
         </Style>
 
-        <Style Selector="Border.PluginCardInactive:pointerover">
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
-        </Style>
-
-        <!-- Add Plugin Card -->
-        <Style Selector="Border.AddPluginCard">
+        <!-- The row's icon, name and status open its details -->
+        <Style Selector="Button.RowHeader">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="MinHeight" Value="220"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.3"/>
-                    <BrushTransition Property="BorderBrush" Duration="0:0:0.3"/>
-                </Transitions>
-            </Setter>
-        </Style>
-
-        <Style Selector="Border.AddPluginCard:pointerover">
-            <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
-        </Style>
-
-        <!-- Status Badge Active -->
-        <Style Selector="Border.StatusActive">
-            <Setter Property="Background" Value="{DynamicResource AccentGreenGlowBrush}"/>
-            <Setter Property="Padding" Value="8,2"/>
-            <Setter Property="CornerRadius" Value="999"/>
-        </Style>
-
-        <!-- Status Badge Inactive -->
-        <Style Selector="Border.StatusInactive">
-            <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
-            <Setter Property="Padding" Value="8,2"/>
-            <Setter Property="CornerRadius" Value="999"/>
-        </Style>
-
-        <Style Selector="Button.PluginActionButton">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Opacity" Value="1"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-        </Style>
-
-        <Style Selector="Button.PluginActionButton:pointerover">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Opacity" Value="1"/>
-        </Style>
-
-        <Style Selector="Button.PluginActionButton:pressed">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-        </Style>
-
-        <Style Selector="Button.PluginActionButton:focus">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-        </Style>
-
-        <Style Selector="Button.PluginActionButton /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Padding" Value="0"/>
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
         </Style>
-
-        <Style Selector="Button.PluginActionButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Style Selector="Button.RowHeader:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.RowHeader:pressed /template/ ContentPresenter#PART_ContentPresenter">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="Border.ListRow.Selected">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+        </Style>
+        <Style Selector="Border.ListRow.Selected TextBlock.RowText">
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style Selector="Viewbox.Chevron">
+            <Setter Property="RenderTransform" Value="rotate(0deg)"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border.ListRow.Selected Viewbox.Chevron">
+            <Setter Property="RenderTransform" Value="rotate(180deg)"/>
         </Style>
 
-        <Style Selector="Button.PluginActionButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
+        <!-- Skills that are off keep a quiet icon -->
+        <Style Selector="Border.KindIcon.Off">
+            <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+        </Style>
+        <Style Selector="Border.KindIcon.Off Path.Icon">
+            <Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}"/>
         </Style>
 
-        <Style Selector="Button.PluginActionButton Path">
-            <Setter Property="Width" Value="16"/>
-            <Setter Property="Height" Value="16"/>
-            <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Style Selector="TextBlock.SkillId">
+            <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Stretch" Value="Uniform"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
+        <Style Selector="TextBlock.StatusText">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBlock.DetailLabel">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.DetailText">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style Selector="TextBlock.DetailMono">
+            <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style Selector="Border.DetailDivider">
+            <Setter Property="Height" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}"/>
+            <Setter Property="Margin" Value="0,2"/>
         </Style>
 
-        <Style Selector="Border.EvalSummary">
-            <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="16,14"/>
-        </Style>
-
-        <Style Selector="Border.EvalHealthy">
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-        </Style>
-
-        <Style Selector="Border.EvalUnhealthy">
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentOrangeGlowBrush}"/>
-        </Style>
-
-        <Style Selector="Border.ImportPanel">
-            <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="16,14"/>
+        <Style Selector="Button.QuickFix">
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="Padding" Value="10,2"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <Grid Classes="WorkbenchPage" RowDefinitions="Auto, Auto, Auto, Auto, *" Margin="32,28,32,40">
+        <StackPanel x:Name="Page" Classes="WorkbenchPage" Margin="32,28,32,40" MaxWidth="900" Spacing="20">
 
-            <!-- Title Section -->
-            <StackPanel Grid.Row="0" Spacing="6" Margin="8,0,8,24">
-                <TextBlock Text="{DynamicResource Lang.Plugins.Title}"
-                           Classes="PageTitle"/>
-                <TextBlock Text="{DynamicResource Lang.Plugins.Subtitle}"
-                           Classes="PageSubtitle"/>
+            <!-- Header -->
+            <StackPanel Spacing="6">
+                <TextBlock Text="{DynamicResource Lang.Skills.Title}" Classes="PageTitle"/>
+                <TextBlock Text="{DynamicResource Lang.Skills.Subtitle}" Classes="PageSubtitle"/>
             </StackPanel>
 
-            <Border Grid.Row="1"
-                    Classes="EvalSummary"
-                    Classes.EvalHealthy="{Binding IsSkillEvalHealthy}"
-                    Classes.EvalUnhealthy="{Binding !IsSkillEvalHealthy}"
-                    Margin="8,0,8,20"
-                    HorizontalAlignment="Stretch">
-                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-                    <Ellipse Grid.Column="0"
-                             Width="10"
-                             Height="10"
-                             Fill="{DynamicResource AccentBrush}"
-                             VerticalAlignment="Top"
-                             Margin="0,4,0,0"
-                             IsVisible="{Binding IsSkillEvalHealthy}"/>
-                    <Ellipse Grid.Column="0"
-                             Width="10"
-                             Height="10"
-                             Fill="{DynamicResource AccentOrangeBrush}"
-                             VerticalAlignment="Top"
-                             Margin="0,4,0,0"
-                             IsVisible="{Binding !IsSkillEvalHealthy}"/>
-                    <StackPanel Grid.Column="1" Spacing="4">
-                        <TextBlock Text="{Binding SkillEvalStatus}"
-                                   FontSize="13"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   TextWrapping="Wrap"/>
-                        <TextBlock Text="{Binding SkillEvalDetail}"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource TextMutedBrush}"
-                                   TextWrapping="Wrap"/>
-                        <ScrollViewer IsVisible="{Binding HasSkillEvalResults}"
-                                      MaxHeight="132"
-                                      VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Disabled"
-                                      Margin="0,6,0,0">
-                            <ItemsControl ItemsSource="{Binding SkillEvalResults}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid ColumnDefinitions="54,*,108"
-                                              ColumnSpacing="8"
-                                              Margin="0,2">
-                                            <TextBlock Grid.Column="0"
-                                                       Text="{Binding StatusText}"
-                                                       FontSize="10"
-                                                       FontFamily="{StaticResource MonoFontFamily}"
-                                                       Foreground="{Binding StatusColor}"
-                                                       TextWrapping="NoWrap"/>
-                                            <StackPanel Grid.Column="1" Spacing="1">
-                                                <TextBlock Text="{Binding Name}"
-                                                           FontSize="10"
-                                                           FontFamily="{StaticResource MonoFontFamily}"
-                                                           Foreground="{DynamicResource TextSecondaryBrush}"
-                                                           TextWrapping="NoWrap"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Text="{Binding ExpectedActualText}"
-                                                           FontSize="10"
-                                                           Foreground="{DynamicResource TextMutedBrush}"
-                                                           TextWrapping="NoWrap"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Text="{Binding DetailText}"
-                                                           FontSize="10"
-                                                           Foreground="{DynamicResource TextMutedBrush}"
-                                                           TextWrapping="Wrap"
-                                                           MaxLines="2"/>
-                                            </StackPanel>
-                                            <TextBlock Grid.Column="2"
-                                                       Text="{Binding SkillId}"
-                                                       FontSize="10"
-                                                       FontFamily="{StaticResource MonoFontFamily}"
-                                                       Foreground="{DynamicResource TextMutedBrush}"
-                                                       TextWrapping="NoWrap"
-                                                       TextTrimming="CharacterEllipsis"/>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                    </StackPanel>
-                    <Button Grid.Column="2"
-                            Command="{Binding RunSkillEvalCommand}"
-                            Classes="IconButton PluginActionButton"
-                            ToolTip.Tip="Run smoke evals"
-                            Width="30"
-                            Height="30"
-                            Padding="0"
-                            VerticalAlignment="Center">
-                        <Path Data="M8,5V19L19,12L8,5Z"
-                              Fill="{DynamicResource AccentBrush}"
-                              Width="13"
-                              Height="13"
-                              Stretch="Uniform"/>
-                    </Button>
-                </Grid>
-            </Border>
-
-            <Border Grid.Row="2"
-                    Classes="ImportPanel"
-                    Margin="8,0,8,20"
-                    HorizontalAlignment="Stretch">
-                <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
-                    <Grid Grid.Row="0" ColumnDefinitions="150,*,Auto" ColumnSpacing="8">
-                        <ComboBox Grid.Column="0"
-                                  ItemsSource="{Binding ImportSources}"
-                                  SelectedIndex="{Binding SelectedImportSourceIndex}"
-                                  MinHeight="34"/>
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding ImportLocation}"
-                                 PlaceholderText="Folder path containing SKILL.md"
-                                 MinHeight="34"/>
-                        <Button Grid.Column="2"
-                                Content="Import"
-                                Command="{Binding ImportSkillCommand}"
-                                Classes="PrimaryAction"
-                                MinHeight="34"
-                                Padding="18,0"/>
+            <!-- Evals and the result of the last action -->
+            <Border Classes="Surface" Padding="14,10">
+                <StackPanel Spacing="10">
+                    <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="10">
+                        <Border Classes="StatusDot"
+                                Classes.Success="{Binding IsSkillEvalHealthy}"
+                                Classes.Warning="{Binding !IsSkillEvalHealthy}"
+                                VerticalAlignment="Top"
+                                Margin="0,6,0,0"/>
+                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding SkillEvalStatus}"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SkillEvalDetail}"
+                                       Classes="Caption"
+                                       MaxLines="2"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                        <StackPanel Classes="EvalActions" Orientation="Horizontal" Spacing="2">
+                            <Button Classes="GhostAction"
+                                    IsVisible="{Binding HasSkillEvalResults}"
+                                    Command="{Binding ToggleEvalResultsCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="{DynamicResource Lang.Skills.Eval.ShowResults}" FontSize="12" IsVisible="{Binding !ShowEvalResults}"/>
+                                    <TextBlock Text="{DynamicResource Lang.Skills.Eval.HideResults}" FontSize="12" IsVisible="{Binding ShowEvalResults}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="GhostAction"
+                                    ToolTip.Tip="{DynamicResource Lang.Skills.Eval.RunTip}"
+                                    Command="{Binding RunSkillEvalCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Viewbox Width="13" Height="13"><Path Classes="Icon" Data="{StaticResource IconPlay}"/></Viewbox>
+                                    <TextBlock Text="{DynamicResource Lang.Skills.Eval.Run}" FontSize="12"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
                     </Grid>
-                    <TextBlock Grid.Row="1"
-                               Text="{Binding ImportStatus}"
-                               FontSize="11"
-                               Foreground="{DynamicResource TextMutedBrush}"
-                               TextWrapping="Wrap"/>
-                </Grid>
+
+                    <ItemsControl ItemsSource="{Binding SkillEvalResults}"
+                                  IsVisible="{Binding ShowEvalResults}"
+                                  Margin="17,0,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Spacing="6"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SkillEvalResultItem">
+                                <Grid ColumnDefinitions="48,*" ColumnSpacing="10">
+                                    <TextBlock Text="{Binding StatusText}"
+                                               Classes="DetailMono"
+                                               Foreground="{Binding StatusColor}"
+                                               TextWrapping="NoWrap"/>
+                                    <StackPanel Grid.Column="1" Spacing="1">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{Binding Name}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding SkillId}" Classes="SkillId"/>
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding ExpectedActualText}" Classes="DetailMono"/>
+                                        <TextBlock Text="{Binding DetailText}" Classes="DetailMono" MaxLines="2" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
             </Border>
 
-            <Border Grid.Row="3"
-                    Classes="ImportPanel"
-                    IsVisible="{Binding HasSelectedPlugin}"
-                    Margin="8,0,8,20"
-                    HorizontalAlignment="Stretch">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <StackPanel Grid.Column="0" Spacing="6">
-                        <TextBlock Text="{Binding SelectedSkillTitle}"
-                                   FontSize="15"
-                                   FontWeight="SemiBold"
-                                   TextWrapping="Wrap"/>
-                        <TextBlock Text="{Binding SelectedSkillId}"
-                                   FontSize="11"
-                                   FontFamily="{StaticResource MonoFontFamily}"
-                                   Foreground="{DynamicResource AccentBrush}"
-                                   TextWrapping="NoWrap"
-                                   TextTrimming="CharacterEllipsis"/>
-                        <TextBlock Text="{Binding SelectedSkillSource}"
-                                   FontSize="10"
-                                   FontFamily="{StaticResource MonoFontFamily}"
-                                   Foreground="{DynamicResource TextMutedBrush}"
-                                   TextWrapping="NoWrap"
-                                   TextTrimming="CharacterEllipsis"/>
-                        <WrapPanel>
-                            <TextBlock Text="{Binding SelectedSkillExecutor}"
-                                       FontSize="10"
-                                       FontFamily="{StaticResource MonoFontFamily}"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       Margin="0,0,14,0"/>
-                            <TextBlock Text="{Binding SelectedSkillRisk}"
-                                       FontSize="10"
-                                       FontFamily="{StaticResource MonoFontFamily}"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       Margin="0,0,14,0"/>
-                            <TextBlock Text="{Binding SelectedSkillChecksum}"
-                                       FontSize="10"
-                                       FontFamily="{StaticResource MonoFontFamily}"
-                                       Foreground="{DynamicResource TextMutedBrush}"/>
-                        </WrapPanel>
-                        <TextBlock Text="{Binding SelectedSkillPermissions}"
-                                   FontSize="10"
-                                   FontFamily="{StaticResource MonoFontFamily}"
-                                   Foreground="{DynamicResource TextMutedBrush}"
-                                   TextWrapping="Wrap"/>
-                        <TextBlock Text="{Binding SelectedSkillLastRun}"
-                                   FontSize="10"
-                                   FontFamily="{StaticResource MonoFontFamily}"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   TextWrapping="Wrap"/>
-                        <TextBlock Text="{Binding SelectedSkillHealthMetrics}"
-                                   FontSize="10"
-                                   FontFamily="{StaticResource MonoFontFamily}"
-                                   Foreground="{DynamicResource TextMutedBrush}"
-                                   TextWrapping="Wrap"/>
-                        <StackPanel IsVisible="{Binding HasSelectedSkillExecutionHistory}"
-                                    Spacing="3"
-                                    Margin="0,4,0,0">
-                            <TextBlock Text="Execution History"
-                                       FontSize="10"
-                                       FontFamily="{StaticResource MonoFontFamily}"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
-                            <ItemsControl ItemsSource="{Binding SelectedSkillExecutionHistory}">
+            <!-- Filters and search -->
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="16">
+                <WrapPanel ItemSpacing="8" LineSpacing="8" VerticalAlignment="Center">
+                    <Button Classes="Chip" Classes.Selected="{Binding IsFilterAll}" Command="{Binding SetFilterCommand}" CommandParameter="All">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{DynamicResource Lang.Skills.Filter.All}"/>
+                            <TextBlock Text="{Binding SkillCount}" Classes="ChipCount"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="Chip" Classes.Selected="{Binding IsFilterOn}" Command="{Binding SetFilterCommand}" CommandParameter="On">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{DynamicResource Lang.Skills.Filter.On}"/>
+                            <TextBlock Text="{Binding OnCount}" Classes="ChipCount"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="Chip" Classes.Selected="{Binding IsFilterAttention}" Command="{Binding SetFilterCommand}" CommandParameter="Attention" IsVisible="{Binding HasAttention}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Border Classes="StatusDot Warning"/>
+                            <TextBlock Text="{DynamicResource Lang.Skills.Filter.Attention}"/>
+                            <TextBlock Text="{Binding AttentionCount}" Classes="ChipCount"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="Chip" Classes.Selected="{Binding IsFilterOff}" Command="{Binding SetFilterCommand}" CommandParameter="Off">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{DynamicResource Lang.Skills.Filter.Off}"/>
+                            <TextBlock Text="{Binding OffCount}" Classes="ChipCount"/>
+                        </StackPanel>
+                    </Button>
+                </WrapPanel>
+                <TextBox Classes="SkillSearch"
+                         Text="{Binding SearchText}"
+                         PlaceholderText="{DynamicResource Lang.Skills.Search.Placeholder}">
+                    <TextBox.InnerLeftContent>
+                        <Viewbox Width="14" Height="14" Margin="10,0,0,0">
+                            <Path Classes="Icon Muted" Data="{StaticResource IconSearch}"/>
+                        </Viewbox>
+                    </TextBox.InnerLeftContent>
+                </TextBox>
+            </Grid>
+
+            <!-- Nothing matches -->
+            <Border Classes="WorkbenchSection" Padding="32,28" IsVisible="{Binding HasNoMatches}">
+                <StackPanel Spacing="12" HorizontalAlignment="Center" MaxWidth="380">
+                    <Border Classes="IconBadge" HorizontalAlignment="Center">
+                        <Viewbox><Path Classes="Icon" Data="{StaticResource IconSearch}"/></Viewbox>
+                    </Border>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{DynamicResource Lang.Skills.NoMatches.Title}" Classes="SectionTitle" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding NoMatchesText}" Classes="Caption" TextAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Skills by group -->
+            <ItemsControl Classes="SkillGroups" ItemsSource="{Binding Groups}" IsVisible="{Binding !HasNoMatches}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><StackPanel Spacing="22"/></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SkillGroupViewModel">
+                        <StackPanel Spacing="10">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="{Binding Title}" Classes="GroupTitle"/>
+                                <TextBlock Text="{Binding VisibleCount}" Classes="GroupCount"/>
+                            </StackPanel>
+
+                            <ItemsControl Classes="SkillRows" ItemsSource="{Binding Items}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><StackPanel Spacing="6"/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid ColumnDefinitions="140,120,*"
-                                              ColumnSpacing="8"
-                                              Margin="0,1">
-                                            <TextBlock Grid.Column="0"
-                                                       Text="{Binding TimestampText}"
-                                                       FontSize="10"
-                                                       FontFamily="{StaticResource MonoFontFamily}"
-                                                       Foreground="{DynamicResource TextMutedBrush}"
-                                                       TextWrapping="NoWrap"/>
-                                            <TextBlock Grid.Column="1"
-                                                       Text="{Binding StatusText}"
-                                                       FontSize="10"
-                                                       FontFamily="{StaticResource MonoFontFamily}"
-                                                       Foreground="{Binding StatusColor}"
-                                                       TextWrapping="NoWrap"
-                                                       TextTrimming="CharacterEllipsis"/>
-                                            <TextBlock Grid.Column="2"
-                                                       Text="{Binding DetailText}"
-                                                       FontSize="10"
-                                                       Foreground="{DynamicResource TextMutedBrush}"
-                                                       TextWrapping="Wrap"
-                                                       MaxLines="2"/>
-                                        </Grid>
+                                    <DataTemplate x:DataType="vm:PluginItem">
+                                        <Border Classes="ListRow" Classes.Selected="{Binding IsSelected}">
+                                            <StackPanel>
+                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10">
+                                                    <Button Classes="RowHeader"
+                                                            Command="{Binding SelectCommand}"
+                                                            ToolTip.Tip="{DynamicResource Lang.Skills.Card.Details}">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                                            <Border Classes="KindIcon" Classes.Off="{Binding IsOff}" VerticalAlignment="Center">
+                                                                <Viewbox><Path Classes="Icon" Data="{Binding IconKey, Converter={StaticResource IconResource}}"/></Viewbox>
+                                                            </Border>
+                                                            <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                                                    <TextBlock Text="{Binding Name}" Classes="RowTitle" TextTrimming="CharacterEllipsis"/>
+                                                                    <TextBlock Grid.Column="1" Text="{Binding SkillId}" Classes="SkillId"/>
+                                                                </Grid>
+                                                                <TextBlock Text="{Binding Summary}" Classes="RowText"/>
+                                                            </StackPanel>
+                                                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                                <Border Classes="StatusDot"
+                                                                        Classes.Success="{Binding IsActive}"
+                                                                        Classes.Warning="{Binding NeedsAttention}"
+                                                                        ToolTip.Tip="{Binding Status}"/>
+                                                                <TextBlock Text="{Binding Status}" Classes="StatusText"/>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Button>
+
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasQuickFix}">
+                                                        <Button Classes="SecondaryAction QuickFix"
+                                                                IsVisible="{Binding CanApproveReview}"
+                                                                Command="{Binding ApproveReviewCommand}"
+                                                                Content="{DynamicResource Lang.Skills.Card.Approve}"
+                                                                ToolTip.Tip="{DynamicResource Lang.Skills.Card.ApproveReview}"/>
+                                                        <Button Classes="SecondaryAction QuickFix"
+                                                                IsVisible="{Binding CanGrantPermissions}"
+                                                                Command="{Binding GrantPermissionsCommand}"
+                                                                Content="{DynamicResource Lang.Skills.Card.Grant}"
+                                                                ToolTip.Tip="{DynamicResource Lang.Skills.Card.GrantPermissions}"/>
+                                                    </StackPanel>
+
+                                                    <ToggleSwitch Grid.Column="2"
+                                                                  Classes="RowToggle"
+                                                                  IsChecked="{Binding IsOn}"
+                                                                  IsVisible="{Binding CanToggle}"
+                                                                  ToolTip.Tip="{DynamicResource Lang.Skills.Card.Toggle}"/>
+
+                                                    <Button Grid.Column="3"
+                                                            Classes="IconButton"
+                                                            VerticalAlignment="Center"
+                                                            Command="{Binding SelectCommand}"
+                                                            ToolTip.Tip="{DynamicResource Lang.Skills.Card.Details}">
+                                                        <Viewbox Classes="Chevron" Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconChevronDown}"/></Viewbox>
+                                                    </Button>
+                                                </Grid>
+
+                                                <!-- Details -->
+                                                <StackPanel IsVisible="{Binding IsSelected}" Margin="44,12,0,2" Spacing="10">
+                                                    <TextBlock Text="{Binding Description}" Classes="DetailText" IsVisible="{Binding ShowsDescriptionInDetails}"/>
+                                                    <TextBlock Text="{Binding MissingPermissionsText}" Classes="ErrorText" IsVisible="{Binding HasMissingPermissions}"/>
+
+                                                    <WrapPanel ItemSpacing="6" LineSpacing="6">
+                                                        <Border Classes="Pill"><TextBlock Text="{Binding SourceText}"/></Border>
+                                                        <Border Classes="Pill"><TextBlock Text="{Binding ExecutorText}"/></Border>
+                                                        <Border Classes="Pill"><TextBlock Text="{Binding RiskLevelText}"/></Border>
+                                                        <Border Classes="Pill"><TextBlock Text="{Binding RequiredPermissionsText}"/></Border>
+                                                        <Border Classes="Pill"><TextBlock Text="{Binding GrantedPermissionsText}"/></Border>
+                                                        <Border Classes="Pill Accent" IsVisible="{Binding HasEvalResult}"><TextBlock Text="{Binding LastEvalStatus}"/></Border>
+                                                    </WrapPanel>
+
+                                                    <StackPanel Spacing="3">
+                                                        <TextBlock Text="{Binding LastRunStatus}"
+                                                                   Classes="DetailMono"
+                                                                   Foreground="{Binding LastRunColor}"
+                                                                   IsVisible="{Binding HasLastRun}"/>
+                                                        <TextBlock Text="{Binding LastRunDetail}" Classes="DetailMono" IsVisible="{Binding HasLastRun}"/>
+                                                        <TextBlock Text="{DynamicResource Lang.Skills.Detail.LastRunNone}" Classes="DetailMono" IsVisible="{Binding !HasLastRun}"/>
+                                                        <TextBlock Text="{Binding HealthMetricsText}" Classes="DetailMono" IsVisible="{Binding HasHealthMetrics}"/>
+                                                        <TextBlock Text="{Binding FailureMetricsText}" Classes="ErrorText" FontSize="11" IsVisible="{Binding HasFailureMetrics}"/>
+                                                        <TextBlock Text="{Binding LastEvalDetail}" Classes="DetailMono" IsVisible="{Binding HasEvalResult}"/>
+                                                        <TextBlock Text="{Binding ChecksumText}" Classes="DetailMono"/>
+                                                        <TextBlock Text="{Binding PolicyGuardrailText}" Classes="DetailMono"/>
+                                                    </StackPanel>
+
+                                                    <StackPanel Spacing="4" IsVisible="{Binding HasExecutionHistory}">
+                                                        <TextBlock Text="{DynamicResource Lang.Skills.Detail.ExecutionHistory}" Classes="DetailLabel"/>
+                                                        <ItemsControl ItemsSource="{Binding ExecutionHistory}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:SkillExecutionHistoryItem">
+                                                                    <Grid ColumnDefinitions="136,128,*" ColumnSpacing="8" Margin="0,1">
+                                                                        <TextBlock Text="{Binding TimestampText}" Classes="DetailMono" TextWrapping="NoWrap"/>
+                                                                        <TextBlock Grid.Column="1"
+                                                                                   Text="{Binding StatusText}"
+                                                                                   Classes="DetailMono"
+                                                                                   Foreground="{Binding StatusColor}"
+                                                                                   TextWrapping="NoWrap"
+                                                                                   TextTrimming="CharacterEllipsis"/>
+                                                                        <TextBlock Grid.Column="2" Text="{Binding DetailText}" Classes="DetailMono" MaxLines="2" TextTrimming="CharacterEllipsis"/>
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+
+                                                    <Grid ColumnDefinitions="170,*,Auto"
+                                                          ColumnSpacing="8"
+                                                          IsVisible="{Binding $parent[UserControl].((vm:PluginsViewModel)DataContext).CanEditSelectedSkillPolicy}">
+                                                        <TextBox Text="{Binding $parent[UserControl].((vm:PluginsViewModel)DataContext).PolicyOptionKeyInput}"
+                                                                 PlaceholderText="{DynamicResource Lang.Skills.Policy.KeyPlaceholder}"/>
+                                                        <TextBox Grid.Column="1"
+                                                                 Text="{Binding $parent[UserControl].((vm:PluginsViewModel)DataContext).PolicyOptionValueInput}"
+                                                                 PlaceholderText="{DynamicResource Lang.Skills.Policy.ValuePlaceholder}"/>
+                                                        <Button Grid.Column="2"
+                                                                Classes="IconAction"
+                                                                Command="{Binding $parent[UserControl].((vm:PluginsViewModel)DataContext).SaveRuntimePolicyOptionCommand}"
+                                                                ToolTip.Tip="{DynamicResource Lang.Skills.Policy.SaveTip}">
+                                                            <Viewbox Width="14" Height="14"><Path Classes="Icon Accent" Data="{StaticResource IconCheck}"/></Viewbox>
+                                                        </Button>
+                                                    </Grid>
+
+                                                    <Border Classes="DetailDivider" IsVisible="{Binding HasDetailActions}"/>
+                                                    <WrapPanel ItemSpacing="4" LineSpacing="4" IsVisible="{Binding HasDetailActions}">
+                                                        <Button Classes="GhostAction" IsVisible="{Binding CanTestSkill}" Command="{Binding TestSkillCommand}">
+                                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                <Viewbox Width="13" Height="13"><Path Classes="Icon" Data="{StaticResource IconPlay}"/></Viewbox>
+                                                                <TextBlock Text="{DynamicResource Lang.Skills.Test.Tip}" FontSize="12"/>
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <Button Classes="GhostAction" IsVisible="{Binding CanRevokePermissions}" Command="{Binding RevokePermissionsCommand}">
+                                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                <Viewbox Width="13" Height="13"><Path Classes="Icon" Data="{StaticResource IconShieldOff}"/></Viewbox>
+                                                                <TextBlock Text="{DynamicResource Lang.Skills.Card.RevokePermissions}" FontSize="12"/>
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </WrapPanel>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </StackPanel>
-                        <TextBlock Text="{Binding SelectedSkillPolicyGuardrail}"
-                                   FontSize="10"
-                                   FontFamily="{StaticResource MonoFontFamily}"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   TextWrapping="Wrap"/>
-                        <Grid ColumnDefinitions="170,*,Auto"
-                              ColumnSpacing="8"
-                              IsVisible="{Binding CanEditSelectedSkillPolicy}">
-                            <TextBox Grid.Column="0"
-                                     Text="{Binding PolicyOptionKeyInput, Mode=TwoWay}"
-                                     PlaceholderText="policy key"
-                                     MinHeight="32"/>
-                            <TextBox Grid.Column="1"
-                                     Text="{Binding PolicyOptionValueInput, Mode=TwoWay}"
-                                     PlaceholderText="value"
-                                     MinHeight="32"/>
-                            <Button Grid.Column="2"
-                                    Command="{Binding SaveRuntimePolicyOptionCommand}"
-                                    ToolTip.Tip="Save runtime policy"
-                                    MinHeight="32"
-                                    Padding="10,0">
-                                <Path Data="M9,16.2L4.8,12L3.4,13.4L9,19L21,7L19.6,5.6L9,16.2Z"
-                                      Width="13"
-                                      Height="13"
-                                      Stretch="Uniform"/>
-                            </Button>
-                        </Grid>
-                    </StackPanel>
-                    <Button Grid.Column="1"
-                            Command="{Binding SelectedPlugin.TestSkillCommand}"
-                            Classes="IconButton PluginActionButton"
-                            IsVisible="{Binding SelectedPlugin.CanTestSkill}"
-                            ToolTip.Tip="Test skill"
-                            Width="30"
-                            Height="30"
-                            Padding="0"
-                            VerticalAlignment="Top">
-                        <Path Data="M8,5V19L19,12L8,5Z"
-                              Fill="{DynamicResource AccentBrush}"
-                              Width="13"
-                              Height="13"
-                              Stretch="Uniform"/>
-                    </Button>
-                </Grid>
-            </Border>
-
-            <!-- Plugins Grid - Responsive Columns -->
-            <ItemsControl Grid.Row="4" ItemsSource="{Binding Plugins}" Margin="0,0,0,20">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <UniformGrid Columns="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=GridColumns}"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Classes.PluginCard="{Binding IsActive}"
-                                Classes.PluginCardInactive="{Binding !IsActive}"
-                                Margin="8">
-                            <Grid RowDefinitions="Auto, *, Auto">
-                                <!-- Icon with Glow -->
-                                <Grid Grid.Row="0"
-                                      Classes="PluginIconBadge"
-                                      Width="40" Height="40"
-                                      HorizontalAlignment="Left"
-                                      Margin="0,0,0,16">
-                                    <Border Classes="IconBadge"
-                                            Background="{Binding GlowColor}"/>
-                                    <Path Data="{Binding IconPath}"
-                                          Fill="{Binding IconColor}"
-                                          Width="18" Height="18"
-                                          Stretch="Uniform"
-                                          HorizontalAlignment="Center"
-                                          VerticalAlignment="Center"
-                                          IsVisible="{Binding IsActive}"/>
-                                    <Path Data="{Binding IconPath}"
-                                          Fill="{DynamicResource TextMutedBrush}"
-                                          Width="18" Height="18"
-                                          Stretch="Uniform"
-                                          HorizontalAlignment="Center"
-                                          VerticalAlignment="Center"
-                                          IsVisible="{Binding !IsActive}"/>
-                                </Grid>
-
-                                <!-- Content -->
-                                <StackPanel Grid.Row="1" VerticalAlignment="Stretch">
-                                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
-                                        <TextBlock Text="{Binding Name}"
-                                                   FontSize="15"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{Binding TextColor}"
-                                                   TextWrapping="Wrap"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   MaxLines="2"/>
-                                        <Border Classes.StatusActive="{Binding IsActive}"
-                                                Classes.StatusInactive="{Binding !IsActive}"
-                                                Grid.Column="1"
-                                                VerticalAlignment="Top"
-                                                MaxWidth="82"
-                                                Margin="8,0,0,0">
-                                            <TextBlock Text="{Binding Status}"
-                                                       FontSize="11"
-                                                       FontWeight="Medium"
-                                                       Foreground="{Binding StatusColor}"
-                                                       VerticalAlignment="Center"
-                                                       TextWrapping="NoWrap"
-                                                       TextTrimming="CharacterEllipsis"/>
-                                        </Border>
-                                    </Grid>
-                                    <TextBlock Text="{Binding SkillId}"
-                                               FontSize="10"
-                                               Foreground="{DynamicResource AccentBrush}"
-                                               FontFamily="{StaticResource MonoFontFamily}"
-                                               TextWrapping="NoWrap"
-                                               TextTrimming="CharacterEllipsis"
-                                               Margin="0,0,0,6"/>
-                                    <TextBlock Text="{Binding Source}"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource TextMutedBrush}"
-                                               TextWrapping="NoWrap"
-                                               TextTrimming="CharacterEllipsis"
-                                               Margin="0,0,0,8"/>
-                                    <TextBlock Text="{Binding RequiredPermissionsText}"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource TextMutedBrush}"
-                                               TextWrapping="NoWrap"
-                                               TextTrimming="CharacterEllipsis"
-                                               Margin="0,0,0,4"/>
-                                    <TextBlock Text="{Binding GrantedPermissionsText}"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource TextMutedBrush}"
-                                               TextWrapping="NoWrap"
-                                               TextTrimming="CharacterEllipsis"
-                                               Margin="0,0,0,4"/>
-                                    <TextBlock Text="{Binding MissingPermissionsText}"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource AccentErrorBrush}"
-                                               TextWrapping="NoWrap"
-                                               TextTrimming="CharacterEllipsis"
-                                               IsVisible="{Binding HasMissingPermissions}"
-                                               Margin="0,0,0,8"/>
-                                    <TextBlock Text="{Binding Description}"
-                                               FontSize="12"
-                                               Foreground="{DynamicResource TextMutedBrush}"
-                                               TextWrapping="Wrap"
-                                               LineHeight="18"
-                                               MaxLines="2"/>
-                                    <TextBlock Text="{Binding HealthDetail}"
-                                               FontSize="10"
-                                               Foreground="{Binding StatusColor}"
-                                               TextWrapping="Wrap"
-                                               LineHeight="16"
-                                               MaxLines="2"
-                                               Margin="0,8,0,0"/>
-                                    <StackPanel IsVisible="{Binding HasLastRun}"
-                                                Spacing="3"
-                                                Margin="0,8,0,0">
-                                        <TextBlock Text="{Binding LastRunStatus}"
-                                                   FontSize="10"
-                                                   FontFamily="{StaticResource MonoFontFamily}"
-                                                   Foreground="{Binding LastRunColor}"
-                                                   TextWrapping="NoWrap"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="{Binding LastRunDetail}"
-                                                   FontSize="10"
-                                                   Foreground="{DynamicResource TextMutedBrush}"
-                                                   TextWrapping="Wrap"
-                                                   MaxLines="2"/>
-                                    </StackPanel>
-                                    <StackPanel IsVisible="{Binding HasHealthMetrics}"
-                                                Spacing="3"
-                                                Margin="0,8,0,0">
-                                        <TextBlock Text="{Binding HealthMetricsText}"
-                                                   FontSize="10"
-                                                   FontFamily="{StaticResource MonoFontFamily}"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                                   TextWrapping="Wrap"
-                                                   MaxLines="2"/>
-                                        <TextBlock Text="{Binding FailureMetricsText}"
-                                                   FontSize="10"
-                                                   Foreground="{DynamicResource AccentErrorBrush}"
-                                                   TextWrapping="Wrap"
-                                                   MaxLines="2"
-                                                   IsVisible="{Binding HasFailureMetrics}"/>
-                                    </StackPanel>
-                                    <Border IsVisible="{Binding HasEvalResult}"
-                                            Background="{DynamicResource SurfaceBgBrush}"
-                                            BorderBrush="{DynamicResource BorderSubtleBrush}"
-                                            BorderThickness="1"
-                                            CornerRadius="6"
-                                            Padding="8,6"
-                                            Margin="0,8,0,0">
-                                        <StackPanel Spacing="3">
-                                            <TextBlock Text="{Binding LastEvalStatus}"
-                                                       FontSize="10"
-                                                       FontFamily="{StaticResource MonoFontFamily}"
-                                                       Foreground="{DynamicResource AccentBrush}"
-                                                       TextWrapping="NoWrap"
-                                                       TextTrimming="CharacterEllipsis"/>
-                                            <TextBlock Text="{Binding LastEvalDetail}"
-                                                       FontSize="10"
-                                                       Foreground="{DynamicResource TextMutedBrush}"
-                                                       TextWrapping="Wrap"
-                                                       MaxLines="2"/>
-                                        </StackPanel>
-                                    </Border>
-                                </StackPanel>
-                                <StackPanel Grid.Row="2"
-                                            Classes="PluginActionBar"
-                                            Orientation="Horizontal"
-                                            Spacing="8"
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Bottom"
-                                            Margin="0,14,0,0">
-                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
-                                            Padding="0"
-                                            Cursor="Hand"
-                                            ToolTip.Tip="Details"
-                                            Command="{Binding SelectCommand}">
-                                        <Path Data="M11,17H13V11H11V17M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,7V9H13V7H11Z"
-                                              Fill="{DynamicResource AccentBrush}"
-                                              Width="16" Height="16"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Stretch="Uniform"/>
-                                    </Button>
-                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
-                                            Padding="0"
-                                            Cursor="Hand"
-                                            ToolTip.Tip="Test Skill"
-                                            IsVisible="{Binding CanTestSkill}"
-                                            Command="{Binding TestSkillCommand}">
-                                        <Path Data="M8,5V19L19,12L8,5Z"
-                                              Fill="{DynamicResource AccentBrush}"
-                                              Width="16" Height="16"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Stretch="Uniform"/>
-                                    </Button>
-                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
-                                            Padding="0"
-                                            Cursor="Hand"
-                                            ToolTip.Tip="Approve Review"
-                                            IsVisible="{Binding CanApproveReview}"
-                                            Command="{Binding ApproveReviewCommand}">
-                                        <Path Data="M9,16.17L4.83,12L3.41,13.41L9,19L21,7L19.59,5.59L9,16.17Z"
-                                              Fill="{DynamicResource AccentBrush}"
-                                              Width="16" Height="16"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Stretch="Uniform"/>
-                                    </Button>
-                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
-                                            Padding="0"
-                                            Cursor="Hand"
-                                            ToolTip.Tip="Enable"
-                                            IsVisible="{Binding CanEnable}"
-                                            Command="{Binding EnableCommand}">
-                                        <Path Data="M8,5V19L19,12L8,5Z"
-                                              Fill="{DynamicResource AccentGreenBrush}"
-                                              Width="16" Height="16"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Stretch="Uniform"/>
-                                    </Button>
-                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
-                                            Padding="0"
-                                            Cursor="Hand"
-                                            ToolTip.Tip="Grant Permissions"
-                                            IsVisible="{Binding CanGrantPermissions}"
-                                            Command="{Binding GrantPermissionsCommand}">
-                                        <Path Data="M12,17A2,2 0 0,0 14,15A2,2 0 0,0 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8H17V6A5,5 0 0,0 7,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0,0 18,8M9,8V6A3,3 0 0,1 15,6V8H9Z"
-                                              Fill="{DynamicResource AccentBrush}"
-                                              Width="16" Height="16"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Stretch="Uniform"/>
-                                    </Button>
-                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
-                                            Padding="0"
-                                            Cursor="Hand"
-                                            ToolTip.Tip="Disable"
-                                            IsVisible="{Binding CanDisable}"
-                                            Command="{Binding DisableCommand}">
-                                        <Path Data="M13,3H11V13H13V3M17.83,5.17L16.41,6.59A6,6 0 1,1 7.59,6.59L6.17,5.17A8,8 0 1,0 17.83,5.17Z"
-                                              Fill="{DynamicResource TextMutedBrush}"
-                                              Width="16" Height="16"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Stretch="Uniform"/>
-                                    </Button>
-                                    <Button Classes="IconButton CompactIconButton PluginActionButton"
-                                            Padding="0"
-                                            Cursor="Hand"
-                                            ToolTip.Tip="Revoke Permissions"
-                                            IsVisible="{Binding CanRevokePermissions}"
-                                            Command="{Binding RevokePermissionsCommand}">
-                                        <Path Data="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C14.15,22.47 16.1,21.26 17.64,19.66L16.22,18.24C15.04,19.42 13.6,20.34 12,20.82C7.98,19.57 5,15.28 5,11V6.3L12,3.18L19,6.3V11C19,12.1 18.8,13.2 18.43,14.25L20,15.82C20.64,14.31 21,12.67 21,11V5L12,1M4.27,3L3,4.27L19.73,21L21,19.73L4.27,3Z"
-                                              Fill="{DynamicResource AccentErrorBrush}"
-                                              Width="16" Height="16"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Stretch="Uniform"/>
-                                    </Button>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-        </Grid>
+
+            <!-- Import -->
+            <Border Classes="WorkbenchSection">
+                <StackPanel Spacing="12">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{DynamicResource Lang.Skills.Import.Title}" Classes="SectionTitle"/>
+                        <TextBlock Text="{Binding ImportStatus}" Classes="Caption"/>
+                    </StackPanel>
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+                        <ComboBox Classes="ImportSource"
+                                  ItemsSource="{Binding ImportSources}"
+                                  SelectedIndex="{Binding SelectedImportSourceIndex}"
+                                  HorizontalAlignment="Stretch"
+                                  MinHeight="36"/>
+                        <TextBox Classes="ImportPath"
+                                 Text="{Binding ImportLocation}"
+                                 PlaceholderText="{DynamicResource Lang.Skills.Import.Placeholder}"
+                                 MinHeight="36"/>
+                        <Button Grid.Column="2"
+                                Classes="SecondaryAction ImportAction"
+                                Content="{DynamicResource Lang.Common.Browse}"
+                                Command="{Binding BrowseImportFolderCommand}"/>
+                        <Button Grid.Column="3"
+                                Classes="PrimaryAction ImportAction"
+                                Content="{DynamicResource Lang.Skills.Import.Button}"
+                                Command="{Binding ImportSkillCommand}"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
     </ScrollViewer>
 </UserControl>

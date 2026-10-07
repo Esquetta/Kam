@@ -34,6 +34,7 @@ using SmartVoiceAgent.Infrastructure.Services.Message;
 using SmartVoiceAgent.Infrastructure.Services.WebResearch;
 using SmartVoiceAgent.Infrastructure.Services.Voice;
 using SmartVoiceAgent.Infrastructure.Services.Audio;
+using SmartVoiceAgent.Infrastructure.Services.Speech;
 using SmartVoiceAgent.Mailing.Extensions;
 using System.Runtime.Versioning;
 
@@ -53,8 +54,6 @@ public static class ServiceRegistration
         services.Configure<GitHubAppOptions>(configuration.GetSection(GitHubAppOptions.SectionName));
         services.Configure<ApplicationUpdateOptions>(configuration.GetSection(ApplicationUpdateOptions.SectionName));
 
-        services.AddSingleton<ISTTServiceFactory, STTServiceFactory>();
-        services.AddSingleton<AudioProcessingService>();
         services.AddScoped<ILanguageDetectionService, HuggingFaceLanguageDetectionService>();
         services.AddSingleton<IApplicationScannerServiceFactory, ApplicationScannerFactory>();
         services.AddSingleton<IApplicationServiceFactory, ApplicationServiceFactory>();
@@ -68,9 +67,12 @@ public static class ServiceRegistration
             sp.GetRequiredService<IMusicServiceFactory>().Create());
         services.AddScoped<IWebResearchService, AiWebResearchService>();
         services.AddHttpClient();
-        services.AddSingleton<OllamaSTTService>();
+        services.AddHttpClient(OpenAiTranscriptionService.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(60));
+        services.AddSingleton<ISpeechModelStore, WhisperModelStore>();
         services.AddSingleton<WhisperSTTService>();
+        services.AddSingleton<OpenAiTranscriptionService>();
         services.AddSingleton<HuggingFaceSTTService>();
+        services.AddSingleton<ITextToSpeechService, TextToSpeechService>();
 
         services.AddSingleton<ISystemControlServiceFactory, SystemControlServiceFactory>();
 
@@ -114,8 +116,8 @@ public static class ServiceRegistration
         // Register Message Services (Email, SMS, etc.)
         services.AddScoped<IMessageServiceFactory, MessageServiceFactory>();
 
-        // Register Wake Word Detection Service
-        services.AddSingleton<IWakeWordDetectionService, WakeWordDetectionService>();
+        // Wake phrase listener: the small local Whisper model checks each utterance
+        services.AddSingleton<IWakeWordDetectionService, WhisperWakeWordDetector>();
 
         // Register Multi-STT Service with Fallback
         services.AddSingleton<IMultiSTTService, MultiSTTService>();

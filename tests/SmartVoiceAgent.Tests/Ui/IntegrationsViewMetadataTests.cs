@@ -21,7 +21,7 @@ public sealed class IntegrationsViewMetadataTests
     [Fact]
     public void IntegrationsView_ShouldExposeGitHubAppConfigurationCard()
     {
-        var xaml = File.ReadAllText(Path.GetFullPath(ViewPath));
+        var xaml = LocalizedXaml.ReadAllText(Path.GetFullPath(ViewPath));
 
         xaml.Should().Contain("GitHub");
         xaml.Should().Contain("Connect GitHub");
@@ -38,10 +38,10 @@ public sealed class IntegrationsViewMetadataTests
     [Fact]
     public void IntegrationsView_ShouldExposeWebSearchCard()
     {
-        var xaml = File.ReadAllText(Path.GetFullPath(ViewPath));
+        var xaml = LocalizedXaml.ReadAllText(Path.GetFullPath(ViewPath));
 
         xaml.Should().Contain("Text=\"Web search\"");
-        xaml.Should().Contain("Google Programmable Search");
+        xaml.Should().Contain("No key needed · Google optional");
         xaml.Should().Contain("Text=\"{Binding WebSearchApiKey, Mode=TwoWay}\"");
         xaml.Should().Contain("Text=\"{Binding WebSearchEngineId, Mode=TwoWay}\"");
         xaml.Should().Contain("SaveWebSearchCommand");
@@ -52,7 +52,7 @@ public sealed class IntegrationsViewMetadataTests
     [Fact]
     public void IntegrationsView_GitHubAppCard_ShouldNotAskForRawPrivateKeyMaterial()
     {
-        var xaml = File.ReadAllText(Path.GetFullPath(ViewPath));
+        var xaml = LocalizedXaml.ReadAllText(Path.GetFullPath(ViewPath));
 
         xaml.Should().NotContain("BEGIN PRIVATE KEY");
         xaml.Should().NotContain("RawPrivateKey");
@@ -63,7 +63,7 @@ public sealed class IntegrationsViewMetadataTests
     [Fact]
     public void IntegrationsView_GitHubAppCard_ShouldExposeConnectionTestActions()
     {
-        var xaml = File.ReadAllText(Path.GetFullPath(ViewPath));
+        var xaml = LocalizedXaml.ReadAllText(Path.GetFullPath(ViewPath));
 
         xaml.Should().Contain("Test Connection");
         xaml.Should().Contain("TestGitHubAppConnectionCommand");
@@ -78,7 +78,7 @@ public sealed class IntegrationsViewMetadataTests
     [Fact]
     public void IntegrationsView_GitHubAppCard_ShouldExposeSetupChecklist()
     {
-        var xaml = File.ReadAllText(Path.GetFullPath(ViewPath));
+        var xaml = LocalizedXaml.ReadAllText(Path.GetFullPath(ViewPath));
         var view = XDocument.Parse(xaml).Root!;
 
         xaml.Should().Contain("SETUP_CHECKLIST");

@@ -1,0 +1,44 @@
+{
+  "Diagnostics.Title": "Runtime diagnostics",
+  "Diagnostics.Subtitle": "Live readiness of the model, host, skills and integrations.",
+
+  "Diagnostics.Status.Ready": "READY",
+  "Diagnostics.Status.ActionNeeded": "ACTION_NEEDED",
+
+  "Diagnostics.LiveTest.Title": "Live production test",
+  "Diagnostics.LiveTest.Ready": "READY_FOR_LIVE_TEST",
+  "Diagnostics.LiveTest.NeedsAction": "NEEDS_ACTION",
+  "Diagnostics.LiveTest.CopyReport": "Copy Report",
+
+  "Diagnostics.Report.NotCopied": "Report not copied.",
+  "Diagnostics.Report.Copied": "Readiness report copied.",
+  "Diagnostics.Report.ClipboardUnavailable": "Clipboard unavailable.",
+
+  "Diagnostics.SetupActions.Title": "Setup actions",
+  "Diagnostics.BlockingItems.Title": "Blocking items",
+  "Diagnostics.AiRuntime.Title": "AI runtime",
+  "Diagnostics.Integrations.Title": "Integrations",
+
+  "Diagnostics.Updates.Title": "App updates",
+  "Diagnostics.Updates.Check": "Check",
+  "Diagnostics.Updates.Download": "Download",
+  "Diagnostics.Updates.RestartPlan": "Restart Plan",
+  "Diagnostics.Updates.NotChecked": "Updates not checked.",
+  "Diagnostics.Updates.Checking": "Checking GitHub Releases for Kam updates.",
+  "Diagnostics.Updates.Downloading": "Downloading latest Kam release package.",
+  "Diagnostics.Updates.Downloaded": "Downloaded Kam update package.",
+  "Diagnostics.Updates.VerifyBeforeRestart": "Verify the downloaded package before restart handoff.",
+
+  "Diagnostics.LocalRuntime.Title": "Local runtime",
+  "Diagnostics.SkillSmoke.Run": "Run Skill Smoke",
+  "Diagnostics.SkillSmoke.NotRun": "Not run",
+  "Diagnostics.SkillSmoke.ServicesUnavailable": "Smoke eval services unavailable",
+  "Diagnostics.SkillSmoke.FailedToRun": "Smoke evals failed to run",
+  "Diagnostics.SkillSmoke.NoneConfigured": "No smoke evals configured",
+  "Diagnostics.SkillSmoke.Passing": "{0}/{1} smoke evals passing",
+
+  "Diagnostics.Refresh.Never": "Not refreshed",
+  "Diagnostics.Refresh.Updated": "Updated {0}",
+  "Diagnostics.Refresh.SkillSmoke": "Skill smoke {0}",
+  "Diagnostics.Refresh.Updates": "Updates {0}"
+}

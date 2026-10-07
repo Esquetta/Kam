@@ -11,7 +11,7 @@ public sealed class OpenAiCompatibleModelCatalogServiceTests
     [Fact]
     public async Task GetModelsAsync_UsesModelsEndpointAndReturnsTextGenerationModels()
     {
-        using var handler = new StubHttpMessageHandler("""{"object":"list","data":[{"id":"gpt-5.2","owned_by":"openai"},{"id":"text-embedding-3-small","owned_by":"openai"},{"id":"gpt-4.1-mini","owned_by":"openai"}]}""");
+        using var handler = new StubHttpMessageHandler("""{"object":"list","data":[{"id":"gpt-5.2","owned_by":"openai"},{"id":"text-embedding-3-small","owned_by":"openai"},{"id":"gpt-live-1","owned_by":"openai"},{"id":"gpt-4.1-mini","owned_by":"openai"}]}""");
         using var httpClient = new HttpClient(handler);
         var service = new OpenAiCompatibleModelCatalogService(httpClient);
 
@@ -29,6 +29,34 @@ public sealed class OpenAiCompatibleModelCatalogServiceTests
             model.Provider == ModelProviderType.OpenAI
             && model.Source == "provider-live"
             && model.IsAvailable);
+    }
+
+    [Fact]
+    public async Task GetModelsAsync_ListsNewestModelsFirst()
+    {
+        using var handler = new StubHttpMessageHandler("""
+            {
+              "data": [
+                { "id": "gpt-4.1-mini", "created": 1744316542 },
+                { "id": "o4-mini", "created": 1744225351 },
+                { "id": "gpt-5.5", "created": 1776902400 },
+                { "id": "custom-model" }
+              ]
+            }
+            """);
+        using var httpClient = new HttpClient(handler);
+        var service = new OpenAiCompatibleModelCatalogService(httpClient);
+
+        var models = await service.GetModelsAsync(new ModelProviderProfile
+        {
+            Provider = ModelProviderType.OpenAI,
+            Endpoint = "https://api.openai.com/v1",
+            ApiKey = "sk-test"
+        });
+
+        models.Select(model => model.ModelId).Should().Equal("gpt-5.5", "gpt-4.1-mini", "o4-mini", "custom-model");
+        models[0].ReleasedAt.Should().Be(DateTimeOffset.FromUnixTimeSeconds(1776902400));
+        models[^1].ReleasedAt.Should().BeNull();
     }
 
     [Fact]

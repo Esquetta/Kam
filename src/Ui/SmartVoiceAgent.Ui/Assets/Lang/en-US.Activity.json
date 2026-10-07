@@ -1,0 +1,30 @@
+{
+  "Activity.Title": "Activity",
+  "Activity.Subtitle": "Session",
+  "Activity.Live": "Live",
+  "Activity.Tab.Runs": "Agent runs",
+  "Activity.Tab.Events": "Event stream",
+  "Activity.Context": "Context",
+
+  "Activity.ApprovalNeeded": "Approval needed",
+  "Activity.Reject": "Reject",
+
+  "Activity.Runs.Title": "Agent runs",
+  "Activity.Runs.Empty": "No agent runs yet.",
+  "Activity.RunDetail.Title": "Run detail",
+  "Activity.RunDetail.Model": "Model",
+  "Activity.RunDetail.Duration": "Duration",
+
+  "Activity.PlanTrace.Title": "Plan trace",
+  "Activity.PlanTrace.Clear": "Clear planner trace",
+
+  "Activity.SkillResults.Title": "Skill results",
+  "Activity.SkillResults.Clear": "Clear result history",
+  "Activity.SkillResults.Filter": "Filter result history...",
+  "Activity.SkillResults.ClearFilters": "Clear filters",
+  "Activity.SkillResults.NoMatches": "No matching executions",
+  "Activity.SkillResults.CopyResult": "Copy result",
+  "Activity.SkillResults.CopyStdOut": "Copy stdout",
+  "Activity.SkillResults.CopyStdErr": "Copy stderr",
+  "Activity.SkillResults.Rerun": "Rerun skill"
+}

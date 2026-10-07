@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -79,8 +80,7 @@ public sealed class AnthropicModelCatalogService : IModelCatalogService, IDispos
             .Select(item => CreateEntry(item, checkedAt))
             .Where(model => !string.IsNullOrWhiteSpace(model.ModelId))
             .DistinctBy(model => model.ModelId, StringComparer.OrdinalIgnoreCase)
-            .OrderByDescending(model => model.ModelId, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+            .NewestFirst();
     }
 
     public void Dispose()
@@ -120,6 +120,13 @@ public sealed class AnthropicModelCatalogService : IModelCatalogService, IDispos
             Source = "provider-live",
             Capabilities = ["text-input", "text-output"],
             IsAvailable = true,
+            ReleasedAt = DateTimeOffset.TryParse(
+                GetString(item, "created_at"),
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal,
+                out var createdAt)
+                ? createdAt
+                : null,
             LastCheckedAt = checkedAt
         };
     }

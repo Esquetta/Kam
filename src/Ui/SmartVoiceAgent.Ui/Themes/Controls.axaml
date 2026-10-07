@@ -167,6 +167,11 @@
         <Setter Property="Fill" Value="{DynamicResource AccentOnBrush}" />
     </Style>
 
+    <Style Selector="Button.PrimaryAction Path.Icon">
+        <Setter Property="Fill" Value="{x:Null}" />
+        <Setter Property="Stroke" Value="{DynamicResource AccentOnBrush}" />
+    </Style>
+
     <Style Selector="Button.PrimaryAction:disabled">
         <Setter Property="Opacity" Value="0.45" />
     </Style>
@@ -194,6 +199,10 @@
         <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+
+    <Style Selector="Button.SecondaryAction:pointerover Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
 
     <!-- Disabled actions keep their shape and fade instead of turning into grey slabs -->
@@ -238,33 +247,112 @@
     </Style>
 
     <Style Selector="Button.GhostAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}" />
+        <Setter Property="Background" Value="{DynamicResource ControlHoverBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
 
-    <Style Selector="Button.IconAction">
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="8" />
+    <Style Selector="Button.GhostAction Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextSecondaryBrush}" />
+    </Style>
+
+    <Style Selector="Button.GhostAction:pointerover Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+
+    <!--
+        Icon buttons. IconButton is a ghost square or circle; IconAction adds a hairline border.
+        The hover and pressed fills cover the whole button, and the glyph brightens with them.
+        Glyphs are Path.Icon in a Viewbox: they keep their 24x24 grid (Stretch None), so narrow
+        icons such as the mic or the play triangle stay centered instead of hugging the left edge.
+        Tint a glyph with Accent, Success or Danger; leave it plain for the muted default.
+    -->
+    <Style Selector="Button.IconButton">
+        <Setter Property="MinWidth" Value="28" />
+        <Setter Property="MinHeight" Value="28" />
         <Setter Property="Padding" Value="0" />
-        <Setter Property="MinWidth" Value="32" />
-        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="8" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Cursor" Value="Hand" />
     </Style>
 
-    <Style Selector="Button.IconAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}" />
+    <Style Selector="Button.IconAction">
+        <Setter Property="MinWidth" Value="32" />
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
     </Style>
 
-    <Style Selector="Button.IconAction Path">
-        <Setter Property="Width" Value="15" />
-        <Setter Property="Height" Value="15" />
-        <Setter Property="Stretch" Value="Uniform" />
-        <Setter Property="HorizontalAlignment" Value="Center" />
-        <Setter Property="VerticalAlignment" Value="Center" />
+    <Style Selector="Button.IconButton /template/ ContentPresenter#PART_ContentPresenter, Button.IconAction /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="Button.IconButton:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.IconAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ControlHoverBrush}" />
+    </Style>
+
+    <Style Selector="Button.IconAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}" />
+    </Style>
+
+    <Style Selector="Button.IconButton:pressed /template/ ContentPresenter#PART_ContentPresenter, Button.IconAction:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ControlPressedBrush}" />
+    </Style>
+
+    <Style Selector="Button.IconButton:disabled, Button.IconAction:disabled">
+        <Setter Property="Opacity" Value="0.4" />
+    </Style>
+
+    <Style Selector="Button.IconButton:disabled /template/ ContentPresenter#PART_ContentPresenter, Button.IconAction:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="Button.IconButton Path.Icon, Button.IconAction Path.Icon">
+        <Setter Property="Stretch" Value="None" />
+        <Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Stroke" Duration="0:0:0.12" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="Button.IconButton:pointerover Path.Icon, Button.IconAction:pointerover Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+
+    <!-- Tinted glyphs keep their color on hover; the fill behind them still changes. -->
+    <Style Selector="Path.Icon.Accent">
+        <Setter Property="Stroke" Value="{DynamicResource AccentBrush}" />
+    </Style>
+
+    <Style Selector="Path.Icon.Success">
+        <Setter Property="Stroke" Value="{DynamicResource AccentGreenBrush}" />
+    </Style>
+
+    <Style Selector="Path.Icon.Danger">
+        <Setter Property="Stroke" Value="{DynamicResource AccentErrorBrush}" />
+    </Style>
+
+    <Style Selector="Path.Icon.Muted">
+        <Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}" />
     </Style>
 
     <Style Selector="Border.IconBadge">
@@ -281,31 +369,32 @@
         <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
     </Style>
 
-    <Style Selector="Button.IconButton">
-        <Setter Property="MinWidth" Value="28" />
-        <Setter Property="MinHeight" Value="28" />
-        <Setter Property="Padding" Value="0" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="Cursor" Value="Hand" />
+    <Style Selector="Border.IconBadge Path.Icon">
+        <Setter Property="Fill" Value="{x:Null}" />
+        <Setter Property="Stroke" Value="{DynamicResource AccentBrush}" />
     </Style>
 
-    <Style Selector="Button.IconButton /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="HorizontalAlignment" Value="Center" />
+    <!-- Talk button: the whole round button turns red while recording a command. -->
+    <Style Selector="Button.TalkButton.listening /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentErrorBrush}" />
+    </Style>
+
+    <Style Selector="Button.TalkButton.listening:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentErrorDimBrush}" />
+    </Style>
+
+    <Style Selector="Button.TalkButton.listening Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource AccentOnBrush}" />
+    </Style>
+
+    <Style Selector="ProgressBar.VoiceMeter">
+        <Setter Property="Width" Value="44" />
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="Height" Value="4" />
+        <Setter Property="MinHeight" Value="4" />
+        <Setter Property="CornerRadius" Value="2" />
         <Setter Property="VerticalAlignment" Value="Center" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="Padding" Value="0" />
-    </Style>
-
-    <Style Selector="Button.IconButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}" />
-    </Style>
-
-    <Style Selector="Button.IconButton Path">
-        <Setter Property="HorizontalAlignment" Value="Center" />
-        <Setter Property="VerticalAlignment" Value="Center" />
-        <Setter Property="Stretch" Value="Uniform" />
+        <Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}" />
     </Style>
 
     <Style Selector="Button.CompactIconButton">
@@ -328,12 +417,122 @@
     </Style>
 
     <Style Selector="Button.CompactAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}" />
+        <Setter Property="Background" Value="{DynamicResource ControlHoverBrush}" />
     </Style>
 
     <!-- ========================= -->
     <!-- PILLS / BADGES -->
     <!-- ========================= -->
+
+    <!-- A pill that acts as a button, such as the title bar status. -->
+    <Style Selector="Button.PillButton">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style Selector="Button.PillButton /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="Button.PillButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="Button.PillButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="Button.PillButton:pointerover Border.Pill">
+        <Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}" />
+    </Style>
+
+    <!-- Segmented control: the activity drawer tabs and the Extensions tabs -->
+    <Style Selector="Border.Segmented">
+        <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="3"/>
+    </Style>
+
+    <Style Selector="Button.DrawerTab">
+        <Setter Property="MinHeight" Value="28"/>
+        <Setter Property="Padding" Value="8,0"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+
+    <Style Selector="Button.DrawerTab:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+
+    <Style Selector="Button.DrawerTab.Selected">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+
+    <Style Selector="Button.DrawerTab.Selected /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
+        <Setter Property="BoxShadow" Value="0 1 2 0 #1F000000"/>
+    </Style>
+
+    <Style Selector="Button.DrawerTab Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}"/>
+    </Style>
+
+    <Style Selector="Button.DrawerTab:pointerover Path.Icon, Button.DrawerTab.Selected Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+
+    <!-- Filter chips, such as the kinds on the Extensions page -->
+    <Style Selector="Button.Chip">
+        <Setter Property="MinHeight" Value="28"/>
+        <Setter Property="Padding" Value="12,0"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="14"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+
+    <Style Selector="Button.Chip:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+
+    <Style Selector="Button.Chip.Selected">
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+    </Style>
+
+    <Style Selector="Button.Chip.Selected /template/ ContentPresenter#PART_ContentPresenter, Button.Chip.Selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+    </Style>
+
+    <Style Selector="Button.Chip TextBlock.ChipCount">
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+    </Style>
+
+    <Style Selector="Button.Chip.Selected TextBlock.ChipCount">
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+    </Style>
 
     <Style Selector="Border.Pill">
         <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}" />
@@ -405,6 +604,16 @@
         <Setter Property="BorderThickness" Value="1" />
     </Style>
 
+    <!-- Disabled inputs keep their surface and fade, like disabled actions -->
+    <Style Selector="TextBox:disabled">
+        <Setter Property="Opacity" Value="0.5" />
+    </Style>
+
+    <Style Selector="TextBox:disabled /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}" />
+    </Style>
+
     <Style Selector="ToggleSwitch">
         <Setter Property="Cursor" Value="Hand" />
     </Style>
@@ -425,6 +634,15 @@
 
     <Style Selector="ComboBox:focus /template/ Border#Background">
         <Setter Property="BorderBrush" Value="{DynamicResource AccentStrongBrush}" />
+    </Style>
+
+    <Style Selector="ComboBox:disabled">
+        <Setter Property="Opacity" Value="0.5" />
+    </Style>
+
+    <Style Selector="ComboBox:disabled /template/ Border#Background">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}" />
     </Style>
 
     <!-- ========================= -->
@@ -549,12 +767,16 @@
     </Style>
 
     <Style Selector="Button.MarkdownCopy:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}" />
+        <Setter Property="Background" Value="{DynamicResource ControlHoverBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
 
     <Style Selector="Button.MarkdownCopy Path.Icon">
         <Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}" />
+    </Style>
+
+    <Style Selector="Button.MarkdownCopy:pointerover Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
 
     <Style Selector="Border.MarkdownTable">
@@ -577,6 +799,122 @@
     <Style Selector="Border.MarkdownTableCell.Header SelectableTextBlock">
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+
+    <!-- List pages (Extensions, Skills): rows, group headers, status dots and row toggles -->
+    <Style Selector="Border.ListRow">
+        <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Padding" Value="12,10"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="BorderBrush" Duration="0:0:0.12"/>
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="Border.ListRow:pointerover">
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+    </Style>
+
+    <Style Selector="Border.KindIcon">
+        <Setter Property="Width" Value="32"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="8"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+    </Style>
+
+    <Style Selector="Border.KindIcon Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource AccentBrush}"/>
+    </Style>
+
+    <Style Selector="Border.StatusDot">
+        <Setter Property="Width" Value="7"/>
+        <Setter Property="Height" Value="7"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Background" Value="{DynamicResource TextMutedBrush}"/>
+    </Style>
+
+    <Style Selector="Border.StatusDot.Success">
+        <Setter Property="Background" Value="{DynamicResource AccentGreenBrush}"/>
+    </Style>
+
+    <Style Selector="Border.StatusDot.Danger">
+        <Setter Property="Background" Value="{DynamicResource AccentErrorBrush}"/>
+    </Style>
+
+    <Style Selector="Border.StatusDot.Accent">
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+    </Style>
+
+    <Style Selector="Border.StatusDot.Warning">
+        <Setter Property="Background" Value="{DynamicResource AccentOrangeBrush}"/>
+    </Style>
+
+    <Style Selector="TextBlock.GroupTitle">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="TextBlock.GroupCount">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="TextBlock.RowTitle">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+
+    <Style Selector="TextBlock.RowText">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+
+    <Style Selector="TextBlock.ErrorText">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentErrorBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <Style Selector="TextBlock.EmptyText">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <Style Selector="Button.LinkAction">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="2,0"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+
+    <Style Selector="Button.LinkAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentStrongBrush}"/>
+    </Style>
+
+    <Style Selector="ToggleSwitch.RowToggle">
+        <Setter Property="OnContent" Value=""/>
+        <Setter Property="OffContent" Value=""/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
 
 </Styles>

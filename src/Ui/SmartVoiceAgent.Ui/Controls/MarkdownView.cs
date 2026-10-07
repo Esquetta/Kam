@@ -11,6 +11,7 @@ using Markdig.Extensions.Tables;
 using Markdig.Extensions.TaskLists;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
+using SmartVoiceAgent.Ui.Services;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -24,7 +25,8 @@ namespace SmartVoiceAgent.Ui.Controls;
 /// <summary>
 /// Renders Markdown as selectable text: headings, paragraphs, lists, quotes, tables and code blocks
 /// with a copy button. Blocks whose source did not change keep their controls, so a streaming reply
-/// only rebuilds its last block.
+/// only rebuilds its last block. Its own labels (code-block chrome, copy buttons, image placeholders)
+/// follow the interface language while the view is on screen.
 /// </summary>
 public sealed class MarkdownView : Decorator
 {
@@ -44,6 +46,7 @@ public sealed class MarkdownView : Decorator
     private readonly StackPanel _panel = new() { Spacing = 10 };
     private readonly List<RenderedBlock> _rendered = [];
     private bool _isDirty;
+    private string? _renderedLanguage;
 
     static MarkdownView()
     {
@@ -74,6 +77,26 @@ public sealed class MarkdownView : Decorator
 
     /// <summary>Gets how many blocks the last render built rather than reused, for tests.</summary>
     public int LastBuiltBlockCount { get; private set; }
+
+    /// <inheritdoc />
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
+
+        // The language may have changed while this view was off screen.
+        if (_renderedLanguage is not null && _renderedLanguage != LocalizationService.Instance.CurrentLanguage)
+        {
+            RebuildAll();
+        }
+    }
+
+    /// <inheritdoc />
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
+        base.OnDetachedFromVisualTree(e);
+    }
 
     /// <inheritdoc />
     protected override Size MeasureOverride(Size availableSize)
@@ -155,6 +178,30 @@ public sealed class MarkdownView : Decorator
         }
 
         LastBuiltBlockCount = built;
+        _renderedLanguage = LocalizationService.Instance.CurrentLanguage;
+    }
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            RebuildAll();
+        }
+        else
+        {
+            Dispatcher.UIThread.Post(RebuildAll);
+        }
+    }
+
+    /// <summary>
+    /// Drops every block so the next layout builds them again with labels in the current language.
+    /// </summary>
+    private void RebuildAll()
+    {
+        _rendered.Clear();
+        _panel.Children.Clear();
+        _isDirty = true;
+        InvalidateMeasure();
     }
 
     private static string SourceOf(string markdown, Block block)
@@ -274,10 +321,10 @@ public sealed class MarkdownView : Decorator
             VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled
         };
 
-        var label = new TextBlock { Text = string.IsNullOrWhiteSpace(language) ? "code" : language };
+        var label = new TextBlock { Text = string.IsNullOrWhiteSpace(language) ? Loc.Get("Chat.Markdown.CodeLabel") : language };
         label.Classes.Add("MarkdownCodeLanguage");
 
-        var copy = CreateCopyButton(() => text, "Copy code");
+        var copy = CreateCopyButton(() => text, Loc.Get("Chat.Markdown.CopyCode"));
         var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
         Grid.SetColumn(copy, 1);
         header.Children.Add(label);
@@ -414,7 +461,13 @@ public sealed class MarkdownView : Decorator
                     break;
 
                 case LinkInline link when link.IsImage:
-                    AddRun(target, string.IsNullOrWhiteSpace(link.Title) ? "[image]" : $"[image: {link.Title}]", style, ref offset);
+                    AddRun(
+                        target,
+                        string.IsNullOrWhiteSpace(link.Title)
+                            ? Loc.Get("Chat.Markdown.Image")
+                            : Loc.Format("Chat.Markdown.ImageWithTitle", link.Title),
+                        style,
+                        ref offset);
                     break;
 
                 case LinkInline link:
@@ -545,12 +598,13 @@ public sealed class MarkdownView : Decorator
 
     /// <summary>
     /// Creates the small copy button used on code blocks. It shows "Copied" for a moment after a click.
+    /// Its label is in the interface language at the time it is created or clicked.
     /// </summary>
     /// <param name="text">Returns the text to copy.</param>
     /// <param name="tip">The button's tooltip.</param>
     public static Button CreateCopyButton(Func<string> text, string tip)
     {
-        var label = new TextBlock { Text = "Copy" };
+        var label = new TextBlock { Text = Loc.Get("Common.Copy") };
         var icon = new Avalonia.Controls.Shapes.Path { Classes = { "Icon" } };
         icon.Bind(Avalonia.Controls.Shapes.Path.DataProperty, icon.GetResourceObservable("IconCopy"));
         var content = new StackPanel
@@ -572,9 +626,9 @@ public sealed class MarkdownView : Decorator
             }
 
             await clipboard.SetTextAsync(text());
-            label.Text = "Copied";
+            label.Text = Loc.Get("Common.Copied");
             await Task.Delay(1500);
-            label.Text = "Copy";
+            label.Text = Loc.Get("Common.Copy");
         };
 
         return button;

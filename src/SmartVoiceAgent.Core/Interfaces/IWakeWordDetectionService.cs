@@ -74,6 +74,18 @@ public class WakeWordDetectedEventArgs : System.EventArgs
     /// </summary>
     public DateTime DetectedAt { get; }
 
+    /// <summary>
+    /// Gets the words heard after the wake phrase in the same breath, such as "open Spotify" in
+    /// "Hey Kam, open Spotify"; empty when the wake phrase was said alone.
+    /// </summary>
+    public string FollowingText { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the recorded utterance that held the wake phrase (16 kHz mono 16-bit PCM), so the words after it can
+    /// be transcribed again with a larger model.
+    /// </summary>
+    public byte[] Utterance { get; init; } = [];
+
     public WakeWordDetectedEventArgs(string wakeWord, float confidence, int? directionOfArrival = null)
     {
         WakeWord = wakeWord;

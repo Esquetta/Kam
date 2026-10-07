@@ -8,6 +8,9 @@
     <Color x:Key="CardBg">#FFFFFF</Color>
     <Color x:Key="SurfaceBgElevated">#FFFFFF</Color>
     <Color x:Key="CardBgHover">#F0F0F4</Color>
+    <!-- Translucent fills for ghost controls, so hover reads the same on any surface -->
+    <Color x:Key="ControlHover">#1015151B</Color>
+    <Color x:Key="ControlPressed">#1E15151B</Color>
     <Color x:Key="BorderSubtle">#E5E5EB</Color>
     <Color x:Key="BorderMuted">#D4D4DC</Color>
     <Color x:Key="TextPrimary">#15151B</Color>

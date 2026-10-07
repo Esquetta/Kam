@@ -1,4 +1,5 @@
 using FluentAssertions;
+using SmartVoiceAgent.Ui.Services;
 using System.Xml.Linq;
 
 namespace SmartVoiceAgent.Tests.Ui;
@@ -8,7 +9,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_TitleDoesNotRenderProductNameOverSystemStatus()
     {
-        var mainWindow = XDocument.Load(FindMainWindowXamlPath()).Root;
+        var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root;
 
         mainWindow.Should().NotBeNull();
         mainWindow!.Attribute("Title")?.Value.Should().BeEmpty();
@@ -18,7 +19,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_LogPanelUsesCalmerActivityCopy()
     {
-        var mainWindow = XDocument.Load(FindMainWindowXamlPath()).Root;
+        var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root;
 
         var visibleText = mainWindow!
             .Descendants()
@@ -44,7 +45,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_UsesModernWorkbenchShellChrome()
     {
-        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
 
         mainWindowText.Should().Contain("Agent workspace");
         mainWindowText.Should().Contain("Border.Sidebar");
@@ -64,7 +65,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_UsesAgentWorkbenchDrawerTabs()
     {
-        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
 
         mainWindowText.Should().Contain("SelectedActivityPanelMode");
         mainWindowText.Should().Contain("ShowRunsCommand");
@@ -81,7 +82,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_ComposerExposesFileAttachmentChips()
     {
-        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
 
         mainWindowText.Should().Contain("Attach files");
         mainWindowText.Should().Contain("OnAttachFilesClick");
@@ -100,7 +101,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_ExposesMultiSessionAgentWorkbench()
     {
-        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
 
         mainWindowText.Should().Contain("AgentChatSessions");
         mainWindowText.Should().Contain("SelectedAgentChatSession.Messages");
@@ -125,7 +126,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_ThreadListSupportsSearchRenameAndDelete()
     {
-        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
 
         mainWindowText.Should().Contain("x:Name=\"ChatSearchInput\"");
         mainWindowText.Should().Contain("PlaceholderText=\"Search chats (Ctrl+K)\"");
@@ -148,7 +149,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_ChatRendersMarkdownWithCopyButtonsAndAModelPicker()
     {
-        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
 
         mainWindowText.Should().Contain("xmlns:controls=\"using:SmartVoiceAgent.Ui.Controls\"");
         mainWindowText.Should().Contain("<controls:MarkdownView Markdown=\"{Binding Content}\"/>");
@@ -164,8 +165,8 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_ComposerSendsOnEnterAndAddsLinesOnShiftEnter()
     {
-        var mainWindow = XDocument.Load(FindMainWindowXamlPath()).Root;
-        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+        var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root;
+        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
 
         var prompt = mainWindow!
             .Descendants()
@@ -180,7 +181,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_SidebarAndPageHost_IncludeExtensions()
     {
-        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
 
         mainWindowText.Should().Contain("Command=\"{Binding NavigateToExtensionsCommand}\"");
         mainWindowText.Should().Contain("ConverterParameter={x:Static vm:NavView.Extensions}");
@@ -192,7 +193,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_ChatRendersAgentToolStepsAndApprovalCards()
     {
-        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
 
         mainWindowText.Should().Contain("IsVisible=\"{Binding IsToolStep}\"");
         mainWindowText.Should().Contain("Classes.Approval=\"{Binding IsAwaitingApproval}\"");
@@ -214,7 +215,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_ActivityPanelUsesStructuredFeedBindings()
     {
-        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
 
         mainWindowText.Should().Contain("ItemsSource=\"{Binding ActivityLogEntries}\"");
         mainWindowText.Should().Contain("ItemsSource=\"{Binding RuntimeAgentActivities}\"");
@@ -241,7 +242,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_ExposesRuntimeDiagnosticsNavigation()
     {
-        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
 
         mainWindowText.Should().Contain("NavigateToDiagnosticsCommand");
         mainWindowText.Should().Contain("RuntimeDiagnosticsViewModel");
@@ -252,7 +253,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_ExposesSlashCommandPaletteBindings()
     {
-        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
 
         mainWindowText.Should().Contain("IsSlashCommandPaletteVisible");
         mainWindowText.Should().Contain("SlashCommandSuggestions");
@@ -263,8 +264,8 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_SlashCommandPaletteUsesCalmSuggestionChrome()
     {
-        var mainWindow = XDocument.Load(FindMainWindowXamlPath()).Root;
-        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+        var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root;
+        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
 
         var templates = mainWindow!
             .Descendants()
@@ -311,7 +312,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_SlashCommandPaletteAvoidsAlertColorsAndShadowEffects()
     {
-        var mainWindow = XDocument.Load(FindMainWindowXamlPath()).Root;
+        var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root;
 
         var templates = mainWindow!
             .Descendants()
@@ -363,7 +364,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_BottomNavigationOnlyRendersThemeToggle()
     {
-        var mainWindow = XDocument.Load(FindMainWindowXamlPath()).Root;
+        var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root;
 
         var bottomNavigation = mainWindow!
             .Descendants()
@@ -385,6 +386,107 @@ public sealed class MainWindowMetadataTests
             .Where(element => element.Name.LocalName == "Border")
             .Should()
             .BeEmpty();
+    }
+
+    [Fact]
+    public void MainWindow_ThemeToggleLabelFollowsTheLanguage()
+    {
+        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
+        var mainWindow = XDocument.Parse(mainWindowText).Root;
+
+        var labelGroup = mainWindow!
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "StackPanel"
+                && AttributeValue(element, "Classes") == "SidebarFooter")
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Panel" && AttributeValue(element, "Classes") == "NavLabelGroup");
+
+        var labels = labelGroup.Elements().Where(element => element.Name.LocalName == "TextBlock").ToArray();
+        labels.Should().HaveCount(2);
+        labels.Select(label => (AttributeValue(label, "Text"), AttributeValue(label, "IsVisible")))
+            .Should()
+            .BeEquivalentTo(new[]
+            {
+                ("{DynamicResource Lang.Shell.LightMode}", "{Binding IsDarkMode}"),
+                ("{DynamicResource Lang.Shell.DarkMode}", "{Binding !IsDarkMode}")
+            });
+
+        // The labels bind IsVisible themselves, so the compact sidebar hides their group instead.
+        mainWindowText.Should().Contain("<Style Selector=\"Border.Sidebar.Compact Panel.NavLabelGroup\">");
+        mainWindowText.Should().NotContain("ConverterParameter='Light mode|Dark mode'");
+
+        LocalizedXaml.English["Shell.LightMode"].Should().Be("Light mode");
+        LocalizedXaml.English["Shell.DarkMode"].Should().Be("Dark mode");
+        var turkish = LocalizationService.LoadDictionary("tr-TR");
+        turkish["Shell.LightMode"].Should().Be("Açık tema");
+        turkish["Shell.DarkMode"].Should().Be("Koyu tema");
+    }
+
+    [Fact]
+    public void MainWindow_ComposerTogglesReadingRepliesAloud()
+    {
+        var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root!;
+        var button = mainWindow.Descendants().Single(element => AttributeValue(element, "Name") == "SpokenRepliesButton");
+
+        AttributeValue(button, "Command").Should().Be("{Binding ToggleSpokenRepliesCommand}");
+        AttributeValue(button, "ToolTip.Tip").Should().Be("{Binding SpokenRepliesToolTip}");
+        button.Descendants()
+            .Where(element => element.Name.LocalName == "Path")
+            .Select(element => AttributeValue(element, "Data"))
+            .Should().Equal("{StaticResource IconVolume}", "{StaticResource IconVolumeOff}");
+
+        var turkish = LocalizationService.LoadDictionary("tr-TR");
+        turkish["Voice.SpokenReplies.TurnOn"].Should().Be("Yanıtları sesli oku");
+        turkish["Voice.SpokenReplies.TurnOff"].Should().Be("Yanıtları sesli okumayı kapat");
+    }
+
+    [Fact]
+    public void MainWindow_MicButtonsTalkAndTheComposerShowsVoiceStatus()
+    {
+        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
+        var mainWindow = XDocument.Parse(mainWindowText).Root!;
+        var talkButtons = mainWindow
+            .Descendants()
+            .Where(element => element.Name.LocalName == "Button"
+                && (AttributeValue(element, "Classes") ?? string.Empty).Contains("TalkButton", StringComparison.Ordinal))
+            .ToArray();
+
+        talkButtons.Should().HaveCount(2, "the chat composer and the command prompt on other pages both have one");
+        foreach (var button in talkButtons)
+        {
+            AttributeValue(button, "Command").Should().Be("{Binding TalkCommand}");
+            AttributeValue(button, "ToolTip.Tip").Should().Be("{Binding TalkToolTip}");
+            AttributeValue(button, "IsEnabled").Should().Be("{Binding IsVoiceAvailable}");
+            AttributeValue(button, "Classes.listening").Should().Be("{Binding IsVoiceListening}");
+        }
+
+        mainWindowText.Should().NotContain("ToggleVoiceCommand");
+        mainWindowText.Should().NotContain("Toggle Voice Control");
+
+        var status = mainWindow.Descendants().Single(element => AttributeValue(element, "Name") == "VoiceStatusPanel");
+        AttributeValue(status, "IsVisible").Should().Be("{Binding IsVoiceStatusVisible}");
+        status.Descendants().Should().Contain(element =>
+            element.Name.LocalName == "ProgressBar" && AttributeValue(element, "Value") == "{Binding VoiceMeterValue}");
+        status.Descendants().Should().Contain(element =>
+            element.Name.LocalName == "Button"
+            && AttributeValue(element, "Command") == "{Binding CancelVoiceCommand}"
+            && AttributeValue(element, "ToolTip.Tip") == "Cancel (Esc)");
+    }
+
+    [Fact]
+    public void MainWindow_HeaderStatusIsAButtonWithATooltip()
+    {
+        var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root!;
+
+        var status = mainWindow.Descendants().Single(element => AttributeValue(element, "Name") == "HeaderStatusButton");
+
+        status.Name.LocalName.Should().Be("Button");
+        AttributeValue(status, "Classes").Should().Be("PillButton");
+        AttributeValue(status, "Command").Should().Be("{Binding HeaderStatusCommand}");
+        AttributeValue(status, "ToolTip.Tip").Should().Be("{Binding StatusToolTip}");
+        status.Descendants().Should().Contain(element =>
+            element.Name.LocalName == "TextBlock" && AttributeValue(element, "Text") == "{Binding StatusText, Mode=OneWay}");
     }
 
     private static string? AttributeValue(XElement element, string attributeName)

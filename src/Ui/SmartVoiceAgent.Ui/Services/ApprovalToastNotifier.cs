@@ -14,9 +14,6 @@ namespace SmartVoiceAgent.Ui.Services;
 /// </summary>
 public sealed class ApprovalToastNotifier : IApprovalNotifier
 {
-    private const string WaitingToolTip = "Kam - waiting for your approval";
-    private const string IdleToolTip = "Kam - AI Workstation Assistant";
-
     private readonly Window _mainWindow;
     private readonly TrayIconService? _trayIconService;
     private readonly List<ApprovalNotice> _pending = [];
@@ -49,7 +46,7 @@ public sealed class ApprovalToastNotifier : IApprovalNotifier
 
         _pending.RemoveAll(pending => pending.RequestId == notice.RequestId);
         _pending.Add(notice);
-        _trayIconService?.UpdateToolTip(WaitingToolTip);
+        _trayIconService?.SetApprovalWaiting(true);
         Refresh();
     }
 
@@ -80,7 +77,7 @@ public sealed class ApprovalToastNotifier : IApprovalNotifier
     {
         if (_pending.Count == 0)
         {
-            _trayIconService?.UpdateToolTip(IdleToolTip);
+            _trayIconService?.SetApprovalWaiting(false);
             CloseToast();
             return;
         }

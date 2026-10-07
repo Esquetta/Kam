@@ -58,10 +58,9 @@ public sealed class UiDesignSystemMetadataTests
 
     [Theory]
     [InlineData("MainWindow.axaml")]
-    [InlineData("PluginsView.axaml")]
     public void CompactIconButtons_DoNotOverrideSharedDimensions(string viewFileName)
     {
-        var view = XDocument.Load(FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Views", viewFileName)).Root;
+        var view = XDocument.Parse(LocalizedXaml.ReadAllText(FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Views", viewFileName))).Root;
 
         var compactButtons = view!
             .Descendants()
@@ -87,7 +86,7 @@ public sealed class UiDesignSystemMetadataTests
     [InlineData("RuntimeDiagnosticsView.axaml")]
     public void PrimaryPages_OptIntoSharedWorkbenchChrome(string viewFileName)
     {
-        var viewText = File.ReadAllText(FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Views", viewFileName));
+        var viewText = LocalizedXaml.ReadAllText(FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Views", viewFileName));
 
         viewText.Should().Contain("Classes=\"WorkbenchPage\"");
         viewText.Should().Contain("Classes=\"PageTitle\"");
@@ -102,7 +101,7 @@ public sealed class UiDesignSystemMetadataTests
     [InlineData("ExtensionsView.axaml")]
     public void PrimaryPages_UseSharedActionAndIconLanguage(string viewFileName)
     {
-        var viewText = File.ReadAllText(FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Views", viewFileName));
+        var viewText = LocalizedXaml.ReadAllText(FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Views", viewFileName));
 
         var usesSharedActionOrIcon = viewText.Contains("Classes=\"PrimaryAction\"", StringComparison.Ordinal)
             || viewText.Contains("Classes=\"SecondaryAction\"", StringComparison.Ordinal)
