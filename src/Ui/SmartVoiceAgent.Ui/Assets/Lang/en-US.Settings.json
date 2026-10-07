@@ -71,7 +71,7 @@
   "Settings.Voice.Model.Hint.Tiny": "Kept for the wake phrase",
   "Settings.Voice.Model.Hint.Base": "Fast",
   "Settings.Voice.Model.Hint.Small": "More accurate",
-  "Settings.Voice.Model.Hint.LargeV3Turbo": "Most accurate, slower",
+  "Settings.Voice.Model.Hint.LargeV3Turbo": "Most accurate, best for Turkish; needs a graphics card to be fast",
   "Settings.Voice.Model.Download": "Download",
   "Settings.Voice.Model.Downloaded": "Downloaded",
   "Settings.Voice.Model.NotDownloaded": "Not downloaded yet. It downloads the first time you talk to Kam.",

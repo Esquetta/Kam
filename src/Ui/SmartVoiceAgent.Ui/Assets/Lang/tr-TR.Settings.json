@@ -71,7 +71,7 @@
   "Settings.Voice.Model.Hint.Tiny": "Uyandırma sözcüğü için ayrıldı",
   "Settings.Voice.Model.Hint.Base": "Hızlı",
   "Settings.Voice.Model.Hint.Small": "Daha doğru",
-  "Settings.Voice.Model.Hint.LargeV3Turbo": "En doğru, daha yavaş",
+  "Settings.Voice.Model.Hint.LargeV3Turbo": "En doğru, Türkçe için en iyisi; hızlı çalışması için ekran kartı gerekir",
   "Settings.Voice.Model.Download": "İndir",
   "Settings.Voice.Model.Downloaded": "İndirildi",
   "Settings.Voice.Model.NotDownloaded": "Henüz indirilmedi. Kam ile ilk konuştuğunuzda indirilir.",

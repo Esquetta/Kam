@@ -85,7 +85,7 @@ public sealed class SettingsViewModelVoiceTests : IDisposable
         viewModel.LocalSpeechModelOptions.Select(option => option.Label)
             .Should().Equal("base · 148 MB", "small · 488 MB", "large-v3-turbo · 574 MB");
         viewModel.LocalSpeechModelOptions.Select(option => option.Hint)
-            .Should().Equal("Fast", "More accurate", "Most accurate, slower");
+            .Should().Equal("Fast", "More accurate", "Most accurate, best for Turkish; needs a graphics card to be fast");
         viewModel.SelectedLocalSpeechModel!.Name.Should().Be("base");
 
         viewModel.SelectedLocalSpeechModel = viewModel.LocalSpeechModelOptions[1];
