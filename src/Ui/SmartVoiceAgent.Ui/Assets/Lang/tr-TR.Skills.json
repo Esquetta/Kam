@@ -1,6 +1,29 @@
 {
   "Skills.Title": "Yetenekler",
-  "Skills.Subtitle": "Yüklü yetenekleri yönetin, test edin ve izin verin.",
+  "Skills.Subtitle": "Ajanın araç olarak kullandığı yerleşik yetenekler. Açıp kapatın, izin verin ve test edin.",
+
+  "Skills.Search.Placeholder": "Yeteneklerde ara",
+
+  "Skills.Filter.All": "Tümü",
+  "Skills.Filter.On": "Açık",
+  "Skills.Filter.Attention": "İlgi bekleyen",
+  "Skills.Filter.Off": "Kapalı",
+
+  "Skills.NoMatches.Title": "Gösterilecek yetenek yok",
+  "Skills.NoMatches.Search": "“{0}” ile eşleşen bir şey yok.",
+  "Skills.NoMatches.Filter": "Bu görünümde yetenek yok.",
+
+  "Skills.Group.Apps": "Uygulamalar",
+  "Skills.Group.Files": "Dosyalar ve klasörler",
+  "Skills.Group.Code": "Kod ve çalışma alanı",
+  "Skills.Group.Web": "Web",
+  "Skills.Group.Communication": "E-posta ve SMS",
+  "Skills.Group.System": "Sistem ve ekran",
+  "Skills.Group.Automation": "Kabuk ve ajanlar",
+  "Skills.Group.Other": "İçe aktarılan ve diğer",
+
+  "Skills.Summary.NoPermissions": "Özel izin gerekmez",
+  "Skills.Summary.Uses": "Kullandığı izinler: {0}",
 
   "Skills.Eval.RunTip": "Duman testlerini çalıştır",
   "Skills.Eval.NotRun": "Duman testleri çalıştırılmadı",
@@ -19,6 +42,9 @@
   "Skills.Eval.Fail": "Kaldı",
   "Skills.Eval.ExpectedActual": "Beklenen: {0} | Gerçek: {1}",
   "Skills.Eval.NoDetail": "Test ayrıntısı yok.",
+  "Skills.Eval.Run": "Testleri çalıştır",
+  "Skills.Eval.ShowResults": "Sonuçları göster",
+  "Skills.Eval.HideResults": "Sonuçları gizle",
 
   "Skills.Import.LocalFolder": "Yerel klasör",
   "Skills.Import.SkillsShFolder": "skills.sh klasörü",
@@ -31,6 +57,8 @@
   "Skills.Import.ImportedMany": "{0} yetenek içe aktarıldı. Kullanmadan önce inceleyin.",
   "Skills.Import.NoneFound": "Yetenek bulunamadı. SKILL.md içeren bir klasör seçin.",
   "Skills.Import.Failed": "İçe aktarma başarısız: {0}",
+  "Skills.Import.Title": "Yetenek içe aktar",
+  "Skills.Import.PickFolder": "SKILL.md içeren bir klasör seçin",
 
   "Skills.Detail.NoSelection": "Yetenek seçilmedi",
   "Skills.Detail.Source": "Kaynak: {0}",
@@ -43,7 +71,7 @@
   "Skills.Detail.InstalledFromNone": "Yüklendiği yer: yok",
   "Skills.Detail.LastRun": "Son çalıştırma: {0}",
   "Skills.Detail.LastRunNone": "Son çalıştırma: yok",
-  "Skills.Detail.ExecutionHistory": "Çalıştırma geçmişi",
+  "Skills.Detail.ExecutionHistory": "Son çalıştırmalar",
   "Skills.Detail.NoExecutionDetail": "Çalıştırma ayrıntısı yok.",
 
   "Skills.Risk.Low": "düşük",
@@ -81,19 +109,24 @@
   "Skills.Test.Passed": "Yetenek testi geçti",
   "Skills.Test.Failed": "Yetenek testi başarısız",
 
+  "Skills.Toggle.Failed": "{0} değiştirilemedi",
+
   "Skills.Card.Details": "Ayrıntılar",
   "Skills.Card.ApproveReview": "İncelemeyi onayla",
   "Skills.Card.GrantPermissions": "İzin ver",
   "Skills.Card.RevokePermissions": "İzinleri geri al",
+  "Skills.Card.Toggle": "Aç veya kapat",
+  "Skills.Card.Approve": "Onayla",
+  "Skills.Card.Grant": "İzin ver",
 
   "Skills.BuiltIn.Configured": "Yerleşik yetenek yapılandırıldı.",
   "Skills.BuiltIn.Disabled": "Yetenek devre dışı.",
 
-  "Skills.Status.Healthy": "Sağlıklı",
-  "Skills.Status.Disabled": "Devre dışı",
-  "Skills.Status.MissingExecutor": "Yürütücü yok",
+  "Skills.Status.Healthy": "Hazır",
+  "Skills.Status.Disabled": "Kapalı",
+  "Skills.Status.MissingExecutor": "Kullanılamıyor",
   "Skills.Status.ReviewRequired": "Onay bekliyor",
-  "Skills.Status.PermissionDenied": "İzin yok",
+  "Skills.Status.PermissionDenied": "İzin gerekli",
   "Skills.Status.Unknown": "Bilinmiyor",
 
   "Skills.Run.Succeeded": "Başarılı",

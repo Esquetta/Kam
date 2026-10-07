@@ -1,6 +1,29 @@
 {
   "Skills.Title": "Skills",
-  "Skills.Subtitle": "Manage, test and grant permissions to installed skills.",
+  "Skills.Subtitle": "Built-in abilities the agent calls as tools. Turn them on or off, grant permissions and test them.",
+
+  "Skills.Search.Placeholder": "Search skills",
+
+  "Skills.Filter.All": "All",
+  "Skills.Filter.On": "On",
+  "Skills.Filter.Attention": "Needs attention",
+  "Skills.Filter.Off": "Off",
+
+  "Skills.NoMatches.Title": "No skills to show",
+  "Skills.NoMatches.Search": "Nothing matches “{0}”.",
+  "Skills.NoMatches.Filter": "No skills in this view.",
+
+  "Skills.Group.Apps": "Apps",
+  "Skills.Group.Files": "Files and folders",
+  "Skills.Group.Code": "Code and workspace",
+  "Skills.Group.Web": "Web",
+  "Skills.Group.Communication": "Email and SMS",
+  "Skills.Group.System": "System and screen",
+  "Skills.Group.Automation": "Shell and agents",
+  "Skills.Group.Other": "Imported and other",
+
+  "Skills.Summary.NoPermissions": "No special permissions",
+  "Skills.Summary.Uses": "Uses {0}",
 
   "Skills.Eval.RunTip": "Run smoke evals",
   "Skills.Eval.NotRun": "Smoke evals not run",
@@ -19,6 +42,9 @@
   "Skills.Eval.Fail": "Fail",
   "Skills.Eval.ExpectedActual": "Expected: {0} | Actual: {1}",
   "Skills.Eval.NoDetail": "No eval detail.",
+  "Skills.Eval.Run": "Run evals",
+  "Skills.Eval.ShowResults": "Show results",
+  "Skills.Eval.HideResults": "Hide results",
 
   "Skills.Import.LocalFolder": "Local folder",
   "Skills.Import.SkillsShFolder": "skills.sh folder",
@@ -31,6 +57,8 @@
   "Skills.Import.ImportedMany": "Imported {0} skills. Review required before use.",
   "Skills.Import.NoneFound": "No skills found. Select a folder containing SKILL.md.",
   "Skills.Import.Failed": "Import failed: {0}",
+  "Skills.Import.Title": "Import skills",
+  "Skills.Import.PickFolder": "Choose a folder with SKILL.md",
 
   "Skills.Detail.NoSelection": "No skill selected",
   "Skills.Detail.Source": "Source: {0}",
@@ -43,7 +71,7 @@
   "Skills.Detail.InstalledFromNone": "Installed From: n/a",
   "Skills.Detail.LastRun": "Last Run: {0}",
   "Skills.Detail.LastRunNone": "Last Run: none",
-  "Skills.Detail.ExecutionHistory": "Execution History",
+  "Skills.Detail.ExecutionHistory": "Recent runs",
   "Skills.Detail.NoExecutionDetail": "No execution detail.",
 
   "Skills.Risk.Low": "Low",
@@ -81,19 +109,24 @@
   "Skills.Test.Passed": "Skill test passed",
   "Skills.Test.Failed": "Skill test failed",
 
+  "Skills.Toggle.Failed": "Could not change {0}",
+
   "Skills.Card.Details": "Details",
-  "Skills.Card.ApproveReview": "Approve Review",
-  "Skills.Card.GrantPermissions": "Grant Permissions",
-  "Skills.Card.RevokePermissions": "Revoke Permissions",
+  "Skills.Card.ApproveReview": "Approve review",
+  "Skills.Card.GrantPermissions": "Grant permissions",
+  "Skills.Card.RevokePermissions": "Revoke permissions",
+  "Skills.Card.Toggle": "Turn on or off",
+  "Skills.Card.Approve": "Approve",
+  "Skills.Card.Grant": "Grant access",
 
   "Skills.BuiltIn.Configured": "Built-in skill configured.",
   "Skills.BuiltIn.Disabled": "Skill is disabled.",
 
-  "Skills.Status.Healthy": "Healthy",
-  "Skills.Status.Disabled": "Disabled",
-  "Skills.Status.MissingExecutor": "Missing Executor",
-  "Skills.Status.ReviewRequired": "Review Required",
-  "Skills.Status.PermissionDenied": "Permission Denied",
+  "Skills.Status.Healthy": "Ready",
+  "Skills.Status.Disabled": "Off",
+  "Skills.Status.MissingExecutor": "Not available",
+  "Skills.Status.ReviewRequired": "Needs review",
+  "Skills.Status.PermissionDenied": "Needs permission",
   "Skills.Status.Unknown": "Unknown",
 
   "Skills.Run.Succeeded": "Succeeded",

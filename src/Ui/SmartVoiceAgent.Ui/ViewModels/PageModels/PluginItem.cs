@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reactive;
 using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,6 +36,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             Loc.Format("Skills.Permissions.Granted", Loc.Get("Skills.Permissions.None"));
         private string _missingPermissionsText = string.Empty;
         private string _policyGuardrailText = string.Empty;
+        private bool _isOn;
+        private bool _isSelected;
+        private bool _isVisible = true;
 
         public string SkillId { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
@@ -42,11 +46,18 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public string Status { get; set; } = string.Empty;
         public string Source { get; set; } = string.Empty;
         public string ExecutorType { get; set; } = string.Empty;
+        public string SourceText { get; set; } = string.Empty;
+
+        /// <summary>Gets or sets the second line of the row: what needs fixing, the description, or the permissions it uses.</summary>
+        public string Summary { get; set; } = string.Empty;
+
+        /// <summary>Gets whether the details repeat the description because the row shows what needs fixing instead.</summary>
+        public bool ShowsDescriptionInDetails => NeedsAttention && !string.IsNullOrWhiteSpace(Description) && Description != Summary;
+        public string ExecutorText { get; set; } = string.Empty;
         public string RiskLevelText { get; set; } = string.Empty;
         public string ChecksumText { get; set; } = string.Empty;
         public string InstalledFromText { get; set; } = string.Empty;
         public string HealthDetail { get; set; } = string.Empty;
-        public string IconPath { get; set; } = string.Empty;
         public bool IsActive { get; set; }
         public bool CanTestSkill { get; set; }
         public bool CanApproveReview { get; set; }
@@ -147,21 +158,147 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         public bool HasExecutionHistory => ExecutionHistory.Count > 0;
 
-        // Color properties for the new design - use theme-aware colors
-        public IBrush IconColor { get; set; } = Brush.Parse("#8B7CFF");
-        public IBrush GlowColor { get; set; } = Brush.Parse("#248B7CFF");
-        // TextColor is now dynamic - returns TextPrimaryBrush for active plugins
-        public IBrush TextColor => IsActive ? GetThemeTextBrush() : Brush.Parse("#71717A");
-        public IBrush StatusColor { get; set; } = Brush.Parse("#10B981");
-        
-        private IBrush GetThemeTextBrush()
+        /// <summary>Gets or sets the group the skill is listed under, such as Files or Web.</summary>
+        public SkillCategory Category { get; set; } = SkillCategory.Other;
+
+        /// <summary>Gets or sets the icon resource shown on the row.</summary>
+        public string IconKey { get; set; } = "IconSparkles";
+
+        /// <summary>Gets whether the skill is turned on but cannot run until someone acts on it.</summary>
+        public bool NeedsAttention { get; set; }
+
+        /// <summary>Gets whether the skill is turned off.</summary>
+        public bool IsOff { get; set; }
+
+        /// <summary>Gets whether the details end with actions: test the skill or revoke its permissions.</summary>
+        public bool HasDetailActions => CanTestSkill || CanRevokePermissions;
+
+        /// <summary>Gets whether the row shows a one-click fix: approve the review or grant permissions.</summary>
+        public bool HasQuickFix => CanApproveReview || CanGrantPermissions;
+
+        /// <summary>Gets whether the row shows an on/off switch.</summary>
+        public bool CanToggle => SetEnabled is not null && (CanEnable || CanDisable);
+
+        /// <summary>Gets or sets what turns the skill on or off; set by the page.</summary>
+        public Func<bool, Task>? SetEnabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether the skill is on. Changing it turns the skill on or off.
+        /// </summary>
+        public bool IsOn
         {
-            var app = global::Avalonia.Application.Current;
-            if (app?.ActualThemeVariant == Avalonia.Styling.ThemeVariant.Dark)
+            get => _isOn;
+            set
             {
-                return Brush.Parse("#FAFAFA"); // White for dark mode
+                if (_isOn == value)
+                {
+                    return;
+                }
+
+                this.RaiseAndSetIfChanged(ref _isOn, value);
+                _ = SetEnabled?.Invoke(value);
             }
-            return Brush.Parse("#18181B"); // Dark for light mode
+        }
+
+        /// <summary>Gets or sets whether the row is expanded to show its details.</summary>
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set => this.RaiseAndSetIfChanged(ref _isSelected, value);
+        }
+
+        /// <summary>Gets or sets whether the row matches the page search and filter.</summary>
+        public bool IsVisible
+        {
+            get => _isVisible;
+            set => this.RaiseAndSetIfChanged(ref _isVisible, value);
+        }
+
+        /// <summary>
+        /// Sets the switch without turning the skill on or off, for example after the change failed.
+        /// </summary>
+        /// <param name="isOn">Whether the switch shows on.</param>
+        public void ShowIsOn(bool isOn)
+        {
+            _isOn = isOn;
+            this.RaisePropertyChanged(nameof(IsOn));
+        }
+    }
+
+    /// <summary>
+    /// The groups the Skills page lists skills under, in display order.
+    /// </summary>
+    public enum SkillCategory
+    {
+        Apps,
+        Files,
+        Code,
+        Web,
+        Communication,
+        System,
+        Automation,
+        Other
+    }
+
+    /// <summary>
+    /// Which skills the Skills page lists.
+    /// </summary>
+    public enum SkillsFilter
+    {
+        All,
+        On,
+        Attention,
+        Off
+    }
+
+    /// <summary>
+    /// A titled group of skills on the Skills page.
+    /// </summary>
+    public sealed class SkillGroupViewModel : ReactiveObject
+    {
+        private int _visibleCount;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SkillGroupViewModel"/> class.
+        /// </summary>
+        /// <param name="category">The group.</param>
+        /// <param name="title">The display title.</param>
+        /// <param name="items">The skills in the group.</param>
+        public SkillGroupViewModel(SkillCategory category, string title, IReadOnlyList<PluginItem> items)
+        {
+            Category = category;
+            Title = title;
+            Items = items;
+            _visibleCount = items.Count;
+        }
+
+        /// <summary>Gets the group.</summary>
+        public SkillCategory Category { get; }
+
+        /// <summary>Gets the display title.</summary>
+        public string Title { get; }
+
+        /// <summary>Gets the skills in the group.</summary>
+        public IReadOnlyList<PluginItem> Items { get; }
+
+        /// <summary>Gets how many skills match the search and filter.</summary>
+        public int VisibleCount
+        {
+            get => _visibleCount;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _visibleCount, value);
+                this.RaisePropertyChanged(nameof(IsVisible));
+            }
+        }
+
+        /// <summary>Gets whether any skill in the group matches.</summary>
+        public bool IsVisible => VisibleCount > 0;
+
+        /// <summary>Recounts the skills that match.</summary>
+        public void Refresh()
+        {
+            VisibleCount = Items.Count(item => item.IsVisible);
         }
     }
 
@@ -231,12 +368,113 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private SkillEvalSummary? _lastEvalSummary;
         private IReadOnlyCollection<SkillHealthReport> _lastReports = [];
         private bool _showsBuiltInSnapshot;
+        private ObservableCollection<SkillGroupViewModel> _groups = new();
+        private string _searchText = string.Empty;
+        private SkillsFilter _filter = SkillsFilter.All;
+        private int _onCount;
+        private int _attentionCount;
+        private int _offCount;
+        private bool _hasNoMatches;
+        private string _noMatchesText = string.Empty;
+        private bool _showEvalResults;
 
         public ObservableCollection<PluginItem> Plugins
         {
             get => _plugins;
             set => this.RaiseAndSetIfChanged(ref _plugins, value);
         }
+
+        /// <summary>Gets the skills grouped for the list, in display order.</summary>
+        public ObservableCollection<SkillGroupViewModel> Groups
+        {
+            get => _groups;
+            private set => this.RaiseAndSetIfChanged(ref _groups, value);
+        }
+
+        /// <summary>Gets or sets the text the list is filtered by.</summary>
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _searchText, value ?? string.Empty);
+                ApplyFilter();
+            }
+        }
+
+        /// <summary>Gets which skills the list shows.</summary>
+        public SkillsFilter Filter
+        {
+            get => _filter;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _filter, value);
+                this.RaisePropertyChanged(nameof(IsFilterAll));
+                this.RaisePropertyChanged(nameof(IsFilterOn));
+                this.RaisePropertyChanged(nameof(IsFilterAttention));
+                this.RaisePropertyChanged(nameof(IsFilterOff));
+            }
+        }
+
+        public bool IsFilterAll => Filter == SkillsFilter.All;
+        public bool IsFilterOn => Filter == SkillsFilter.On;
+        public bool IsFilterAttention => Filter == SkillsFilter.Attention;
+        public bool IsFilterOff => Filter == SkillsFilter.Off;
+
+        /// <summary>Gets how many skills are installed.</summary>
+        public int SkillCount => Plugins.Count;
+
+        /// <summary>Gets how many skills are on and ready.</summary>
+        public int OnCount
+        {
+            get => _onCount;
+            private set => this.RaiseAndSetIfChanged(ref _onCount, value);
+        }
+
+        /// <summary>Gets how many skills are on but cannot run yet.</summary>
+        public int AttentionCount
+        {
+            get => _attentionCount;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _attentionCount, value);
+                this.RaisePropertyChanged(nameof(HasAttention));
+            }
+        }
+
+        /// <summary>Gets whether any skill needs attention.</summary>
+        public bool HasAttention => AttentionCount > 0;
+
+        /// <summary>Gets how many skills are off.</summary>
+        public int OffCount
+        {
+            get => _offCount;
+            private set => this.RaiseAndSetIfChanged(ref _offCount, value);
+        }
+
+        /// <summary>Gets whether the search and filter hide every skill.</summary>
+        public bool HasNoMatches
+        {
+            get => _hasNoMatches;
+            private set => this.RaiseAndSetIfChanged(ref _hasNoMatches, value);
+        }
+
+        /// <summary>Gets what the empty list says.</summary>
+        public string NoMatchesText
+        {
+            get => _noMatchesText;
+            private set => this.RaiseAndSetIfChanged(ref _noMatchesText, value);
+        }
+
+        /// <summary>Gets or sets whether the eval results list is open.</summary>
+        public bool ShowEvalResults
+        {
+            get => _showEvalResults;
+            set => this.RaiseAndSetIfChanged(ref _showEvalResults, value);
+        }
+
+        /// <summary>Gets or sets the folder picker the view provides; it returns null when cancelled.</summary>
+        public Func<string, Task<string?>>? PickFolderAsync { get; set; }
 
         public ObservableCollection<SkillEvalResultItem> SkillEvalResults
         {
@@ -394,6 +632,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public ICommand ImportSkillCommand { get; }
         public ICommand RunSkillEvalCommand { get; }
         public ICommand SaveRuntimePolicyOptionCommand { get; }
+        public ReactiveCommand<string, Unit> SetFilterCommand { get; }
+        public ICommand ToggleEvalResultsCommand { get; }
+        public ICommand BrowseImportFolderCommand { get; }
 
         public PluginsViewModel()
         {
@@ -401,6 +642,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             ImportSkillCommand = ReactiveCommand.CreateFromTask(ImportSkillAsync);
             RunSkillEvalCommand = ReactiveCommand.CreateFromTask(RunSkillEvalAsync);
             SaveRuntimePolicyOptionCommand = ReactiveCommand.CreateFromTask(SaveRuntimePolicyOptionAsync);
+            SetFilterCommand = ReactiveCommand.Create<string>(SetFilter);
+            ToggleEvalResultsCommand = ReactiveCommand.Create(() => ShowEvalResults = !ShowEvalResults);
+            BrowseImportFolderCommand = ReactiveCommand.CreateFromTask(BrowseImportFolderAsync);
             LoadBuiltInSnapshot();
             LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
         }
@@ -556,10 +800,79 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             var selectedSkillId = SelectedPlugin?.SkillId;
             Plugins = new ObservableCollection<PluginItem>(
                 reports.Select(CreatePluginItem));
+            this.RaisePropertyChanged(nameof(SkillCount));
+            Groups = new ObservableCollection<SkillGroupViewModel>(Plugins
+                .GroupBy(item => item.Category)
+                .OrderBy(group => group.Key)
+                .Select(group => new SkillGroupViewModel(
+                    group.Key,
+                    FormatCategory(group.Key),
+                    group.OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase).ToArray())));
+            OnCount = Plugins.Count(item => item.IsActive);
+            AttentionCount = Plugins.Count(item => item.NeedsAttention);
+            OffCount = Plugins.Count(item => item.IsOff);
             ApplyPluginEvalResults(_lastEvalSummary);
-            SelectPlugin(!string.IsNullOrWhiteSpace(selectedSkillId)
-                ? selectedSkillId
-                : Plugins.FirstOrDefault()?.SkillId ?? string.Empty);
+            ApplyFilter();
+            SelectPlugin(selectedSkillId ?? string.Empty);
+        }
+
+        private void SetFilter(string filter)
+        {
+            Filter = Enum.TryParse<SkillsFilter>(filter, ignoreCase: true, out var value) ? value : SkillsFilter.All;
+            ApplyFilter();
+        }
+
+        private void ApplyFilter()
+        {
+            var search = SearchText.Trim();
+            foreach (var item in Plugins)
+            {
+                item.IsVisible = MatchesFilter(item) && MatchesSearch(item, search);
+            }
+
+            foreach (var group in Groups)
+            {
+                group.Refresh();
+            }
+
+            HasNoMatches = Plugins.Count > 0 && Plugins.All(item => !item.IsVisible);
+            NoMatchesText = search.Length > 0
+                ? Loc.Format("Skills.NoMatches.Search", search)
+                : Loc.Get("Skills.NoMatches.Filter");
+        }
+
+        private bool MatchesFilter(PluginItem item)
+        {
+            return Filter switch
+            {
+                SkillsFilter.On => item.IsActive,
+                SkillsFilter.Attention => item.NeedsAttention,
+                SkillsFilter.Off => item.IsOff,
+                _ => true
+            };
+        }
+
+        private static bool MatchesSearch(PluginItem item, string search)
+        {
+            return search.Length == 0
+                || item.Name.Contains(search, StringComparison.CurrentCultureIgnoreCase)
+                || item.SkillId.Contains(search, StringComparison.CurrentCultureIgnoreCase)
+                || item.Description.Contains(search, StringComparison.CurrentCultureIgnoreCase)
+                || item.Status.Contains(search, StringComparison.CurrentCultureIgnoreCase);
+        }
+
+        private async Task BrowseImportFolderAsync()
+        {
+            if (PickFolderAsync is null)
+            {
+                return;
+            }
+
+            var folder = await PickFolderAsync(Loc.Get("Skills.Import.PickFolder"));
+            if (!string.IsNullOrWhiteSpace(folder))
+            {
+                ImportLocation = folder;
+            }
         }
 
         private async Task RefreshHealthAsync(ISkillHealthService skillHealthService)
@@ -674,6 +987,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 StringComparison.OrdinalIgnoreCase));
             SelectedPlugin = plugin;
             HasSelectedPlugin = plugin is not null;
+            foreach (var candidate in Plugins)
+            {
+                candidate.IsSelected = ReferenceEquals(candidate, plugin);
+            }
 
             if (plugin is null)
             {
@@ -992,8 +1309,6 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         private PluginItem CreatePluginItem(SkillHealthReport report)
         {
-            var palette = GetStatusPalette(report.Status);
-
             var item = new PluginItem
             {
                 SkillId = report.SkillId,
@@ -1006,6 +1321,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 ExecutorType = string.IsNullOrWhiteSpace(report.ExecutorType)
                     ? Loc.Get("Skills.Detail.ExecutorUnknown")
                     : report.ExecutorType,
+                SourceText = Loc.Format("Skills.Detail.Source", report.Source),
+                ExecutorText = Loc.Format(
+                    "Skills.Detail.Executor",
+                    string.IsNullOrWhiteSpace(report.ExecutorType) ? Loc.Get("Skills.Detail.ExecutorUnknown") : report.ExecutorType),
                 RiskLevelText = Loc.Format("Skills.Detail.Risk", FormatRiskLevel(report.RiskLevel)),
                 ChecksumText = string.IsNullOrWhiteSpace(report.Checksum)
                     ? Loc.Get("Skills.Detail.ChecksumNone")
@@ -1014,11 +1333,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     ? Loc.Get("Skills.Detail.InstalledFromNone")
                     : Loc.Format("Skills.Detail.InstalledFrom", report.InstalledFrom),
                 HealthDetail = report.Details,
-                IconColor = Brush.Parse(palette.IconColor),
-                GlowColor = Brush.Parse(palette.GlowColor),
-                StatusColor = Brush.Parse(palette.StatusColor),
-                IconPath = GetIconPath(report),
+                Category = GetCategory(report.SkillId),
+                IconKey = GetIconKey(report.SkillId),
                 IsActive = report.Status == SkillHealthStatus.Healthy,
+                IsOff = report.Status == SkillHealthStatus.Disabled,
+                NeedsAttention = report.Status is not SkillHealthStatus.Healthy and not SkillHealthStatus.Disabled,
                 CanTestSkill = _skillTestService is not null
                     && report.Status == SkillHealthStatus.Healthy,
                 CanApproveReview = report.Status == SkillHealthStatus.ReviewRequired,
@@ -1057,13 +1376,15 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     report.RuntimeOptions)
             };
 
+            item.Summary = FormatSummary(report, item);
             AttachPolicyCommands(item);
+            item.ShowIsOn(item.CanDisable);
             return item;
         }
 
         private void AttachPolicyCommands(PluginItem item)
         {
-            item.SelectCommand = ReactiveCommand.Create(() => SelectPlugin(item.SkillId));
+            item.SelectCommand = ReactiveCommand.Create(() => SelectPlugin(item.IsSelected ? string.Empty : item.SkillId));
             if (_skillTestService is not null)
             {
                 item.TestSkillCommand = ReactiveCommand.CreateFromTask(
@@ -1081,24 +1402,55 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 () => ApplyPolicyActionAsync(item.SkillId, _skillPolicyManager.EnableAsync));
             item.DisableCommand = ReactiveCommand.CreateFromTask(
                 () => ApplyPolicyActionAsync(item.SkillId, _skillPolicyManager.DisableAsync));
+            item.SetEnabled = isOn => SetSkillEnabledAsync(item, isOn);
             item.GrantPermissionsCommand = ReactiveCommand.CreateFromTask(
                 () => GrantPermissionsAsync(item.SkillId));
             item.RevokePermissionsCommand = ReactiveCommand.CreateFromTask(
                 () => ApplyPolicyActionAsync(item.SkillId, _skillPolicyManager.RevokePermissionsAsync));
         }
 
-        private async Task ApplyPolicyActionAsync(
+        private async Task<bool> ApplyPolicyActionAsync(
             string skillId,
             Func<string, CancellationToken, Task<bool>> action)
         {
             var changed = await action(skillId, CancellationToken.None);
             if (!changed || _skillHealthService is null)
             {
-                return;
+                return changed;
             }
 
             var reports = await _skillHealthService.GetHealthAsync();
             await RunOnUiThreadAsync(() => LoadPlugins(reports));
+            return true;
+        }
+
+        /// <summary>
+        /// Turns a skill on or off from its row switch; the switch flips back when the change fails.
+        /// </summary>
+        /// <param name="item">The skill's row.</param>
+        /// <param name="isOn">Whether to turn it on.</param>
+        public async Task SetSkillEnabledAsync(PluginItem item, bool isOn)
+        {
+            var changed = false;
+            try
+            {
+                if (_skillPolicyManager is not null)
+                {
+                    changed = await ApplyPolicyActionAsync(
+                        item.SkillId,
+                        isOn ? _skillPolicyManager.EnableAsync : _skillPolicyManager.DisableAsync);
+                }
+            }
+            catch (Exception ex)
+            {
+                SetSkillEvalText(() => Loc.Format("Skills.Toggle.Failed", item.Name), () => ex.Message);
+                IsSkillEvalHealthy = false;
+            }
+
+            if (!changed)
+            {
+                await RunOnUiThreadAsync(() => item.ShowIsOn(!isOn));
+            }
         }
 
         private void UpdateSelectedRuntimeOption(string skillId, string key, string value)
@@ -1145,6 +1497,86 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 SkillHealthStatus.ReviewRequired => Loc.Get("Skills.Status.ReviewRequired"),
                 SkillHealthStatus.PermissionDenied => Loc.Get("Skills.Status.PermissionDenied"),
                 _ => Loc.Get("Skills.Status.Unknown")
+            };
+        }
+
+        private static string FormatSummary(SkillHealthReport report, PluginItem item)
+        {
+            if (item.NeedsAttention && !string.IsNullOrWhiteSpace(report.Details))
+            {
+                return report.Details;
+            }
+
+            if (!string.IsNullOrWhiteSpace(report.Description))
+            {
+                return report.Description;
+            }
+
+            var permissions = report.RequiredPermissions
+                .Where(permission => permission != SkillPermission.None)
+                .Distinct()
+                .Select(permission => permission.ToString())
+                .ToArray();
+            var uses = permissions.Length == 0
+                ? Loc.Get("Skills.Summary.NoPermissions")
+                : Loc.Format("Skills.Summary.Uses", string.Join(", ", permissions));
+            return $"{uses} · {item.RiskLevelText}";
+        }
+
+        private static string FormatCategory(SkillCategory category)
+        {
+            return category switch
+            {
+                SkillCategory.Apps => Loc.Get("Skills.Group.Apps"),
+                SkillCategory.Files => Loc.Get("Skills.Group.Files"),
+                SkillCategory.Code => Loc.Get("Skills.Group.Code"),
+                SkillCategory.Web => Loc.Get("Skills.Group.Web"),
+                SkillCategory.Communication => Loc.Get("Skills.Group.Communication"),
+                SkillCategory.System => Loc.Get("Skills.Group.System"),
+                SkillCategory.Automation => Loc.Get("Skills.Group.Automation"),
+                _ => Loc.Get("Skills.Group.Other")
+            };
+        }
+
+        private static string SkillPrefix(string skillId)
+        {
+            var dot = skillId.IndexOf('.');
+            return (dot > 0 ? skillId[..dot] : skillId).ToLowerInvariant();
+        }
+
+        internal static SkillCategory GetCategory(string skillId)
+        {
+            return SkillPrefix(skillId) switch
+            {
+                "apps" => SkillCategory.Apps,
+                "files" or "file" or "directories" => SkillCategory.Files,
+                "workspace" or "code" => SkillCategory.Code,
+                "web" => SkillCategory.Web,
+                "communication" => SkillCategory.Communication,
+                "system" or "clipboard" or "media" or "window" or "accessibility" => SkillCategory.System,
+                "shell" or "agents" => SkillCategory.Automation,
+                _ => SkillCategory.Other
+            };
+        }
+
+        private static string GetIconKey(string skillId)
+        {
+            return SkillPrefix(skillId) switch
+            {
+                "apps" or "window" => "IconAppWindow",
+                "files" or "directories" => "IconFolder",
+                "file" => "IconFile",
+                "workspace" => "IconListTree",
+                "code" => "IconCode",
+                "web" => "IconGlobe",
+                "communication" => "IconMail",
+                "system" => "IconCpu",
+                "clipboard" => "IconCopy",
+                "media" => "IconPlay",
+                "accessibility" => "IconMonitor",
+                "shell" => "IconTerminal",
+                "agents" => "IconBot",
+                _ => "IconSparkles"
             };
         }
 
@@ -1378,40 +1810,6 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 SkillExecutionStatus.PermissionDenied => Brush.Parse("#EF4444"),
                 _ => Brush.Parse("#71717A")
             };
-        }
-
-        private static (string IconColor, string GlowColor, string StatusColor) GetStatusPalette(
-            SkillHealthStatus status)
-        {
-            return status switch
-            {
-                SkillHealthStatus.Healthy => ("#8B7CFF", "#248B7CFF", "#10B981"),
-                SkillHealthStatus.MissingExecutor => ("#F59E0B", "#20F59E0B", "#F59E0B"),
-                SkillHealthStatus.ReviewRequired => ("#F59E0B", "#20F59E0B", "#F59E0B"),
-                SkillHealthStatus.PermissionDenied => ("#EF4444", "#20EF4444", "#EF4444"),
-                SkillHealthStatus.Disabled => ("#71717A", "#1827272A", "#71717A"),
-                _ => ("#71717A", "#1827272A", "#71717A")
-            };
-        }
-
-        private static string GetIconPath(SkillHealthReport report)
-        {
-            if (report.SkillId.StartsWith("apps.", StringComparison.OrdinalIgnoreCase))
-            {
-                return "M13,3H5A2,2 0 0,0 3,5V13H5V5H13V3M19,7H9A2,2 0 0,0 7,9V19A2,2 0 0,0 9,21H19A2,2 0 0,0 21,19V9A2,2 0 0,0 19,7Z";
-            }
-
-            if (report.SkillId.StartsWith("files.", StringComparison.OrdinalIgnoreCase))
-            {
-                return "M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M13,9V3.5L18.5,9H13Z";
-            }
-
-            if (report.SkillId.StartsWith("web.", StringComparison.OrdinalIgnoreCase))
-            {
-                return "M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M18.9,8H15.97C15.65,6.75 15.15,5.56 14.5,4.48A8.03,8.03 0 0,1 18.9,8Z";
-            }
-
-            return "M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M11,6V13H13V6H11M11,15V17H13V15H11Z";
         }
 
         private static async Task RunOnUiThreadAsync(Action action)
