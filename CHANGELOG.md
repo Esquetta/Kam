@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- Activity panel: shown only beside the chat, with a close button and a way back from the chat header. Its first tab, Steps, shows the latest turn in the selected chat: each tool call with its outcome and time, then the totals for tools, time and tokens. The second message box on other pages is gone, so those pages use the full width.
+- Diagnostics leads with four plain status cards (model, tools, MCP servers, voice), each with one action when something needs attention; the technical checklist and reports moved under "Details for troubleshooting".
+- Skills, Integrations and Extensions: no developer message on a clean profile, status badges in sentence case with colours that match their meaning, and the Docs link in the same place on every Discover card.
+- Settings says whether the agent model still needs a key instead of showing an internal profile id.
+- The window is named "Kam" for the taskbar and Alt-Tab, without drawing the name over the logo, and the separate full-screen button is gone. The light theme separates sidebar, page and cards more clearly, and off switches use a muted knob.
 - First run: with no model connected, the empty workbench shows a setup card (OpenRouter, Ollama, OpenAI, Anthropic) that opens Settings on that provider, and a chat that already has messages shows a "Set up" strip above the composer.
 - Settings: the agent model comes first, with Test Connection next to its key; the command mode planner moved under an "advanced" toggle. Test Connection checks whichever profiles are set up instead of always requiring the planner. The duplicate "Start minimized" switch is gone.
 - Workbench copy: the thread list and chat header drop the "Agent threads" and "Conversation timeline" subtitles, thread rows show the status only while the agent works, and 22 icon-only buttons have accessible names.

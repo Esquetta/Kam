@@ -50,7 +50,6 @@
   "Chat.Composer.Send": "Gönder (Enter)",
   "Chat.Composer.Stop": "Durdur (Esc)",
   "Chat.Composer.Hint": "Göndermek için Enter  ·  Yeni satır için Shift+Enter  ·  Komutlar için / yazın",
-  "Chat.Composer.MessageLabel": "Mesaj",
   "Chat.Composer.SlashPlaceholder": "Komutlar için / yazın...",
 
   "Chat.Markdown.CopyCode": "Kodu kopyala",

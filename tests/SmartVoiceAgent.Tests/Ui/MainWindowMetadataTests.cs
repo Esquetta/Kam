@@ -7,13 +7,15 @@ namespace SmartVoiceAgent.Tests.Ui;
 public sealed class MainWindowMetadataTests
 {
     [Fact]
-    public void MainWindow_TitleDoesNotRenderProductNameOverSystemStatus()
+    public void MainWindow_NamesTheAppForTheTaskbarButHidesTheDrawnTitleText()
     {
-        var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root;
+        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
+        var mainWindow = XDocument.Parse(mainWindowText).Root;
 
         mainWindow.Should().NotBeNull();
-        mainWindow!.Attribute("Title")?.Value.Should().BeEmpty();
-        mainWindow.Attribute("Title")?.Value.Should().NotContain("COORDINATOR");
+        mainWindow!.Attribute("Title")?.Value.Should().Be("Kam");
+        mainWindowText.Should().Contain("WindowDrawnDecorations /template/ TextBlock");
+        mainWindowText.Should().Contain("WindowDrawnDecorations /template/ :is(Control)#PART_FullScreenButton");
     }
 
     [Fact]
@@ -29,10 +31,9 @@ public sealed class MainWindowMetadataTests
             .ToArray();
 
         visibleText.Should().Contain("Activity");
-        visibleText.Should().Contain("Session");
-        visibleText.Should().Contain("Agent runs");
+        visibleText.Should().Contain("This chat");
+        visibleText.Should().Contain("Steps");
         visibleText.Should().Contain("Event stream");
-        visibleText.Should().Contain("Message");
         visibleText.Should().NotContain(value =>
             value.Contains("ACTIVITY_LOG", StringComparison.Ordinal)
             || value.Contains("KERNEL_LOG", StringComparison.Ordinal)
@@ -218,7 +219,12 @@ public sealed class MainWindowMetadataTests
 
         mainWindowText.Should().Contain("ItemsSource=\"{Binding ActivityLogEntries}\"");
         mainWindowText.Should().Contain("ItemsSource=\"{Binding RuntimeAgentActivities}\"");
-        mainWindowText.Should().Contain("IsVisible=\"{Binding !HasRuntimeAgentActivities}\"");
+        mainWindowText.Should().Contain("IsVisible=\"{Binding HasRuntimeAgentActivities}\"");
+        mainWindowText.Should().Contain("ItemsSource=\"{Binding SelectedAgentChatSession.LastTurn.Steps}\"");
+        mainWindowText.Should().Contain("Text=\"{Binding ToolDurationText}\"");
+        mainWindowText.Should().Contain("Text=\"{Binding SelectedAgentChatSession.LastTurn.SummaryText}\"");
+        mainWindowText.Should().Contain("<ColumnDefinition Width=\"{Binding ActivityPanelWidth}\"/>");
+        mainWindowText.Should().Contain("IsVisible=\"{Binding IsActivityPanelShown}\"");
         mainWindowText.Should().Contain("Classes=\"ActivityLogItem\"");
         mainWindowText.Should().Contain("ConverterParameter={x:Static vm:ActivityPanelMode.Events}");
         mainWindowText.Should().Contain("Text=\"{Binding CategoryText}\"");
@@ -451,7 +457,7 @@ public sealed class MainWindowMetadataTests
                 && (AttributeValue(element, "Classes") ?? string.Empty).Contains("TalkButton", StringComparison.Ordinal))
             .ToArray();
 
-        talkButtons.Should().HaveCount(2, "the chat composer and the command prompt on other pages both have one");
+        talkButtons.Should().ContainSingle("only the chat composer has a prompt; other pages have none");
         foreach (var button in talkButtons)
         {
             AttributeValue(button, "Command").Should().Be("{Binding TalkCommand}");

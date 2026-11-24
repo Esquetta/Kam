@@ -38,10 +38,7 @@ namespace SmartVoiceAgent.Ui.Views
             _chatSearchInput = this.FindControl<TextBox>("ChatSearchInput");
 
             // Tunnel, so Enter sends before a multi-line TextBox turns it into a new line.
-            foreach (var prompt in new[] { _workbenchPromptInput, this.FindControl<TextBox>("PromptInput") })
-            {
-                prompt?.AddHandler(KeyDownEvent, OnPromptKeyDown, RoutingStrategies.Tunnel);
-            }
+            _workbenchPromptInput?.AddHandler(KeyDownEvent, OnPromptKeyDown, RoutingStrategies.Tunnel);
 
             this.Closing += MainWindow_Closed;
             this.DataContextChanged += OnDataContextChanged;

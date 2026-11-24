@@ -5,15 +5,6 @@
              x:DataType="vm:RuntimeDiagnosticsViewModel">
 
     <UserControl.Styles>
-        <Style Selector="Border.ReadinessCard">
-            <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="16,14"/>
-            <Setter Property="MinHeight" Value="112"/>
-        </Style>
-
         <Style Selector="Border.DiagnosticPanel">
             <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
@@ -29,10 +20,6 @@
             <Setter Property="CornerRadius" Value="0"/>
             <Setter Property="Padding" Value="2,12"/>
             <Setter Property="Margin" Value="0"/>
-        </Style>
-
-        <Style Selector="Border.ReadinessCard.Blocked">
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentErrorGlowBrush}"/>
         </Style>
 
         <Style Selector="Ellipse.StatusDot">
@@ -52,26 +39,33 @@
         <Style Selector="Ellipse.BlockedDot">
             <Setter Property="Fill" Value="{DynamicResource AccentErrorBrush}"/>
         </Style>
+
+        <Style Selector="ToggleButton.AdvancedToggle">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0,2"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="ToggleButton.AdvancedToggle:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+                         ToggleButton.AdvancedToggle:checked /template/ ContentPresenter#PART_ContentPresenter,
+                         ToggleButton.AdvancedToggle:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentStrongBrush}"/>
+        </Style>
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, Auto"
-              Classes="WorkbenchPage"
-              Margin="32,28,32,40"
-              HorizontalAlignment="Stretch">
+        <StackPanel Classes="WorkbenchPage"
+                    Margin="32,28,32,40"
+                    HorizontalAlignment="Stretch">
 
-            <Grid Grid.Row="0" ColumnDefinitions="*, Auto" ColumnSpacing="16">
+            <Grid ColumnDefinitions="*, Auto" ColumnSpacing="16">
                 <StackPanel Spacing="6">
                     <TextBlock Text="{DynamicResource Lang.Diagnostics.Title}"
                                Classes="PageTitle"/>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="{DynamicResource Lang.Diagnostics.Subtitle}"
-                                   Classes="PageSubtitle"
-                                   VerticalAlignment="Center"/>
-                        <Border Classes="Pill Accent">
-                            <TextBlock Text="{Binding CoreReadinessStatusText}"/>
-                        </Border>
-                    </StackPanel>
+                    <TextBlock Text="{DynamicResource Lang.Diagnostics.Subtitle}"
+                               Classes="PageSubtitle"/>
                 </StackPanel>
 
                 <Button Grid.Column="1"
@@ -93,288 +87,139 @@
                 </Button>
             </Grid>
 
-            <ItemsControl Grid.Row="1" ItemsSource="{Binding SummaryCards}" Margin="0,0,-12,0">
+            <ItemsControl ItemsSource="{Binding StatusCards}" Margin="0,0,-12,0">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <UniformGrid Columns="3"/>
+                        <UniformGrid Columns="4"/>
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:RuntimeDiagnosticItemViewModel">
-                        <Border Classes="ReadinessCard"
-                                Classes.Ready="{Binding IsReady}"
-                                Classes.Warning="{Binding IsWarning}"
-                                Classes.Blocked="{Binding IsBlocked}"
-                                Margin="0,0,12,12">
-                            <Grid RowDefinitions="Auto, Auto, *" RowSpacing="6">
+                        <Border Classes="Card" Padding="16,14" Margin="0,0,12,0">
+                            <StackPanel Spacing="6">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Ellipse Classes="StatusDot ReadyDot" IsVisible="{Binding IsReady}"/>
-                                    <Ellipse Classes="StatusDot WarningDot" IsVisible="{Binding IsWarning}"/>
-                                    <Ellipse Classes="StatusDot BlockedDot" IsVisible="{Binding IsBlocked}"/>
-                                    <Ellipse Classes="StatusDot" Fill="{DynamicResource TextMutedBrush}" IsVisible="{Binding IsNeutral}"/>
-                                    <TextBlock Text="{Binding Name}"
-                                               FontSize="12"
-                                               FontWeight="SemiBold"
-                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <Border Classes="StatusDot"
+                                            Classes.Success="{Binding IsReady}"
+                                            Classes.Warning="{Binding IsWarning}"
+                                            Classes.Danger="{Binding IsBlocked}"/>
+                                    <TextBlock Text="{Binding Name}" Classes="GroupTitle"/>
                                 </StackPanel>
-                                <TextBlock Grid.Row="1"
-                                           Text="{Binding Value}"
-                                           FontSize="17"
+                                <TextBlock Text="{Binding Value}"
+                                           FontSize="15"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextPrimaryBrush}"
                                            TextWrapping="Wrap"/>
-                                <TextBlock Grid.Row="2"
-                                           Text="{Binding Detail}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           TextWrapping="Wrap"/>
-                            </Grid>
+                                <TextBlock Text="{Binding Detail}"
+                                           Classes="Caption"
+                                           TextWrapping="Wrap"
+                                           IsVisible="{Binding Detail, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                <Button Content="{Binding ActionText}"
+                                        Tag="{Binding ActionTarget}"
+                                        Classes="LinkAction"
+                                        HorizontalAlignment="Left"
+                                        Click="OnCardActionClick"
+                                        IsVisible="{Binding HasAction}"/>
+                            </StackPanel>
                         </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <Border Grid.Row="2" Classes="DiagnosticPanel">
-                <Grid RowDefinitions="Auto, Auto" RowSpacing="14">
-                    <Grid ColumnDefinitions="*, Auto, Auto" ColumnSpacing="12">
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="{DynamicResource Lang.Diagnostics.LiveTest.Title}"
-                                       Classes="SectionTitle"/>
-                            <TextBlock Text="{Binding LiveTestNextAction}"
-                                       FontSize="13"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       TextWrapping="Wrap"/>
-                            <TextBlock Text="{Binding ReadinessReportCopyStatus}"
-                                       FontSize="11"
-                                       FontFamily="{StaticResource MonoFontFamily}"
-                                       Foreground="{DynamicResource TextMutedBrush}"/>
-                        </StackPanel>
-                        <Button Grid.Column="1"
-                                Command="{Binding CopyReadinessReportCommand}"
-                                Classes="SecondaryAction"
-                                MinWidth="112"
-                                Height="34"
-                                Padding="12,0"
-                                VerticalAlignment="Top">
-                            <TextBlock Text="{DynamicResource Lang.Diagnostics.LiveTest.CopyReport}"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       FontSize="12"
-                                       FontWeight="SemiBold"
-                                       VerticalAlignment="Center"/>
-                        </Button>
-                        <Border Grid.Column="2"
-                                Classes="Pill"
-                                VerticalAlignment="Top"
-                                Margin="0,8,0,0">
-                            <TextBlock Text="{Binding LiveTestStatusText}"/>
-                        </Border>
-                    </Grid>
+            <StackPanel Spacing="14">
+                <ToggleButton x:Name="DetailsToggle"
+                              Classes="AdvancedToggle"
+                              HorizontalAlignment="Left">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{DynamicResource Lang.Diagnostics.Details.Title}" FontSize="12" FontWeight="Medium"/>
+                        <Viewbox Width="12" Height="12"><Path Classes="Icon" Data="{StaticResource IconChevronDown}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
+                    </StackPanel>
+                </ToggleButton>
 
-                    <ItemsControl Grid.Row="1" ItemsSource="{Binding LiveTestSteps}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:RuntimeDiagnosticItemViewModel">
-                                <Border Classes="DiagnosticRow"
-                                        Classes.Ready="{Binding IsReady}"
-                                        Classes.Warning="{Binding IsWarning}"
-                                        Classes.Blocked="{Binding IsBlocked}">
-                                    <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="10">
-                                        <Ellipse Grid.Column="0" Classes="StatusDot ReadyDot" IsVisible="{Binding IsReady}"/>
-                                        <Ellipse Grid.Column="0" Classes="StatusDot WarningDot" IsVisible="{Binding IsWarning}"/>
-                                        <Ellipse Grid.Column="0" Classes="StatusDot BlockedDot" IsVisible="{Binding IsBlocked}"/>
-                                        <StackPanel Grid.Column="1" Spacing="3">
-                                            <TextBlock Text="{Binding Name}"
-                                                       FontSize="12"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="{Binding Detail}"
-                                                       FontSize="11"
-                                                       Foreground="{DynamicResource TextMutedBrush}"
-                                                       TextWrapping="Wrap"/>
-                                        </StackPanel>
-                                        <TextBlock Grid.Column="2"
-                                                   Text="{Binding Value}"
-                                                   FontSize="12"
-                                                   FontWeight="Medium"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                                   TextAlignment="Right"
-                                                   VerticalAlignment="Center"/>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </Grid>
-            </Border>
-
-            <Border Grid.Row="3"
-                    Classes="DiagnosticPanel"
-                    IsVisible="{Binding HasSetupActionItems}">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="{DynamicResource Lang.Diagnostics.SetupActions.Title}"
-                               Classes="SectionTitle"/>
-                    <ItemsControl ItemsSource="{Binding SetupActionItems}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:RuntimeDiagnosticItemViewModel">
-                                <Border Classes="DiagnosticRow"
-                                        Classes.Ready="{Binding IsReady}"
-                                        Classes.Warning="{Binding IsWarning}"
-                                        Classes.Blocked="{Binding IsBlocked}">
-                                    <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="10">
-                                        <Ellipse Grid.Column="0" Classes="StatusDot ReadyDot" IsVisible="{Binding IsReady}"/>
-                                        <Ellipse Grid.Column="0" Classes="StatusDot WarningDot" IsVisible="{Binding IsWarning}"/>
-                                        <Ellipse Grid.Column="0" Classes="StatusDot BlockedDot" IsVisible="{Binding IsBlocked}"/>
-                                        <StackPanel Grid.Column="1" Spacing="3">
-                                            <TextBlock Text="{Binding Name}"
-                                                       FontSize="12"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="{Binding Detail}"
-                                                       FontSize="11"
-                                                       Foreground="{DynamicResource TextMutedBrush}"
-                                                       TextWrapping="Wrap"/>
-                                        </StackPanel>
-                                        <TextBlock Grid.Column="2"
-                                                   Text="{Binding Value}"
-                                                   FontSize="12"
-                                                   FontWeight="Medium"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                                   TextWrapping="Wrap"
-                                                   MaxWidth="160"
-                                                   TextAlignment="Right"
-                                                   VerticalAlignment="Center"/>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </Border>
-
-            <Border Grid.Row="4" Classes="DiagnosticPanel">
-                <Grid RowDefinitions="Auto, Auto" RowSpacing="14">
-                    <Grid ColumnDefinitions="*, Auto, Auto, Auto" ColumnSpacing="12">
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="{DynamicResource Lang.Diagnostics.Updates.Title}"
-                                       Classes="SectionTitle"/>
-                            <TextBlock Text="{Binding ApplicationUpdateActionStatus}"
-                                       FontSize="13"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       TextWrapping="Wrap"/>
-                            <TextBlock Text="{Binding ApplicationVersionText}"
-                                       FontSize="11"
-                                       FontFamily="{StaticResource MonoFontFamily}"
-                                       Foreground="{DynamicResource TextMutedBrush}"/>
-                        </StackPanel>
-                        <Button Grid.Column="1"
-                                Command="{Binding CheckApplicationUpdateCommand}"
-                                Classes="SecondaryAction"
-                                MinWidth="104"
-                                Height="34"
-                                Padding="12,0"
-                                VerticalAlignment="Top">
-                            <TextBlock Text="{DynamicResource Lang.Diagnostics.Updates.Check}"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       FontSize="12"
-                                       FontWeight="SemiBold"
-                                       VerticalAlignment="Center"/>
-                        </Button>
-                        <Button Grid.Column="2"
-                                Command="{Binding DownloadApplicationUpdateCommand}"
-                                Classes="SecondaryAction"
-                                MinWidth="104"
-                                Height="34"
-                                Padding="12,0"
-                                VerticalAlignment="Top">
-                            <TextBlock Text="{DynamicResource Lang.Diagnostics.Updates.Download}"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       FontSize="12"
-                                       FontWeight="SemiBold"
-                                       VerticalAlignment="Center"/>
-                        </Button>
-                        <Button Grid.Column="3"
-                                Command="{Binding PlanApplicationRestartCommand}"
-                                Classes="SecondaryAction"
-                                MinWidth="112"
-                                Height="34"
-                                Padding="12,0"
-                                VerticalAlignment="Top">
-                            <TextBlock Text="{DynamicResource Lang.Diagnostics.Updates.RestartPlan}"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       FontSize="12"
-                                       FontWeight="SemiBold"
-                                       VerticalAlignment="Center"/>
-                        </Button>
-                    </Grid>
-
-                    <ItemsControl Grid.Row="1" ItemsSource="{Binding ApplicationUpdateItems}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:RuntimeDiagnosticItemViewModel">
-                                <Border Classes="DiagnosticRow"
-                                        Classes.Ready="{Binding IsReady}"
-                                        Classes.Warning="{Binding IsWarning}"
-                                        Classes.Blocked="{Binding IsBlocked}">
-                                    <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="10">
-                                        <Ellipse Grid.Column="0" Classes="StatusDot ReadyDot" IsVisible="{Binding IsReady}"/>
-                                        <Ellipse Grid.Column="0" Classes="StatusDot WarningDot" IsVisible="{Binding IsWarning}"/>
-                                        <Ellipse Grid.Column="0" Classes="StatusDot BlockedDot" IsVisible="{Binding IsBlocked}"/>
-                                        <StackPanel Grid.Column="1" Spacing="3">
-                                            <TextBlock Text="{Binding Name}"
-                                                       FontSize="12"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="{Binding Detail}"
-                                                       FontSize="11"
-                                                       Foreground="{DynamicResource TextMutedBrush}"
-                                                       TextWrapping="Wrap"/>
-                                        </StackPanel>
-                                        <TextBlock Grid.Column="2"
-                                                   Text="{Binding Value}"
-                                                   FontSize="12"
-                                                   FontWeight="Medium"
-                                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                                   TextWrapping="Wrap"
-                                                   MaxWidth="220"
-                                                   TextAlignment="Right"
-                                                   VerticalAlignment="Center"/>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </Grid>
-            </Border>
-
-            <Border Grid.Row="5"
-                    Classes="DiagnosticPanel"
-                    IsVisible="{Binding HasBlockingItems}">
-                <StackPanel Spacing="10">
-                    <TextBlock Text="{DynamicResource Lang.Diagnostics.BlockingItems.Title}"
-                               Classes="SectionTitle"
-                               Foreground="{DynamicResource AccentErrorBrush}"/>
-                    <ItemsControl ItemsSource="{Binding BlockingItems}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}"
+                <StackPanel Spacing="16" IsVisible="{Binding #DetailsToggle.IsChecked}">
+                    <TextBlock Text="{DynamicResource Lang.Diagnostics.Details.Hint}"
+                               Classes="Caption"
+                               TextWrapping="Wrap"/>
+                    <Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto" RowSpacing="16">
+                <Border Grid.Row="0" Classes="DiagnosticPanel">
+                    <Grid RowDefinitions="Auto, Auto" RowSpacing="14">
+                        <Grid ColumnDefinitions="*, Auto, Auto" ColumnSpacing="12">
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{DynamicResource Lang.Diagnostics.LiveTest.Title}"
+                                           Classes="SectionTitle"/>
+                                <TextBlock Text="{Binding LiveTestNextAction}"
+                                           FontSize="13"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding ReadinessReportCopyStatus}"
+                                           IsVisible="{Binding HasReadinessReportCopyStatus}"
+                                           FontSize="11"
+                                           FontFamily="{StaticResource MonoFontFamily}"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Command="{Binding CopyReadinessReportCommand}"
+                                    Classes="SecondaryAction"
+                                    MinWidth="112"
+                                    Height="34"
+                                    Padding="12,0"
+                                    VerticalAlignment="Top">
+                                <TextBlock Text="{DynamicResource Lang.Diagnostics.LiveTest.CopyReport}"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"
                                            FontSize="12"
-                                           TextWrapping="Wrap"
-                                           Margin="0,0,0,4"/>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </Border>
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"/>
+                            </Button>
+                            <Border Grid.Column="2"
+                                    Classes="Pill"
+                                    VerticalAlignment="Top"
+                                    Margin="0,8,0,0">
+                                <TextBlock Text="{Binding LiveTestStatusText}"/>
+                            </Border>
+                        </Grid>
 
-            <Grid Grid.Row="6"
-                  ColumnDefinitions="*, *"
-                  RowDefinitions="Auto, Auto"
-                  ColumnSpacing="16"
-                  RowSpacing="16">
-                <Border Grid.Row="0" Grid.Column="0" Classes="DiagnosticPanel">
+                        <ItemsControl Grid.Row="1" ItemsSource="{Binding LiveTestSteps}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:RuntimeDiagnosticItemViewModel">
+                                    <Border Classes="DiagnosticRow"
+                                            Classes.Ready="{Binding IsReady}"
+                                            Classes.Warning="{Binding IsWarning}"
+                                            Classes.Blocked="{Binding IsBlocked}">
+                                        <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="10">
+                                            <Ellipse Grid.Column="0" Classes="StatusDot ReadyDot" IsVisible="{Binding IsReady}"/>
+                                            <Ellipse Grid.Column="0" Classes="StatusDot WarningDot" IsVisible="{Binding IsWarning}"/>
+                                            <Ellipse Grid.Column="0" Classes="StatusDot BlockedDot" IsVisible="{Binding IsBlocked}"/>
+                                            <StackPanel Grid.Column="1" Spacing="3">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontSize="12"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                <TextBlock Text="{Binding Detail}"
+                                                           FontSize="11"
+                                                           Foreground="{DynamicResource TextMutedBrush}"
+                                                           TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{Binding Value}"
+                                                       FontSize="12"
+                                                       FontWeight="Medium"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       TextAlignment="Right"
+                                                       VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="1"
+                        Classes="DiagnosticPanel"
+                        IsVisible="{Binding HasSetupActionItems}">
                     <StackPanel Spacing="12">
-                        <TextBlock Text="{DynamicResource Lang.Diagnostics.AiRuntime.Title}"
+                        <TextBlock Text="{DynamicResource Lang.Diagnostics.SetupActions.Title}"
                                    Classes="SectionTitle"/>
-                        <ItemsControl ItemsSource="{Binding AiRuntimeItems}">
+                        <ItemsControl ItemsSource="{Binding SetupActionItems}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:RuntimeDiagnosticItemViewModel">
                                     <Border Classes="DiagnosticRow"
@@ -401,7 +246,7 @@
                                                        FontWeight="Medium"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                                        TextWrapping="Wrap"
-                                                       MaxWidth="190"
+                                                       MaxWidth="160"
                                                        TextAlignment="Right"
                                                        VerticalAlignment="Center"/>
                                         </Grid>
@@ -412,79 +257,63 @@
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Row="0" Grid.Column="1" Classes="DiagnosticPanel">
-                    <StackPanel Spacing="12">
-                        <TextBlock Text="{DynamicResource Lang.Diagnostics.Integrations.Title}"
-                                   Classes="SectionTitle"/>
-                        <ItemsControl ItemsSource="{Binding IntegrationItems}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:RuntimeDiagnosticItemViewModel">
-                                    <Border Classes="DiagnosticRow"
-                                            Classes.Ready="{Binding IsReady}"
-                                            Classes.Warning="{Binding IsWarning}">
-                                        <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="10">
-                                            <Ellipse Grid.Column="0" Classes="StatusDot ReadyDot" IsVisible="{Binding IsReady}"/>
-                                            <Ellipse Grid.Column="0" Classes="StatusDot WarningDot" IsVisible="{Binding IsWarning}"/>
-                                            <StackPanel Grid.Column="1" Spacing="3">
-                                                <TextBlock Text="{Binding Name}"
-                                                           FontSize="12"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                                <TextBlock Text="{Binding Detail}"
-                                                           FontSize="11"
-                                                           Foreground="{DynamicResource TextMutedBrush}"
-                                                           TextWrapping="Wrap"/>
-                                            </StackPanel>
-                                            <TextBlock Grid.Column="2"
-                                                       Text="{Binding Value}"
-                                                       FontSize="12"
-                                                       FontWeight="Medium"
-                                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                                       TextAlignment="Right"
-                                                       VerticalAlignment="Center"/>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </Border>
-
-                <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="DiagnosticPanel">
-                    <Grid RowDefinitions="Auto, Auto" RowSpacing="12">
-                        <Grid ColumnDefinitions="*, Auto, Auto" ColumnSpacing="12">
-                            <TextBlock Text="{DynamicResource Lang.Diagnostics.LocalRuntime.Title}"
-                                       Classes="SectionTitle"/>
-                            <StackPanel Grid.Column="1"
-                                        Orientation="Horizontal"
-                                        Spacing="10"
-                                        VerticalAlignment="Center">
-                                <TextBlock Text="{Binding SkillSmokeStatus}"
+                <Border Grid.Row="2" Classes="DiagnosticPanel">
+                    <Grid RowDefinitions="Auto, Auto" RowSpacing="14">
+                        <Grid ColumnDefinitions="*, Auto, Auto, Auto" ColumnSpacing="12">
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{DynamicResource Lang.Diagnostics.Updates.Title}"
+                                           Classes="SectionTitle"/>
+                                <TextBlock Text="{Binding ApplicationUpdateActionStatus}"
+                                           FontSize="13"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding ApplicationVersionText}"
                                            FontSize="11"
                                            FontFamily="{StaticResource MonoFontFamily}"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           VerticalAlignment="Center"/>
-                                <Button Command="{Binding RunSkillSmokeCommand}"
-                                        Classes="SecondaryAction"
-                                        MinWidth="132"
-                                        Height="34"
-                                        Padding="12,0"
-                                        >
-                                    <TextBlock Text="{DynamicResource Lang.Diagnostics.SkillSmoke.Run}"
-                                               Foreground="{DynamicResource TextPrimaryBrush}"
-                                               FontSize="11"
-                                               FontWeight="SemiBold"
-                                               VerticalAlignment="Center"/>
-                                </Button>
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
                             </StackPanel>
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding LastRefreshText}"
-                                       FontSize="11"
-                                       FontFamily="{StaticResource MonoFontFamily}"
-                                       Foreground="{DynamicResource TextMutedBrush}"/>
+                            <Button Grid.Column="1"
+                                    Command="{Binding CheckApplicationUpdateCommand}"
+                                    Classes="SecondaryAction"
+                                    MinWidth="104"
+                                    Height="34"
+                                    Padding="12,0"
+                                    VerticalAlignment="Top">
+                                <TextBlock Text="{DynamicResource Lang.Diagnostics.Updates.Check}"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"/>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Command="{Binding DownloadApplicationUpdateCommand}"
+                                    Classes="SecondaryAction"
+                                    MinWidth="104"
+                                    Height="34"
+                                    Padding="12,0"
+                                    VerticalAlignment="Top">
+                                <TextBlock Text="{DynamicResource Lang.Diagnostics.Updates.Download}"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"/>
+                            </Button>
+                            <Button Grid.Column="3"
+                                    Command="{Binding PlanApplicationRestartCommand}"
+                                    Classes="SecondaryAction"
+                                    MinWidth="112"
+                                    Height="34"
+                                    Padding="12,0"
+                                    VerticalAlignment="Top">
+                                <TextBlock Text="{DynamicResource Lang.Diagnostics.Updates.RestartPlan}"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"/>
+                            </Button>
                         </Grid>
 
-                        <ItemsControl Grid.Row="1" ItemsSource="{Binding RuntimeItems}">
+                        <ItemsControl Grid.Row="1" ItemsSource="{Binding ApplicationUpdateItems}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:RuntimeDiagnosticItemViewModel">
                                     <Border Classes="DiagnosticRow"
@@ -510,6 +339,8 @@
                                                        FontSize="12"
                                                        FontWeight="Medium"
                                                        Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       TextWrapping="Wrap"
+                                                       MaxWidth="220"
                                                        TextAlignment="Right"
                                                        VerticalAlignment="Center"/>
                                         </Grid>
@@ -519,7 +350,186 @@
                         </ItemsControl>
                     </Grid>
                 </Border>
-            </Grid>
-        </Grid>
+
+                <Border Grid.Row="3"
+                        Classes="DiagnosticPanel"
+                        IsVisible="{Binding HasBlockingItems}">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="{DynamicResource Lang.Diagnostics.BlockingItems.Title}"
+                                   Classes="SectionTitle"
+                                   Foreground="{DynamicResource AccentErrorBrush}"/>
+                        <ItemsControl ItemsSource="{Binding BlockingItems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               FontSize="12"
+                                               TextWrapping="Wrap"
+                                               Margin="0,0,0,4"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <Grid Grid.Row="4"
+                      ColumnDefinitions="*, *"
+                      RowDefinitions="Auto, Auto"
+                      ColumnSpacing="16"
+                      RowSpacing="16">
+                    <Border Grid.Row="0" Grid.Column="0" Classes="DiagnosticPanel">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="{DynamicResource Lang.Diagnostics.AiRuntime.Title}"
+                                       Classes="SectionTitle"/>
+                            <ItemsControl ItemsSource="{Binding AiRuntimeItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:RuntimeDiagnosticItemViewModel">
+                                        <Border Classes="DiagnosticRow"
+                                                Classes.Ready="{Binding IsReady}"
+                                                Classes.Warning="{Binding IsWarning}"
+                                                Classes.Blocked="{Binding IsBlocked}">
+                                            <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="10">
+                                                <Ellipse Grid.Column="0" Classes="StatusDot ReadyDot" IsVisible="{Binding IsReady}"/>
+                                                <Ellipse Grid.Column="0" Classes="StatusDot WarningDot" IsVisible="{Binding IsWarning}"/>
+                                                <Ellipse Grid.Column="0" Classes="StatusDot BlockedDot" IsVisible="{Binding IsBlocked}"/>
+                                                <StackPanel Grid.Column="1" Spacing="3">
+                                                    <TextBlock Text="{Binding Name}"
+                                                               FontSize="12"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                    <TextBlock Text="{Binding Detail}"
+                                                               FontSize="11"
+                                                               Foreground="{DynamicResource TextMutedBrush}"
+                                                               TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2"
+                                                           Text="{Binding Value}"
+                                                           FontSize="12"
+                                                           FontWeight="Medium"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                                           TextWrapping="Wrap"
+                                                           MaxWidth="190"
+                                                           TextAlignment="Right"
+                                                           VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Row="0" Grid.Column="1" Classes="DiagnosticPanel">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="{DynamicResource Lang.Diagnostics.Integrations.Title}"
+                                       Classes="SectionTitle"/>
+                            <ItemsControl ItemsSource="{Binding IntegrationItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:RuntimeDiagnosticItemViewModel">
+                                        <Border Classes="DiagnosticRow"
+                                                Classes.Ready="{Binding IsReady}"
+                                                Classes.Warning="{Binding IsWarning}">
+                                            <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="10">
+                                                <Ellipse Grid.Column="0" Classes="StatusDot ReadyDot" IsVisible="{Binding IsReady}"/>
+                                                <Ellipse Grid.Column="0" Classes="StatusDot WarningDot" IsVisible="{Binding IsWarning}"/>
+                                                <StackPanel Grid.Column="1" Spacing="3">
+                                                    <TextBlock Text="{Binding Name}"
+                                                               FontSize="12"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                    <TextBlock Text="{Binding Detail}"
+                                                               FontSize="11"
+                                                               Foreground="{DynamicResource TextMutedBrush}"
+                                                               TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2"
+                                                           Text="{Binding Value}"
+                                                           FontSize="12"
+                                                           FontWeight="Medium"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                                           TextAlignment="Right"
+                                                           VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="DiagnosticPanel">
+                        <Grid RowDefinitions="Auto, Auto" RowSpacing="12">
+                            <Grid ColumnDefinitions="*, Auto, Auto" ColumnSpacing="12">
+                                <TextBlock Text="{DynamicResource Lang.Diagnostics.LocalRuntime.Title}"
+                                           Classes="SectionTitle"/>
+                                <StackPanel Grid.Column="1"
+                                            Orientation="Horizontal"
+                                            Spacing="10"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding SkillSmokeStatus}"
+                                               FontSize="11"
+                                               FontFamily="{StaticResource MonoFontFamily}"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               VerticalAlignment="Center"/>
+                                    <Button Command="{Binding RunSkillSmokeCommand}"
+                                            Classes="SecondaryAction"
+                                            MinWidth="132"
+                                            Height="34"
+                                            Padding="12,0"
+                                            >
+                                        <TextBlock Text="{DynamicResource Lang.Diagnostics.SkillSmoke.Run}"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                                   FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"/>
+                                    </Button>
+                                </StackPanel>
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding LastRefreshText}"
+                                           FontSize="11"
+                                           FontFamily="{StaticResource MonoFontFamily}"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                            </Grid>
+
+                            <ItemsControl Grid.Row="1" ItemsSource="{Binding RuntimeItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:RuntimeDiagnosticItemViewModel">
+                                        <Border Classes="DiagnosticRow"
+                                                Classes.Ready="{Binding IsReady}"
+                                                Classes.Warning="{Binding IsWarning}"
+                                                Classes.Blocked="{Binding IsBlocked}">
+                                            <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="10">
+                                                <Ellipse Grid.Column="0" Classes="StatusDot ReadyDot" IsVisible="{Binding IsReady}"/>
+                                                <Ellipse Grid.Column="0" Classes="StatusDot WarningDot" IsVisible="{Binding IsWarning}"/>
+                                                <Ellipse Grid.Column="0" Classes="StatusDot BlockedDot" IsVisible="{Binding IsBlocked}"/>
+                                                <StackPanel Grid.Column="1" Spacing="3">
+                                                    <TextBlock Text="{Binding Name}"
+                                                               FontSize="12"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                    <TextBlock Text="{Binding Detail}"
+                                                               FontSize="11"
+                                                               Foreground="{DynamicResource TextMutedBrush}"
+                                                               TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2"
+                                                           Text="{Binding Value}"
+                                                           FontSize="12"
+                                                           FontWeight="Medium"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                                           TextAlignment="Right"
+                                                           VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                    </Border>
+                </Grid>
+                    </Grid>
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
     </ScrollViewer>
 </UserControl>

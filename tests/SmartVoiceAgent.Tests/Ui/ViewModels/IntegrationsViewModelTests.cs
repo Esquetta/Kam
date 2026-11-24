@@ -14,6 +14,27 @@ public sealed class IntegrationsViewModelTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
+    public void TodoistBadge_FollowsTheSavedKeyNotTheTextBox()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var viewModel = new IntegrationsViewModel(settingsService);
+
+        viewModel.TodoistApiKey = "typing";
+
+        viewModel.TodoistBadge.IsSuccess.Should().BeFalse();
+        viewModel.TodoistBadge.IsAccent.Should().BeFalse();
+
+        viewModel.SaveTodoistCommand.Execute(null);
+
+        viewModel.TodoistBadge.IsAccent.Should().BeTrue();
+        viewModel.TodoistStatusText.Should().Be("Configured");
+
+        viewModel.ClearTodoistCommand.Execute(null);
+
+        viewModel.TodoistBadge.IsAccent.Should().BeFalse();
+    }
+
+    [Fact]
     public void Constructor_LoadsGitHubAppSettingsFromSettingsService()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);
@@ -27,7 +48,7 @@ public sealed class IntegrationsViewModelTests : IDisposable
         viewModel.GitHubInstallationId.Should().Be("98765");
         viewModel.GitHubPrivateKeyPath.Should().Be(@"C:\secure\kam-github-app.pem");
         viewModel.IsGitHubAppConfigured.Should().BeTrue();
-        viewModel.GitHubAppStatusText.Should().Be("CONFIGURED");
+        viewModel.GitHubAppStatusText.Should().Be("Configured");
     }
 
     [Fact]
@@ -37,7 +58,7 @@ public sealed class IntegrationsViewModelTests : IDisposable
         var viewModel = new IntegrationsViewModel(settingsService);
 
         viewModel.IsWebSearchConfigured.Should().BeFalse();
-        viewModel.WebSearchStatusText.Should().Be("NO KEY", "search works without a key");
+        viewModel.WebSearchStatusText.Should().Be("Ready", "search works without a key");
         viewModel.WebSearchApiKey = " search-key ";
         viewModel.CanSaveWebSearch.Should().BeFalse("both the key and the engine id are needed");
         viewModel.WebSearchEngineId = "engine-1";
@@ -46,7 +67,7 @@ public sealed class IntegrationsViewModelTests : IDisposable
         settingsService.WebSearchApiKey.Should().Be("search-key");
         settingsService.WebSearchEngineId.Should().Be("engine-1");
         viewModel.IsWebSearchConfigured.Should().BeTrue();
-        viewModel.WebSearchStatusText.Should().Be("GOOGLE");
+        viewModel.WebSearchStatusText.Should().Be("Using Google");
         using (var reloaded = new JsonSettingsService(_settingsDirectory))
         {
             new IntegrationsViewModel(reloaded).IsWebSearchConfigured.Should().BeTrue();
@@ -57,7 +78,7 @@ public sealed class IntegrationsViewModelTests : IDisposable
         settingsService.WebSearchApiKey.Should().BeEmpty();
         settingsService.WebSearchEngineId.Should().BeEmpty();
         viewModel.IsWebSearchConfigured.Should().BeFalse();
-        viewModel.WebSearchStatusText.Should().Be("NO KEY");
+        viewModel.WebSearchStatusText.Should().Be("Ready");
     }
 
     [Fact]
@@ -87,7 +108,7 @@ public sealed class IntegrationsViewModelTests : IDisposable
 
         var viewModel = new IntegrationsViewModel(settingsService);
 
-        viewModel.GitHubAppStatusText.Should().Be("NOT CONNECTED");
+        viewModel.GitHubAppStatusText.Should().Be("Not connected");
         viewModel.GitHubConnectionStatusText.Should().Be("Not connected");
         viewModel.GitHubConnectionDetailText.Should().Contain("Connect GitHub");
         viewModel.ShowGitHubAppAdvancedSettings.Should().BeFalse();
@@ -112,7 +133,7 @@ public sealed class IntegrationsViewModelTests : IDisposable
         await viewModel.ConnectGitHubAsync();
 
         desktopConnector.ConnectCallCount.Should().Be(1);
-        viewModel.GitHubAppStatusText.Should().Be("CONNECTED");
+        viewModel.GitHubAppStatusText.Should().Be("Connected");
         viewModel.GitHubConnectionStatusText.Should().Be("Connected");
         viewModel.GitHubConnectionDetailText.Should().Contain("2 repositories");
         viewModel.GitHubRepositoryPreviewText.Should().Contain("Esquetta/Kam");

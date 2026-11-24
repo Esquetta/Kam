@@ -338,6 +338,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private string _skillEvalDetail = Loc.Get("Skills.Eval.NeedsRuntime");
         private bool _isSkillEvalHealthy;
         private bool _hasSkillEvalResults;
+        private bool _isSkillEvalIdle = true;
         private string _importLocation = string.Empty;
         private int _selectedImportSourceIndex;
         private Func<string> _importStatusSource = () => Loc.Get("Skills.Import.Hint");
@@ -497,7 +498,31 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public bool IsSkillEvalHealthy
         {
             get => _isSkillEvalHealthy;
-            private set => this.RaiseAndSetIfChanged(ref _isSkillEvalHealthy, value);
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _isSkillEvalHealthy, value);
+                this.RaisePropertyChanged(nameof(IsSkillEvalWarning));
+            }
+        }
+
+        public bool IsSkillEvalWarning => !_isSkillEvalHealthy && !_isSkillEvalIdle;
+
+        /// <summary>Gets whether the skill checks can run; without them the page has nothing to run or report.</summary>
+        public bool CanRunSkillEval => _skillEvalHarness is not null && _skillEvalCaseCatalog is not null;
+
+        /// <summary>Gets whether the checks card shows: when checks can run, or once an action has a result to report.</summary>
+        public bool ShowSkillEvalCard => CanRunSkillEval || !_isSkillEvalIdle;
+
+        /// <summary>True until a check, test or policy action has reported something; the page shows a neutral dot then.</summary>
+        public bool IsSkillEvalIdle
+        {
+            get => _isSkillEvalIdle;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _isSkillEvalIdle, value);
+                this.RaisePropertyChanged(nameof(IsSkillEvalWarning));
+                this.RaisePropertyChanged(nameof(ShowSkillEvalCard));
+            }
         }
 
         public bool HasSkillEvalResults
@@ -1186,6 +1211,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     () => Loc.Get("Skills.Eval.NotRun"),
                     () => Loc.Get("Skills.Eval.NoResults"));
                 IsSkillEvalHealthy = false;
+                IsSkillEvalIdle = true;
                 RebuildSkillEvalResults();
                 ApplyPluginEvalResults(null);
                 return;
@@ -1226,6 +1252,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _skillEvalDetailSource = detail;
             SkillEvalStatus = status();
             SkillEvalDetail = detail();
+            IsSkillEvalIdle = false;
         }
 
         private void SetImportStatus(Func<string> status)

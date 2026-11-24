@@ -2,6 +2,7 @@ using ReactiveUI;
 using SmartVoiceAgent.Core.Models.Agents;
 using SmartVoiceAgent.Ui.Services;
 using System;
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -60,6 +61,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private string _content;
         private bool _isStreaming;
         private AgentToolStepState _toolState;
+        private readonly long _toolStartedTimestamp;
+        private string _toolDurationText = string.Empty;
         private string _toolSummary = string.Empty;
         private string? _approvalRequestId;
         private string? _alwaysAllowRule;
@@ -92,6 +95,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             : this(AgentRole, string.Empty, timeText)
         {
             Kind = AgentChatItemKind.ToolStep;
+            _toolStartedTimestamp = Stopwatch.GetTimestamp();
             CallId = callId;
             ToolName = toolName;
             ToolDisplayName = toolDisplayName;
@@ -222,6 +226,16 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         public bool HasToolSummary => ToolSummary.Length > 0;
+
+        /// <summary>
+        /// Gets how long the tool call took from start to finish, including any wait for approval;
+        /// empty while it runs.
+        /// </summary>
+        public string ToolDurationText
+        {
+            get => _toolDurationText;
+            private set => this.RaiseAndSetIfChanged(ref _toolDurationText, value);
+        }
 
         /// <summary>Gets the pending approval request, while the card waits for an answer.</summary>
         public string? ApprovalRequestId => _approvalRequestId;
@@ -369,6 +383,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ToolState = success
                 ? AgentToolStepState.Succeeded
                 : declined ? AgentToolStepState.Declined : AgentToolStepState.Failed;
+            ToolDurationText = AgentTurnTraceViewModel.FormatDuration(Stopwatch.GetElapsedTime(_toolStartedTimestamp));
         }
 
         /// <summary>
@@ -381,6 +396,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 _approvalRequestId = null;
                 ToolSummary = Loc.Get("Workbench.Tool.Stopped");
                 ToolState = AgentToolStepState.Failed;
+                ToolDurationText = AgentTurnTraceViewModel.FormatDuration(Stopwatch.GetElapsedTime(_toolStartedTimestamp));
             }
         }
 

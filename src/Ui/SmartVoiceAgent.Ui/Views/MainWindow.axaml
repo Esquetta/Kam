@@ -13,16 +13,22 @@
 		FontSize="13"
 		TransparencyLevelHint="Mica"
 		ExtendClientAreaToDecorationsHint="True"
-		Title=""
+		Title="Kam"
 		Icon="/Assets/favicon.ico"
 		Width="1360" Height="860"
 		MinWidth="800" MinHeight="600">
 
-	<Window.Resources>
-		<converters:LogPanelWidthConverter x:Key="LogPanelWidthConverter" />
-	</Window.Resources>
-
 	<Window.Styles>
+		<!-- The window keeps its name for the taskbar and Alt-Tab, but the drawn title bar would paint it
+			 over the sidebar logo; Kam's own header shows the page instead. The separate full-screen
+			 button goes too; maximize covers it. -->
+		<Style Selector="WindowDrawnDecorations /template/ TextBlock">
+			<Setter Property="IsVisible" Value="False"/>
+		</Style>
+		<Style Selector="WindowDrawnDecorations /template/ :is(Control)#PART_FullScreenButton">
+			<Setter Property="IsVisible" Value="False"/>
+		</Style>
+
 		<!-- ========================= -->
 		<!-- SIDEBAR NAVIGATION -->
 		<!-- ========================= -->
@@ -599,7 +605,7 @@
 			<Grid>
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="*"/>
-					<ColumnDefinition Width="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsLogPanelVisible, Converter={StaticResource LogPanelWidthConverter}}"/>
+					<ColumnDefinition Width="{Binding ActivityPanelWidth}"/>
 				</Grid.ColumnDefinitions>
 
 				<!-- Chat workbench -->
@@ -798,6 +804,7 @@
 									<ColumnDefinition Width="Auto"/>
 									<ColumnDefinition Width="Auto"/>
 									<ColumnDefinition Width="Auto"/>
+									<ColumnDefinition Width="Auto"/>
 								</Grid.ColumnDefinitions>
 								<TextBlock Grid.Column="0"
 										   Text="{Binding SelectedAgentChatSession.Title}"
@@ -863,6 +870,18 @@
 										</MenuFlyout>
 									</Button.Flyout>
 									<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconMore}" StrokeThickness="3" Stretch="None"/></Viewbox>
+								</Button>
+								<!-- Brings the Activity panel back after it was closed -->
+								<Button Grid.Column="4"
+										Classes="IconButton CompactIconButton"
+										Background="Transparent"
+										BorderThickness="0"
+										VerticalAlignment="Center"
+										IsVisible="{Binding !IsActivityPanelOpen}"
+										AutomationProperties.Name="{DynamicResource Lang.Activity.Show}"
+										ToolTip.Tip="{DynamicResource Lang.Activity.Show}"
+										Command="{Binding ToggleActivityPanelCommand}">
+									<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconActivity}"/></Viewbox>
 								</Button>
 							</Grid>
 						</Border>
@@ -1527,8 +1546,8 @@
 						Background="{DynamicResource PanelBgBrush}"
 						BorderBrush="{DynamicResource BorderSubtleBrush}"
 						BorderThickness="1,0,0,0"
-						IsVisible="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsLogPanelVisible}">
-					<Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, *, Auto">
+						IsVisible="{Binding IsActivityPanelShown}">
+					<Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, *">
 
 						<!-- Activity Header -->
 						<Border Grid.Row="0"
@@ -1542,14 +1561,16 @@
 										<TextBlock Text="{DynamicResource Lang.Activity.Title}" Classes="SectionTitle"/>
 										<TextBlock Text="{DynamicResource Lang.Activity.Subtitle}" Classes="Caption"/>
 									</StackPanel>
-									<Border Grid.Column="1" Classes="Pill Success">
-										<StackPanel Orientation="Horizontal" Spacing="6">
-											<Ellipse Width="6" Height="6"
-													 Fill="{DynamicResource AccentGreenBrush}"
-													 VerticalAlignment="Center"/>
-											<TextBlock Text="{DynamicResource Lang.Activity.Live}"/>
-										</StackPanel>
-									</Border>
+									<Button Grid.Column="1"
+											Classes="IconButton CompactIconButton"
+											Background="Transparent"
+											BorderThickness="0"
+											VerticalAlignment="Center"
+											AutomationProperties.Name="{DynamicResource Lang.Activity.Hide}"
+											ToolTip.Tip="{DynamicResource Lang.Activity.Hide}"
+											Command="{Binding ToggleActivityPanelCommand}">
+										<Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconX}"/></Viewbox>
+									</Button>
 								</Grid>
 								<Border Grid.Row="1" Classes="Segmented">
 									<Grid ColumnDefinitions="*,*,*" ColumnSpacing="2">
@@ -1683,7 +1704,69 @@
 								BorderThickness="0,0,0,1"
 								Padding="16,12"
 								IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Runs}}">
-							<StackPanel Spacing="8">
+							<StackPanel Spacing="12">
+								<!-- Steps of the latest turn in the selected chat: each tool call, its outcome and time, then totals -->
+								<StackPanel Spacing="10" IsVisible="{Binding SelectedAgentChatSession.HasLastTurn}">
+									<Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+										<TextBlock Text="{Binding SelectedAgentChatSession.LastTurn.Request}"
+												   FontSize="12"
+												   FontWeight="SemiBold"
+												   Foreground="{DynamicResource TextPrimaryBrush}"
+												   TextTrimming="CharacterEllipsis"
+												   VerticalAlignment="Center"/>
+										<Border Grid.Column="1" Classes="Pill" VerticalAlignment="Center">
+											<StackPanel Orientation="Horizontal" Spacing="6">
+												<Border Classes="StatusDot Accent" IsVisible="{Binding SelectedAgentChatSession.LastTurn.IsRunning}"/>
+												<Border Classes="StatusDot Success" IsVisible="{Binding SelectedAgentChatSession.LastTurn.IsDone}"/>
+												<Border Classes="StatusDot Danger" IsVisible="{Binding SelectedAgentChatSession.LastTurn.IsFailed}"/>
+												<TextBlock Text="{Binding SelectedAgentChatSession.LastTurn.OutcomeText}"/>
+											</StackPanel>
+										</Border>
+									</Grid>
+									<ItemsControl ItemsSource="{Binding SelectedAgentChatSession.LastTurn.Steps}">
+										<ItemsControl.ItemTemplate>
+											<DataTemplate DataType="vm:AgentChatMessageViewModel">
+												<Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8" Margin="0,0,0,8">
+													<Border Grid.Column="0" Classes="StatusDot Accent" IsVisible="{Binding IsToolRunning}"/>
+													<Border Grid.Column="0" Classes="StatusDot Warning" IsVisible="{Binding IsAwaitingApproval}"/>
+													<Border Grid.Column="0" Classes="StatusDot Success" IsVisible="{Binding IsToolSucceeded}"/>
+													<Border Grid.Column="0" Classes="StatusDot Danger" IsVisible="{Binding IsToolFailed}"/>
+													<TextBlock Grid.Column="1"
+															   Text="{Binding ToolDisplayName}"
+															   FontSize="12"
+															   Foreground="{DynamicResource TextSecondaryBrush}"
+															   TextTrimming="CharacterEllipsis"/>
+													<TextBlock Grid.Column="2"
+															   Text="{Binding ToolDurationText}"
+															   FontSize="11"
+															   FontFamily="{StaticResource MonoFontFamily}"
+															   Foreground="{DynamicResource TextMutedBrush}"/>
+													<TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+															   Text="{Binding ToolStatusText}"
+															   FontSize="11"
+															   Foreground="{DynamicResource TextMutedBrush}"
+															   TextTrimming="CharacterEllipsis"/>
+												</Grid>
+											</DataTemplate>
+										</ItemsControl.ItemTemplate>
+									</ItemsControl>
+									<TextBlock Text="{DynamicResource Lang.Activity.Trace.NoTools}"
+											   FontSize="12"
+											   Foreground="{DynamicResource TextMutedBrush}"
+											   IsVisible="{Binding !SelectedAgentChatSession.LastTurn.HasSteps}"/>
+									<TextBlock Text="{Binding SelectedAgentChatSession.LastTurn.SummaryText}"
+											   FontSize="11"
+											   Foreground="{DynamicResource TextMutedBrush}"
+											   TextWrapping="Wrap"/>
+								</StackPanel>
+								<TextBlock Text="{DynamicResource Lang.Activity.Trace.Empty}"
+										   FontSize="12"
+										   Foreground="{DynamicResource TextMutedBrush}"
+										   TextWrapping="Wrap"
+										   IsVisible="{Binding !SelectedAgentChatSession.HasLastTurn}"/>
+
+								<!-- Older single-shot agent runs (command mode); shown only when there are any -->
+								<StackPanel Spacing="8" IsVisible="{Binding HasRuntimeAgentActivities}">
 								<StackPanel Orientation="Horizontal"
 											Spacing="8">
 									<Viewbox Width="14" Height="14" VerticalAlignment="Center"><Path Classes="Icon Accent" Data="{StaticResource IconLightbulb}"/></Viewbox>
@@ -1750,11 +1833,7 @@
 										</DataTemplate>
 									</ItemsControl.ItemTemplate>
 								</ItemsControl>
-								<TextBlock Text="{DynamicResource Lang.Activity.Runs.Empty}"
-										   FontSize="12"
-										   Foreground="{DynamicResource TextMutedBrush}"
-										   Margin="2,2,0,0"
-										   IsVisible="{Binding !HasRuntimeAgentActivities}"/>
+								</StackPanel>
 								<Border Background="{DynamicResource CardBgHoverBrush}"
 										BorderBrush="{DynamicResource AccentBrush}"
 										BorderThickness="1"
@@ -2270,151 +2349,6 @@
 						</ScrollViewer>
 
 						<!-- Command prompt (shown on pages that hide the chat composer) -->
-						<Border Grid.Row="6"
-								BorderBrush="{DynamicResource BorderSubtleBrush}"
-								BorderThickness="0,1,0,0"
-								Padding="14,12"
-								IsVisible="{Binding IsPageHostVisible}">
-							<Grid RowDefinitions="Auto, Auto, Auto, Auto" RowSpacing="8">
-								<TextBlock Grid.Row="0" Text="{DynamicResource Lang.Chat.Composer.MessageLabel}" Classes="Overline"/>
-
-								<Border Grid.Row="1"
-										Background="{DynamicResource SurfaceBgElevatedBrush}"
-										BorderBrush="{DynamicResource BorderMutedBrush}"
-										BorderThickness="1"
-										CornerRadius="10"
-										Padding="4"
-										IsVisible="{Binding IsSlashCommandPaletteVisible}">
-									<ItemsControl ItemsSource="{Binding SlashCommandSuggestions}"
-												  HorizontalAlignment="Stretch">
-										<ItemsControl.ItemTemplate>
-											<DataTemplate DataType="vm:SlashCommandSuggestionViewModel">
-												<Button Command="{Binding $parent[Window].DataContext.SelectSlashCommandCommand}"
-														CommandParameter="{Binding}"
-														Classes="SlashCommandItem"
-														HorizontalAlignment="Stretch">
-													<Border Background="{Binding IsSelected, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='CardBgHoverBrush|TransparentBrush'}"
-															BorderBrush="Transparent"
-															BorderThickness="0"
-															CornerRadius="6"
-															Padding="8,6"
-															HorizontalAlignment="Stretch">
-														<Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto, Auto" RowSpacing="2">
-															<Border Grid.Column="0"
-																	Grid.RowSpan="2"
-																	Width="2"
-																	Height="22"
-																	Background="{DynamicResource AccentBrush}"
-																	CornerRadius="2"
-																	Opacity="{Binding IsSelected, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter='1|0'}"
-																	VerticalAlignment="Center"
-																	Margin="0,0,8,0"/>
-															<TextBlock Grid.Column="1"
-																	   Text="{Binding Name}"
-																	   FontSize="12"
-																	   FontFamily="{StaticResource MonoFontFamily}"
-																	   FontWeight="SemiBold"
-																	   Foreground="{DynamicResource AccentBrush}"/>
-															<TextBlock Grid.Column="1"
-																	   Grid.Row="1"
-																	   Text="{Binding Summary}"
-																	   FontSize="11"
-																	   Foreground="{DynamicResource TextSecondaryBrush}"
-																	   TextTrimming="CharacterEllipsis"/>
-														</Grid>
-													</Border>
-												</Button>
-											</DataTemplate>
-										</ItemsControl.ItemTemplate>
-									</ItemsControl>
-								</Border>
-
-								<WrapPanel Grid.Row="2" IsVisible="{Binding HasComposerAttachments}">
-									<ItemsControl ItemsSource="{Binding ComposerAttachments}">
-										<ItemsControl.ItemsPanel>
-											<ItemsPanelTemplate>
-												<WrapPanel/>
-											</ItemsPanelTemplate>
-										</ItemsControl.ItemsPanel>
-										<ItemsControl.ItemTemplate>
-											<DataTemplate DataType="vm:ComposerAttachmentViewModel">
-												<Border Classes="AttachmentChip">
-													<StackPanel Orientation="Horizontal" Spacing="6">
-														<TextBlock Text="{Binding FileName}"
-																   FontSize="11"
-																   FontWeight="SemiBold"
-																   MaxWidth="160"
-																   TextTrimming="CharacterEllipsis"
-																   VerticalAlignment="Center"/>
-														<Button Classes="IconButton CompactIconButton"
-																Background="Transparent"
-																BorderThickness="0"
-																AutomationProperties.Name="{DynamicResource Lang.Chat.Composer.RemoveFile}"
-																ToolTip.Tip="{DynamicResource Lang.Chat.Composer.RemoveFile}"
-																Command="{Binding $parent[Window].DataContext.RemoveComposerAttachmentCommand}"
-																CommandParameter="{Binding}">
-															<Viewbox Width="10" Height="10"><Path Classes="Icon" Data="{StaticResource IconX}"/></Viewbox>
-														</Button>
-													</StackPanel>
-												</Border>
-											</DataTemplate>
-										</ItemsControl.ItemTemplate>
-									</ItemsControl>
-								</WrapPanel>
-
-								<Border Grid.Row="3"
-										Background="{DynamicResource CardBgBrush}"
-										BorderBrush="{DynamicResource BorderMutedBrush}"
-										BorderThickness="1"
-										CornerRadius="10"
-										Padding="6,4">
-									<Grid ColumnDefinitions="Auto, *, Auto, Auto" ColumnSpacing="4">
-										<Button Grid.Column="0"
-												Classes="IconButton"
-												Width="28" Height="28"
-												CornerRadius="14"
-												Background="Transparent"
-												BorderThickness="0"
-												AutomationProperties.Name="{DynamicResource Lang.Chat.Composer.AttachFiles}"
-												ToolTip.Tip="{DynamicResource Lang.Chat.Composer.AttachFiles}"
-												Click="OnAttachFilesClick">
-											<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconPaperclip}"/></Viewbox>
-										</Button>
-										<TextBox Grid.Column="1"
-												 x:Name="PromptInput"
-												 Classes="BareInput"
-												 PlaceholderText="{DynamicResource Lang.Chat.Composer.SlashPlaceholder}"
-												 FontSize="13"
-												 VerticalAlignment="Center"
-												 AcceptsReturn="False"
-												 TextWrapping="NoWrap"
-												 Text="{Binding CommandInputText, Mode=TwoWay}"/>
-										<Button Grid.Column="2"
-												Classes="IconButton TalkButton"
-												Classes.listening="{Binding IsVoiceListening}"
-												Width="28" Height="28"
-												CornerRadius="14"
-												Background="Transparent"
-												BorderThickness="0"
-												AutomationProperties.Name="{Binding TalkToolTip}"
-												ToolTip.Tip="{Binding TalkToolTip}"
-												IsEnabled="{Binding IsVoiceAvailable}"
-												Command="{Binding TalkCommand}">
-											<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconMic}"/></Viewbox>
-										</Button>
-										<Button Grid.Column="3"
-												Classes="SendButton"
-												Width="28" Height="28"
-												CornerRadius="14"
-												AutomationProperties.Name="{DynamicResource Lang.Chat.Composer.Send}"
-												ToolTip.Tip="{DynamicResource Lang.Chat.Composer.Send}"
-												Command="{Binding SubmitCommand}">
-											<Viewbox Width="13" Height="13"><Path Classes="Icon" Data="{StaticResource IconArrowUp}"/></Viewbox>
-										</Button>
-									</Grid>
-								</Border>
-							</Grid>
-						</Border>
 					</Grid>
 				</Border>
 			</Grid>

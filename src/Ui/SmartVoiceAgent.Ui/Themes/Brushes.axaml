@@ -30,6 +30,13 @@
     <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="{DynamicResource AccentStrong}" />
     <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="{DynamicResource AccentStrongHover}" />
     <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="{DynamicResource AccentStrong}" />
+    <!-- Off: a quiet outline and a muted knob instead of Fluent's near-black knob -->
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="{DynamicResource BorderMuted}" />
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="{DynamicResource TextMuted}" />
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="{DynamicResource TextMuted}" />
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="{DynamicResource TextMuted}" />
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="{DynamicResource TextSecondary}" />
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="{DynamicResource TextSecondary}" />
     <SolidColorBrush x:Key="AccentSubtleBrush" Color="{DynamicResource AccentSubtle}" />
     <SolidColorBrush x:Key="AccentOnBrush" Color="{DynamicResource AccentOn}" />
 

@@ -30,7 +30,7 @@ A singleton service that tracks window dimensions and provides responsive state:
 XAML converters for responsive bindings:
 - `ResponsiveColumnConverter` - Returns column count from WindowStateManager
 - `LogPanelVisibilityConverter` - Returns visibility boolean
-- `LogPanelWidthConverter` - Returns GridLength for log panel
+- `MainWindowViewModel.ActivityPanelWidth` - Activity panel width (0 when hidden or away from the chat, 360 medium, 420 wide)
 - `ResponsiveScaleConverter` - Scales values based on breakpoint
 - `ResponsiveFontSizeConverter` - Returns scaled font sizes
 - `CompactModeConverter` / `MediumModeConverter` / `ExpandedModeConverter` - Breakpoint checks

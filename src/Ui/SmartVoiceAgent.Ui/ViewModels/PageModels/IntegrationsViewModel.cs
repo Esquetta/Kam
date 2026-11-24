@@ -16,6 +16,25 @@ using System.Windows.Input;
 namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 {
     /// <summary>
+    /// The text and tone of an integration's status badge. The tone maps to the shared Pill classes:
+    /// success for connected or ready, warning for setup needed, danger for a failed check, accent for
+    /// configured but untested, and neutral when nothing is set up.
+    /// </summary>
+    /// <param name="Text">The badge text in the current language.</param>
+    /// <param name="IsSuccess">Whether the badge uses the success tone.</param>
+    /// <param name="IsWarning">Whether the badge uses the warning tone.</param>
+    /// <param name="IsDanger">Whether the badge uses the danger tone.</param>
+    /// <param name="IsAccent">Whether the badge uses the accent tone.</param>
+    public sealed record IntegrationBadge(string Text, bool IsSuccess, bool IsWarning, bool IsDanger, bool IsAccent)
+    {
+        public static IntegrationBadge Success(string text) => new(text, true, false, false, false);
+        public static IntegrationBadge Warning(string text) => new(text, false, true, false, false);
+        public static IntegrationBadge Danger(string text) => new(text, false, false, true, false);
+        public static IntegrationBadge Accent(string text) => new(text, false, false, false, true);
+        public static IntegrationBadge Neutral(string text) => new(text, false, false, false, false);
+    }
+
+    /// <summary>
     /// ViewModel for the Integrations view - manages external service API keys
     /// </summary>
     public class IntegrationsViewModel : ViewModelBase, IDisposable
@@ -139,14 +158,19 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             Title = Loc.Get("Integrations.Title");
             this.RaisePropertyChanged(nameof(TodoistDescription));
             this.RaisePropertyChanged(nameof(TodoistStatusText));
+            this.RaisePropertyChanged(nameof(TodoistBadge));
             this.RaisePropertyChanged(nameof(WebSearchDescription));
             this.RaisePropertyChanged(nameof(WebSearchStatusText));
+            this.RaisePropertyChanged(nameof(WebSearchBadge));
             this.RaisePropertyChanged(nameof(GitHubAppDescription));
             this.RaisePropertyChanged(nameof(GitHubAppStatusText));
+            this.RaisePropertyChanged(nameof(GitHubBadge));
             this.RaisePropertyChanged(nameof(EmailDescription));
             this.RaisePropertyChanged(nameof(EmailStatusText));
+            this.RaisePropertyChanged(nameof(EmailBadge));
             this.RaisePropertyChanged(nameof(SmsDescription));
             this.RaisePropertyChanged(nameof(SmsStatusText));
+            this.RaisePropertyChanged(nameof(SmsBadge));
             EmailProviderOptions = CreateEmailProviderOptions();
             this.RaisePropertyChanged(nameof(SelectedEmailProviderOption));
             RefreshGitHubConnectionText();
@@ -181,13 +205,17 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 this.RaiseAndSetIfChanged(ref _isTaskAgentEnabled, value);
                 this.RaisePropertyChanged(nameof(TodoistStatusText));
+                this.RaisePropertyChanged(nameof(TodoistBadge));
             }
         }
 
         public string TodoistDescription => Loc.Get("Integrations.Todoist.Description");
-        public string TodoistStatusText => IsTaskAgentEnabled
-            ? Loc.Get("Integrations.Status.Active")
-            : Loc.Get("Integrations.Status.NotConfigured");
+        // The saved key decides the badge, not the text box: typing a key is not connecting, and Kam
+        // does not test the key, so a saved one is "configured" rather than "connected".
+        public IntegrationBadge TodoistBadge => !string.IsNullOrWhiteSpace(_settingsService.TodoistApiKey)
+            ? IntegrationBadge.Accent(Loc.Get("Integrations.Status.Configured"))
+            : IntegrationBadge.Neutral(Loc.Get("Integrations.Status.NotConnected"));
+        public string TodoistStatusText => TodoistBadge.Text;
 
         #endregion
 
@@ -223,6 +251,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 this.RaiseAndSetIfChanged(ref _isWebSearchConfigured, value);
                 this.RaisePropertyChanged(nameof(WebSearchStatusText));
+                this.RaisePropertyChanged(nameof(WebSearchBadge));
             }
         }
 
@@ -233,9 +262,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public string WebSearchDescription => Loc.Get("Integrations.WebSearch.Description");
 
         /// <summary>Gets which search the agent uses: Google with a saved key, otherwise keyless search.</summary>
-        public string WebSearchStatusText => IsWebSearchConfigured
-            ? Loc.Get("Integrations.WebSearch.Status.Google")
-            : Loc.Get("Integrations.WebSearch.Status.Keyless");
+        public IntegrationBadge WebSearchBadge => IsWebSearchConfigured
+            ? IntegrationBadge.Success(Loc.Get("Integrations.WebSearch.Status.Google"))
+            : IntegrationBadge.Success(Loc.Get("Integrations.WebSearch.Status.Keyless"));
+        public string WebSearchStatusText => WebSearchBadge.Text;
 
         #endregion
 
@@ -296,17 +326,37 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 this.RaiseAndSetIfChanged(ref _isGitHubAppConfigured, value);
                 this.RaisePropertyChanged(nameof(GitHubAppStatusText));
+                this.RaisePropertyChanged(nameof(GitHubBadge));
                 this.RaisePropertyChanged(nameof(IsGitHubStatusPositive));
                 this.RaisePropertyChanged(nameof(CanTestGitHubAppConnection));
             }
         }
 
         public string GitHubAppDescription => Loc.Get("Integrations.GitHub.Description");
-        public string GitHubAppStatusText => _isGitHubDesktopConnected || _isGitHubAppConnected
-            ? Loc.Get("Integrations.Status.Connected")
-            : IsGitHubAppConfigured
-                ? Loc.Get("Integrations.Status.Configured")
-                : Loc.Get("Integrations.Status.NotConnected");
+        public IntegrationBadge GitHubBadge
+        {
+            get
+            {
+                if (_isGitHubDesktopConnected || _isGitHubAppConnected)
+                {
+                    return IntegrationBadge.Success(Loc.Get("Integrations.Status.Connected"));
+                }
+
+                return _githubConnectionState switch
+                {
+                    GitHubConnectionState.InvalidPrivateKeyPath or GitHubConnectionState.Unavailable
+                        => IntegrationBadge.Danger(Loc.Get("Integrations.Status.CheckFailed")),
+                    GitHubConnectionState.MissingSettings or GitHubConnectionState.SignInRequired
+                        or GitHubConnectionState.NeedsAction or GitHubConnectionState.RetestRequired
+                        => IntegrationBadge.Warning(Loc.Get("Integrations.Status.SetupNeeded")),
+                    _ => IsGitHubAppConfigured
+                        ? IntegrationBadge.Accent(Loc.Get("Integrations.Status.Configured"))
+                        : IntegrationBadge.Neutral(Loc.Get("Integrations.Status.NotConnected"))
+                };
+            }
+        }
+
+        public string GitHubAppStatusText => GitHubBadge.Text;
 
         public bool IsGitHubStatusPositive => _isGitHubDesktopConnected || _isGitHubAppConnected || IsGitHubAppConfigured;
 
@@ -456,6 +506,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 this.RaiseAndSetIfChanged(ref _isEmailEnabled, value);
                 this.RaisePropertyChanged(nameof(EmailStatusText));
+                this.RaisePropertyChanged(nameof(EmailBadge));
             }
         }
 
@@ -466,9 +517,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         }
 
         public string EmailDescription => Loc.Get("Integrations.Email.Description");
-        public string EmailStatusText => IsEmailEnabled
-            ? Loc.Get("Integrations.Status.Configured")
-            : Loc.Get("Integrations.Status.NotConfigured");
+        public IntegrationBadge EmailBadge => IsEmailEnabled
+            ? IntegrationBadge.Accent(Loc.Get("Integrations.Status.Configured"))
+            : IntegrationBadge.Neutral(Loc.Get("Integrations.Status.NotConfigured"));
+        public string EmailStatusText => EmailBadge.Text;
 
         public string[] EmailProviders => new[] { "Gmail", "Outlook", "Yahoo", "Custom" };
 
@@ -512,13 +564,15 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 this.RaiseAndSetIfChanged(ref _isSmsEnabled, value);
                 this.RaisePropertyChanged(nameof(SmsStatusText));
+                this.RaisePropertyChanged(nameof(SmsBadge));
             }
         }
 
         public string SmsDescription => Loc.Get("Integrations.Sms.Description");
-        public string SmsStatusText => IsSmsEnabled
-            ? Loc.Get("Integrations.Status.Configured")
-            : Loc.Get("Integrations.Status.NotConfigured");
+        public IntegrationBadge SmsBadge => IsSmsEnabled
+            ? IntegrationBadge.Accent(Loc.Get("Integrations.Status.Configured"))
+            : IntegrationBadge.Neutral(Loc.Get("Integrations.Status.NotConfigured"));
+        public string SmsStatusText => SmsBadge.Text;
 
         #endregion
 
@@ -687,6 +741,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _isGitHubAppConnected = false;
             _isGitHubDesktopConnected = false;
             this.RaisePropertyChanged(nameof(GitHubAppStatusText));
+            this.RaisePropertyChanged(nameof(GitHubBadge));
             this.RaisePropertyChanged(nameof(IsGitHubStatusPositive));
             this.RaisePropertyChanged(nameof(CanListGitHubAppRepositories));
             SetGitHubConnectionText(
@@ -706,6 +761,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             _githubConnectionState = state;
             _githubConnectionDetail = detail;
+            this.RaisePropertyChanged(nameof(GitHubBadge));
+            this.RaisePropertyChanged(nameof(GitHubAppStatusText));
             GitHubConnectionStatusText = GetGitHubConnectionStateText(state);
             GitHubConnectionDetailText = SanitizeGitHubAppDetail(detail());
         }
@@ -753,6 +810,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             _settingsService.TodoistApiKey = TodoistApiKey;
             _settingsService.Save();
+            RaiseTodoistBadge();
         }
 
         private void ClearTodoist()
@@ -760,6 +818,13 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             TodoistApiKey = string.Empty;
             _settingsService.TodoistApiKey = string.Empty;
             _settingsService.Save();
+            RaiseTodoistBadge();
+        }
+
+        private void RaiseTodoistBadge()
+        {
+            this.RaisePropertyChanged(nameof(TodoistBadge));
+            this.RaisePropertyChanged(nameof(TodoistStatusText));
         }
 
         #endregion
@@ -1049,6 +1114,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _isGitHubDesktopConnected = true;
             _isGitHubAppConnected = false;
             this.RaisePropertyChanged(nameof(GitHubAppStatusText));
+            this.RaisePropertyChanged(nameof(GitHubBadge));
             this.RaisePropertyChanged(nameof(IsGitHubStatusPositive));
             this.RaisePropertyChanged(nameof(CanListGitHubAppRepositories));
             var repositoryCount = result.Repositories.Count;
@@ -1063,6 +1129,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             _isGitHubAppConnected = true;
             this.RaisePropertyChanged(nameof(GitHubAppStatusText));
+            this.RaisePropertyChanged(nameof(GitHubBadge));
             this.RaisePropertyChanged(nameof(IsGitHubStatusPositive));
             this.RaisePropertyChanged(nameof(CanListGitHubAppRepositories));
         }
@@ -1072,6 +1139,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _isGitHubAppConnected = false;
             _isGitHubDesktopConnected = false;
             this.RaisePropertyChanged(nameof(GitHubAppStatusText));
+            this.RaisePropertyChanged(nameof(GitHubBadge));
             this.RaisePropertyChanged(nameof(IsGitHubStatusPositive));
             this.RaisePropertyChanged(nameof(CanListGitHubAppRepositories));
             SetGitHubConnectionText(state, detail);

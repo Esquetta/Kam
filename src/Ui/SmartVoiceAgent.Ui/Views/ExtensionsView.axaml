@@ -470,7 +470,10 @@
                                             <Viewbox><Path Classes="Icon" Data="{Binding Icon, Converter={StaticResource IconResource}}"/></Viewbox>
                                         </Border>
                                         <StackPanel Grid.Column="1" Spacing="3">
-                                            <TextBlock Text="{Binding Title}" Classes="RowTitle"/>
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                <TextBlock Text="{Binding Title}" Classes="RowTitle" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                <Button Grid.Column="1" Classes="LinkAction" Command="{Binding OpenHomepageCommand}" Content="{DynamicResource Lang.Extensions.Catalog.Docs}"/>
+                                            </Grid>
                                             <TextBlock Text="{Binding Description}" Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
                                         </StackPanel>
                                         <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,12,0,0">
@@ -479,7 +482,6 @@
                                                 <Border Classes="Pill Warning" IsVisible="{Binding IsRuntimeMissing}"><TextBlock Text="{Binding MissingText}"/></Border>
                                                 <Border Classes="Pill" IsVisible="{Binding NeedsFolder}"><TextBlock Text="{DynamicResource Lang.Extensions.Catalog.AsksForFolder}"/></Border>
                                                 <Button Classes="LinkAction" IsVisible="{Binding IsRuntimeMissing}" Command="{Binding GetRuntimeCommand}" Content="{Binding GetRuntimeText}"/>
-                                                <Button Classes="LinkAction" Command="{Binding OpenHomepageCommand}" Content="{DynamicResource Lang.Extensions.Catalog.Docs}"/>
                                             </WrapPanel>
                                             <Button Grid.Column="1"
                                                     Classes="SecondaryAction CatalogAdd"
@@ -531,7 +533,10 @@
                                             <Viewbox><Path Classes="Icon" Data="{Binding Icon, Converter={StaticResource IconResource}}"/></Viewbox>
                                         </Border>
                                         <StackPanel Grid.Column="1" Spacing="3">
-                                            <TextBlock Text="{Binding Title}" Classes="RowTitle"/>
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                <TextBlock Text="{Binding Title}" Classes="RowTitle" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                <Button Grid.Column="1" Classes="LinkAction" Command="{Binding OpenHomepageCommand}" Content="{DynamicResource Lang.Extensions.Catalog.Docs}"/>
+                                            </Grid>
                                             <TextBlock Text="{Binding Description}" Classes="Caption" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
                                         </StackPanel>
                                         <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,12,0,0">
@@ -539,7 +544,6 @@
                                                 <Border Classes="Pill"><TextBlock Text="{Binding Entry.Source}" Classes="Mono"/></Border>
                                                 <Border Classes="Pill Warning" IsVisible="{Binding IsRuntimeMissing}"><TextBlock Text="{Binding MissingText}"/></Border>
                                                 <Button Classes="LinkAction" IsVisible="{Binding IsRuntimeMissing}" Command="{Binding GetRuntimeCommand}" Content="{Binding GetRuntimeText}"/>
-                                                <Button Classes="LinkAction" Command="{Binding OpenHomepageCommand}" Content="{DynamicResource Lang.Extensions.Catalog.Docs}"/>
                                             </WrapPanel>
                                             <Button Grid.Column="1"
                                                     Classes="SecondaryAction CatalogAdd"

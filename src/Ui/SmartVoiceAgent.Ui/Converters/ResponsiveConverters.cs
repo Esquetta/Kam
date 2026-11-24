@@ -163,31 +163,6 @@ public class LogPanelVisibilityConverter : IValueConverter
         return OneWayConverter.ConvertBackNoOp();
     }
 }
-
-/// <summary>
-/// Returns GridLength for log panel column based on current breakpoint
-/// </summary>
-public class LogPanelWidthConverter : IValueConverter
-{
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        var manager = WindowStateManager.Instance;
-        
-        if (!manager.IsLogPanelVisible)
-            return new GridLength(0);
-        
-        if (manager.IsMedium)
-            return new GridLength(360);
-        
-        return new GridLength(420);
-    }
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        return OneWayConverter.ConvertBackNoOp();
-    }
-}
-
 /// <summary>
 /// Scales a numeric value based on window width
 /// Usage: Binding with ConverterParameter=baseValue (e.g., 260)

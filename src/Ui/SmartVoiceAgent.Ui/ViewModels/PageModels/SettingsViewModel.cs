@@ -239,6 +239,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     this.RaiseAndSetIfChanged(ref _chatProvider, value);
                     ApplyProviderDefaults(ModelProviderRole.Chat);
                     SaveAiProfileSettings();
+                    RaiseChatProfileState();
                 }
             }
         }
@@ -265,6 +266,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 {
                     this.RaiseAndSetIfChanged(ref _chatModelId, value);
                     SaveAiProfileSettings();
+                    RaiseChatProfileState();
                 }
             }
         }
@@ -279,8 +281,38 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     this.RaiseAndSetIfChanged(ref _chatApiKey, value);
                     this.RaisePropertyChanged(nameof(MaskedChatApiKey));
                     SaveAiProfileSettings();
+                    RaiseChatProfileState();
                 }
             }
+        }
+
+        /// <summary>
+        /// Gets whether the agent model still needs an API key, so Settings does not look set up
+        /// just because a provider and model are preselected.
+        /// </summary>
+        public bool ChatProfileNeedsKey =>
+            ParseProvider(_chatProvider) != ModelProviderType.Ollama && string.IsNullOrWhiteSpace(_chatApiKey);
+
+        /// <summary>
+        /// Gets the agent model's state in words: what is missing, or which model it uses.
+        /// </summary>
+        public string ChatProfileStateText => ChatProfileNeedsKey
+            ? Loc.Get("Settings.ChatState.NeedsKey")
+            : string.IsNullOrWhiteSpace(_chatModelId)
+                ? Loc.Get("Settings.ChatState.NeedsModel")
+                : Loc.Format("Settings.ChatState.Ready", _chatModelId, ProviderDisplayName(_chatProvider));
+
+        private static string ProviderDisplayName(string provider)
+        {
+            return ParseProvider(provider) == ModelProviderType.OpenAICompatible
+                ? Loc.Get("Settings.Provider.OpenAICompatible")
+                : provider;
+        }
+
+        private void RaiseChatProfileState()
+        {
+            this.RaisePropertyChanged(nameof(ChatProfileNeedsKey));
+            this.RaisePropertyChanged(nameof(ChatProfileStateText));
         }
 
         public string MaskedChatApiKey => new ModelProviderProfile { ApiKey = _chatApiKey }.MaskedApiKey;
@@ -2416,6 +2448,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             AiProfileStatus = _aiProfileStatusText();
             this.RaisePropertyChanged(nameof(AiConnectionTestButtonText));
             this.RaisePropertyChanged(nameof(SelectedLanguage));
+            RaiseChatProfileState();
         }
 
         #endregion

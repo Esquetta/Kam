@@ -141,6 +141,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         private NavView _activeView = NavView.Coordinator;
+        private bool _isActivityPanelOpen = true;
         public NavView ActiveView
         {
             get => _activeView;
@@ -150,7 +151,42 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 this.RaisePropertyChanged(nameof(IsChatWorkbenchVisible));
                 this.RaisePropertyChanged(nameof(IsPageHostVisible));
                 this.RaisePropertyChanged(nameof(ActivePageTitle));
+                RaiseActivityPanelLayout();
             }
+        }
+
+        /// <summary>
+        /// Gets whether the user wants the Activity panel next to the chat; the panel button toggles it.
+        /// </summary>
+        public bool IsActivityPanelOpen
+        {
+            get => _isActivityPanelOpen;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _isActivityPanelOpen, value);
+                RaiseActivityPanelLayout();
+            }
+        }
+
+        /// <summary>
+        /// Gets whether the Activity panel is on screen: only beside the chat, when the user has it open
+        /// and the window is wide enough. Other pages use the full width.
+        /// </summary>
+        public bool IsActivityPanelShown =>
+            IsChatWorkbenchVisible && _isActivityPanelOpen && WindowStateManager.Instance.IsLogPanelVisible;
+
+        /// <summary>Gets the Activity panel column width: 0 when hidden, narrower on medium windows.</summary>
+        public GridLength ActivityPanelWidth => IsActivityPanelShown
+            ? new GridLength(WindowStateManager.Instance.IsMedium ? 360 : 420)
+            : new GridLength(0);
+
+        /// <summary>Shows or hides the Activity panel beside the chat.</summary>
+        public ICommand ToggleActivityPanelCommand { get; }
+
+        private void RaiseActivityPanelLayout()
+        {
+            this.RaisePropertyChanged(nameof(IsActivityPanelShown));
+            this.RaisePropertyChanged(nameof(ActivityPanelWidth));
         }
 
         /// <summary>
@@ -831,6 +867,14 @@ namespace SmartVoiceAgent.Ui.ViewModels
             RemoveComposerAttachmentCommand = ReactiveCommand.Create<ComposerAttachmentViewModel?>(RemoveComposerAttachment);
             ClearComposerAttachmentsCommand = ReactiveCommand.Create(ClearComposerAttachments);
             ShowRunsCommand = ReactiveCommand.Create(() => SelectedActivityPanelMode = ActivityPanelMode.Runs);
+            ToggleActivityPanelCommand = ReactiveCommand.Create(() => { IsActivityPanelOpen = !IsActivityPanelOpen; });
+            WindowStateManager.Instance.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName is nameof(WindowStateManager.IsLogPanelVisible) or nameof(WindowStateManager.IsMedium))
+                {
+                    RaiseActivityPanelLayout();
+                }
+            };
             ShowContextCommand = ReactiveCommand.Create(() => SelectedActivityPanelMode = ActivityPanelMode.Context);
             ShowEventsCommand = ReactiveCommand.Create(() => SelectedActivityPanelMode = ActivityPanelMode.Events);
             UseComposerSuggestionCommand = ReactiveCommand.Create<string?>(UseComposerSuggestion);
