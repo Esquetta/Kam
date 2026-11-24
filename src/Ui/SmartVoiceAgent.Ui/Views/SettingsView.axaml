@@ -28,6 +28,19 @@
             <Setter Property="Margin" Value="0"/>
         </Style>
 
+        <Style Selector="ToggleButton.AdvancedToggle">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0,2"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="ToggleButton.AdvancedToggle:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+                         ToggleButton.AdvancedToggle:checked /template/ ContentPresenter#PART_ContentPresenter,
+                         ToggleButton.AdvancedToggle:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentStrongBrush}"/>
+        </Style>
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
@@ -39,6 +52,189 @@
                            Classes="PageTitle"/>
                 <TextBlock Text="{DynamicResource Lang.Settings.Subtitle}"
                            Classes="PageSubtitle"/>
+            </StackPanel>
+
+            <!-- AI Runtime Section: the model comes first, because nothing works without it -->
+            <StackPanel Spacing="8" Margin="0,8,0,8">
+                <TextBlock Text="{DynamicResource Lang.Settings.AiRuntime}"
+                           Classes="Overline"
+                           Margin="4,0,0,4"/>
+
+                <Border Classes="SettingsItem">
+                    <StackPanel Spacing="12">
+                        <Grid ColumnDefinitions="Auto, *">
+                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
+                                <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconChat}"/></Viewbox>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{DynamicResource Lang.Settings.ChatModel}"
+                                           FontSize="13"
+                                           FontWeight="Medium"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding ActiveChatProfileId}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" ColumnSpacing="10" RowSpacing="10">
+                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="6">
+                                <TextBlock Text="{DynamicResource Lang.Settings.Provider}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                <ComboBox ItemsSource="{Binding AiProviders}"
+                                          SelectedItem="{Binding ChatProvider, Mode=TwoWay}"
+                                          HorizontalAlignment="Stretch"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="6">
+                                <TextBlock Text="{DynamicResource Lang.Settings.Model}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                <Grid ColumnDefinitions="*, Auto"
+                                      ColumnSpacing="8"
+                                      IsVisible="{Binding IsChatModelCatalogBacked}">
+                                    <ComboBox Grid.Column="0"
+                                              ItemsSource="{Binding ChatModelOptions}"
+                                              SelectedItem="{Binding ChatModelId, Mode=TwoWay}"
+                                              HorizontalAlignment="Stretch"/>
+                                    <Button Grid.Column="1"
+                                            Command="{Binding RefreshChatModelsCommand}"
+                                            IsEnabled="{Binding !IsRefreshingChatModels}"
+                                            Classes="SecondaryAction"
+                                            Padding="12,8">
+                                        <TextBlock Text="{DynamicResource Lang.Common.Refresh}" FontSize="12" FontWeight="Medium"/>
+                                    </Button>
+                                </Grid>
+                                <TextBox Text="{Binding ChatModelId, Mode=TwoWay}"
+                                         IsVisible="{Binding !IsChatModelCatalogBacked}"
+                                         PlaceholderText="custom/model-id"/>
+                            </StackPanel>
+
+                            <Grid Grid.Row="1"
+                                  Grid.Column="0"
+                                  Grid.ColumnSpan="2"
+                                  ColumnDefinitions="*, Auto"
+                                  RowDefinitions="Auto, Auto, Auto"
+                                  ColumnSpacing="10"
+                                  RowSpacing="6">
+                                <TextBlock Grid.Row="0"
+                                           Grid.Column="0"
+                                           Grid.ColumnSpan="2"
+                                           Text="{DynamicResource Lang.Settings.ApiKey}"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                <TextBox Grid.Row="1"
+                                         Grid.Column="0"
+                                         Text="{Binding ChatApiKey, Mode=TwoWay}"
+                                         PasswordChar="*"
+                                         PlaceholderText="sk-..."/>
+                                <Button Grid.Row="1"
+                                        Grid.Column="1"
+                                        Command="{Binding TestAiConnectionCommand}"
+                                        IsEnabled="{Binding !IsTestingAiConnection}"
+                                        Classes="SecondaryAction"
+                                        MinWidth="180"
+                                        HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Stretch"
+                                        Padding="16,9">
+                                    <TextBlock Text="{Binding AiConnectionTestButtonText}" FontSize="12" FontWeight="Medium"/>
+                                </Button>
+                                <TextBlock Grid.Row="2"
+                                           Grid.Column="0"
+                                           Grid.ColumnSpan="2"
+                                           Text="{Binding MaskedChatApiKey}"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </Grid>
+                        <TextBlock Text="{Binding AiProfileStatus}"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   TextWrapping="Wrap"/>
+
+                        <!-- The planner only serves the older command mode (AgentRuntime:Enabled=false) -->
+                        <ToggleButton x:Name="PlannerToggle"
+                                      Classes="AdvancedToggle"
+                                      HorizontalAlignment="Left">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="{DynamicResource Lang.Settings.PlannerAdvanced}" FontSize="12" FontWeight="Medium"/>
+                                <Viewbox Width="12" Height="12"><Path Classes="Icon" Data="{StaticResource IconChevronDown}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
+                            </StackPanel>
+                        </ToggleButton>
+                        <StackPanel Spacing="12" IsVisible="{Binding #PlannerToggle.IsChecked}">
+                            <TextBlock Text="{DynamicResource Lang.Settings.PlannerAdvancedDesc}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       TextWrapping="Wrap"/>
+                            <Grid ColumnDefinitions="Auto, *">
+                                <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
+                                    <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconSparkles}"/></Viewbox>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{DynamicResource Lang.Settings.PlannerModel}"
+                                               FontSize="13"
+                                               FontWeight="Medium"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                    <TextBlock Text="{Binding ActivePlannerProfileId}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" ColumnSpacing="10" RowSpacing="10">
+                                <StackPanel Grid.Row="0" Grid.Column="0" Spacing="6">
+                                    <TextBlock Text="{DynamicResource Lang.Settings.Provider}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource TextMutedBrush}"/>
+                                    <ComboBox ItemsSource="{Binding AiProviders}"
+                                              SelectedItem="{Binding AiProvider, Mode=TwoWay}"
+                                              HorizontalAlignment="Stretch"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="0" Grid.Column="1" Spacing="6">
+                                    <TextBlock Text="{DynamicResource Lang.Settings.Model}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource TextMutedBrush}"/>
+                                    <Grid ColumnDefinitions="*, Auto"
+                                          ColumnSpacing="8"
+                                          IsVisible="{Binding IsPlannerModelCatalogBacked}">
+                                        <ComboBox Grid.Column="0"
+                                                  ItemsSource="{Binding AiModelOptions}"
+                                                  SelectedItem="{Binding AiModelId, Mode=TwoWay}"
+                                                  HorizontalAlignment="Stretch"/>
+                                        <Button Grid.Column="1"
+                                                Command="{Binding RefreshAiModelsCommand}"
+                                                IsEnabled="{Binding !IsRefreshingAiModels}"
+                                                Classes="SecondaryAction"
+                                                Padding="12,8">
+                                            <TextBlock Text="{DynamicResource Lang.Common.Refresh}" FontSize="12" FontWeight="Medium"/>
+                                        </Button>
+                                    </Grid>
+                                    <TextBox Text="{Binding AiModelId, Mode=TwoWay}"
+                                             IsVisible="{Binding !IsPlannerModelCatalogBacked}"
+                                             PlaceholderText="custom/model-id"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Spacing="6">
+                                    <TextBlock Text="{DynamicResource Lang.Settings.ApiKey}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource TextMutedBrush}"/>
+                                    <TextBox Text="{Binding AiApiKey, Mode=TwoWay}"
+                                             PasswordChar="*"
+                                             PlaceholderText="sk-..."/>
+                                    <TextBlock Text="{Binding MaskedAiApiKey}"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
             </StackPanel>
 
             <!-- General Section -->
@@ -94,197 +290,6 @@
                                       OffContent=""
                                       VerticalAlignment="Center"/>
                     </Grid>
-                </Border>
-
-                <!-- Start Minimized -->
-                <Border Classes="SettingsItem">
-                    <Grid ColumnDefinitions="Auto, *, Auto">
-                        <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
-                            <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconAppWindow}"/></Viewbox>
-                        </Border>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Lang.Settings.StartMinimized}"
-                                       FontSize="13"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="{DynamicResource Lang.Settings.StartMinimizedDesc}"
-                                       FontSize="12"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       Margin="0,2,0,0"/>
-                        </StackPanel>
-                        <ToggleSwitch Grid.Column="2"
-                                      IsChecked="{Binding StartMinimized, Mode=TwoWay}"
-                                      OnContent=""
-                                      OffContent=""
-                                      VerticalAlignment="Center"/>
-                    </Grid>
-                </Border>
-            </StackPanel>
-
-            <!-- AI Runtime Section -->
-            <StackPanel Spacing="8" Margin="0,8,0,8">
-                <TextBlock Text="{DynamicResource Lang.Settings.AiRuntime}"
-                           Classes="Overline"
-                           Margin="4,0,0,4"/>
-
-                <Border Classes="SettingsItem">
-                    <StackPanel Spacing="12">
-                        <Grid ColumnDefinitions="Auto, *">
-                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
-                                <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconSparkles}"/></Viewbox>
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="{DynamicResource Lang.Settings.PlannerModel}"
-                                           FontSize="13"
-                                           FontWeight="Medium"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                <TextBlock Text="{Binding ActivePlannerProfileId}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           Margin="0,2,0,0"/>
-                            </StackPanel>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" ColumnSpacing="10" RowSpacing="10">
-                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="6">
-                                <TextBlock Text="{DynamicResource Lang.Settings.Provider}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                                <ComboBox ItemsSource="{Binding AiProviders}"
-                                          SelectedItem="{Binding AiProvider, Mode=TwoWay}"
-                                          HorizontalAlignment="Stretch"/>
-                            </StackPanel>
-
-                            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="6">
-                                <TextBlock Text="{DynamicResource Lang.Settings.Model}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                                <Grid ColumnDefinitions="*, Auto"
-                                      ColumnSpacing="8"
-                                      IsVisible="{Binding IsPlannerModelCatalogBacked}">
-                                    <ComboBox Grid.Column="0"
-                                              ItemsSource="{Binding AiModelOptions}"
-                                              SelectedItem="{Binding AiModelId, Mode=TwoWay}"
-                                              HorizontalAlignment="Stretch"/>
-                                    <Button Grid.Column="1"
-                                            Command="{Binding RefreshAiModelsCommand}"
-                                            IsEnabled="{Binding !IsRefreshingAiModels}"
-                                            Classes="SecondaryAction"
-                                            Padding="12,8">
-                                        <TextBlock Text="{DynamicResource Lang.Common.Refresh}" FontSize="12" FontWeight="Medium"/>
-                                    </Button>
-                                </Grid>
-                                <TextBox Text="{Binding AiModelId, Mode=TwoWay}"
-                                         IsVisible="{Binding !IsPlannerModelCatalogBacked}"
-                                         PlaceholderText="custom/model-id"/>
-                            </StackPanel>
-
-                            <Grid Grid.Row="1"
-                                  Grid.Column="0"
-                                  Grid.ColumnSpan="2"
-                                  ColumnDefinitions="*, Auto"
-                                  RowDefinitions="Auto, Auto, Auto"
-                                  ColumnSpacing="10"
-                                  RowSpacing="6">
-                                <TextBlock Grid.Row="0"
-                                           Grid.Column="0"
-                                           Grid.ColumnSpan="2"
-                                           Text="{DynamicResource Lang.Settings.ApiKey}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                                <TextBox Grid.Row="1"
-                                         Grid.Column="0"
-                                         Text="{Binding AiApiKey, Mode=TwoWay}"
-                                         PasswordChar="*"
-                                         PlaceholderText="sk-..."/>
-                                <Button Grid.Row="1"
-                                        Grid.Column="1"
-                                        Command="{Binding TestAiConnectionCommand}"
-                                        IsEnabled="{Binding !IsTestingAiConnection}"
-                                        Classes="SecondaryAction"
-                                        MinWidth="180"
-                                        HorizontalAlignment="Stretch"
-                                        VerticalAlignment="Stretch"
-                                        Padding="16,9">
-                                    <TextBlock Text="{Binding AiConnectionTestButtonText}" FontSize="12" FontWeight="Medium"/>
-                                </Button>
-                                <TextBlock Grid.Row="2"
-                                           Grid.Column="0"
-                                           Grid.ColumnSpan="2"
-                                           Text="{Binding MaskedAiApiKey}"
-                                           FontSize="10"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           TextTrimming="CharacterEllipsis"/>
-                            </Grid>
-                        </Grid>
-                        <Grid ColumnDefinitions="Auto, *" Margin="0,8,0,0">
-                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
-                                <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconChat}"/></Viewbox>
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="{DynamicResource Lang.Settings.ChatModel}"
-                                           FontSize="13"
-                                           FontWeight="Medium"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                <TextBlock Text="{Binding ActiveChatProfileId}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           Margin="0,2,0,0"/>
-                            </StackPanel>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" ColumnSpacing="10" RowSpacing="10">
-                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="6">
-                                <TextBlock Text="{DynamicResource Lang.Settings.Provider}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                                <ComboBox ItemsSource="{Binding AiProviders}"
-                                          SelectedItem="{Binding ChatProvider, Mode=TwoWay}"
-                                          HorizontalAlignment="Stretch"/>
-                            </StackPanel>
-
-                            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="6">
-                                <TextBlock Text="{DynamicResource Lang.Settings.Model}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                                <Grid ColumnDefinitions="*, Auto"
-                                      ColumnSpacing="8"
-                                      IsVisible="{Binding IsChatModelCatalogBacked}">
-                                    <ComboBox Grid.Column="0"
-                                              ItemsSource="{Binding ChatModelOptions}"
-                                              SelectedItem="{Binding ChatModelId, Mode=TwoWay}"
-                                              HorizontalAlignment="Stretch"/>
-                                    <Button Grid.Column="1"
-                                            Command="{Binding RefreshChatModelsCommand}"
-                                            IsEnabled="{Binding !IsRefreshingChatModels}"
-                                            Classes="SecondaryAction"
-                                            Padding="12,8">
-                                        <TextBlock Text="{DynamicResource Lang.Common.Refresh}" FontSize="12" FontWeight="Medium"/>
-                                    </Button>
-                                </Grid>
-                                <TextBox Text="{Binding ChatModelId, Mode=TwoWay}"
-                                         IsVisible="{Binding !IsChatModelCatalogBacked}"
-                                         PlaceholderText="custom/model-id"/>
-                            </StackPanel>
-
-                            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Spacing="6">
-                                <TextBlock Text="{DynamicResource Lang.Settings.ApiKey}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                                <TextBox Text="{Binding ChatApiKey, Mode=TwoWay}"
-                                         PasswordChar="*"
-                                         PlaceholderText="sk-..."/>
-                                <TextBlock Text="{Binding MaskedChatApiKey}"
-                                           FontSize="10"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           TextTrimming="CharacterEllipsis"/>
-                            </StackPanel>
-                        </Grid>
-                        <TextBlock Text="{Binding AiProfileStatus}"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource TextMutedBrush}"
-                                   TextWrapping="Wrap"/>
-                    </StackPanel>
                 </Border>
             </StackPanel>
 

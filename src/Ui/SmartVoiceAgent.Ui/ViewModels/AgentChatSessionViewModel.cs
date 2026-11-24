@@ -215,11 +215,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public ObservableCollection<AgentChatMessageViewModel> Messages { get; } = new();
 
         /// <summary>
-        /// Gets the name of the agent answering in this thread.
-        /// </summary>
-        public string AgentName => Loc.Get("Workbench.Thread.AgentName");
-
-        /// <summary>
         /// Gets the thread state shown in the sidebar: working, active or ready.
         /// </summary>
         public string StatusText => IsRunning
@@ -350,7 +345,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 this.RaisePropertyChanged(nameof(RelativeTimeText));
             }
 
-            this.RaisePropertyChanged(nameof(AgentName));
             this.RaisePropertyChanged(nameof(StatusText));
             this.RaisePropertyChanged(nameof(MessageCountText));
 

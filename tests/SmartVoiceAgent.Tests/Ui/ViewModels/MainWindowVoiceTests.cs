@@ -272,6 +272,23 @@ public sealed class MainWindowVoiceTests : IDisposable
     }
 
     [Fact]
+    public void SetUpModel_WithNoModel_ShowsTheSetupCardAndSavesThePickedProviderForChat()
+    {
+        using var settings = new JsonSettingsService(_settingsDirectory);
+        settings.ModelProviderProfiles = [];
+        var viewModel = new MainWindowViewModel(settings);
+        viewModel.SetAgentRuntime(new IdleRuntime(), new AllowAllPermissions(), new NoSessions());
+
+        viewModel.NeedsModelSetup.Should().BeTrue();
+        viewModel.SetUpModelCommand.Execute("Ollama");
+
+        // Navigation may be posted to the UI thread; the saved chat profile is what the next turn uses.
+        settings.ModelProviderProfiles.Should().Contain(profile =>
+            profile.Provider == ModelProviderType.Ollama
+            && profile.Roles.Contains(ModelProviderRole.Chat));
+    }
+
+    [Fact]
     public void HeaderStatus_WithTheAgentAndAModel_IsReadyAndNamesTheModel()
     {
         using var settings = new JsonSettingsService(_settingsDirectory);

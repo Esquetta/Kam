@@ -108,15 +108,14 @@ public sealed class MainWindowMetadataTests
         mainWindowText.Should().Contain("AgentChatSessionCountText");
         mainWindowText.Should().Contain("SelectedAgentChatMessageCountText");
         mainWindowText.Should().Contain("MessageCountText");
-        mainWindowText.Should().Contain("AgentName");
         mainWindowText.Should().Contain("NewAgentChatCommand");
         mainWindowText.Should().Contain("SelectAgentChatCommand");
         mainWindowText.Should().Contain("IsChatWorkbenchVisible");
         mainWindowText.Should().Contain("IsPageHostVisible");
         mainWindowText.Should().Contain("Chats");
-        mainWindowText.Should().Contain("Agent threads");
         mainWindowText.Should().Contain("New task");
-        mainWindowText.Should().Contain("Conversation timeline");
+        mainWindowText.Should().Contain("Connect a model to start");
+        mainWindowText.Should().Contain("Command=\"{Binding SetUpModelCommand}\"");
         mainWindowText.Should().NotContain("Model follows Settings");
         mainWindowText.Should().Contain("Start a focused agent task");
         mainWindowText.Should().Contain("Review current workspace");

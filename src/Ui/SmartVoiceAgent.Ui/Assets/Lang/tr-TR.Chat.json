@@ -1,6 +1,5 @@
 {
   "Chat.Threads.Title": "Sohbetler",
-  "Chat.Threads.Subtitle": "Ajan sohbetleri",
   "Chat.NewTask": "Yeni görev",
   "Chat.NewChatTip": "Yeni sohbet (Ctrl+N)",
   "Chat.Search.Placeholder": "Sohbetlerde ara (Ctrl+K)",
@@ -11,8 +10,20 @@
   "Chat.DeleteConfirm.Title": "Bu sohbet silinsin mi?",
   "Chat.DeleteConfirm.Body": "Mesajları bu bilgisayardan silinir.",
 
-  "Chat.Timeline": "Sohbet akışı",
 
+  "Chat.Setup.Title": "Başlamak için bir model bağlayın",
+  "Chat.Setup.Body": "Kam'ın size cevap verebilmesi için bir dil modeli gerekiyor. Nerede çalışacağını seçin; sonra Ayarlar'dan değiştirebilirsiniz.",
+  "Chat.Setup.OpenRouter.Title": "OpenRouter",
+  "Chat.Setup.OpenRouter.Caption": "Tek anahtarla birçok şirketin modelleri.",
+  "Chat.Setup.Ollama.Title": "Ollama",
+  "Chat.Setup.Ollama.Caption": "Model bu bilgisayarda çalışır. Anahtar gerekmez.",
+  "Chat.Setup.OpenAI.Title": "OpenAI",
+  "Chat.Setup.OpenAI.Caption": "OpenAI API anahtarınızla.",
+  "Chat.Setup.Anthropic.Title": "Anthropic",
+  "Chat.Setup.Anthropic.Caption": "Anthropic API anahtarınızla.",
+  "Chat.Setup.KeyNote": "Anahtarlar bu bilgisayarda şifreli saklanır.",
+  "Chat.Setup.Strip": "Henüz bağlı bir model yok, Kam cevap veremez.",
+  "Chat.Setup.StripAction": "Kur",
   "Chat.Empty.Title": "Odaklı bir ajan görevi başlatın",
   "Chat.Empty.Body": "Bir sohbet seçin, dosya ekleyin ya da sıradaki görevi mesaj kutusundan gönderin.",
   "Chat.Suggestion.Review.Title": "Çalışma alanını incele",

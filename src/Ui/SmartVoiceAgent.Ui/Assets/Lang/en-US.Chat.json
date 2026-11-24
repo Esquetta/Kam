@@ -1,6 +1,5 @@
 {
   "Chat.Threads.Title": "Chats",
-  "Chat.Threads.Subtitle": "Agent threads",
   "Chat.NewTask": "New task",
   "Chat.NewChatTip": "New chat (Ctrl+N)",
   "Chat.Search.Placeholder": "Search chats (Ctrl+K)",
@@ -11,8 +10,20 @@
   "Chat.DeleteConfirm.Title": "Delete this chat?",
   "Chat.DeleteConfirm.Body": "Its messages are removed from this computer.",
 
-  "Chat.Timeline": "Conversation timeline",
 
+  "Chat.Setup.Title": "Connect a model to start",
+  "Chat.Setup.Body": "Kam needs a language model to answer you. Pick where it runs; you can change it later in Settings.",
+  "Chat.Setup.OpenRouter.Title": "OpenRouter",
+  "Chat.Setup.OpenRouter.Caption": "One key for models from many companies.",
+  "Chat.Setup.Ollama.Title": "Ollama",
+  "Chat.Setup.Ollama.Caption": "The model runs on this computer. No key needed.",
+  "Chat.Setup.OpenAI.Title": "OpenAI",
+  "Chat.Setup.OpenAI.Caption": "Use your OpenAI API key.",
+  "Chat.Setup.Anthropic.Title": "Anthropic",
+  "Chat.Setup.Anthropic.Caption": "Use your Anthropic API key.",
+  "Chat.Setup.KeyNote": "Keys are stored encrypted on this computer.",
+  "Chat.Setup.Strip": "No model is connected yet, so Kam can't answer.",
+  "Chat.Setup.StripAction": "Set up",
   "Chat.Empty.Title": "Start a focused agent task",
   "Chat.Empty.Body": "Pick a thread, attach files, or send the next task from the composer.",
   "Chat.Suggestion.Review.Title": "Review current workspace",
