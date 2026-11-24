@@ -154,7 +154,7 @@ public class AiWebResearchService : IWebResearchService
 
             if (!results.Any())
             {
-                return "Araştırma sonucu bulunamadı.";
+                return "No research results found.";
             }
 
             // Linkleri aç
@@ -168,7 +168,7 @@ public class AiWebResearchService : IWebResearchService
         catch (Exception ex)
         {
             _logger.Error($"Özet oluşturulurken hata: {ex.Message}");
-            return $"Araştırma tamamlandı ancak özet oluşturulamadı. Hata: {ex.Message}";
+            return $"Error: the research finished but the summary could not be created: {ex.Message}";
         }
     }
 
@@ -178,25 +178,25 @@ public class AiWebResearchService : IWebResearchService
     private async Task<string> CreateSummaryAsync(WebResearchRequest request, List<WebResearchResult> results)
     {
         var resultsText = string.Join("\n\n", results.Select(r =>
-            $"Başlık: {r.Title}\nURL: {r.Url}\nÖzet: {r.Description}"));
+            $"Title: {r.Title}\nURL: {r.Url}\nSummary: {r.Description}"));
 
         var prompt = $@"
-Kullanıcı ""{request.Query}"" konusunda araştırma yaptı.
-Aşağıdaki araştırma sonuçlarına dayanarak:
-1. Konunun genel özetini çıkar
-2. Önemli noktaları belirt
-3. Kullanıcının dikkat etmesi gereken hususları söyle
-4. Kısa ve öz bir özet hazırla (maksimum 500 kelime)
+The user researched ""{request.Query}"".
+Based on the research results below:
+1. Summarize the topic in general terms
+2. List the key points
+3. Mention what the user should watch out for
+4. Keep it short (at most 500 words)
 
-Araştırma Sonuçları:
+Research results:
 {resultsText}
 
-Lütfen Türkçe olarak yanıtla.";
+Reply in the same language as the user's topic.";
 
         try
         {
             var summary = await CallAiProviderAsync(
-                "Sen araştırma sonuçlarını özetleyen bir uzmansın. Bulguları açık ve anlaşılır şekilde özetlersin.",
+                "You are an expert at summarizing research results. You summarize findings clearly and plainly.",
                 prompt
             );
 
@@ -215,7 +215,7 @@ Lütfen Türkçe olarak yanıtla.";
     private string CreateFallbackSummary(List<WebResearchResult> results)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("Araştırma Sonuçları:");
+        sb.AppendLine("Research results:");
         sb.AppendLine(new string('=', 50));
 
         for (int i = 0; i < results.Count; i++)
@@ -225,7 +225,7 @@ Lütfen Türkçe olarak yanıtla.";
             sb.AppendLine($"   URL: {result.Url}");
             if (!string.IsNullOrEmpty(result.Description))
             {
-                sb.AppendLine($"   Özet: {result.Description}");
+                sb.AppendLine($"   Summary: {result.Description}");
             }
             sb.AppendLine();
         }
@@ -574,9 +574,9 @@ SADECE JSON formatında yanıt ver:
                     {
                         results.Add(new WebResearchResult
                         {
-                            Title = string.IsNullOrWhiteSpace(title) ? "Başlık Yok" : CleanText(title),
+                            Title = string.IsNullOrWhiteSpace(title) ? "No title" : CleanText(title),
                             Url = link,
-                            Description = string.IsNullOrWhiteSpace(snippet) ? "Açıklama Yok" : CleanText(snippet),
+                            Description = string.IsNullOrWhiteSpace(snippet) ? "No description" : CleanText(snippet),
                             SearchDate = DateTime.Now
                         });
                     }

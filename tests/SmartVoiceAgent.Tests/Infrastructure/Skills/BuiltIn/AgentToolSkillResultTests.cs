@@ -17,6 +17,11 @@ public sealed class AgentToolSkillResultTests
 
     [Theory]
     [InlineData("Dosya başarıyla okundu:\n\n2026-10-01 [Error] Build failed: could not find file")]
+    [InlineData("File read:\n\n2026-10-01 [Error] Build failed: could not find file")]
+    [InlineData("Spotify was started.")]
+    [InlineData("File exists: C:\\notes.txt")]
+    [InlineData("File not found: C:\\notes.txt")]
+    [InlineData("No files found in 'C:\\temp'.")]
     [InlineData("Search results for 'error CS1002 failed build' (2):\n- Fix error CS1002\n  URL: https://example.com")]
     [InlineData("No results found for 'unavailable service'.")]
     [InlineData("Spotify başarıyla başlatıldı.")]
@@ -35,6 +40,11 @@ public sealed class AgentToolSkillResultTests
     [InlineData("Web search could not be completed. Error: timeout")]
     [InlineData("Güvenlik uyarısı: '.exe' dosyaları otomatik olarak açılamaz.")]
     [InlineData("Durum kontrolü başarısız: denied")]
+    [InlineData("Error: file 'C:\\notes.txt' not found.")]
+    [InlineData("Error: invalid file path; the operation was refused for security.")]
+    [InlineData("Error: '.exe' files are not opened automatically; run them yourself.")]
+    [InlineData("Error reading file: Access denied")]
+    [InlineData("Error: could not open Spotify: not installed")]
     public void FromMessage_WithFailureOnFirstLine_ReturnsFailure(string message)
     {
         AgentToolSkillResult.FromMessage(message).Success.Should().BeFalse();

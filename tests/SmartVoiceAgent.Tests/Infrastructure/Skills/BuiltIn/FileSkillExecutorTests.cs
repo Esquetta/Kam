@@ -28,7 +28,7 @@ public class FileSkillExecutorTests : IDisposable
         var result = await executor.ExecuteAsync(SkillPlan.FromObject("files.exists", new { filePath }));
 
         result.Success.Should().BeTrue();
-        result.Message.Should().Contain("Dosya mevcut");
+        result.Message.Should().Contain("File exists");
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class FileSkillExecutorTests : IDisposable
         var result = await executor.ExecuteAsync(SkillPlan.FromObject("file.read", new { filePath }));
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("Güvenlik");
+        result.ErrorMessage.Should().Contain("security");
     }
 
     [Fact]
@@ -121,7 +121,7 @@ public class FileSkillExecutorTests : IDisposable
             }));
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("reddedildi");
+        result.ErrorMessage.Should().Contain("refused for security");
     }
 
     [Fact]
@@ -134,7 +134,7 @@ public class FileSkillExecutorTests : IDisposable
         var result = await executor.ExecuteAsync(SkillPlan.FromObject("files.exists", new { filePath }));
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("reddedildi");
+        result.ErrorMessage.Should().Contain("refused for security");
     }
 
     [Fact]
@@ -147,7 +147,7 @@ public class FileSkillExecutorTests : IDisposable
         var result = await executor.ExecuteAsync(SkillPlan.FromObject("files.info", new { filePath }));
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("reddedildi");
+        result.ErrorMessage.Should().Contain("refused for security");
     }
 
     [Fact]
@@ -161,7 +161,7 @@ public class FileSkillExecutorTests : IDisposable
             new { directoryPath = _outsideWorkspace }));
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("reddedildi");
+        result.ErrorMessage.Should().Contain("refused for security");
     }
 
     [Fact]
@@ -175,7 +175,7 @@ public class FileSkillExecutorTests : IDisposable
             new { directoryPath = _outsideWorkspace, searchPattern = "secret" }));
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("reddedildi");
+        result.ErrorMessage.Should().Contain("refused for security");
     }
 
     [Fact]
@@ -189,7 +189,7 @@ public class FileSkillExecutorTests : IDisposable
             new { directoryPath = _outsideWorkspace }));
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("reddedildi");
+        result.ErrorMessage.Should().Contain("refused for security");
     }
 
     [Fact]
@@ -204,7 +204,7 @@ public class FileSkillExecutorTests : IDisposable
             new { filePath }));
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("reddedildi");
+        result.ErrorMessage.Should().Contain("refused for security");
     }
 
     [Fact]
@@ -218,7 +218,7 @@ public class FileSkillExecutorTests : IDisposable
             new { directoryPath }));
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("reddedildi");
+        result.ErrorMessage.Should().Contain("refused for security");
         Directory.Exists(directoryPath).Should().BeFalse();
     }
 
@@ -234,7 +234,7 @@ public class FileSkillExecutorTests : IDisposable
             new { filePath, startLine = 1, lineCount = 1 }));
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("reddedildi");
+        result.ErrorMessage.Should().Contain("refused for security");
     }
 
     [Fact]
@@ -380,7 +380,7 @@ public class FileSkillExecutorTests : IDisposable
         var result = await executor.ExecuteAsync(SkillPlan.FromObject("files.delete", new { filePath }));
 
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("Güvenlik");
+        result.ErrorMessage.Should().Contain("security");
         File.Exists(filePath).Should().BeTrue();
     }
 

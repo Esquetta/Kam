@@ -64,12 +64,12 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 // Security: Validate path to prevent path traversal
                 if (!IsSafeFilePath(filePath))
                 {
-                    return "Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.";
+                    return "Error: invalid file path; the operation was refused for security.";
                 }
 
                 if (File.Exists(filePath))
                 {
-                    return $"Hata: '{filePath}' dosyası zaten mevcut.";
+                    return $"Error: file '{filePath}' already exists.";
                 }
 
                 var fileInfo = new FileInfo(filePath);
@@ -77,7 +77,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 // Check file extension
                 if (!_allowedExtensions.Contains(fileInfo.Extension))
                 {
-                    return $"Hata: '{fileInfo.Extension}' uzantılı dosyalar desteklenmiyor.";
+                    return $"Error: '{fileInfo.Extension}' files are not supported.";
                 }
 
                 // Create directory if it doesn't exist
@@ -88,7 +88,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 await File.WriteAllTextAsync(filePath, content);
 
-                string result = $"Dosya başarıyla oluşturuldu: {filePath}";
+                string result = $"File created: {filePath}";
 
                 // Auto-open if requested and safe
                 if (openAfterCreation)
@@ -101,7 +101,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
             catch (Exception ex)
             {
-                return $"Dosya oluşturma hatası: {ex.Message}";
+                return $"Error creating file: {ex.Message}";
             }
         }
 
@@ -119,12 +119,12 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             {
                 if (!IsSafeFilePath(directoryPath))
                 {
-                    return "Hata: Geçersiz dizin yolu. Güvenlik nedeniyle işlem reddedildi.";
+                    return "Error: invalid directory path; the operation was refused for security.";
                 }
 
                 if (!Directory.Exists(directoryPath))
                 {
-                    return $"Hata: '{directoryPath}' dizini bulunamadı.";
+                    return $"Error: directory '{directoryPath}' not found.";
                 }
 
                 var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
@@ -134,11 +134,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (files.Length == 0)
                 {
-                    sb.AppendLine($"'{directoryPath}' dizininde dosya bulunamadı.");
+                    sb.AppendLine($"No files found in '{directoryPath}'.");
                 }
                 else
                 {
-                    sb.AppendLine($"Dizindeki dosyalar ({files.Length} adet):");
+                    sb.AppendLine($"Files in directory ({files.Length}):");
                     foreach (var file in files)
                     {
                         var fileInfo = new FileInfo(file);
@@ -150,14 +150,14 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 if (openFolder)
                 {
                     var openResult = await OpenDirectoryAsync(directoryPath);
-                    sb.AppendLine($"\nKlasör açıldı: {openResult}");
+                    sb.AppendLine($"\nFolder opened: {openResult}");
                 }
 
                 return sb.ToString();
             }
             catch (Exception ex)
             {
-                return $"Dosya listeleme hatası: {ex.Message}";
+                return $"Error listing files: {ex.Message}";
             }
         }
 
@@ -178,12 +178,12 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 // Security: Validate path to prevent path traversal
                 if (!IsSafeFilePath(filePath))
                 {
-                    return "Güvenlik hatası: Dosya yolu güvenli değil. Yol dışarı çıkma veya geçersiz karakterler içeriyor.";
+                    return "Error: unsafe file path; the path leaves the allowed directory or contains invalid characters.";
                 }
 
                 if (!File.Exists(filePath))
                 {
-                    return $"Hata: '{filePath}' dosyası bulunamadı.";
+                    return $"Error: file '{filePath}' not found.";
                 }
 
                 var fileInfo = new FileInfo(filePath);
@@ -192,7 +192,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 // Security check for executables
                 if (_executableExtensions.Contains(ext) && !allowExecutables)
                 {
-                    return $"Güvenlik uyarısı: '{ext}' dosyaları otomatik olarak açılamaz. Lütfen manuel olarak çalıştırın.";
+                    return $"Error: '{ext}' files are not opened automatically; run them yourself.";
                 }
 
                 // Use ProcessStartInfo for better control
@@ -207,11 +207,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 await Task.Delay(500); // Brief delay to ensure process starts
 
-                return $"Dosya açıldı: {fileInfo.Name} ({ext})";
+                return $"File opened: {fileInfo.Name} ({ext})";
             }
             catch (Exception ex)
             {
-                return $"Dosya açılma hatası: {ex.Message}";
+                return $"Error opening file: {ex.Message}";
             }
         }
 
@@ -228,12 +228,12 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 // Security: Validate path to prevent path traversal
                 if (!IsSafeFilePath(directoryPath))
                 {
-                    return "Güvenlik hatası: Dizin yolu güvenli değil. Yol dışarı çıkma veya geçersiz karakterler içeriyor.";
+                    return "Error: unsafe directory path; the path leaves the allowed directory or contains invalid characters.";
                 }
 
                 if (!Directory.Exists(directoryPath))
                 {
-                    return $"Hata: '{directoryPath}' dizini bulunamadı.";
+                    return $"Error: directory '{directoryPath}' not found.";
                 }
 
                 ProcessStartInfo psi;
@@ -263,11 +263,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 using var process = Process.Start(psi);
                 await Task.Delay(100);
 
-                return $"Klasör açıldı: {directoryPath}";
+                return $"Folder opened: {directoryPath}";
             }
             catch (Exception ex)
             {
-                return $"Klasör açılma hatası: {ex.Message}";
+                return $"Error opening folder: {ex.Message}";
             }
         }
 
@@ -280,7 +280,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 // Security: Validate path to prevent path traversal
                 if (!IsSafeFilePath(path))
                 {
-                    return "Güvenlik hatası: Yol güvenli değil. Yol dışarı çıkma veya geçersiz karakterler içeriyor.";
+                    return "Error: unsafe path; the path leaves the allowed directory or contains invalid characters.";
                 }
 
                 if (File.Exists(path))
@@ -293,7 +293,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                         UseShellExecute = false
                     };
                     Process.Start(psi);
-                    return $"Dosya konumu gösterildi: {Path.GetFileName(path)}";
+                    return $"File location shown: {Path.GetFileName(path)}";
                 }
                 else if (Directory.Exists(path))
                 {
@@ -301,12 +301,12 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 }
                 else
                 {
-                    return $"Hata: '{path}' bulunamadı.";
+                    return $"Error: '{path}' not found.";
                 }
             }
             catch (Exception ex)
             {
-                return $"Explorer hatası: {ex.Message}";
+                return $"Error in Explorer: {ex.Message}";
             }
         }
 
@@ -324,36 +324,36 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (!IsSafeFilePath(filePath))
                 {
-                    return "Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.";
+                    return "Error: invalid file path; the operation was refused for security.";
                 }
 
                 if (!File.Exists(filePath))
                 {
-                    return $"Hata: '{filePath}' dosyası bulunamadı.";
+                    return $"Error: file '{filePath}' not found.";
                 }
 
                 var fileInfo = new FileInfo(filePath);
 
                 if (fileInfo.Length > _maxFileSizeBytes)
                 {
-                    return $"Hata: Dosya çok büyük ({fileInfo.Length / 1024 / 1024}MB). Maksimum boyut: {_maxFileSizeBytes / 1024 / 1024}MB";
+                    return $"Error: file is too large ({fileInfo.Length / 1024 / 1024}MB). Maximum size: {_maxFileSizeBytes / 1024 / 1024}MB";
                 }
 
                 if (!_allowedExtensions.Contains(fileInfo.Extension))
                 {
-                    return $"Hata: '{fileInfo.Extension}' uzantılı dosyalar desteklenmiyor.";
+                    return $"Error: '{fileInfo.Extension}' files are not supported.";
                 }
 
                 var content = await File.ReadAllTextAsync(filePath);
-                return $"Dosya başarıyla okundu:\n\n{content}";
+                return $"File read:\n\n{content}";
             }
             catch (UnauthorizedAccessException)
             {
-                return $"Hata: '{filePath}' dosyasına erişim izni yok.";
+                return $"Error: access to file '{filePath}' was denied.";
             }
             catch (Exception ex)
             {
-                return $"Dosya okuma hatası: {ex.Message}";
+                return $"Error reading file: {ex.Message}";
             }
         }
 
@@ -375,14 +375,14 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (!IsSafeFilePath(filePath))
                 {
-                    return "Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.";
+                    return "Error: invalid file path; the operation was refused for security.";
                 }
 
                 var fileInfo = new FileInfo(filePath);
 
                 if (!_allowedExtensions.Contains(fileInfo.Extension))
                 {
-                    return $"Hata: '{fileInfo.Extension}' uzantılı dosyalara yazma desteklenmiyor.";
+                    return $"Error: writing '{fileInfo.Extension}' files is not supported.";
                 }
 
                 if (previewOnly)
@@ -411,7 +411,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                     await File.WriteAllTextAsync(filePath, content);
                 }
 
-                string result = $"Dosya başarıyla yazıldı: {filePath}";
+                string result = $"File written: {filePath}";
 
                 if (openAfterWrite)
                 {
@@ -422,11 +422,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
             catch (UnauthorizedAccessException)
             {
-                return $"Hata: '{filePath}' dosyasına yazma izni yok.";
+                return $"Error: no permission to write file '{filePath}'.";
             }
             catch (Exception ex)
             {
-                return $"Dosya yazma hatası: {ex.Message}";
+                return $"Error writing file: {ex.Message}";
             }
         }
 
@@ -440,25 +440,25 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (!IsSafeFilePath(filePath))
                 {
-                    return "Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.";
+                    return "Error: invalid file path; the operation was refused for security.";
                 }
 
                 if (!File.Exists(filePath))
                 {
-                    return $"Hata: '{filePath}' dosyası bulunamadı.";
+                    return $"Error: file '{filePath}' not found.";
                 }
 
                 File.Delete(filePath);
                 await Task.CompletedTask; // Maintain async signature
-                return $"Dosya başarıyla silindi: {filePath}";
+                return $"File deleted: {filePath}";
             }
             catch (UnauthorizedAccessException)
             {
-                return $"Hata: '{filePath}' dosyasını silme izni yok.";
+                return $"Error: no permission to delete file '{filePath}'.";
             }
             catch (Exception ex)
             {
-                return $"Dosya silme hatası: {ex.Message}";
+                return $"Error deleting file: {ex.Message}";
             }
         }
 
@@ -478,17 +478,17 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (!IsSafeFilePath(sourcePath) || !IsSafeFilePath(destinationPath))
                 {
-                    return "Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.";
+                    return "Error: invalid file path; the operation was refused for security.";
                 }
 
                 if (!File.Exists(sourcePath))
                 {
-                    return $"Hata: Kaynak dosya '{sourcePath}' bulunamadı.";
+                    return $"Error: source file '{sourcePath}' not found.";
                 }
 
                 if (File.Exists(destinationPath) && !overwrite)
                 {
-                    return $"Hata: Hedef dosya '{destinationPath}' zaten mevcut. overwrite=true kullanın.";
+                    return $"Error: destination file '{destinationPath}' already exists. Use overwrite=true.";
                 }
 
                 var destInfo = new FileInfo(destinationPath);
@@ -499,7 +499,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 File.Copy(sourcePath, destinationPath, overwrite);
 
-                string result = $"Dosya başarıyla kopyalandı: {sourcePath} -> {destinationPath}";
+                string result = $"File copied: {sourcePath} -> {destinationPath}";
 
                 if (showInFolder)
                 {
@@ -510,7 +510,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
             catch (Exception ex)
             {
-                return $"Dosya kopyalama hatası: {ex.Message}";
+                return $"Error copying file: {ex.Message}";
             }
         }
 
@@ -528,17 +528,17 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (!IsSafeFilePath(sourcePath) || !IsSafeFilePath(destinationPath))
                 {
-                    return "Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.";
+                    return "Error: invalid file path; the operation was refused for security.";
                 }
 
                 if (!File.Exists(sourcePath))
                 {
-                    return $"Hata: Kaynak dosya '{sourcePath}' bulunamadı.";
+                    return $"Error: source file '{sourcePath}' not found.";
                 }
 
                 if (File.Exists(destinationPath) && !overwrite)
                 {
-                    return $"Hata: Hedef dosya '{destinationPath}' zaten mevcut. overwrite=true kullanın.";
+                    return $"Error: destination file '{destinationPath}' already exists. Use overwrite=true.";
                 }
 
                 var destInfo = new FileInfo(destinationPath);
@@ -550,11 +550,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 File.Move(sourcePath, destinationPath, overwrite);
                 await Task.CompletedTask;
 
-                return $"Dosya başarıyla taşındı: {sourcePath} -> {destinationPath}";
+                return $"File moved: {sourcePath} -> {destinationPath}";
             }
             catch (Exception ex)
             {
-                return $"Dosya taşıma hatası: {ex.Message}";
+                return $"Error moving file: {ex.Message}";
             }
         }
 
@@ -566,17 +566,17 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             {
                 if (!IsSafeFilePath(filePath))
                 {
-                    return Task.FromResult("Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.");
+                    return Task.FromResult("Error: invalid file path; the operation was refused for security.");
                 }
 
                 var exists = File.Exists(filePath);
                 return Task.FromResult(exists
-                    ? $"Dosya mevcut: {filePath}"
-                    : $"Dosya bulunamadı: {filePath}");
+                    ? $"File exists: {filePath}"
+                    : $"File not found: {filePath}");
             }
             catch (Exception ex)
             {
-                return Task.FromResult($"Kontrol hatası: {ex.Message}");
+                return Task.FromResult($"Error checking file: {ex.Message}");
             }
         }
 
@@ -588,32 +588,32 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             {
                 if (!IsSafeFilePath(filePath))
                 {
-                    return Task.FromResult("Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.");
+                    return Task.FromResult("Error: invalid file path; the operation was refused for security.");
                 }
 
                 if (!File.Exists(filePath))
                 {
-                    return Task.FromResult($"Hata: '{filePath}' dosyası bulunamadı.");
+                    return Task.FromResult($"Error: file '{filePath}' not found.");
                 }
 
                 var fileInfo = new FileInfo(filePath);
                 var sb = new StringBuilder();
 
-                sb.AppendLine($"Dosya Bilgileri:");
-                sb.AppendLine($"  İsim: {fileInfo.Name}");
-                sb.AppendLine($"  Tam Yol: {fileInfo.FullName}");
-                sb.AppendLine($"  Boyut: {FormatFileSize(fileInfo.Length)}");
-                sb.AppendLine($"  Uzantı: {fileInfo.Extension}");
-                sb.AppendLine($"  Oluşturma: {fileInfo.CreationTime:yyyy-MM-dd HH:mm:ss}");
-                sb.AppendLine($"  Son Değişiklik: {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}");
-                sb.AppendLine($"  Son Erişim: {fileInfo.LastAccessTime:yyyy-MM-dd HH:mm:ss}");
-                sb.AppendLine($"  Salt Okunur: {fileInfo.IsReadOnly}");
+                sb.AppendLine($"File information:");
+                sb.AppendLine($"  Name: {fileInfo.Name}");
+                sb.AppendLine($"  Full path: {fileInfo.FullName}");
+                sb.AppendLine($"  Size: {FormatFileSize(fileInfo.Length)}");
+                sb.AppendLine($"  Extension: {fileInfo.Extension}");
+                sb.AppendLine($"  Created: {fileInfo.CreationTime:yyyy-MM-dd HH:mm:ss}");
+                sb.AppendLine($"  Modified: {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}");
+                sb.AppendLine($"  Last accessed: {fileInfo.LastAccessTime:yyyy-MM-dd HH:mm:ss}");
+                sb.AppendLine($"  Read only: {fileInfo.IsReadOnly}");
 
                 return Task.FromResult(sb.ToString());
             }
             catch (Exception ex)
             {
-                return Task.FromResult($"Dosya bilgisi alma hatası: {ex.Message}");
+                return Task.FromResult($"Error getting file information: {ex.Message}");
             }
         }
 
@@ -629,12 +629,12 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             {
                 if (!IsSafeFilePath(directoryPath))
                 {
-                    return Task.FromResult("Hata: Geçersiz dizin yolu. Güvenlik nedeniyle işlem reddedildi.");
+                    return Task.FromResult("Error: invalid directory path; the operation was refused for security.");
                 }
 
                 if (!Directory.Exists(directoryPath))
                 {
-                    return Task.FromResult($"Hata: '{directoryPath}' dizini bulunamadı.");
+                    return Task.FromResult($"Error: directory '{directoryPath}' not found.");
                 }
 
                 var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
@@ -642,11 +642,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (files.Length == 0)
                 {
-                    return Task.FromResult($"'{searchPattern}' deseni için dosya bulunamadı.");
+                    return Task.FromResult($"No files found for pattern '{searchPattern}'.");
                 }
 
                 var sb = new StringBuilder();
-                sb.AppendLine($"Bulunan dosyalar ({files.Length} adet):");
+                sb.AppendLine($"Files found ({files.Length}):");
 
                 foreach (var file in files.Take(20))
                 {
@@ -656,14 +656,14 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (files.Length > 20)
                 {
-                    sb.AppendLine($"\n  ... ve {files.Length - 20} dosya daha");
+                    sb.AppendLine($"\n  ... and {files.Length - 20} more files");
                 }
 
                 return Task.FromResult(sb.ToString());
             }
             catch (Exception ex)
             {
-                return Task.FromResult($"Dosya arama hatası: {ex.Message}");
+                return Task.FromResult($"Error searching files: {ex.Message}");
             }
         }
 
@@ -683,17 +683,17 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             {
                 if (string.IsNullOrWhiteSpace(query))
                 {
-                    return "Hata: Arama metni gerekli.";
+                    return "Error: search text is required.";
                 }
 
                 if (!IsSafeFilePath(directoryPath))
                 {
-                    return "Hata: Geçersiz dizin yolu. Güvenlik nedeniyle işlem reddedildi.";
+                    return "Error: invalid directory path; the operation was refused for security.";
                 }
 
                 if (!Directory.Exists(directoryPath))
                 {
-                    return $"Hata: '{directoryPath}' dizini bulunamadı.";
+                    return $"Error: directory '{directoryPath}' not found.";
                 }
 
                 maxMatches = Math.Clamp(maxMatches, 1, 200);
@@ -747,12 +747,12 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 }
 
                 return matches.Count == 0
-                    ? $"'{query}' için içerik eşleşmesi bulunamadı."
+                    ? $"No content matches found for '{query}'."
                     : FormatContentSearchResult(query, matches, truncated: false);
             }
             catch (Exception ex)
             {
-                return $"İçerik arama hatası: {ex.Message}";
+                return $"Error searching content: {ex.Message}";
             }
         }
 
@@ -768,12 +768,12 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             {
                 if (!IsSafeFilePath(directoryPath))
                 {
-                    return Task.FromResult("Hata: Geçersiz dizin yolu. Güvenlik nedeniyle işlem reddedildi.");
+                    return Task.FromResult("Error: invalid directory path; the operation was refused for security.");
                 }
 
                 if (!Directory.Exists(directoryPath))
                 {
-                    return Task.FromResult($"Hata: '{directoryPath}' dizini bulunamadı.");
+                    return Task.FromResult($"Error: directory '{directoryPath}' not found.");
                 }
 
                 maxDepth = Math.Clamp(maxDepth, 0, 8);
@@ -787,14 +787,14 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (count >= maxEntries)
                 {
-                    sb.AppendLine($"... çıktı {maxEntries} kayıt ile sınırlandı.");
+                    sb.AppendLine($"... output limited to {maxEntries} entries.");
                 }
 
                 return Task.FromResult(sb.ToString());
             }
             catch (Exception ex)
             {
-                return Task.FromResult($"Dizin ağacı hatası: {ex.Message}");
+                return Task.FromResult($"Error building directory tree: {ex.Message}");
             }
         }
 
@@ -810,12 +810,12 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             {
                 if (!IsSafeFilePath(directoryPath))
                 {
-                    return Task.FromResult("Hata: Geçersiz dizin yolu. Güvenlik nedeniyle işlem reddedildi.");
+                    return Task.FromResult("Error: invalid directory path; the operation was refused for security.");
                 }
 
                 if (!Directory.Exists(directoryPath))
                 {
-                    return Task.FromResult($"Hata: '{directoryPath}' dizini bulunamadı.");
+                    return Task.FromResult($"Error: directory '{directoryPath}' not found.");
                 }
 
                 maxDepth = Math.Clamp(maxDepth, 0, 8);
@@ -848,14 +848,14 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (count >= maxEntries)
                 {
-                    sb.AppendLine($"... çıktı {maxEntries} kayıt ile sınırlandı.");
+                    sb.AppendLine($"... output limited to {maxEntries} entries.");
                 }
 
                 return Task.FromResult(sb.ToString());
             }
             catch (Exception ex)
             {
-                return Task.FromResult($"Workspace map hatası: {ex.Message}");
+                return Task.FromResult($"Error building workspace map: {ex.Message}");
             }
         }
 
@@ -869,23 +869,23 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             {
                 if (!IsSafeFilePath(filePath))
                 {
-                    return "Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.";
+                    return "Error: invalid file path; the operation was refused for security.";
                 }
 
                 if (!File.Exists(filePath))
                 {
-                    return $"Hata: '{filePath}' dosyası bulunamadı.";
+                    return $"Error: file '{filePath}' not found.";
                 }
 
                 var fileInfo = new FileInfo(filePath);
                 if (fileInfo.Length > _maxFileSizeBytes)
                 {
-                    return $"Hata: Dosya çok büyük ({fileInfo.Length / 1024 / 1024}MB). Maksimum boyut: {_maxFileSizeBytes / 1024 / 1024}MB";
+                    return $"Error: file is too large ({fileInfo.Length / 1024 / 1024}MB). Maximum size: {_maxFileSizeBytes / 1024 / 1024}MB";
                 }
 
                 if (!IsCodeOutlineExtension(fileInfo.Extension))
                 {
-                    return $"Hata: '{fileInfo.Extension}' uzantısı için code outline desteklenmiyor.";
+                    return $"Error: code outline is not supported for '{fileInfo.Extension}' files.";
                 }
 
                 maxSymbols = Math.Clamp(maxSymbols, 1, 500);
@@ -919,7 +919,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
             catch (Exception ex)
             {
-                return $"Code outline hatası: {ex.Message}";
+                return $"Error building code outline: {ex.Message}";
             }
         }
 
@@ -948,12 +948,12 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 var lines = SplitNormalizedLines(original);
                 if (startLine < 1 || startLine > lines.Length)
                 {
-                    return $"Hata: Geçersiz satır numarası. Dosyada {lines.Length} satır var.";
+                    return $"Error: invalid line number. The file has {lines.Length} lines.";
                 }
 
                 if (lineCount < 0 || startLine + lineCount - 1 > lines.Length)
                 {
-                    return $"Hata: Geçersiz satır aralığı. Dosyada {lines.Length} satır var.";
+                    return $"Error: invalid line range. The file has {lines.Length} lines.";
                 }
 
                 var replacementLines = SplitNormalizedLines(replacement);
@@ -975,7 +975,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
             catch (Exception ex)
             {
-                return $"Dosya aralığı değiştirme hatası: {ex.Message}";
+                return $"Error replacing line range: {ex.Message}";
             }
         }
 
@@ -1001,7 +1001,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (string.IsNullOrEmpty(oldText))
                 {
-                    return "Hata: oldText değeri gerekli.";
+                    return "Error: oldText is required.";
                 }
 
                 expectedOccurrences = Math.Max(1, expectedOccurrences);
@@ -1009,7 +1009,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                 var occurrenceCount = CountOccurrences(original, oldText);
                 if (occurrenceCount != expectedOccurrences)
                 {
-                    return $"Hata: Beklenen eşleşme sayısı {expectedOccurrences}, bulunan {occurrenceCount}.";
+                    return $"Error: expected {expectedOccurrences} matches, found {occurrenceCount}.";
                 }
 
                 var proposed = original.Replace(oldText, newText, StringComparison.Ordinal);
@@ -1025,7 +1025,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
             catch (Exception ex)
             {
-                return $"Dosya patch hatası: {ex.Message}";
+                return $"Error patching file: {ex.Message}";
             }
         }
 
@@ -1048,7 +1048,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
             catch (Exception ex)
             {
-                return $"Diff preview hatası: {ex.Message}";
+                return $"Error building diff preview: {ex.Message}";
             }
         }
 
@@ -1090,17 +1090,17 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (!IsSafeFilePath(directoryPath))
                 {
-                    return "Hata: Geçersiz dizin yolu. Güvenlik nedeniyle işlem reddedildi.";
+                    return "Error: invalid directory path; the operation was refused for security.";
                 }
 
                 if (Directory.Exists(directoryPath))
                 {
-                    return $"Dizin zaten mevcut: {directoryPath}";
+                    return $"Directory already exists: {directoryPath}";
                 }
 
                 Directory.CreateDirectory(directoryPath);
 
-                string result = $"Dizin başarıyla oluşturuldu: {directoryPath}";
+                string result = $"Directory created: {directoryPath}";
 
                 if (openAfterCreation)
                 {
@@ -1111,7 +1111,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
             catch (Exception ex)
             {
-                return $"Dizin oluşturma hatası: {ex.Message}";
+                return $"Error creating directory: {ex.Message}";
             }
         }
 
@@ -1135,7 +1135,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (startLine < 1 || startLine > allLines.Length)
                 {
-                    return $"Hata: Geçersiz satır numarası. Dosyada {allLines.Length} satır var.";
+                    return $"Error: invalid line number. The file has {allLines.Length} lines.";
                 }
 
                 var linesToRead = lineCount > 0
@@ -1148,8 +1148,8 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                     .ToArray();
 
                 var sb = new StringBuilder();
-                sb.AppendLine($"Dosya: {filePath}");
-                sb.AppendLine($"Satırlar {startLine}-{startLine + selectedLines.Length - 1}:");
+                sb.AppendLine($"File: {filePath}");
+                sb.AppendLine($"Lines {startLine}-{startLine + selectedLines.Length - 1}:");
                 sb.AppendLine(new string('-', 50));
 
                 for (int i = 0; i < selectedLines.Length; i++)
@@ -1161,7 +1161,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             }
             catch (Exception ex)
             {
-                return $"Satır okuma hatası: {ex.Message}";
+                return $"Error reading lines: {ex.Message}";
             }
         }
 
@@ -1272,23 +1272,23 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
         {
             if (!IsSafeFilePath(filePath))
             {
-                return "Hata: Geçersiz dosya yolu. Güvenlik nedeniyle işlem reddedildi.";
+                return "Error: invalid file path; the operation was refused for security.";
             }
 
             if (!File.Exists(filePath))
             {
-                return $"Hata: '{filePath}' dosyası bulunamadı.";
+                return $"Error: file '{filePath}' not found.";
             }
 
             var fileInfo = new FileInfo(filePath);
             if (fileInfo.Length > _maxFileSizeBytes)
             {
-                return $"Hata: Dosya çok büyük ({fileInfo.Length / 1024 / 1024}MB). Maksimum boyut: {_maxFileSizeBytes / 1024 / 1024}MB";
+                return $"Error: file is too large ({fileInfo.Length / 1024 / 1024}MB). Maximum size: {_maxFileSizeBytes / 1024 / 1024}MB";
             }
 
             if (!_allowedExtensions.Contains(fileInfo.Extension) || !IsTextSearchableExtension(fileInfo.Extension))
             {
-                return $"Hata: '{fileInfo.Extension}' uzantılı dosyalar metin düzenleme için desteklenmiyor.";
+                return $"Error: '{fileInfo.Extension}' files are not supported for text editing.";
             }
 
             return null;
@@ -1304,7 +1304,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
             var fileInfo = new FileInfo(filePath);
             return fileInfo.IsReadOnly
-                ? $"Hata: '{filePath}' dosyası salt okunur."
+                ? $"Error: file '{filePath}' is read-only."
                 : null;
         }
 
@@ -1414,7 +1414,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
             bool truncated)
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"İçerik eşleşmeleri: '{query}' ({matches.Count} adet)");
+            sb.AppendLine($"Content matches: '{query}' ({matches.Count})");
             foreach (var match in matches)
             {
                 sb.AppendLine($"  - {match}");
@@ -1422,7 +1422,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
             if (truncated)
             {
-                sb.AppendLine("... sonuçlar sınırlandı.");
+                sb.AppendLine("... results truncated.");
             }
 
             return sb.ToString();
