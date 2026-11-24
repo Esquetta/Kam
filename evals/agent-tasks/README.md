@@ -46,7 +46,20 @@ What failed:
 
 The file, app and web-research tools now return English. Failure messages start with `Error:` so Kam still tells failures from successes. The web research summary prompt no longer forces Turkish; it answers in the language of the topic.
 
-The rerun to measure the effect has not been done yet: the OpenAI account ran out of credits during it.
+Rerun on the two cheaper models only, one run each: [`results/2026-11-24`](results/2026-11-24/summary.md).
+
+| Model | Passed before | after | English tasks answered in Turkish before | after |
+| --- | ---: | ---: | ---: | ---: |
+| gpt-5.4-mini | 16/16 | 15/16 | 6 of 8 | 1 of 8 |
+| gpt-5.4-nano | 13/16 | 13/16 | 6 of 8 | 5 of 8 |
+
+- **gpt-5.4-mini now answers in the user's language.** English tool text was the main cause for this model.
+- **gpt-5.4-nano still drifts into Turkish.** The tool text was not the only cause for it. Other Turkish signals reach the model: the time zone in the system prompt is "Istanbul", and the Turkish requests in the same run do not share context, so they are not the cause. This is not investigated further.
+- **Pass rates did not change beyond noise.** The new failures:
+  - gpt-5.4-mini wrote an answer.txt that did not contain "march.txt", although its reply says it did. The sandbox is deleted after the run, so the file cannot be inspected.
+  - gpt-5.4-nano moved `c.log` along with the `.txt` files. Its reply mentions "file in use" errors when it ran several moves at once, which matches the locked file seen on gpt-5.5 before. Parallel `files_move` calls may conflict; this is worth a look.
+  - gpt-5.4-nano added up the CSV wrong (1375).
+  - gpt-5.4-nano asked `files_write` to open the file afterwards, was blocked by the sandbox, and gave up instead of writing without opening. In the app that call would have run, so this failure is partly the sandbox's.
 
 ## Limits
 
