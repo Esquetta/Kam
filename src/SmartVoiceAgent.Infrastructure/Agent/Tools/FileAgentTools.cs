@@ -86,7 +86,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                     fileInfo.Directory.Create();
                 }
 
-                await File.WriteAllTextAsync(filePath, content);
+                await TransientFileAccess.RunAsync(() => File.WriteAllTextAsync(filePath, content));
 
                 string result = $"File created: {filePath}";
 
@@ -404,11 +404,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (append && File.Exists(filePath))
                 {
-                    await File.AppendAllTextAsync(filePath, content);
+                    await TransientFileAccess.RunAsync(() => File.AppendAllTextAsync(filePath, content));
                 }
                 else
                 {
-                    await File.WriteAllTextAsync(filePath, content);
+                    await TransientFileAccess.RunAsync(() => File.WriteAllTextAsync(filePath, content));
                 }
 
                 string result = $"File written: {filePath}";
@@ -448,8 +448,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                     return $"Error: file '{filePath}' not found.";
                 }
 
-                File.Delete(filePath);
-                await Task.CompletedTask; // Maintain async signature
+                await TransientFileAccess.RunAsync(() => File.Delete(filePath));
                 return $"File deleted: {filePath}";
             }
             catch (UnauthorizedAccessException)
@@ -497,7 +496,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                     destInfo.Directory.Create();
                 }
 
-                File.Copy(sourcePath, destinationPath, overwrite);
+                await TransientFileAccess.RunAsync(() => File.Copy(sourcePath, destinationPath, overwrite));
 
                 string result = $"File copied: {sourcePath} -> {destinationPath}";
 
@@ -547,8 +546,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
                     destInfo.Directory.Create();
                 }
 
-                File.Move(sourcePath, destinationPath, overwrite);
-                await Task.CompletedTask;
+                await TransientFileAccess.RunAsync(() => File.Move(sourcePath, destinationPath, overwrite));
 
                 return $"File moved: {sourcePath} -> {destinationPath}";
             }
@@ -967,7 +965,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (!previewOnly)
                 {
-                    await File.WriteAllTextAsync(filePath, proposed);
+                    await TransientFileAccess.RunAsync(() => File.WriteAllTextAsync(filePath, proposed));
                 }
 
                 var mode = previewOnly ? "Preview only" : "Patch applied";
@@ -1017,7 +1015,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Tools
 
                 if (!previewOnly)
                 {
-                    await File.WriteAllTextAsync(filePath, proposed);
+                    await TransientFileAccess.RunAsync(() => File.WriteAllTextAsync(filePath, proposed));
                 }
 
                 var mode = previewOnly ? "Preview only" : "Patch applied";
