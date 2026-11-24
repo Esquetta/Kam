@@ -62,7 +62,23 @@ The same four models, one run each: [`results/2026-11-24-fixes`](results/2026-11
 
 - **The targeted cases all pass.** Across the four models and both modes, "Panoda ne var?" and the two volume cases make 24 attempts. 7 were wrong before the fixes and 0 after. This is the set the fixes were written for, so it shows that the fixes work, not that the eval generalises.
 - **The planner prompt grew by 143 tokens** (1158 to 1301) because of the new descriptions and value lists.
-- **What is left is in tool mode.** Before deleting a file, killing a process or sending an SMS, models still often stop to ask for confirmation in prose. Kam already shows its own approval prompt for these calls, so the agent prompt could say plainly that it should make the call and let Kam ask. gpt-5-mini once killed the process through `shell.run` instead of `system.process.kill`.
+- **Tool mode still asked for confirmation in prose.** Before deleting a file, killing a process or sending an SMS, models often stopped to ask "are you sure?". Kam already shows its own approval prompt for these calls. gpt-5-mini once killed the process through `shell.run` instead of `system.process.kill`.
+
+## After the approval prompt change
+
+The agent system prompt now says: when the user asked for a risky action, make the call; Kam's approval settings decide whether the user confirms it, so don't ask in the reply first. Only tool mode was rerun, since the JSON planner does not use this prompt: [`results/2026-11-24-approval`](results/2026-11-24-approval/summary.md).
+
+| Model | Right skill + args before | after | First call right before | after |
+| --- | ---: | ---: | ---: | ---: |
+| gpt-5.5 | 100% | 100% | 96% | 100% |
+| gpt-5.4-mini | 100% | 100% | 92% | 94% |
+| gpt-5.4-nano | 96% | 100% | 88% | 85% |
+| gpt-5-mini | 96% | 98% | 85% | 81% |
+
+- **No more misses from asking.** The two earlier published runs had 2 and 3 tool-mode misses where the model asked instead of acting; one of them was about the clipboard wording. This run had none: 191 of 192 attempts reached the right skill.
+- **The one miss comes from the simulation.** gpt-5-mini checked whether the destination file existed, got `OK`, and asked whether to overwrite it. A real check would have said the file was not there.
+- **Models still look before they act.** First call right did not move (173 of 192 in both runs). The change stops the asking, not the checking.
+- One run each, so a difference of one or two cases per model is noise.
 
 ## Limits
 

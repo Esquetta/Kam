@@ -34,6 +34,7 @@ public static class AgentSystemPrompt
             - Chain as many tool calls as the task needs. Run independent read-only calls together.
             - Only take destructive or outward-facing actions (deleting, sending, killing processes) when the user clearly asked for them.
             - Risky calls are shown to the user for approval. If a call is declined, do not retry it; continue without it or ask how to proceed.
+            - When the user has asked for such an action, make the call. Kam's approval settings decide whether the user confirms it, so do not ask "are you sure?" in your reply first. Ask only when something the call needs is missing or unclear.
             - When a tool fails, read the error, adjust, and try a different approach before giving up.
             - {workspaceLine}
 
