@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags: [ 'v*.*.*' ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-2025-vs2026
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Setup .NET 9
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Test
+      run: dotnet test tests/SmartVoiceAgent.Tests/SmartVoiceAgent.Tests.csproj --configuration Release
+
+    - name: Package
+      shell: pwsh
+      run: ./scripts/package-release.ps1 -Version "${{ github.ref_name }}".TrimStart('v')
+
+    - name: Publish GitHub release
+      shell: pwsh
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        $tag = "${{ github.ref_name }}"
+        $version = $tag.TrimStart('v')
+
+        # Release notes are this version's section of CHANGELOG.md.
+        $section = [regex]::Match(
+          (Get-Content CHANGELOG.md -Raw),
+          "(?ms)^## \[$([regex]::Escape($version))\][^\n]*\n(.*?)(?=^## \[|\z)")
+        if (-not $section.Success) {
+          throw "CHANGELOG.md has no section for $version."
+        }
+        $section.Groups[1].Value.Trim() | Set-Content release-notes.md -Encoding utf8
+
+        $flags = @()
+        if ($version.StartsWith('0.')) {
+          $flags += '--prerelease'
+        }
+
+        gh release create $tag `
+          "artifacts/release/Kam-$version-win-x64.zip" `
+          "artifacts/release/Kam-$version-win-x64.zip.sha256" `
+          --title "Kam $version" `
+          --notes-file release-notes.md `
+          @flags

@@ -1,6 +1,6 @@
 # Contributing To Kam
 
-Kam is moving toward a production-ready local desktop agent. Contributions should keep that direction intact: reliable skill execution, clear diagnostics, safe automation, and a polished Avalonia UI.
+Kam is an early-stage local desktop agent. Contributions should keep that direction intact: reliable skill execution, clear diagnostics, safe automation, and a polished Avalonia UI.
 
 ## Development Baseline
 

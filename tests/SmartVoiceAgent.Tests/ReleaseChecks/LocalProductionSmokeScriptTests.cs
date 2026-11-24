@@ -84,6 +84,21 @@ public sealed class LocalProductionSmokeScriptTests
         workflow.Should().NotContain("security-scan Kam.sln --excl-proj=\"**/SmartVoiceAgent.Tests.csproj\" || true");
     }
 
+    [Fact]
+    public void ReleaseWorkflow_PackagesWithTheReleaseScriptAndPublishesTheZip()
+    {
+        var script = File.ReadAllText(FindRepoFile("scripts", "package-release.ps1"));
+        var workflow = File.ReadAllText(FindRepoFile(".github", "workflows", "release.yml"));
+
+        script.Should().Contain("--self-contained true");
+        script.Should().Contain("--runtime win-x64");
+        script.Should().Contain("\"Kam.exe\"");
+        script.Should().Contain("SHA256");
+        workflow.Should().Contain("./scripts/package-release.ps1");
+        workflow.Should().Contain("Kam-$version-win-x64.zip.sha256");
+        workflow.Should().Contain("CHANGELOG.md");
+    }
+
     private static string FindRepoFile(params string[] segments)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

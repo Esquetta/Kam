@@ -7,7 +7,7 @@ Kam is a local desktop automation agent. It can inspect files, run bounded shell
 
 ## Supported Versions
 
-Kam is pre-1.0 production-readiness software. Security fixes are applied to the `master` branch until release-candidate tags are introduced.
+Kam is pre-1.0 software. Security fixes are applied to the `master` branch and ship in the next release.
 
 ## Reporting A Vulnerability
 

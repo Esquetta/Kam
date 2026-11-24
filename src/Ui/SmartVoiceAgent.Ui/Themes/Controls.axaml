@@ -586,6 +586,9 @@
         <Setter Property="SelectionBrush" Value="{DynamicResource AccentStrongBrush}" />
         <Setter Property="SelectionForegroundBrush" Value="{DynamicResource AccentOnBrush}" />
         <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}" />
+        <!-- The template binds these, and a template value beats a style on the template part -->
+        <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}" />
     </Style>
 
     <Style Selector="TextBox /template/ Border#PART_BorderElement">

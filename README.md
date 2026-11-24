@@ -1,124 +1,77 @@
 # Kam
 
-Kam is a desktop AI agent for operating a workstation through voice, text, skills, and local context. It is designed to sit between a coding-agent style workflow and a daily assistant: it can plan with an OpenAI-compatible model, execute bounded desktop skills, inspect local context, and surface production-readiness evidence through an Avalonia UI.
+Kam is a desktop AI agent for Windows. You talk or type to it, and a model calls tools to act on your machine: open apps, read and edit files, run shell commands, search the web, and use any MCP server you add. Every tool call goes through a permission check you control.
+
+This is an early pre-release (v0.1.0), built by one person. Windows only for now.
 
 [![.NET CI](https://github.com/Esquetta/Kam/actions/workflows/dotnet.yml/badge.svg)](https://github.com/Esquetta/Kam/actions/workflows/dotnet.yml)
 [![.NET](https://img.shields.io/badge/.NET-9.0-512BD4)](https://dotnet.microsoft.com/)
 [![UI](https://img.shields.io/badge/UI-Avalonia-0B84F3)](https://avaloniaui.net/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-## Product Direction
-
-Kam is evolving into a product-grade local agent runtime:
-
-- Model-flexible: users can select OpenAI, OpenRouter, Ollama, or another OpenAI-compatible provider from the app.
-- Skill-first: commands are planned as JSON skill plans and executed through a validated skill pipeline instead of relying on unstable provider function-calling behavior.
-- Workstation-native: Windows is the first production target; the Avalonia UI and platform-service boundaries keep macOS support viable.
-- Evidence-driven: Runtime Diagnostics, skill health, execution history, and local production smoke scripts make readiness visible.
-- Safe by default: destructive desktop/file/shell actions are constrained by policy, validation, confirmation, and execution history.
-
-## Interface
+## Screenshots
 
 <p align="center">
-  <img src="assets/dashboard.png" alt="Kam agent workbench in dark mode" width="840">
+  <img src="assets/dashboard.png" alt="Agent chat workbench, dark theme" width="840">
 </p>
-
 <p align="center">
-  <img src="assets/dashboard-light.png" alt="Kam agent workbench in light mode" width="840">
+  <img src="assets/dashboard-light.png" alt="Agent chat workbench, light theme" width="840">
 </p>
-
 <p align="center">
-  <img src="assets/plugins.png" alt="Kam skills and plugin manager" width="840">
+  <img src="assets/skills.png" alt="Skills page: built-in skills grouped by area with per-skill switches" width="840">
 </p>
-
 <p align="center">
-  <img src="assets/settings.png" alt="Kam settings and AI runtime configuration" width="840">
+  <img src="assets/extensions.png" alt="Extensions page: installed MCP servers, plugins, Agent Skills and slash commands" width="840">
+</p>
+<p align="center">
+  <img src="assets/settings.png" alt="Settings page with AI runtime configuration" width="840">
 </p>
 
-## Capabilities
+## Download
 
-### AI Runtime
+Get `Kam-0.1.0-win-x64.zip` from the [v0.1.0 pre-release](https://github.com/Esquetta/Kam/releases/tag/v0.1.0); newer builds are listed under [Releases](https://github.com/Esquetta/Kam/releases). A `.sha256` file sits next to it.
 
-- Planner model profile for JSON-only skill plans.
-- Separate chat / skill execution profile for richer imported skills.
-- Live model catalog refresh for OpenAI-compatible providers.
-- Connection test feedback without exposing API keys or endpoints.
+- Windows 10/11 x64. The build is self-contained, so no .NET install is needed.
+- About 106 MB to download, about 260 MB unpacked. Unzip anywhere and run `Kam.exe`.
+- The build is not code-signed. Windows SmartScreen may warn; choose "More info" > "Run anyway".
+- First run: the title bar shows "Set up a model". Open Settings > AI Runtime, pick a provider and a model. Until then, chat replies with a message asking you to set one up.
+  - Providers: OpenRouter, OpenAI, Anthropic, Ollama, or any OpenAI-compatible endpoint. Ollama at `http://localhost:11434/v1` needs no key.
+- Settings are stored in `%LocalAppData%\SmartVoiceAgent` and `%AppData%\Kam`. API keys are encrypted with Windows DPAPI for the current user.
+- There is no installer and no auto-start. Delete the folder to uninstall.
 
-### Skills And Tools
+## How it works
 
-- Built-in app, file, workspace, shell, clipboard, web, window, accessibility, system, email, and SMS validation skills.
-- Local skill imports from folders containing `SKILL.md`.
-- Adapter direction for skills.sh, local skills, Codex-style skills, Claude-style skills, and MCP-backed tools.
-- Skill health, smoke evals, execution history, replay controls, and policy guardrails.
-- Skills page: skills grouped by area with search, state filters, an on/off switch per skill, one-click approve or grant, and details that open in place.
-- Extensions page: installed MCP servers, plugins, Agent Skills and slash commands, plus a Discover tab that adds well-known MCP servers that need no key (Fetch, Filesystem, Git, Playwright, Context7, Microsoft Learn, DeepWiki and more) and Anthropic's skill and plugin collections in one click.
+Chat, voice commands and the tray's "New task" all run through one tool-calling agent loop (`IAgentRuntime`):
 
-### Desktop Agent Runtime
-
-- Application list/open/close/status operations.
-- Window and accessibility context.
-- Bounded file and workspace inspection.
-- Shell execution with safety policy.
-- Voice: push to talk (mic button, tray, or `Ctrl+Alt+Space` from anywhere on Windows), an optional "Hey Kam" wake phrase detected on the device, and replies read aloud.
-- Speech recognition with local Whisper models that download on first use, or an OpenAI-compatible transcription API.
-- English and Turkish interface (Settings > Language).
-- Runtime Diagnostics panel for local production checks.
-
-### Production Readiness
-
-- `scripts/local-production-smoke.ps1` runs restore, build, tests, AI config checks, skill smoke, publish, and optional launch.
-- Headless skill smoke currently covers installed apps, app status, system info, file/workspace/code search, clipboard, shell, web search, active window, window list, accessibility tree, email validation, and SMS validation.
-- `docs/production-live-readiness.md` defines the manual local-live gate.
-- `docs/superpowers/plans/2026-04-30-kam-production-readiness-sprint.md` tracks the release-candidate sprint.
-
-## Repository Structure
-
-```text
-Kam.sln
-src/
-  SmartVoiceAgent.Core/                 Domain models, interfaces, DTOs
-  SmartVoiceAgent.Application/          CQRS commands, handlers, validators
-  SmartVoiceAgent.Infrastructure/       agents, skills, platform services, MCP, AI integrations
-  SmartVoiceAgent.CrossCuttingConcerns/ logging, exceptions, security utilities
-  SmartVoiceAgent.AgentHost.ConsoleApp/ headless host and skill-smoke entrypoint
-  SmartVoiceAgent.Mailing/              optional email/SMS infrastructure
-  SmartVoiceAgent.Benchmarks/           performance benchmarks
-  Ui/SmartVoiceAgent.Ui/                Avalonia desktop application
-tests/
-  SmartVoiceAgent.Tests/                unit, integration, UI metadata, and smoke tests
-docs/
-  local-production-smoke.md
-  production-live-readiness.md
-  superpowers/
-scripts/
-  local-production-smoke.ps1
-assets/
-  dashboard.png
-  dashboard-light.png
-  plugins.png
-  settings.png
+```
+user input -> AgentRuntime -> model <-> tools -> reply
+                                        |- built-in skills (files, shell, apps, web, clipboard, windows, ...)
+                                        |- MCP servers
+                                        |- Agent Skills (SKILL.md, loaded on demand)
 ```
 
-## Requirements
+- **Permissions.** Every tool call passes `IToolPermissionService`. Modes are Ask, Auto-edit and Full auto, plus "always allow" and deny rules such as `shell_run(git status:*)` or `mcp__github__*`. Deny rules win, and allow rules never match chained shell commands. `ShellCommandGuard` blocks destructive shell commands by command position.
+- **Sessions.** Threads persist as JSON under `%AppData%\Kam\sessions`. Each thread can use its own model.
+- **Context.** `AgentContextWindow` keeps requests under a token budget by shortening old tool results and then inserting a summary message. `/compact` forces it.
+- **MCP host.** Reads `%AppData%\Kam\mcp.json` (Claude Desktop format) and plugin `.mcp.json` files; tools appear as `mcp__{server}__{tool}`. The Extensions page can add well-known keyless servers.
+- **Extensions.** Agent Skills, Claude Code layout plugins and Markdown slash commands load from disk and are managed on the Extensions page.
+- **Voice.** Push to talk, an optional "Hey Kam" wake phrase, and spoken replies. Speech-to-text runs on local Whisper models (downloaded on first use, Vulkan GPU with CPU fallback) or an OpenAI-compatible transcription endpoint.
+- **Interface.** English and Turkish.
+- **Legacy fallback.** With `AgentRuntime:Enabled=false`, commands go through a single-skill JSON planner instead of the agent loop.
 
-- Windows 10/11 for the current production target.
-- .NET 9 SDK.
-- At least one planner model path:
-  - OpenAI API key and selected model, or
-  - OpenRouter API key and selected model, or
-  - local Ollama server at `http://localhost:11434/v1`.
+Design notes and roadmap: [docs/architecture/agent-platform.md](docs/architecture/agent-platform.md).
 
-Optional integrations:
+## What it does not do yet
 
-- Todoist MCP token for Todoist task operations.
-- GitHub App installation credentials for read-only coding-agent repository discovery.
-- OpenAI-compatible speech-to-text endpoint and key, if you prefer it to local Whisper.
-- Hugging Face API key as a fallback speech-to-text provider.
-- SMTP credentials for email sending.
-- Twilio credentials for SMS sending.
-- Google Custom Search key and search engine id for the legacy Google-backed web research service.
+- **One agent, one loop.** A turn stops when the model stops calling tools, after 24 steps, or when you cancel. There is no retry or backoff on model errors, no cost budget and no self-check pass.
+- **No subagents or workflows in the loop.** Tool calls run one after another. Parallel subagents and a `task` tool are on the roadmap, not in the code.
+- **The agent cannot extend itself.** You install skills, plugins and MCP servers from the Extensions page; the agent has no tool for it.
+- **Evals cover skills, not conversations.** 38 smoke cases check that built-in skills run; nothing measures how well the agent completes tasks.
+- **Hooks and long-term memory** are described in the roadmap only.
 
-## Quick Start
+## Build from source
+
+Requires Windows 10/11 and the .NET 9 SDK.
 
 ```powershell
 git clone https://github.com/Esquetta/Kam.git
@@ -128,13 +81,13 @@ dotnet build Kam.sln --configuration Release
 dotnet run --project src/Ui/SmartVoiceAgent.Ui/SmartVoiceAgent.Ui.csproj --configuration Release
 ```
 
-Then open Settings > AI Runtime and configure one planner model profile. Prefer the UI for local setup because it stores user settings without exposing secret values in the repository.
+Then configure a model in Settings > AI Runtime.
 
-## Secret Configuration
+`scripts/package-release.ps1 -Version 0.1.0` builds the release zip and its SHA-256 file. Pushing a `v*` tag runs the same script in CI and publishes the release.
 
-Do not put API keys in committed `appsettings.json` files. Use the Settings UI, user secrets, or environment variables.
+## Secrets
 
-User-secrets example for headless smoke:
+Never commit API keys. Use the Settings page, .NET user secrets, or environment variables:
 
 ```powershell
 dotnet user-secrets set "AIService:Provider" "OpenAI" --project src/Ui/SmartVoiceAgent.Ui
@@ -143,101 +96,29 @@ dotnet user-secrets set "AIService:ModelId" "selected-model-id" --project src/Ui
 dotnet user-secrets set "AIService:Endpoint" "https://api.openai.com/v1" --project src/Ui/SmartVoiceAgent.Ui
 ```
 
-The smoke gate also accepts `AIService:EndPoint` for backward compatibility.
+Optional integrations (Todoist, SMTP email, Twilio SMS, a Google Custom Search key, a GitHub App for read-only repository discovery) are configured the same way or on the Integrations page.
 
-GitHub App setup for coding-agent repository discovery:
-
-```powershell
-dotnet user-secrets set "GitHubApp:AppId" "<app-id>" --project src/SmartVoiceAgent.AgentHost.ConsoleApp
-dotnet user-secrets set "GitHubApp:InstallationId" "<installation-id>" --project src/SmartVoiceAgent.AgentHost.ConsoleApp
-dotnet user-secrets set "GitHubApp:PrivateKeyPath" "C:\secure\kam-github-app.pem" --project src/SmartVoiceAgent.AgentHost.ConsoleApp
-```
-
-Desktop Runtime Diagnostics reads configuration from the UI host, so set the same keys for `src/Ui/SmartVoiceAgent.Ui` or use environment variables such as `GitHubApp__AppId`, `GitHubApp__InstallationId`, and `GitHubApp__PrivateKeyPath`.
-
-Start with read-only GitHub App permissions: Metadata, Contents, Pull requests, Issues, Actions, Checks, Commit statuses, and Dependabot alerts. Keep the PEM file outside the repository; Kam prints only configured/missing status, never PEM contents, JWTs, installation tokens, or private key paths. Runtime Diagnostics shows the repo count plus a short repository preview when list access is available.
-
-## Development Commands
+## Development
 
 ```powershell
-dotnet restore Kam.sln
 dotnet build Kam.sln --configuration Release
-dotnet test Kam.sln --configuration Release
-dotnet run --project src/SmartVoiceAgent.AgentHost.ConsoleApp --configuration Release -- --skill-smoke --summary artifacts/manual-skill-smoke.md
-dotnet run --project src/SmartVoiceAgent.AgentHost.ConsoleApp --configuration Release -- --coding-agent --command "/github app"
-dotnet run --project src/SmartVoiceAgent.AgentHost.ConsoleApp --configuration Release -- --coding-agent --command "/github repos"
+dotnet test tests/SmartVoiceAgent.Tests
+.\scripts\local-production-smoke.ps1 -Configuration Release -Runtime win-x64
 ```
 
-## Local Production Smoke
+The smoke script runs restore, build, tests, a headless skill smoke and publish; CI runs it too. See [docs/local-production-smoke.md](docs/local-production-smoke.md). Architecture and conventions for contributors are in [AGENTS.md](AGENTS.md).
 
-Run the full local gate before treating a build as release-candidate quality:
+## Security model
 
-```powershell
-.\scripts\local-production-smoke.ps1 -Configuration Release -Runtime win-x64 -RequireAiConfig
-```
+Kam runs tools with your user's permissions, so treat it accordingly.
 
-Launch the published app for hands-on verification:
+- Tool calls need approval according to the selected permission mode; deny rules always win.
+- Shell commands are checked by `ShellCommandGuard`; file paths, application names and URLs are validated before use (`SecurityUtilities`).
+- API keys are kept in the user secret store (DPAPI-encrypted), and are masked in logs.
+- Plugins, MCP servers and Agent Skills you install run with the same access as you do. Install only ones you trust.
 
-```powershell
-.\scripts\local-production-smoke.ps1 -Configuration Release -Runtime win-x64 -RequireAiConfig -Launch
-```
-
-Expected release-candidate signals:
-
-- Release build has zero warnings.
-- Full test suite passes.
-- Skill smoke passes for required built-in skills.
-- Published Avalonia app starts and responds.
-- Runtime Diagnostics reports `READY_FOR_LIVE_TEST` after a simple command creates planner trace and skill result evidence.
-
-## Documentation
-
-- [Local production smoke](docs/local-production-smoke.md)
-- [Production live readiness](docs/production-live-readiness.md)
-- [Production readiness sprint](docs/superpowers/plans/2026-04-30-kam-production-readiness-sprint.md)
-- [Skill-first runtime design](docs/superpowers/specs/2026-04-26-kam-skill-first-runtime-design.md)
-- [Agent guide](AGENTS.md)
-- [Security policy](SECURITY.md)
-
-## Security Model
-
-Kam is a local automation agent, so safety is part of the core product surface:
-
-- API keys and provider credentials stay in user settings, user secrets, or environment variables.
-- Planner output is parsed and validated before skill execution.
-- Skill arguments are validated before execution.
-- High-risk file/shell/desktop actions require policy checks and confirmation paths.
-- Runtime diagnostics and support reports must not expose API keys, bearer tokens, or passwords.
-
-See [SECURITY.md](SECURITY.md) for reporting guidance and implementation notes.
-
-## Current Release Focus
-
-The next release-candidate sprint is focused on:
-
-1. CI parity with the local production smoke gate.
-2. Live model profile readiness.
-3. Runtime Diagnostics as the release source of truth.
-4. Complete built-in skill smoke coverage.
-5. JSON planner and command-loop reliability.
-6. Desktop automation safety boundaries.
-7. Publish/launch artifact hardening.
-8. Product UX polish.
-9. Secret redaction across logs, traces, and support reports.
-10. Release-candidate rehearsal and checklist.
-
-## Contributing
-
-Before sending changes:
-
-```powershell
-dotnet test Kam.sln --configuration Release
-.\scripts\local-production-smoke.ps1 -Configuration Release -Runtime win-x64 -RequireAiConfig
-git diff --check
-```
-
-Keep commits scoped by product slice: runtime, UI, skills, diagnostics, docs, or release tooling.
+Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
 
 ## License
 
-Kam is released under the MIT License. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

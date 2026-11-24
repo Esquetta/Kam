@@ -32,7 +32,7 @@ public sealed partial class ExtensionsSkillsDiagnosticsCopyTests
         turkish["Extensions.Skills.Title"].Should().Be("Yetenekler");
         turkish["Extensions.Commands.Title"].Should().Be("Slash komutları");
         turkish["Diagnostics.Title"].Should().Be("Çalışma zamanı tanılaması");
-        turkish["Diagnostics.Status.ActionNeeded"].Should().Be("İŞLEM GEREKLİ");
+        turkish["Diagnostics.Status.ActionNeeded"].Should().Be("İşlem gerekli");
         turkish["Skills.Card.ApproveReview"].Should().Be("İncelemeyi onayla");
     }
 

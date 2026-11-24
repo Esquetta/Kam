@@ -200,7 +200,13 @@ dotnet run --project src/SmartVoiceAgent.AgentHost.ConsoleApp
 
 # Run UI (main application)
 dotnet run --project src/Ui/SmartVoiceAgent.Ui
+
+# Build the release zip (self-contained win-x64, Kam.exe) into artifacts/release
+pwsh scripts/package-release.ps1 -Version 0.1.0
 ```
+
+### Releases
+Pushing a `v*.*.*` tag runs `.github/workflows/release.yml`: tests, `scripts/package-release.ps1`, then a GitHub release whose notes are that version's section of `CHANGELOG.md` (0.x versions are marked pre-release). The app version is `<Version>` in `SmartVoiceAgent.Ui.csproj`; the script overrides it from the tag.
 
 ### Platform-Specific Notes
 - **UI Project**: Targets `win-x64` runtime identifier by default
@@ -399,7 +405,7 @@ See `RESPONSIVE_DESIGN.md` for full details.
 
 ---
 
-*Last Updated: 2026-10-06*
+*Last Updated: 2026-11-24*
 
 ## Current Project Status
 
@@ -466,7 +472,7 @@ See `RESPONSIVE_DESIGN.md` for full details.
 ### Test Status
 ```
 Build: ✅ Success (CI runs on windows-2025)
-Tests: 1470 total; on Linux 13 fail because they assume Windows paths or tessdata
+Tests: 1503 total; on Linux 13 fail because they assume Windows paths or tessdata
 Run locally on Linux: DOTNET_ROLL_FORWARD=Major dotnet test tests/SmartVoiceAgent.Tests -p:EnableWindowsTargeting=true
 ```
 

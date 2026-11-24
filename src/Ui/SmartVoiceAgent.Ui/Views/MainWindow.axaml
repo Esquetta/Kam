@@ -473,6 +473,7 @@
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Coordinator}}"
 							Command="{Binding NavigateToCoordinatorCommand}"
+							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Workbench}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Workbench}">
 						<StackPanel Orientation="Horizontal" Spacing="12">
 							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconChat}"/></Viewbox>
@@ -482,6 +483,7 @@
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Diagnostics}}"
 							Command="{Binding NavigateToDiagnosticsCommand}"
+							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Diagnostics}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.DiagnosticsTip}">
 						<StackPanel Orientation="Horizontal" Spacing="12">
 							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconActivity}"/></Viewbox>
@@ -491,6 +493,7 @@
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Plugins}}"
 							Command="{Binding NavigateToPluginsCommand}"
+							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Skills}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Skills}">
 						<StackPanel Orientation="Horizontal" Spacing="12">
 							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconBlocks}"/></Viewbox>
@@ -500,6 +503,7 @@
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Extensions}}"
 							Command="{Binding NavigateToExtensionsCommand}"
+							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Extensions}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Extensions}">
 						<StackPanel Orientation="Horizontal" Spacing="12">
 							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconPuzzle}"/></Viewbox>
@@ -509,6 +513,7 @@
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Integrations}}"
 							Command="{Binding NavigateToIntegrationsCommand}"
+							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Integrations}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Integrations}">
 						<StackPanel Orientation="Horizontal" Spacing="12">
 							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconPlug}"/></Viewbox>
@@ -518,6 +523,7 @@
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Settings}}"
 							Command="{Binding NavigateToSettingsCommand}"
+							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Settings}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Settings}">
 						<StackPanel Orientation="Horizontal" Spacing="12">
 							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconSliders}"/></Viewbox>
@@ -530,6 +536,7 @@
 				<StackPanel Grid.Row="2" Classes="SidebarFooter" Spacing="4">
 					<Button Classes="NavBtn"
 							Command="{Binding ToggleThemeCommand}"
+							AutomationProperties.Name="{DynamicResource Lang.Shell.ToggleTheme}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.ToggleTheme}">
 						<StackPanel Orientation="Horizontal" Spacing="12">
 							<Panel Width="18" Height="18">
