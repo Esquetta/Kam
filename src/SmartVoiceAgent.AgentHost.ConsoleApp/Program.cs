@@ -15,6 +15,16 @@ using SmartVoiceAgent.Mailing.Extensions;
 #endregion
 
 #region Main Entry Point
+// The routing eval only calls models, so it runs without building the host.
+if (SkillRoutingEvalCommand.IsRequested(args))
+{
+    Environment.ExitCode = await SkillRoutingEvalCommand.RunAsync(
+        SkillRoutingEvalCommand.ParseOptions(args),
+        Console.Out,
+        Console.Error);
+    return;
+}
+
 var skillSmokeRequested = SkillSmokeCommand.IsRequested(args);
 var commandSmokeRequested = CommandSmokeCommand.IsRequested(args);
 var codingAgentRequested = CodingAgentCommand.IsRequested(args);

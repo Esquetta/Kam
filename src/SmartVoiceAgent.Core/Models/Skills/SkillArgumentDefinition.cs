@@ -9,4 +9,9 @@ public sealed class SkillArgumentDefinition
     public SkillArgumentType Type { get; set; } = SkillArgumentType.Any;
 
     public bool Required { get; set; }
+
+    /// <summary>
+    /// The only values a string argument accepts, compared without case. Empty means any value.
+    /// </summary>
+    public List<string> AllowedValues { get; set; } = [];
 }

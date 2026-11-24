@@ -99,7 +99,8 @@ public sealed class ModelSkillPlannerService : ISkillPlannerService
                 builder.Append(string.Join(
                     ", ",
                     skill.Arguments.Select(argument =>
-                        $"{argument.Name}:{argument.Type.ToString().ToLowerInvariant()}{(argument.Required ? ":required" : ":optional")}")));
+                        $"{argument.Name}:{argument.Type.ToString().ToLowerInvariant()}{(argument.Required ? ":required" : ":optional")}"
+                        + (argument.AllowedValues.Count > 0 ? $" (one of {string.Join("|", argument.AllowedValues)})" : string.Empty))));
             }
 
             builder.AppendLine();
