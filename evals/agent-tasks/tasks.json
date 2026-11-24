@@ -1,0 +1,418 @@
+[
+  {
+    "id": "find-invoice",
+    "language": "en",
+    "request": "Which file in the notes folder mentions invoice 4471? Write only its file name to answer.txt in the workspace.",
+    "files": {
+      "notes/january.txt": "Paid the electricity bill.\n",
+      "notes/february.txt": "Lunch with Ayşe on Friday.\n",
+      "notes/march.txt": "Invoice 4471 sent to Acme, due in 30 days.\n"
+    },
+    "checks": [
+      {
+        "type": "Contains",
+        "path": "answer.txt",
+        "text": "march.txt"
+      },
+      {
+        "type": "NotContains",
+        "path": "answer.txt",
+        "text": "february"
+      }
+    ]
+  },
+  {
+    "id": "find-invoice",
+    "language": "tr",
+    "request": "notes klasöründe 4471 numaralı faturadan bahseden dosya hangisi? Sadece dosya adını çalışma alanındaki answer.txt dosyasına yaz.",
+    "files": {
+      "notes/january.txt": "Paid the electricity bill.\n",
+      "notes/february.txt": "Lunch with Ayşe on Friday.\n",
+      "notes/march.txt": "Invoice 4471 sent to Acme, due in 30 days.\n"
+    },
+    "checks": [
+      {
+        "type": "Contains",
+        "path": "answer.txt",
+        "text": "march.txt"
+      },
+      {
+        "type": "NotContains",
+        "path": "answer.txt",
+        "text": "february"
+      }
+    ]
+  },
+  {
+    "id": "fix-add",
+    "language": "en",
+    "request": "The add function in calc.py subtracts instead of adding. Fix it without changing anything else.",
+    "files": {
+      "calc.py": "def add(a, b):\n    return a - b\n\n\ndef mul(a, b):\n    return a * b\n"
+    },
+    "checks": [
+      {
+        "type": "Contains",
+        "path": "calc.py",
+        "text": "return a + b"
+      },
+      {
+        "type": "NotContains",
+        "path": "calc.py",
+        "text": "return a - b"
+      },
+      {
+        "type": "Contains",
+        "path": "calc.py",
+        "text": "return a * b"
+      }
+    ]
+  },
+  {
+    "id": "fix-add",
+    "language": "tr",
+    "request": "calc.py içindeki add fonksiyonu toplama yerine çıkarma yapıyor. Başka hiçbir şeyi değiştirmeden düzelt.",
+    "files": {
+      "calc.py": "def add(a, b):\n    return a - b\n\n\ndef mul(a, b):\n    return a * b\n"
+    },
+    "checks": [
+      {
+        "type": "Contains",
+        "path": "calc.py",
+        "text": "return a + b"
+      },
+      {
+        "type": "NotContains",
+        "path": "calc.py",
+        "text": "return a - b"
+      },
+      {
+        "type": "Contains",
+        "path": "calc.py",
+        "text": "return a * b"
+      }
+    ]
+  },
+  {
+    "id": "rename-txt",
+    "language": "en",
+    "request": "Rename every .txt file in the drafts folder to .md. Leave the other files alone.",
+    "files": {
+      "drafts/a.txt": "alpha\n",
+      "drafts/b.txt": "beta\n",
+      "drafts/c.log": "gamma\n"
+    },
+    "checks": [
+      {
+        "type": "Contains",
+        "path": "drafts/a.md",
+        "text": "alpha"
+      },
+      {
+        "type": "Contains",
+        "path": "drafts/b.md",
+        "text": "beta"
+      },
+      {
+        "type": "Missing",
+        "path": "drafts/a.txt"
+      },
+      {
+        "type": "Missing",
+        "path": "drafts/b.txt"
+      },
+      {
+        "type": "Contains",
+        "path": "drafts/c.log",
+        "text": "gamma"
+      }
+    ]
+  },
+  {
+    "id": "rename-txt",
+    "language": "tr",
+    "request": "drafts klasöründeki tüm .txt dosyalarının uzantısını .md yap. Diğer dosyalara dokunma.",
+    "files": {
+      "drafts/a.txt": "alpha\n",
+      "drafts/b.txt": "beta\n",
+      "drafts/c.log": "gamma\n"
+    },
+    "checks": [
+      {
+        "type": "Contains",
+        "path": "drafts/a.md",
+        "text": "alpha"
+      },
+      {
+        "type": "Contains",
+        "path": "drafts/b.md",
+        "text": "beta"
+      },
+      {
+        "type": "Missing",
+        "path": "drafts/a.txt"
+      },
+      {
+        "type": "Missing",
+        "path": "drafts/b.txt"
+      },
+      {
+        "type": "Contains",
+        "path": "drafts/c.log",
+        "text": "gamma"
+      }
+    ]
+  },
+  {
+    "id": "backup-config",
+    "language": "en",
+    "request": "Copy config.json to backup/config.json, then set debug to false in the original config.json.",
+    "files": {
+      "config.json": "{\n  \"debug\": true,\n  \"port\": 8080\n}\n"
+    },
+    "checks": [
+      {
+        "type": "Contains",
+        "path": "backup/config.json",
+        "text": "true"
+      },
+      {
+        "type": "Contains",
+        "path": "config.json",
+        "text": "false"
+      },
+      {
+        "type": "NotContains",
+        "path": "config.json",
+        "text": "true"
+      },
+      {
+        "type": "Contains",
+        "path": "config.json",
+        "text": "8080"
+      }
+    ]
+  },
+  {
+    "id": "backup-config",
+    "language": "tr",
+    "request": "config.json dosyasını backup/config.json olarak kopyala, sonra asıl config.json içinde debug değerini false yap.",
+    "files": {
+      "config.json": "{\n  \"debug\": true,\n  \"port\": 8080\n}\n"
+    },
+    "checks": [
+      {
+        "type": "Contains",
+        "path": "backup/config.json",
+        "text": "true"
+      },
+      {
+        "type": "Contains",
+        "path": "config.json",
+        "text": "false"
+      },
+      {
+        "type": "NotContains",
+        "path": "config.json",
+        "text": "true"
+      },
+      {
+        "type": "Contains",
+        "path": "config.json",
+        "text": "8080"
+      }
+    ]
+  },
+  {
+    "id": "count-todos",
+    "language": "en",
+    "request": "How many lines contain TODO in the files under src? Write just the number to todo-count.txt.",
+    "files": {
+      "src/app.cs": "// TODO: handle errors\nvar x = 1;\n// TODO: log startup\n",
+      "src/util.cs": "static int Twice(int v) => v * 2; // TODO: overflow\n// TODO: tests\n",
+      "src/readme.md": "# Utils\n\nTODO: write docs\n"
+    },
+    "checks": [
+      {
+        "type": "Equals",
+        "path": "todo-count.txt",
+        "text": "5"
+      }
+    ]
+  },
+  {
+    "id": "count-todos",
+    "language": "tr",
+    "request": "src altındaki dosyalarda TODO geçen kaç satır var? Sadece sayıyı todo-count.txt dosyasına yaz.",
+    "files": {
+      "src/app.cs": "// TODO: handle errors\nvar x = 1;\n// TODO: log startup\n",
+      "src/util.cs": "static int Twice(int v) => v * 2; // TODO: overflow\n// TODO: tests\n",
+      "src/readme.md": "# Utils\n\nTODO: write docs\n"
+    },
+    "checks": [
+      {
+        "type": "Equals",
+        "path": "todo-count.txt",
+        "text": "5"
+      }
+    ]
+  },
+  {
+    "id": "move-images",
+    "language": "en",
+    "request": "Move the image files in inbox into a new folder inbox/images. Leave the other files where they are.",
+    "files": {
+      "inbox/photo1.jpg": "jpg\n",
+      "inbox/photo2.png": "png\n",
+      "inbox/report.pdf": "pdf\n",
+      "inbox/notes.txt": "notes\n"
+    },
+    "checks": [
+      {
+        "type": "Exists",
+        "path": "inbox/images/photo1.jpg"
+      },
+      {
+        "type": "Exists",
+        "path": "inbox/images/photo2.png"
+      },
+      {
+        "type": "Missing",
+        "path": "inbox/photo1.jpg"
+      },
+      {
+        "type": "Missing",
+        "path": "inbox/photo2.png"
+      },
+      {
+        "type": "Exists",
+        "path": "inbox/report.pdf"
+      },
+      {
+        "type": "Exists",
+        "path": "inbox/notes.txt"
+      }
+    ]
+  },
+  {
+    "id": "move-images",
+    "language": "tr",
+    "request": "inbox klasöründeki resim dosyalarını yeni bir inbox/images klasörüne taşı. Diğer dosyalar yerinde kalsın.",
+    "files": {
+      "inbox/photo1.jpg": "jpg\n",
+      "inbox/photo2.png": "png\n",
+      "inbox/report.pdf": "pdf\n",
+      "inbox/notes.txt": "notes\n"
+    },
+    "checks": [
+      {
+        "type": "Exists",
+        "path": "inbox/images/photo1.jpg"
+      },
+      {
+        "type": "Exists",
+        "path": "inbox/images/photo2.png"
+      },
+      {
+        "type": "Missing",
+        "path": "inbox/photo1.jpg"
+      },
+      {
+        "type": "Missing",
+        "path": "inbox/photo2.png"
+      },
+      {
+        "type": "Exists",
+        "path": "inbox/report.pdf"
+      },
+      {
+        "type": "Exists",
+        "path": "inbox/notes.txt"
+      }
+    ]
+  },
+  {
+    "id": "sales-total",
+    "language": "en",
+    "request": "Add up the amount column in sales.csv and write the total to total.txt.",
+    "files": {
+      "sales.csv": "date,item,amount\n2026-11-01,keyboard,120\n2026-11-03,monitor,830\n2026-11-07,cable,15\n2026-11-12,mouse,285\n"
+    },
+    "checks": [
+      {
+        "type": "Contains",
+        "path": "total.txt",
+        "text": "1250"
+      }
+    ]
+  },
+  {
+    "id": "sales-total",
+    "language": "tr",
+    "request": "sales.csv dosyasındaki amount sütununu topla ve toplamı total.txt dosyasına yaz.",
+    "files": {
+      "sales.csv": "date,item,amount\n2026-11-01,keyboard,120\n2026-11-03,monitor,830\n2026-11-07,cable,15\n2026-11-12,mouse,285\n"
+    },
+    "checks": [
+      {
+        "type": "Contains",
+        "path": "total.txt",
+        "text": "1250"
+      }
+    ]
+  },
+  {
+    "id": "readme-folders",
+    "language": "en",
+    "request": "Create README.md in the workspace that lists each top-level folder name on its own line.",
+    "files": {
+      "docs/guide.md": "# Guide\n",
+      "src/main.cs": "// entry\n",
+      "tests/main_test.cs": "// tests\n"
+    },
+    "checks": [
+      {
+        "type": "Contains",
+        "path": "README.md",
+        "text": "docs"
+      },
+      {
+        "type": "Contains",
+        "path": "README.md",
+        "text": "src"
+      },
+      {
+        "type": "Contains",
+        "path": "README.md",
+        "text": "tests"
+      }
+    ]
+  },
+  {
+    "id": "readme-folders",
+    "language": "tr",
+    "request": "Çalışma alanında, en üst düzeydeki her klasörün adını ayrı bir satırda listeleyen bir README.md oluştur.",
+    "files": {
+      "docs/guide.md": "# Guide\n",
+      "src/main.cs": "// entry\n",
+      "tests/main_test.cs": "// tests\n"
+    },
+    "checks": [
+      {
+        "type": "Contains",
+        "path": "README.md",
+        "text": "docs"
+      },
+      {
+        "type": "Contains",
+        "path": "README.md",
+        "text": "src"
+      },
+      {
+        "type": "Contains",
+        "path": "README.md",
+        "text": "tests"
+      }
+    ]
+  }
+]

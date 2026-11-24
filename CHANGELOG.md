@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Agent task eval: `--agent-task-eval` in the console host runs 16 multi-step file tasks (8 in English and Turkish) through the real agent loop, each in a fresh temp workspace where only file tools inside it may run, and checks the files afterwards. First results in [evals/agent-tasks](evals/agent-tasks/README.md).
+- File, app and web-research tools return English text, with failures starting with `Error:`. They returned Turkish, and models often answered English requests in Turkish.
 - Skill routing eval: `--skill-routing-eval` in the console host sends 48 English and Turkish requests through the JSON planner and through native tool calling, and scores the skill and arguments each model picks. First results in [evals/skill-routing](evals/skill-routing/README.md).
 - Skill arguments can list allowed values: they reach the tool schema as `enum` and the planner prompt as "one of", and the validator enforces them. Device control now lists its devices and actions, so models no longer send values such as `volume_up` that the handler rejects.
 - Clipboard skills have descriptions, including the Turkish word *pano*, so "Panoda ne var?" routes to the clipboard.

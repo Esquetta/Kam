@@ -25,6 +25,15 @@ if (SkillRoutingEvalCommand.IsRequested(args))
     return;
 }
 
+if (AgentTaskEvalCommand.IsRequested(args))
+{
+    Environment.ExitCode = await AgentTaskEvalCommand.RunAsync(
+        AgentTaskEvalCommand.ParseOptions(args),
+        Console.Out,
+        Console.Error);
+    return;
+}
+
 var skillSmokeRequested = SkillSmokeCommand.IsRequested(args);
 var commandSmokeRequested = CommandSmokeCommand.IsRequested(args);
 var codingAgentRequested = CodingAgentCommand.IsRequested(args);
