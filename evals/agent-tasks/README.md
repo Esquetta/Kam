@@ -39,7 +39,7 @@ What failed:
 
 - **Arithmetic.** gpt-5.4-nano wrote 1275 and 1255 for a CSV column that sums to 1250. There is no calculator tool, and the shell is blocked here.
 - **Giving up after a blocked call.** gpt-5.4-nano tried to move images with the shell, was blocked, and stopped without trying `files_move`. gpt-5-mini had one `files_read` blocked and stopped instead of retrying with an absolute path. That run predates logging of blocked arguments, so the exact path it used is unknown.
-- **A locked file.** On gpt-5.5, one `files_move` failed with "the file is used by another process". Nothing in Kam holds the file, so this is most likely the virus scanner or search indexer opening a file seconds after it was written. A real user's machine has the same scanners.
+- **A locked file.** On gpt-5.5, one `files_move` failed with "the file is used by another process". Nothing in Kam holds the file: another process (most likely the virus scanner) opens new files for a moment after they are written. On the test machine, moving a file 300 ms after writing it failed 108 times in 400. A real user's machine has the same scanners. Fixed: file writes, moves, copies and deletes now retry briefly on this error (`TransientFileAccess`).
 - **Reply language.** 15 of 32 English requests got a Turkish answer. Kam's file and app tools returned hard-coded Turkish text ("Dosya başarıyla taşındı", "Hata: ..."). The most likely cause is that models followed the language of the tool results instead of the user's; the rerun below is meant to confirm it.
 
 ## The fix: English tool text
@@ -57,7 +57,7 @@ Rerun on the two cheaper models only, one run each: [`results/2026-11-24`](resul
 - **gpt-5.4-nano still drifts into Turkish.** The tool text was not the only cause for it. Each task runs in its own session, so the Turkish requests in the same run are not the cause. One untested guess is the "Istanbul" time zone in the system prompt.
 - **Pass rates did not change beyond noise.** The new failures:
   - gpt-5.4-mini wrote an answer.txt that did not contain "march.txt", although its reply says it did. The sandbox is deleted after the run, so the file cannot be inspected.
-  - gpt-5.4-nano moved `c.log` along with the `.txt` files. Its reply mentions "file in use" errors when it ran several moves at once, which matches the locked file seen on gpt-5.5 before. Parallel `files_move` calls may conflict; this is worth a look.
+  - gpt-5.4-nano moved `c.log` along with the `.txt` files. Its reply blames "file in use" errors on running moves in parallel, but Kam runs tool calls one at a time; this is the virus-scanner lock above, fixed since.
   - gpt-5.4-nano added up the CSV wrong (1375).
   - gpt-5.4-nano asked `files_write` to open the file afterwards, was blocked by the sandbox, and gave up instead of writing without opening. In the app that call would have run, so this failure is partly the sandbox's.
 
