@@ -188,7 +188,11 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    static IChatClient CreateChatClient(AIServiceConfiguration config)
+    /// <summary>
+    /// Builds a chat client for one provider, endpoint, key and model.
+    /// </summary>
+    /// <param name="config">Model settings.</param>
+    public static IChatClient CreateChatClient(AIServiceConfiguration config)
     {
         return config.Provider switch
         {

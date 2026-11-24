@@ -1,0 +1,73 @@
+[
+  { "id": "open-app", "language": "en", "request": "Open Spotify", "expectedSkills": ["apps.open"], "expectedArguments": { "applicationName": "spotify" } },
+  { "id": "open-app", "language": "tr", "request": "Spotify'ı aç", "expectedSkills": ["apps.open"], "expectedArguments": { "applicationName": "spotify" } },
+
+  { "id": "close-app", "language": "en", "request": "Close Chrome", "expectedSkills": ["apps.close"], "expectedArguments": { "applicationName": "chrome" } },
+  { "id": "close-app", "language": "tr", "request": "Chrome'u kapat", "expectedSkills": ["apps.close"], "expectedArguments": { "applicationName": "chrome" } },
+
+  { "id": "app-running", "language": "en", "request": "Is Notepad running right now?", "expectedSkills": ["apps.running", "apps.status", "apps.check"], "expectedArguments": { "applicationName": "notepad" } },
+  { "id": "app-running", "language": "tr", "request": "Notepad şu an çalışıyor mu?", "expectedSkills": ["apps.running", "apps.status", "apps.check"], "expectedArguments": { "applicationName": "notepad" } },
+
+  { "id": "volume-up", "language": "en", "request": "Turn the volume up", "expectedSkills": ["system.device.control"], "expectedArguments": { "deviceName": "=volume|=ses", "action": "=increase|=up|=artır|=yukarı" } },
+  { "id": "volume-up", "language": "tr", "request": "Sesi yükselt", "expectedSkills": ["system.device.control"], "expectedArguments": { "deviceName": "=volume|=ses", "action": "=increase|=up|=artır|=yukarı" } },
+
+  { "id": "battery", "language": "en", "request": "How much battery do I have left?", "expectedSkills": ["system.battery"], "expectedArguments": {} },
+  { "id": "battery", "language": "tr", "request": "Ne kadar şarjım kaldı?", "expectedSkills": ["system.battery"], "expectedArguments": {} },
+
+  { "id": "memory", "language": "en", "request": "How much RAM is free?", "expectedSkills": ["system.memory"], "expectedArguments": {} },
+  { "id": "memory", "language": "tr", "request": "Ne kadar boş RAM var?", "expectedSkills": ["system.memory"], "expectedArguments": {} },
+
+  { "id": "play-song", "language": "en", "request": "Play Bohemian Rhapsody", "expectedSkills": ["media.play"], "expectedArguments": { "trackName": "bohemian rhapsody" } },
+  { "id": "play-song", "language": "tr", "request": "Bohemian Rhapsody çal", "expectedSkills": ["media.play"], "expectedArguments": { "trackName": "bohemian rhapsody" } },
+
+  { "id": "read-file", "language": "en", "request": "Show me what's in C:\\notes\\todo.txt", "expectedSkills": ["files.read", "file.read", "files.read_lines", "file.read_range"], "expectedArguments": { "filePath": "c:/notes/todo.txt" } },
+  { "id": "read-file", "language": "tr", "request": "C:\\notes\\todo.txt dosyasında ne yazıyor?", "expectedSkills": ["files.read", "file.read", "files.read_lines", "file.read_range"], "expectedArguments": { "filePath": "c:/notes/todo.txt" } },
+
+  { "id": "create-folder", "language": "en", "request": "Create a folder at D:\\Projects\\demo", "expectedSkills": ["directories.create"], "expectedArguments": { "directoryPath": "d:/projects/demo" } },
+  { "id": "create-folder", "language": "tr", "request": "D:\\Projects\\demo diye bir klasör oluştur", "expectedSkills": ["directories.create"], "expectedArguments": { "directoryPath": "d:/projects/demo" } },
+
+  { "id": "copy-file", "language": "en", "request": "Copy C:\\Users\\me\\Downloads\\report.pdf to C:\\Users\\me\\Desktop", "expectedSkills": ["files.copy"], "expectedArguments": { "sourcePath": "downloads/report.pdf", "destinationPath": "desktop" } },
+  { "id": "copy-file", "language": "tr", "request": "C:\\Users\\me\\Downloads\\report.pdf dosyasını C:\\Users\\me\\Desktop klasörüne kopyala", "expectedSkills": ["files.copy"], "expectedArguments": { "sourcePath": "downloads/report.pdf", "destinationPath": "desktop" } },
+
+  { "id": "delete-file", "language": "en", "request": "Delete C:\\temp\\old.log", "expectedSkills": ["files.delete"], "expectedArguments": { "filePath": "c:/temp/old.log" } },
+  { "id": "delete-file", "language": "tr", "request": "C:\\temp\\old.log dosyasını sil", "expectedSkills": ["files.delete"], "expectedArguments": { "filePath": "c:/temp/old.log" } },
+
+  { "id": "find-files", "language": "en", "request": "Find all .cs files under D:\\Workstation\\Kam", "expectedSkills": ["files.search", "workspace.find_files", "files.list"], "expectedArguments": { "directoryPath": "d:/workstation/kam", "searchPattern": ".cs" } },
+  { "id": "find-files", "language": "tr", "request": "D:\\Workstation\\Kam altındaki tüm .cs dosyalarını bul", "expectedSkills": ["files.search", "workspace.find_files", "files.list"], "expectedArguments": { "directoryPath": "d:/workstation/kam", "searchPattern": ".cs" } },
+
+  { "id": "search-text", "language": "en", "request": "Search for TODO inside the files in D:\\src", "expectedSkills": ["files.search_content", "workspace.search_text", "code.search"], "expectedArguments": { "directoryPath": "d:/src", "query": "todo" } },
+  { "id": "search-text", "language": "tr", "request": "D:\\src içindeki dosyalarda TODO geçen yerleri ara", "expectedSkills": ["files.search_content", "workspace.search_text", "code.search"], "expectedArguments": { "directoryPath": "d:/src", "query": "todo" } },
+
+  { "id": "folder-tree", "language": "en", "request": "Show the folder structure of D:\\Workstation\\Kam, two levels deep", "expectedSkills": ["files.tree", "workspace.tree", "workspace.map"], "expectedArguments": { "directoryPath": "d:/workstation/kam", "maxDepth": "2" } },
+  { "id": "folder-tree", "language": "tr", "request": "D:\\Workstation\\Kam klasör yapısını iki seviye derinliğe kadar göster", "expectedSkills": ["files.tree", "workspace.tree", "workspace.map"], "expectedArguments": { "directoryPath": "d:/workstation/kam", "maxDepth": "2" } },
+
+  { "id": "clipboard-set", "language": "en", "request": "Copy \"see you at 3\" to my clipboard", "expectedSkills": ["clipboard.set"], "expectedArguments": { "content": "see you at 3" } },
+  { "id": "clipboard-set", "language": "tr", "request": "\"saat 3'te görüşürüz\" yazısını panoya kopyala", "expectedSkills": ["clipboard.set"], "expectedArguments": { "content": "saat 3'te görüşürüz" } },
+
+  { "id": "clipboard-get", "language": "en", "request": "What's on my clipboard?", "expectedSkills": ["clipboard.get", "clipboard.peek"], "expectedArguments": {} },
+  { "id": "clipboard-get", "language": "tr", "request": "Panoda ne var?", "expectedSkills": ["clipboard.get", "clipboard.peek"], "expectedArguments": {} },
+
+  { "id": "web-search", "language": "en", "request": "Search the web for the .NET 10 release date", "expectedSkills": ["web.search"], "expectedArguments": { "query": "net 10" } },
+  { "id": "web-search", "language": "tr", "request": "İnternette .NET 10 çıkış tarihini ara", "expectedSkills": ["web.search"], "expectedArguments": { "query": "net 10" } },
+
+  { "id": "read-page", "language": "en", "request": "Read https://example.com/pricing and tell me what it says", "expectedSkills": ["web.read_page", "web.fetch"], "expectedArguments": { "url": "example.com/pricing" } },
+  { "id": "read-page", "language": "tr", "request": "https://example.com/pricing sayfasını oku, ne yazıyor söyle", "expectedSkills": ["web.read_page", "web.fetch"], "expectedArguments": { "url": "example.com/pricing" } },
+
+  { "id": "send-email", "language": "en", "request": "Email ali@example.com with the subject \"Meeting\" and say I'll be ten minutes late", "expectedSkills": ["communication.email.send"], "expectedArguments": { "to": "ali@example.com", "subject": "meeting" } },
+  { "id": "send-email", "language": "tr", "request": "ali@example.com adresine \"Toplantı\" konulu bir e-posta at, on dakika gecikeceğimi söyle", "expectedSkills": ["communication.email.send"], "expectedArguments": { "to": "ali@example.com", "subject": "toplanti" } },
+
+  { "id": "send-sms", "language": "en", "request": "Text +905551112233: on my way", "expectedSkills": ["communication.sms.send"], "expectedArguments": { "to": "5551112233", "message": "on my way" } },
+  { "id": "send-sms", "language": "tr", "request": "+905551112233 numarasına \"yoldayım\" diye SMS gönder", "expectedSkills": ["communication.sms.send"], "expectedArguments": { "to": "5551112233", "message": "yoldayim" } },
+
+  { "id": "active-window", "language": "en", "request": "Which window is in front right now?", "expectedSkills": ["window.active"], "expectedArguments": {} },
+  { "id": "active-window", "language": "tr", "request": "Şu an öndeki pencere hangisi?", "expectedSkills": ["window.active"], "expectedArguments": {} },
+
+  { "id": "top-processes", "language": "en", "request": "Show the 5 processes using the most memory", "expectedSkills": ["system.processes.list"], "expectedArguments": { "count": "5" } },
+  { "id": "top-processes", "language": "tr", "request": "En çok bellek kullanan 5 işlemi göster", "expectedSkills": ["system.processes.list"], "expectedArguments": { "count": "5" } },
+
+  { "id": "kill-process", "language": "en", "request": "Kill the process with id 4312", "expectedSkills": ["system.process.kill"], "expectedArguments": { "processNameOrId": "4312" } },
+  { "id": "kill-process", "language": "tr", "request": "4312 numaralı işlemi sonlandır", "expectedSkills": ["system.process.kill"], "expectedArguments": { "processNameOrId": "4312" } },
+
+  { "id": "shell", "language": "en", "request": "Run git status in D:\\Workstation\\Kam", "expectedSkills": ["shell.run"], "expectedArguments": { "command": "git status" } },
+  { "id": "shell", "language": "tr", "request": "D:\\Workstation\\Kam içinde git status çalıştır", "expectedSkills": ["shell.run"], "expectedArguments": { "command": "git status" } }
+]

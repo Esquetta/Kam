@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- Skill routing eval: `--skill-routing-eval` in the console host sends 48 English and Turkish requests through the JSON planner and through native tool calling, and scores the skill and arguments each model picks. First results in [evals/skill-routing](evals/skill-routing/README.md).
+
 ## [0.1.0] - 2026-11-24
 
 First downloadable build. Pre-release: expect rough edges.

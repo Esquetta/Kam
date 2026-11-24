@@ -174,7 +174,11 @@ public sealed class SkillToolProvider : IAgentToolProvider
         return JsonSerializer.SerializeToElement(schema);
     }
 
-    private static string BuildDescription(KamSkillManifest manifest)
+    /// <summary>
+    /// Builds the tool description the model sees for a skill.
+    /// </summary>
+    /// <param name="manifest">The skill manifest.</param>
+    public static string BuildDescription(KamSkillManifest manifest)
     {
         var title = string.IsNullOrWhiteSpace(manifest.DisplayName) ? manifest.Id : manifest.DisplayName;
         return string.IsNullOrWhiteSpace(manifest.Description)
