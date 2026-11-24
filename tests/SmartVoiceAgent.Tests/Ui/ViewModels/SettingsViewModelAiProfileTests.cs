@@ -229,7 +229,7 @@ public class SettingsViewModelAiProfileTests : IDisposable
         await connectionTestService.RequestReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         viewModel.IsTestingAiConnection.Should().BeTrue();
-        viewModel.AiProfileStatus.Should().Be("Testing OpenAI planner connection for gpt-5.2...");
+        viewModel.AiProfileStatus.Should().Be("Testing OpenAI connection for gpt-5.2...");
         viewModel.AiConnectionTestButtonText.Should().Be("Testing...");
 
         connectionTestService.Complete(ModelConnectionTestResult.Passed(

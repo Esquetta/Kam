@@ -236,6 +236,17 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// </summary>
         public ICommand HeaderStatusCommand { get; }
 
+        /// <summary>
+        /// Gets whether the agent has no model to talk to yet, so the workbench shows the setup card.
+        /// </summary>
+        public bool NeedsModelSetup => _headerStatus == HeaderStatus.NeedsModel;
+
+        /// <summary>
+        /// Opens Settings with the chat model's provider set to the one picked on the setup card
+        /// ("OpenRouter", "OpenAI", "Anthropic" or "Ollama").
+        /// </summary>
+        public ICommand SetUpModelCommand { get; }
+
         private void UpdateStatusProperties()
         {
             _headerStatus = ResolveHeaderStatus();
@@ -253,6 +264,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             this.RaisePropertyChanged(nameof(StatusColor));
             this.RaisePropertyChanged(nameof(StatusToolTip));
             this.RaisePropertyChanged(nameof(CurrentHeaderStatus));
+            this.RaisePropertyChanged(nameof(NeedsModelSetup));
             StatusChanged?.Invoke(this, EventArgs.Empty);
         }
 
@@ -281,6 +293,15 @@ namespace SmartVoiceAgent.Ui.ViewModels
             }
 
             return IsHostRunning ? HeaderStatus.CommandModeOn : HeaderStatus.CommandModePaused;
+        }
+
+        private void SetUpModel(string? provider)
+        {
+            NavigateTo(NavView.Settings);
+            if (!string.IsNullOrWhiteSpace(provider) && GetOrCreateViewModel(NavView.Settings) is SettingsViewModel settings)
+            {
+                settings.ChatProvider = provider;
+            }
         }
 
         private void OnHeaderStatusClicked()
@@ -798,6 +819,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             NavigateToSettingsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Settings));
             ToggleThemeCommand = ReactiveCommand.Create(ToggleTheme);
             HeaderStatusCommand = ReactiveCommand.Create(OnHeaderStatusClicked);
+            SetUpModelCommand = ReactiveCommand.Create<string?>(SetUpModel);
             ClearSkillExecutionHistoryCommand = ReactiveCommand.Create(ClearSkillExecutionHistory);
             ClearSkillExecutionHistoryFiltersCommand = ReactiveCommand.Create(ClearSkillExecutionHistoryFilters);
             ClearSkillPlannerTraceCommand = ReactiveCommand.Create(ClearSkillPlannerTrace);

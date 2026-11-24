@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- First run: with no model connected, the empty workbench shows a setup card (OpenRouter, Ollama, OpenAI, Anthropic) that opens Settings on that provider, and a chat that already has messages shows a "Set up" strip above the composer.
+- Settings: the agent model comes first, with Test Connection next to its key; the command mode planner moved under an "advanced" toggle. Test Connection checks whichever profiles are set up instead of always requiring the planner. The duplicate "Start minimized" switch is gone.
+- Workbench copy: the thread list and chat header drop the "Agent threads" and "Conversation timeline" subtitles, thread rows show the status only while the agent works, and 22 icon-only buttons have accessible names.
 - File writes, moves, copies and deletes retry briefly when another process (usually the virus scanner) holds a file it just wrote. Moving a file 300 ms after writing it failed about one time in four on a test machine.
 - Agent task eval: `--agent-task-eval` in the console host runs 16 multi-step file tasks (8 in English and Turkish) through the real agent loop, each in a fresh temp workspace where only file tools inside it may run, and checks the files afterwards. First results in [evals/agent-tasks](evals/agent-tasks/README.md).
 - File, app and web-research tools return English text, with failures starting with `Error:`. They returned Turkish, and models often answered English requests in Turkish.

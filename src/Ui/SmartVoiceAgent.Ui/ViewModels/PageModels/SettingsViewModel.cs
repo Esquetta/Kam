@@ -460,6 +460,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 .SelectMany(ValidateProfileForConnectionTest)
                 .ToArray();
 
+            // Nothing set up yet: ask for the chat model's key, since the agent runs on that profile.
+            if (!targets.Any(target => ShouldTestOptionalProfile(target.Profile)))
+            {
+                validationErrors = [() => Loc.Format("Settings.Status.ApiKeyRequired", GetRoleLabel(ModelProviderRole.Chat))];
+            }
+
             if (validationErrors.Length > 0)
             {
                 IsAiProfileValid = false;
@@ -471,12 +477,13 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             try
             {
                 IsTestingAiConnection = true;
-                var testedProvider = profile.Provider;
-                var testedModelId = profile.ModelId;
+                var tested = targets.Where(target => ShouldTestOptionalProfile(target.Profile)).ToArray();
+                var testedProvider = tested[0].Profile.Provider;
+                var testedModelId = tested[0].Profile.ModelId;
                 SetAiProfileStatus(() => Loc.Format("Settings.Status.Testing", testedProvider, testedModelId));
                 var results = new List<Func<string>>();
 
-                foreach (var target in targets.Where(target => target.Required || ShouldTestOptionalProfile(target.Profile)))
+                foreach (var target in tested)
                 {
                     var result = await _modelConnectionTestService.TestAsync(target.Profile).ConfigureAwait(true);
                     if (!result.Success)
@@ -736,17 +743,19 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             ModelProviderProfile plannerProfile,
             ModelProviderProfile chatProfile)
         {
+            // Each profile is tested when it is set up (a key, or Ollama). The agent runs on the chat
+            // profile and the planner only serves the older command mode, so neither is required alone.
             return
             [
-                new ConnectionTestTarget(ModelProviderRole.Planner, plannerProfile, Required: true),
-                new ConnectionTestTarget(ModelProviderRole.Chat, chatProfile, Required: false)
+                new ConnectionTestTarget(ModelProviderRole.Planner, plannerProfile),
+                new ConnectionTestTarget(ModelProviderRole.Chat, chatProfile)
             ];
         }
 
         private static IEnumerable<Func<string>> ValidateProfileForConnectionTest(ConnectionTestTarget target)
         {
             var profile = target.Profile;
-            if (!target.Required && !ShouldTestOptionalProfile(profile))
+            if (!ShouldTestOptionalProfile(profile))
             {
                 yield break;
             }
@@ -801,8 +810,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         private sealed record ConnectionTestTarget(
             ModelProviderRole Role,
-            ModelProviderProfile Profile,
-            bool Required);
+            ModelProviderProfile Profile);
 
         private static Func<string> FormatConnectionSuccess(
             ConnectionTestTarget target,
