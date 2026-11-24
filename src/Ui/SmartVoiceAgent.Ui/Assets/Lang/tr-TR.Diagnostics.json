@@ -2,12 +2,12 @@
   "Diagnostics.Title": "Çalışma zamanı tanılaması",
   "Diagnostics.Subtitle": "Model, ajan hizmeti, yetenekler ve entegrasyonların anlık hazırlık durumu.",
 
-  "Diagnostics.Status.Ready": "HAZIR",
-  "Diagnostics.Status.ActionNeeded": "İŞLEM GEREKLİ",
+  "Diagnostics.Status.Ready": "Hazır",
+  "Diagnostics.Status.ActionNeeded": "İşlem gerekli",
 
-  "Diagnostics.LiveTest.Title": "Canlı üretim testi",
-  "Diagnostics.LiveTest.Ready": "CANLI TESTE HAZIR",
-  "Diagnostics.LiveTest.NeedsAction": "İŞLEM GEREKLİ",
+  "Diagnostics.LiveTest.Title": "Canlı test kontrol listesi",
+  "Diagnostics.LiveTest.Ready": "Canlı teste hazır",
+  "Diagnostics.LiveTest.NeedsAction": "İşlem gerekli",
   "Diagnostics.LiveTest.CopyReport": "Raporu kopyala",
 
   "Diagnostics.Report.NotCopied": "Rapor kopyalanmadı.",

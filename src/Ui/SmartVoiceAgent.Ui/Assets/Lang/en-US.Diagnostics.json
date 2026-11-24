@@ -2,12 +2,12 @@
   "Diagnostics.Title": "Runtime diagnostics",
   "Diagnostics.Subtitle": "Live readiness of the model, host, skills and integrations.",
 
-  "Diagnostics.Status.Ready": "READY",
-  "Diagnostics.Status.ActionNeeded": "ACTION_NEEDED",
+  "Diagnostics.Status.Ready": "Ready",
+  "Diagnostics.Status.ActionNeeded": "Action needed",
 
-  "Diagnostics.LiveTest.Title": "Live production test",
-  "Diagnostics.LiveTest.Ready": "READY_FOR_LIVE_TEST",
-  "Diagnostics.LiveTest.NeedsAction": "NEEDS_ACTION",
+  "Diagnostics.LiveTest.Title": "Live test checklist",
+  "Diagnostics.LiveTest.Ready": "Ready for a live test",
+  "Diagnostics.LiveTest.NeedsAction": "Needs action",
   "Diagnostics.LiveTest.CopyReport": "Copy Report",
 
   "Diagnostics.Report.NotCopied": "Report not copied.",

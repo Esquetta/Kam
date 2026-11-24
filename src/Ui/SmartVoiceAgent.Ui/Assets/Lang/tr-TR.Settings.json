@@ -4,9 +4,9 @@
 
   "Settings.Title": "Ayarlar",
   "Settings.Subtitle": "Ajan çalışma alanınızı ve tercihlerinizi yönetin.",
-  "Settings.Appearance": "GÖRÜNÜM",
-  "Settings.Startup": "Başlangıç davranışı",
-  "Settings.StartupDesc": "Sistem açılırken ajan çalışma alanını başlat",
+  "Settings.Appearance": "BAŞLANGIÇ",
+  "Settings.Startup": "Açılışta pencereyi göster",
+  "Settings.StartupDesc": "Kam başladığında ana pencereyi aç",
   "Settings.AutoStart": "Windows ile otomatik başlatma",
   "Settings.AutoStartDesc": "Windows açıldığında otomatik olarak başlat",
   "Settings.StartMinimized": "Simge durumunda başlatma",
