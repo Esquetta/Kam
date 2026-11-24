@@ -36,9 +36,33 @@ What this says:
 - **Accuracy is the same within noise.** On these single-step tasks both paths reach the right skill 96–100% of the time. The JSON planner is not more accurate than native tool calling, so it is no reason to keep a second routing path for accuracy.
 - **Tool calling costs 2.4–2.8× the input tokens** (2.7–3.2k against 1.2k per attempt), because full JSON schemas for 62 tools are larger than the planner's one-line skill list. Output tokens are lower.
 - **Tool calling looks before it acts.** Before copying, deleting, closing, killing or sending, models often call a read-only tool first (an existence check, a process list, a validation). gpt-5.4-nano and gpt-5-mini did this in 8 cases each: 79–83% first call right against 96–100% right skill. Each look adds a model call.
-- **Turkish misses are mostly one word.** "Panoda ne var?" ("what is on the clipboard?") sent gpt-5.4-nano to `system.info` and gpt-5.4-mini to `accessibility.tree`, in both modes. The clipboard skills do not mention *pano*.
-- **Free-text enum arguments break.** `system.device.control` takes `action` as free text; models sent `volume_up` and `increase by 10%`, which the handler rejects. An enum in the schema would rule this out.
+- **Turkish misses are mostly one word.** "Panoda ne var?" ("what is on the clipboard?") sent gpt-5.4-nano to `system.info` and gpt-5.4-mini to `accessibility.tree`, in both modes. The clipboard skills did not mention *pano*. Fixed, see below.
+- **Free-text enum arguments break.** `system.device.control` takes `action` as free text; models sent `volume_up` and `increase by 10%`, which the handler rejects. Fixed with allowed values, see below.
 - **The eval is sensitive to simulated tool results.** Two earlier runs answered intermediate tool calls with "OK (simulated: this evaluation does not run tools)". Models then often stopped to ask for confirmation in prose, and gpt-5.4-nano's tool-call score fell to 83–90%. The published run uses a plain `OK`.
+
+## After the fixes
+
+The two fixes from the first run:
+
+- The clipboard skills now have descriptions that mention *pano*.
+- Skill arguments can list allowed values. They reach the tool schema as `enum` and the planner prompt as "one of", and the validator enforces them. `system.device.control` now lists its devices and actions.
+
+The same four models, one run each: [`results/2026-11-24-fixes`](results/2026-11-24-fixes/summary.md).
+
+| Model | Mode | Right skill + args before | after | First call right after |
+| --- | --- | ---: | ---: | ---: |
+| gpt-5.5 | JSON plan | 100% | 100% | 100% |
+| gpt-5.5 | tool call | 100% | 100% | 96% |
+| gpt-5.4-mini | JSON plan | 98% | 100% | 100% |
+| gpt-5.4-mini | tool call | 98% | 100% | 92% |
+| gpt-5.4-nano | JSON plan | 96% | 100% | 100% |
+| gpt-5.4-nano | tool call | 96% | 96% | 88% |
+| gpt-5-mini | JSON plan | 96% | 100% | 100% |
+| gpt-5-mini | tool call | 96% | 96% | 85% |
+
+- **The targeted cases all pass.** Across the four models and both modes, "Panoda ne var?" and the two volume cases make 24 attempts. 7 were wrong before the fixes and 0 after. This is the set the fixes were written for, so it shows that the fixes work, not that the eval generalises.
+- **The planner prompt grew by 143 tokens** (1158 to 1301) because of the new descriptions and value lists.
+- **What is left is in tool mode.** Before deleting a file, killing a process or sending an SMS, models still often stop to ask for confirmation in prose. Kam already shows its own approval prompt for these calls, so the agent prompt could say plainly that it should make the call and let Kam ask. gpt-5-mini once killed the process through `shell.run` instead of `system.process.kill`.
 
 ## Limits
 

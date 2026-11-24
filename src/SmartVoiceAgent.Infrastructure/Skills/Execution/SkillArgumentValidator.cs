@@ -37,6 +37,13 @@ internal static class SkillArgumentValidator
             {
                 return $"Argument '{argument.Name}' must be {argument.Type.ToString().ToLowerInvariant()}.";
             }
+
+            if (argument.AllowedValues.Count > 0
+                && value.ValueKind == JsonValueKind.String
+                && !argument.AllowedValues.Contains(value.GetString() ?? string.Empty, StringComparer.OrdinalIgnoreCase))
+            {
+                return $"Argument '{argument.Name}' must be one of: {string.Join(", ", argument.AllowedValues)}.";
+            }
         }
 
         return null;

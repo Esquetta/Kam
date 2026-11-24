@@ -153,6 +153,11 @@ public sealed class SkillToolProvider : IAgentToolProvider
                 property["description"] = argument.Description;
             }
 
+            if (argument.AllowedValues.Count > 0)
+            {
+                property["enum"] = new JsonArray(argument.AllowedValues.Select(value => (JsonNode)value).ToArray());
+            }
+
             properties[argument.Name] = property;
             if (argument.Required)
             {

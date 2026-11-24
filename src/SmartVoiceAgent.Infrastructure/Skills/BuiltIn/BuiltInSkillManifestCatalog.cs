@@ -90,9 +90,13 @@ public static class BuiltInSkillManifestCatalog
                 SkillRiskLevel.High,
                 [SkillPermission.ProcessControl],
                 [
-                    RequiredString("deviceName", "Device name such as volume, wifi, bluetooth, brightness, or power."),
-                    RequiredString("action", "Action such as increase, decrease, on, off, toggle, status, or shutdown.")
-                ]),
+                    RequiredChoice("deviceName", "Device to control.", "volume", "brightness", "wifi", "bluetooth", "power"),
+                    RequiredChoice(
+                        "action",
+                        "volume: increase, decrease, mute, unmute, status. brightness: increase, decrease. wifi and bluetooth: on, off, status. power: shutdown, restart, sleep, lock, status.",
+                        "increase", "decrease", "mute", "unmute", "on", "off", "status", "shutdown", "restart", "sleep", "lock")
+                ],
+                description: "Changes or reads volume, screen brightness, Wi-Fi, Bluetooth or power state (Turkish: ses, parlaklık, Wi-Fi, Bluetooth, güç)."),
             Create(
                 "system.info",
                 "System Information",
@@ -427,14 +431,16 @@ public static class BuiltInSkillManifestCatalog
                 SkillRiskLevel.Medium,
                 [SkillPermission.ClipboardRead],
                 [OptionalNumber("maxLength", "Maximum characters to return.")],
-                timeoutMilliseconds: 5000),
+                timeoutMilliseconds: 5000,
+                description: "Returns the text on the system clipboard (Turkish: pano, \"panoda ne var\")."),
             Create(
                 "clipboard.peek",
                 "Peek Clipboard",
                 SkillRiskLevel.Medium,
                 [SkillPermission.ClipboardRead],
                 [OptionalNumber("maxLength", "Maximum characters to return.")],
-                timeoutMilliseconds: 5000),
+                timeoutMilliseconds: 5000,
+                description: "Returns a short preview of the clipboard text without changing it (Turkish: pano)."),
             Create(
                 "clipboard.set",
                 "Set Clipboard",
@@ -442,6 +448,7 @@ public static class BuiltInSkillManifestCatalog
                 [SkillPermission.ClipboardWrite],
                 [RequiredString("content", "Text content to put in the clipboard.")],
                 timeoutMilliseconds: 5000,
+                description: "Puts text on the system clipboard (Turkish: panoya kopyala).",
                 runtimeOptions: SmokeNotApplicable("Mutates the user's clipboard contents.")),
             Create(
                 "clipboard.clear",
@@ -449,6 +456,7 @@ public static class BuiltInSkillManifestCatalog
                 SkillRiskLevel.High,
                 [SkillPermission.ClipboardWrite],
                 timeoutMilliseconds: 5000,
+                description: "Empties the system clipboard (Turkish: panoyu temizle).",
                 runtimeOptions: SmokeNotApplicable("Clears the user's clipboard contents.")),
             Create(
                 "web.search",
@@ -583,12 +591,14 @@ public static class BuiltInSkillManifestCatalog
         IReadOnlyCollection<SkillPermission> permissions,
         IReadOnlyCollection<SkillArgumentDefinition>? arguments = null,
         int timeoutMilliseconds = 10000,
-        IReadOnlyDictionary<string, string>? runtimeOptions = null)
+        IReadOnlyDictionary<string, string>? runtimeOptions = null,
+        string description = "")
     {
         return new KamSkillManifest
         {
             Id = id,
             DisplayName = displayName,
+            Description = description,
             Source = "builtin",
             ExecutorType = "builtin",
             Enabled = true,
@@ -616,6 +626,13 @@ public static class BuiltInSkillManifestCatalog
 
     private static SkillArgumentDefinition RequiredString(string name, string description) =>
         Argument(name, description, SkillArgumentType.String, required: true);
+
+    private static SkillArgumentDefinition RequiredChoice(string name, string description, params string[] allowedValues)
+    {
+        var argument = Argument(name, description, SkillArgumentType.String, required: true);
+        argument.AllowedValues = [.. allowedValues];
+        return argument;
+    }
 
     private static SkillArgumentDefinition OptionalString(string name, string description) =>
         Argument(name, description, SkillArgumentType.String, required: false);
