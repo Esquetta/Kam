@@ -20,7 +20,7 @@
   "Diagnostics.Card.Model.Unreachable": "Modele ulaşılamadı",
   "Diagnostics.Card.Model.UnreachableHint": "Anahtarınızı ve bağlantınızı kontrol edin.",
   "Diagnostics.Card.Model.Connected": "Bağlı",
-  "Diagnostics.Card.Model.Ready": "Kurulu",
+  "Diagnostics.Card.Model.Ready": "Hazır",
   "Diagnostics.Card.Tools.Action": "Araçlara bakın",
   "Diagnostics.Card.Tools.None": "Kullanılabilir araç yok",
   "Diagnostics.Card.Tools.Unavailable": "{1} araçtan {0} tanesi kullanılamıyor",
