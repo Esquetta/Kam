@@ -71,10 +71,12 @@
                                            FontSize="13"
                                            FontWeight="Medium"
                                            Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                <TextBlock Text="{Binding ActiveChatProfileId}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           Margin="0,2,0,0"/>
+                                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,0,0">
+                                    <Border Classes="StatusDot Warning" IsVisible="{Binding ChatProfileNeedsKey}"/>
+                                    <TextBlock Text="{Binding ChatProfileStateText}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource TextMutedBrush}"/>
+                                </StackPanel>
                             </StackPanel>
                         </Grid>
 

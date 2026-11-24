@@ -50,18 +50,13 @@
                             </StackPanel>
                             
                             <!-- Status Badge -->
-                            <Border Grid.Column="2" 
-                                    Background="{Binding IsTaskAgentEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenGlowBrush|CardBgHoverBrush'}"
-                                    BorderBrush="{Binding IsTaskAgentEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|BorderSubtleBrush'}"
-                                    BorderThickness="0"
-                                    CornerRadius="999"
-                                    Padding="10,4"
-                                    VerticalAlignment="Center"
+                            <Border Grid.Column="2" Classes="Pill"
+                                    Classes.Success="{Binding TodoistBadge.IsSuccess}"
+                                    Classes.Warning="{Binding TodoistBadge.IsWarning}"
+                                    Classes.Danger="{Binding TodoistBadge.IsDanger}"
+                                    Classes.Accent="{Binding TodoistBadge.IsAccent}"
                                     HorizontalAlignment="Right">
-                                <TextBlock Text="{Binding TodoistStatusText}"
-                                           FontSize="11"
-                                           FontWeight="Medium"
-                                           Foreground="{Binding IsTaskAgentEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|TextMutedBrush'}"/>
+                                <TextBlock Text="{Binding TodoistStatusText}"/>
                             </Border>
                         </Grid>
                         
@@ -140,16 +135,13 @@
                             </StackPanel>
 
                             <!-- Search works with or without a Google key, so the pill is always green and names the source. -->
-                            <Border Grid.Column="2"
-                                    Background="{DynamicResource AccentGreenGlowBrush}"
-                                    CornerRadius="999"
-                                    Padding="10,4"
-                                    VerticalAlignment="Center"
+                            <Border Grid.Column="2" Classes="Pill"
+                                    Classes.Success="{Binding WebSearchBadge.IsSuccess}"
+                                    Classes.Warning="{Binding WebSearchBadge.IsWarning}"
+                                    Classes.Danger="{Binding WebSearchBadge.IsDanger}"
+                                    Classes.Accent="{Binding WebSearchBadge.IsAccent}"
                                     HorizontalAlignment="Right">
-                                <TextBlock Text="{Binding WebSearchStatusText}"
-                                           FontSize="11"
-                                           FontWeight="Medium"
-                                           Foreground="{DynamicResource AccentGreenBrush}"/>
+                                <TextBlock Text="{Binding WebSearchStatusText}"/>
                             </Border>
                         </Grid>
 
@@ -244,18 +236,13 @@
                             </StackPanel>
 
                             <!-- Status Badge -->
-                            <Border Grid.Column="2"
-                                    Background="{Binding IsGitHubStatusPositive, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenGlowBrush|CardBgHoverBrush'}"
-                                    BorderBrush="{Binding IsGitHubStatusPositive, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|BorderSubtleBrush'}"
-                                    BorderThickness="0"
-                                    CornerRadius="999"
-                                    Padding="10,4"
-                                    VerticalAlignment="Center"
+                            <Border Grid.Column="2" Classes="Pill"
+                                    Classes.Success="{Binding GitHubBadge.IsSuccess}"
+                                    Classes.Warning="{Binding GitHubBadge.IsWarning}"
+                                    Classes.Danger="{Binding GitHubBadge.IsDanger}"
+                                    Classes.Accent="{Binding GitHubBadge.IsAccent}"
                                     HorizontalAlignment="Right">
-                                <TextBlock Text="{Binding GitHubAppStatusText}"
-                                           FontSize="11"
-                                           FontWeight="Medium"
-                                           Foreground="{Binding IsGitHubStatusPositive, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|TextMutedBrush'}"/>
+                                <TextBlock Text="{Binding GitHubAppStatusText}"/>
                             </Border>
                         </Grid>
 
@@ -489,18 +476,13 @@
                             </StackPanel>
                             
                             <!-- Status Badge -->
-                            <Border Grid.Column="2" 
-                                    Background="{Binding IsEmailEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenGlowBrush|CardBgHoverBrush'}"
-                                    BorderBrush="{Binding IsEmailEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|BorderSubtleBrush'}"
-                                    BorderThickness="0"
-                                    CornerRadius="999"
-                                    Padding="10,4"
-                                    VerticalAlignment="Center"
+                            <Border Grid.Column="2" Classes="Pill"
+                                    Classes.Success="{Binding EmailBadge.IsSuccess}"
+                                    Classes.Warning="{Binding EmailBadge.IsWarning}"
+                                    Classes.Danger="{Binding EmailBadge.IsDanger}"
+                                    Classes.Accent="{Binding EmailBadge.IsAccent}"
                                     HorizontalAlignment="Right">
-                                <TextBlock Text="{Binding EmailStatusText}"
-                                           FontSize="11"
-                                           FontWeight="Medium"
-                                           Foreground="{Binding IsEmailEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|TextMutedBrush'}"/>
+                                <TextBlock Text="{Binding EmailStatusText}"/>
                             </Border>
                         </Grid>
                         
@@ -676,18 +658,13 @@
                             </StackPanel>
                             
                             <!-- Status Badge -->
-                            <Border Grid.Column="2" 
-                                    Background="{Binding IsSmsEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenGlowBrush|CardBgHoverBrush'}"
-                                    BorderBrush="{Binding IsSmsEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|BorderSubtleBrush'}"
-                                    BorderThickness="0"
-                                    CornerRadius="999"
-                                    Padding="10,4"
-                                    VerticalAlignment="Center"
+                            <Border Grid.Column="2" Classes="Pill"
+                                    Classes.Success="{Binding SmsBadge.IsSuccess}"
+                                    Classes.Warning="{Binding SmsBadge.IsWarning}"
+                                    Classes.Danger="{Binding SmsBadge.IsDanger}"
+                                    Classes.Accent="{Binding SmsBadge.IsAccent}"
                                     HorizontalAlignment="Right">
-                                <TextBlock Text="{Binding SmsStatusText}"
-                                           FontSize="11"
-                                           FontWeight="Medium"
-                                           Foreground="{Binding IsSmsEnabled, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentGreenBrush|TextMutedBrush'}"/>
+                                <TextBlock Text="{Binding SmsStatusText}"/>
                             </Border>
                         </Grid>
                         

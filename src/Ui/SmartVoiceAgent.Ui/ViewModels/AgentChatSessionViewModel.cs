@@ -20,6 +20,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         private string _title;
         private string _summary;
+        private AgentTurnTraceViewModel? _lastTurn;
         private string _relativeTimeText;
         private bool _isSelected;
         private bool _isRunning;
@@ -213,6 +214,22 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         public ObservableCollection<AgentChatMessageViewModel> Messages { get; } = new();
+
+        /// <summary>
+        /// Gets or sets the steps of the latest turn run in this chat since Kam started, for the Activity panel.
+        /// </summary>
+        public AgentTurnTraceViewModel? LastTurn
+        {
+            get => _lastTurn;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _lastTurn, value);
+                this.RaisePropertyChanged(nameof(HasLastTurn));
+            }
+        }
+
+        /// <summary>Gets whether a turn has run in this chat since Kam started.</summary>
+        public bool HasLastTurn => _lastTurn is not null;
 
         /// <summary>
         /// Gets the thread state shown in the sidebar: working, active or ready.

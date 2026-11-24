@@ -359,6 +359,35 @@ public class SettingsViewModelAiProfileTests : IDisposable
         autoStartService.SetRequests.Should().ContainSingle(request => request.Enable);
     }
 
+    [Fact]
+    public void ChatProfileState_SaysWhatIsMissingUntilTheAgentModelHasAKey()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        using var viewModel = CreateViewModel(settingsService);
+        viewModel.ChatProvider = "OpenRouter";
+        viewModel.ChatApiKey = string.Empty;
+
+        viewModel.ChatProfileNeedsKey.Should().BeTrue();
+        viewModel.ChatProfileStateText.Should().Be("Not set up yet: add an API key below.");
+
+        viewModel.ChatApiKey = "sk-or-test";
+        viewModel.ChatModelId = "openai/gpt-5.4-mini";
+
+        viewModel.ChatProfileNeedsKey.Should().BeFalse();
+        viewModel.ChatProfileStateText.Should().Be("Uses openai/gpt-5.4-mini on OpenRouter.");
+    }
+
+    [Fact]
+    public void ChatProfileState_OllamaNeedsNoKey()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        using var viewModel = CreateViewModel(settingsService);
+        viewModel.ChatProvider = "Ollama";
+        viewModel.ChatApiKey = string.Empty;
+
+        viewModel.ChatProfileNeedsKey.Should().BeFalse();
+    }
+
     private static SettingsViewModel CreateViewModel(
         ISettingsService settingsService,
         IModelConnectionTestService? connectionTestService = null)

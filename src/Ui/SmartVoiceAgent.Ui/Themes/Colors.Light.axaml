@@ -3,15 +3,15 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- Neutral surfaces: layered from the window background up to hovered cards -->
-    <Color x:Key="PanelBg">#F5F5F7</Color>
-    <Color x:Key="SurfaceBg">#FAFAFB</Color>
+    <Color x:Key="PanelBg">#ECECF1</Color>
+    <Color x:Key="SurfaceBg">#F6F6F8</Color>
     <Color x:Key="CardBg">#FFFFFF</Color>
     <Color x:Key="SurfaceBgElevated">#FFFFFF</Color>
-    <Color x:Key="CardBgHover">#F0F0F4</Color>
+    <Color x:Key="CardBgHover">#F1F1F5</Color>
     <!-- Translucent fills for ghost controls, so hover reads the same on any surface -->
     <Color x:Key="ControlHover">#1015151B</Color>
     <Color x:Key="ControlPressed">#1E15151B</Color>
-    <Color x:Key="BorderSubtle">#E5E5EB</Color>
+    <Color x:Key="BorderSubtle">#E1E1E8</Color>
     <Color x:Key="BorderMuted">#D4D4DC</Color>
     <Color x:Key="TextPrimary">#15151B</Color>
     <Color x:Key="TextSecondary">#3B3B46</Color>

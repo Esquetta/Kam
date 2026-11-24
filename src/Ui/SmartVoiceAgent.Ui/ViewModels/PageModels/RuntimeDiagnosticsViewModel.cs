@@ -54,8 +54,14 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     private string _downloadedUpdatePackagePath = string.Empty;
     private string _liveTestStatus = "NEEDS_ACTION";
     private string _liveTestNextAction = "Fix blocking model settings before live commands.";
-    private Func<string> _readinessReportCopyStatusSource = () => Loc.Get("Diagnostics.Report.NotCopied");
-    private string _readinessReportCopyStatus = Loc.Get("Diagnostics.Report.NotCopied");
+    private Func<string> _readinessReportCopyStatusSource = () => string.Empty;
+    private string _readinessReportCopyStatus = string.Empty;
+    private ModelProviderProfile? _agentModelProfile;
+    private bool _modelConnectionVerified;
+    private bool _modelConnectionFailed;
+    private int _skillTotal = -1;
+    private int _skillReview;
+    private int _skillBlocked;
     private Func<string> _lastRefreshTextSource = () => Loc.Get("Diagnostics.Refresh.Never");
     private string _lastRefreshText = Loc.Get("Diagnostics.Refresh.Never");
     private bool _isRefreshing;
@@ -139,6 +145,11 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     public ICommand CopyReadinessReportCommand { get; }
 
     public ObservableCollection<RuntimeDiagnosticItemViewModel> SummaryCards { get; } = [];
+
+    /// <summary>
+    /// Gets the four cards at the top of the page: model, tools, MCP servers and voice.
+    /// </summary>
+    public ObservableCollection<RuntimeDiagnosticItemViewModel> StatusCards { get; } = [];
 
     public ObservableCollection<RuntimeDiagnosticItemViewModel> AiRuntimeItems { get; } = [];
 
@@ -257,8 +268,17 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     public string ReadinessReportCopyStatus
     {
         get => _readinessReportCopyStatus;
-        private set => this.RaiseAndSetIfChanged(ref _readinessReportCopyStatus, value);
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref _readinessReportCopyStatus, value);
+            this.RaisePropertyChanged(nameof(HasReadinessReportCopyStatus));
+        }
     }
+
+    /// <summary>
+    /// Gets whether the user has tried to copy the report, so the status line is worth showing.
+    /// </summary>
+    public bool HasReadinessReportCopyStatus => !string.IsNullOrEmpty(ReadinessReportCopyStatus);
 
     public string LastRefreshText
     {
@@ -612,6 +632,8 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         BlockingItems.Clear();
         SetSkillSmokeStatus(() => Loc.Get("Diagnostics.SkillSmoke.NotRun"));
         _skillSmokeSummaryValue = string.Empty;
+        _modelConnectionVerified = false;
+        _modelConnectionFailed = false;
 
         var profiles = _settingsService.ModelProviderProfiles.ToArray();
         var plannerProfile = FindProfile(
@@ -623,6 +645,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
             _settingsService.ActiveChatProfileId,
             ModelProviderRole.Chat);
 
+        _agentModelProfile = chatProfile ?? plannerProfile;
         ApplyPlannerDiagnostics(plannerProfile);
         ApplyChatDiagnostics(chatProfile, plannerProfile);
         ApplyIntegrationDiagnostics();
@@ -965,6 +988,10 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
     private async Task ApplyPlannerLiveConnectionAsync(ModelProviderProfile plannerProfile)
     {
         var result = await _modelConnectionTestService!.TestAsync(plannerProfile).ConfigureAwait(true);
+        var isAgentModel = _agentModelProfile is not null
+            && _agentModelProfile.Id.Equals(plannerProfile.Id, StringComparison.OrdinalIgnoreCase);
+        _modelConnectionVerified = isAgentModel && result.Success;
+        _modelConnectionFailed = isAgentModel && !result.Success;
         if (result.Success)
         {
             AiRuntimeItems.Add(new RuntimeDiagnosticItemViewModel(
@@ -993,6 +1020,9 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         var needsReview = reports.Count(report => report.Status == SkillHealthStatus.ReviewRequired);
         var blocked = reports.Count(report =>
             report.Status is SkillHealthStatus.MissingExecutor or SkillHealthStatus.PermissionDenied);
+        _skillTotal = total;
+        _skillReview = needsReview;
+        _skillBlocked = blocked;
 
         SkillStatus = total == 0 ? "No skills" : $"{healthy}/{total} healthy";
         ReplaceRuntimeItem(
@@ -1045,8 +1075,162 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         RebuildSummary();
     }
 
+    private void RebuildStatusCards()
+    {
+        StatusCards.Clear();
+        StatusCards.Add(BuildModelCard());
+        StatusCards.Add(BuildToolsCard());
+        StatusCards.Add(BuildMcpCard());
+        StatusCards.Add(BuildVoiceCard());
+    }
+
+    private static RuntimeDiagnosticItemViewModel SettingsCard(
+        string name,
+        string valueKey,
+        string hintKey,
+        string actionKey = "Diagnostics.Card.OpenSettings")
+    {
+        return new RuntimeDiagnosticItemViewModel(
+            name,
+            Loc.Get(valueKey),
+            Loc.Get(hintKey),
+            RuntimeDiagnosticSeverity.Blocked,
+            Loc.Get(actionKey),
+            "Settings");
+    }
+
+    private RuntimeDiagnosticItemViewModel BuildModelCard()
+    {
+        var name = Loc.Get("Diagnostics.Card.Model");
+        var profile = _agentModelProfile;
+        if (profile is null)
+        {
+            return SettingsCard(
+                name,
+                "Diagnostics.Card.Model.Missing",
+                "Diagnostics.Card.Model.MissingHint",
+                "Diagnostics.Card.Model.Action");
+        }
+
+        if (!profile.Enabled)
+        {
+            return SettingsCard(name, "Diagnostics.Card.Model.Off", "Diagnostics.Card.Model.OffHint");
+        }
+
+        if (RequiresApiKey(profile.Provider) && !HasValue(profile.ApiKey))
+        {
+            return SettingsCard(name, "Diagnostics.Card.Model.NoKey", "Diagnostics.Card.Model.NoKeyHint");
+        }
+
+        if (!profile.Validate().IsValid)
+        {
+            return SettingsCard(name, "Diagnostics.Card.Model.Incomplete", "Diagnostics.Card.Model.IncompleteHint");
+        }
+
+        if (_modelConnectionFailed)
+        {
+            return SettingsCard(name, "Diagnostics.Card.Model.Unreachable", "Diagnostics.Card.Model.UnreachableHint");
+        }
+
+        return new RuntimeDiagnosticItemViewModel(
+            name,
+            Loc.Get(_modelConnectionVerified ? "Diagnostics.Card.Model.Connected" : "Diagnostics.Card.Model.Ready"),
+            profile.ModelId,
+            RuntimeDiagnosticSeverity.Ready);
+    }
+
+    private RuntimeDiagnosticItemViewModel BuildToolsCard()
+    {
+        var name = Loc.Get("Diagnostics.Card.Tools");
+        var action = Loc.Get("Diagnostics.Card.Tools.Action");
+        if (_skillTotal < 0)
+        {
+            return new RuntimeDiagnosticItemViewModel(
+                name,
+                Loc.Get("Diagnostics.Card.NotChecked"),
+                string.Empty,
+                RuntimeDiagnosticSeverity.Neutral);
+        }
+
+        if (_skillTotal == 0)
+        {
+            return new RuntimeDiagnosticItemViewModel(
+                name,
+                Loc.Get("Diagnostics.Card.Tools.None"),
+                string.Empty,
+                RuntimeDiagnosticSeverity.Warning,
+                action,
+                "Skills");
+        }
+
+        if (_skillBlocked > 0)
+        {
+            return new RuntimeDiagnosticItemViewModel(
+                name,
+                Loc.Format("Diagnostics.Card.Tools.Unavailable", _skillBlocked, _skillTotal),
+                string.Empty,
+                RuntimeDiagnosticSeverity.Blocked,
+                action,
+                "Skills");
+        }
+
+        if (_skillReview > 0)
+        {
+            return new RuntimeDiagnosticItemViewModel(
+                name,
+                Loc.Format("Diagnostics.Card.Tools.NeedReview", _skillReview),
+                string.Empty,
+                RuntimeDiagnosticSeverity.Warning,
+                action,
+                "Skills");
+        }
+
+        return new RuntimeDiagnosticItemViewModel(
+            name,
+            Loc.Format("Diagnostics.Card.Tools.Ready", _skillTotal),
+            string.Empty,
+            RuntimeDiagnosticSeverity.Ready);
+    }
+
+    private static RuntimeDiagnosticItemViewModel BuildMcpCard()
+    {
+        // The page has no view of the MCP host, so it cannot say more than this.
+        return new RuntimeDiagnosticItemViewModel(
+            Loc.Get("Diagnostics.Card.Mcp"),
+            Loc.Get("Diagnostics.Card.NotChecked"),
+            string.Empty,
+            RuntimeDiagnosticSeverity.Neutral,
+            Loc.Get("Diagnostics.Card.Mcp.Action"),
+            "Extensions");
+    }
+
+    private RuntimeDiagnosticItemViewModel BuildVoiceCard()
+    {
+        var name = Loc.Get("Diagnostics.Card.Voice");
+        if (string.Equals(_settingsService.SpeechEngine, "OpenAI", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!HasValue(_settingsService.SpeechApiKey))
+            {
+                return SettingsCard(name, "Diagnostics.Card.Voice.NoKey", "Diagnostics.Card.Voice.NoKeyHint");
+            }
+
+            return new RuntimeDiagnosticItemViewModel(
+                name,
+                Loc.Get("Diagnostics.Card.Voice.Service"),
+                _settingsService.SpeechApiModel,
+                RuntimeDiagnosticSeverity.Ready);
+        }
+
+        return new RuntimeDiagnosticItemViewModel(
+            name,
+            Loc.Get("Diagnostics.Card.Voice.Local"),
+            _settingsService.LocalSpeechModel,
+            RuntimeDiagnosticSeverity.Ready);
+    }
+
     private void RebuildSummary()
     {
+        RebuildStatusCards();
         SummaryCards.Clear();
         SummaryCards.Add(new RuntimeDiagnosticItemViewModel(
             "Core AI",
@@ -1730,6 +1914,7 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
         Title = Loc.Get("Diagnostics.Title");
         this.RaisePropertyChanged(nameof(CoreReadinessStatusText));
         this.RaisePropertyChanged(nameof(LiveTestStatusText));
+        RebuildStatusCards();
         SkillSmokeStatus = _skillSmokeStatusSource();
         ApplicationUpdateActionStatus = _applicationUpdateActionStatusSource();
         ReadinessReportCopyStatus = _readinessReportCopyStatusSource();

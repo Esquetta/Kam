@@ -22,6 +22,8 @@
   "Settings.AiRuntime": "AI RUNTIME",
   "Settings.PlannerModel": "Planner Model",
   "Settings.ChatModel": "Agent model",
+  "Settings.ChatState.NeedsKey": "Not set up yet: add an API key below.",
+  "Settings.ChatState.Ready": "Uses {0} on {1}.",
   "Settings.PlannerAdvanced": "Command mode planner (advanced)",
   "Settings.PlannerAdvancedDesc": "A separate model that picks one skill per request. Kam uses it only when the agent loop is turned off; the agent model above handles chat, voice and tasks.",
   "Settings.Provider": "Provider",

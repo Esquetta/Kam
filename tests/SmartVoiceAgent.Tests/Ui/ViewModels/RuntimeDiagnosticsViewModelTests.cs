@@ -55,6 +55,65 @@ public sealed class RuntimeDiagnosticsViewModelTests : IDisposable
     }
 
     [Fact]
+    public void StatusCards_WithoutModel_AskToSetUpAModelAndLeaveUnknownSourcesNeutral()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        settingsService.ModelProviderProfiles = [];
+
+        var viewModel = new RuntimeDiagnosticsViewModel(settingsService);
+
+        viewModel.StatusCards.Should().HaveCount(4);
+        var model = viewModel.StatusCards[0];
+        model.IsBlocked.Should().BeTrue();
+        model.HasAction.Should().BeTrue();
+        model.ActionTarget.Should().Be("Settings");
+        viewModel.StatusCards[1].IsNeutral.Should().BeTrue();
+        viewModel.StatusCards[2].IsNeutral.Should().BeTrue();
+        viewModel.StatusCards[2].ActionTarget.Should().Be("Extensions");
+        viewModel.StatusCards[3].IsReady.Should().BeTrue();
+        viewModel.StatusCards.Select(card => card.Value).Should().NotContain(value => value.Contains('_'));
+    }
+
+    [Fact]
+    public void StatusCards_WithConfiguredModel_ShowsModelReadyWithoutAnAction()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        settingsService.ModelProviderProfiles =
+        [
+            new ModelProviderProfile
+            {
+                Id = "chat",
+                Provider = ModelProviderType.OpenAI,
+                DisplayName = "OpenAI chat",
+                Endpoint = "https://api.openai.com/v1",
+                ApiKey = "sk-secret-value",
+                ModelId = "gpt-5.2",
+                Roles = [ModelProviderRole.Chat],
+                Enabled = true
+            }
+        ];
+        settingsService.ActiveChatProfileId = "chat";
+
+        var viewModel = new RuntimeDiagnosticsViewModel(settingsService);
+
+        viewModel.StatusCards[0].IsReady.Should().BeTrue();
+        viewModel.StatusCards[0].HasAction.Should().BeFalse();
+        viewModel.StatusCards[0].Detail.Should().Be("gpt-5.2");
+    }
+
+    [Fact]
+    public void ReadinessReportCopyStatus_IsEmptyUntilTheUserCopiesTheReport()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+
+        var viewModel = new RuntimeDiagnosticsViewModel(settingsService);
+
+        viewModel.HasReadinessReportCopyStatus.Should().BeFalse();
+        viewModel.CopyReadinessReportCommand.Execute(null);
+        viewModel.HasReadinessReportCopyStatus.Should().BeTrue();
+    }
+
+    [Fact]
     public void Constructor_WithoutUsablePlannerProfile_ReportsCoreAiBlocked()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);

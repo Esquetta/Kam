@@ -206,6 +206,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             AgentChatMessageViewModel? streaming = null;
             var wroteText = false;
+            var trace = new AgentTurnTraceViewModel(message);
+            session.LastTurn = trace;
             var steps = new Dictionary<string, AgentChatMessageViewModel>(StringComparer.Ordinal);
             var approvalRequests = new List<string>();
 
@@ -241,6 +243,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                                 started.Risk);
                             steps[started.CallId] = step;
                             session.AddMessage(step);
+                            trace.AddStep(step);
                             AddLog($"TOOL: {started.ToolName}");
                             break;
 
@@ -266,6 +269,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                                     ToolRisk.Read);
                                 steps[completed.CallId] = finished;
                                 session.AddMessage(finished);
+                                trace.AddStep(finished);
                             }
 
                             finished.CompleteTool(completed.Success, completed.Summary);
@@ -293,11 +297,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
                                 ReadReplyAloud(done.FinalText, fromVoice);
                             }
 
+                            trace.Complete(done.ToolCallCount, done.InputTokens, done.OutputTokens);
                             AddLog($"AGENT_TURN_DONE: {done.ToolCallCount} tool calls, {done.InputTokens + done.OutputTokens} tokens");
                             break;
 
                         case AgentTurnFailed failed:
                             FinishStreaming(session, ref streaming);
+                            trace.End(stopped: failed.Message == "Stopped.");
                             session.AddMessage(AgentChatMessageViewModel.System(
                                 failed.Message == "Stopped."
                                     ? Loc.Get("Workbench.Chat.Stopped")
@@ -316,6 +322,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             catch (Exception ex)
             {
                 FinishStreaming(session, ref streaming);
+                trace.End(stopped: false);
                 session.AddMessage(AgentChatMessageViewModel.System(Loc.Format("Workbench.Chat.Error", ex.Message)));
                 AddLog($"AGENT_TURN_FAILED: {ex.Message}");
             }
@@ -326,6 +333,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 {
                     step.Abandon();
                 }
+
+                // A turn that ended without a final event (cancelled mid-stream) still gets an outcome.
+                trace.End(stopped: cancellation.IsCancellationRequested);
 
                 foreach (var requestId in approvalRequests)
                 {

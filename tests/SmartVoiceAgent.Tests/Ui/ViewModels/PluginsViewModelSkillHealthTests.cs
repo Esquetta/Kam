@@ -152,7 +152,7 @@ public class PluginsViewModelSkillHealthTests
             ]
         });
 
-        viewModel.SkillEvalStatus.Should().Be("2/3 smoke evals passing");
+        viewModel.SkillEvalStatus.Should().Be("2/3 skill checks passing");
         viewModel.SkillEvalDetail.Should().Contain("files.exists");
         viewModel.IsSkillEvalHealthy.Should().BeFalse();
     }
@@ -508,7 +508,7 @@ public class PluginsViewModelSkillHealthTests
 
         await viewModel.RunSkillEvalAsync();
 
-        viewModel.SkillEvalStatus.Should().Be("0/1 smoke evals passing");
+        viewModel.SkillEvalStatus.Should().Be("0/1 skill checks passing");
         viewModel.SkillEvalDetail.Should().Contain("files.read");
         viewModel.IsSkillEvalHealthy.Should().BeFalse();
         viewModel.Plugins.Should().ContainSingle(plugin =>

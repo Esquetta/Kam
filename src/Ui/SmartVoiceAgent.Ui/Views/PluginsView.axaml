@@ -157,12 +157,12 @@
             </StackPanel>
 
             <!-- Evals and the result of the last action -->
-            <Border Classes="Surface" Padding="14,10">
+            <Border Classes="Surface" Padding="14,10" IsVisible="{Binding ShowSkillEvalCard}">
                 <StackPanel Spacing="10">
                     <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="10">
                         <Border Classes="StatusDot"
                                 Classes.Success="{Binding IsSkillEvalHealthy}"
-                                Classes.Warning="{Binding !IsSkillEvalHealthy}"
+                                Classes.Warning="{Binding IsSkillEvalWarning}"
                                 VerticalAlignment="Top"
                                 Margin="0,6,0,0"/>
                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
@@ -186,6 +186,7 @@
                                 </StackPanel>
                             </Button>
                             <Button Classes="GhostAction"
+                                    IsVisible="{Binding CanRunSkillEval}"
                                     ToolTip.Tip="{DynamicResource Lang.Skills.Eval.RunTip}"
                                     Command="{Binding RunSkillEvalCommand}">
                                 <StackPanel Orientation="Horizontal" Spacing="6">

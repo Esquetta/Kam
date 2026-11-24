@@ -21,7 +21,6 @@ public class ResponsiveConvertersTests
         new MediumModeConverter(),
         new ExpandedModeConverter(),
         new LogPanelVisibilityConverter(),
-        new LogPanelWidthConverter(),
         new ResponsiveScaleConverter(),
         new ResponsiveFontSizeConverter(),
         new ReducedMotionConverter(),
@@ -49,19 +48,29 @@ public class ResponsiveConvertersTests
     [InlineData(900, 0)]
     [InlineData(1280, 360)]
     [InlineData(1600, 420)]
-    public void LogPanelWidthConverter_Convert_UsesCalmerRailWidths(double windowWidth, double expectedWidth)
+    public void ActivityPanelWidth_UsesCalmerRailWidthsBesideTheChat(double windowWidth, double expectedWidth)
     {
         SetWindowWidth(windowWidth);
-        var converter = new LogPanelWidthConverter();
+        var viewModel = new SmartVoiceAgent.Ui.ViewModels.MainWindowViewModel();
 
-        var result = converter.Convert(
-            value: true,
-            targetType: typeof(GridLength),
-            parameter: null,
-            culture: CultureInfo.InvariantCulture);
+        viewModel.ActivityPanelWidth.Value.Should().Be(expectedWidth);
+        viewModel.IsActivityPanelShown.Should().Be(expectedWidth > 0);
+    }
 
-        result.Should().BeOfType<GridLength>();
-        ((GridLength)result).Value.Should().Be(expectedWidth);
+    [Fact]
+    public void ActivityPanel_ClosesAndReopensFromItsToggle()
+    {
+        SetWindowWidth(1600);
+        var viewModel = new SmartVoiceAgent.Ui.ViewModels.MainWindowViewModel();
+
+        viewModel.ToggleActivityPanelCommand.Execute(null);
+
+        viewModel.IsActivityPanelShown.Should().BeFalse();
+        viewModel.ActivityPanelWidth.Value.Should().Be(0);
+
+        viewModel.ToggleActivityPanelCommand.Execute(null);
+
+        viewModel.IsActivityPanelShown.Should().BeTrue();
     }
 
     [Theory]
