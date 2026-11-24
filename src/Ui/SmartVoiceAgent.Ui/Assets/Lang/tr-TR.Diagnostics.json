@@ -27,6 +27,7 @@
   "Diagnostics.Card.Tools.NeedReview": "{0} araç incelenmeli",
   "Diagnostics.Card.Tools.Ready": "{0} araç hazır",
   "Diagnostics.Card.Mcp.Action": "MCP sunucularına bakın",
+  "Diagnostics.Card.Mcp.Managed": "Uzantılar sayfasından yönetilir",
   "Diagnostics.Card.Voice.Local": "Bu bilgisayarda çalışır",
   "Diagnostics.Card.Voice.Service": "Bir konuşma hizmeti kullanır",
   "Diagnostics.Card.Voice.NoKey": "Konuşma API anahtarı eksik",

@@ -30,7 +30,7 @@
   "Skills.Eval.NeedsRuntime": "Her yeteneğin bu bilgisayarda çalıştığını görmek için denetimleri çalıştırın.",
   "Skills.Eval.FailedToRun": "Yetenek denetimleri çalıştırılamadı",
   "Skills.Eval.ServicesUnavailable": "Yetenek denetimleri kullanılamıyor",
-  "Skills.Eval.ServicesMissing": "Kam'i yeniden başlatıp tekrar deneyin.",
+  "Skills.Eval.ServicesMissing": "Kam'ı yeniden başlatıp tekrar deneyin.",
   "Skills.Eval.Running": "Yetenekler denetleniyor",
   "Skills.Eval.Executing": "Her yetenek için kısa bir deneme çalışıyor.",
   "Skills.Eval.NoResults": "Henüz denetim sonucu yok.",

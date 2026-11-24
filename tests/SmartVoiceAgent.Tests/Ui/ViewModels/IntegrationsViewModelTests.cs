@@ -14,6 +14,27 @@ public sealed class IntegrationsViewModelTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
+    public void TodoistBadge_FollowsTheSavedKeyNotTheTextBox()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var viewModel = new IntegrationsViewModel(settingsService);
+
+        viewModel.TodoistApiKey = "typing";
+
+        viewModel.TodoistBadge.IsSuccess.Should().BeFalse();
+        viewModel.TodoistBadge.IsAccent.Should().BeFalse();
+
+        viewModel.SaveTodoistCommand.Execute(null);
+
+        viewModel.TodoistBadge.IsAccent.Should().BeTrue();
+        viewModel.TodoistStatusText.Should().Be("Configured");
+
+        viewModel.ClearTodoistCommand.Execute(null);
+
+        viewModel.TodoistBadge.IsAccent.Should().BeFalse();
+    }
+
+    [Fact]
     public void Constructor_LoadsGitHubAppSettingsFromSettingsService()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);

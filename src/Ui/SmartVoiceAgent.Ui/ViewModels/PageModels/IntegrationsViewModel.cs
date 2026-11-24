@@ -210,8 +210,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         }
 
         public string TodoistDescription => Loc.Get("Integrations.Todoist.Description");
-        public IntegrationBadge TodoistBadge => IsTaskAgentEnabled
-            ? IntegrationBadge.Success(Loc.Get("Integrations.Status.Connected"))
+        // The saved key decides the badge, not the text box: typing a key is not connecting, and Kam
+        // does not test the key, so a saved one is "configured" rather than "connected".
+        public IntegrationBadge TodoistBadge => !string.IsNullOrWhiteSpace(_settingsService.TodoistApiKey)
+            ? IntegrationBadge.Accent(Loc.Get("Integrations.Status.Configured"))
             : IntegrationBadge.Neutral(Loc.Get("Integrations.Status.NotConnected"));
         public string TodoistStatusText => TodoistBadge.Text;
 
@@ -516,7 +518,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         public string EmailDescription => Loc.Get("Integrations.Email.Description");
         public IntegrationBadge EmailBadge => IsEmailEnabled
-            ? IntegrationBadge.Success(Loc.Get("Integrations.Status.Configured"))
+            ? IntegrationBadge.Accent(Loc.Get("Integrations.Status.Configured"))
             : IntegrationBadge.Neutral(Loc.Get("Integrations.Status.NotConfigured"));
         public string EmailStatusText => EmailBadge.Text;
 
@@ -568,7 +570,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         public string SmsDescription => Loc.Get("Integrations.Sms.Description");
         public IntegrationBadge SmsBadge => IsSmsEnabled
-            ? IntegrationBadge.Success(Loc.Get("Integrations.Status.Configured"))
+            ? IntegrationBadge.Accent(Loc.Get("Integrations.Status.Configured"))
             : IntegrationBadge.Neutral(Loc.Get("Integrations.Status.NotConfigured"));
         public string SmsStatusText => SmsBadge.Text;
 
@@ -808,6 +810,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             _settingsService.TodoistApiKey = TodoistApiKey;
             _settingsService.Save();
+            RaiseTodoistBadge();
         }
 
         private void ClearTodoist()
@@ -815,6 +818,13 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             TodoistApiKey = string.Empty;
             _settingsService.TodoistApiKey = string.Empty;
             _settingsService.Save();
+            RaiseTodoistBadge();
+        }
+
+        private void RaiseTodoistBadge()
+        {
+            this.RaisePropertyChanged(nameof(TodoistBadge));
+            this.RaisePropertyChanged(nameof(TodoistStatusText));
         }
 
         #endregion

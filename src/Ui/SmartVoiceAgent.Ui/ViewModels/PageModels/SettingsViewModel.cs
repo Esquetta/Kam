@@ -298,7 +298,16 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /// </summary>
         public string ChatProfileStateText => ChatProfileNeedsKey
             ? Loc.Get("Settings.ChatState.NeedsKey")
-            : Loc.Format("Settings.ChatState.Ready", _chatModelId, _chatProvider);
+            : string.IsNullOrWhiteSpace(_chatModelId)
+                ? Loc.Get("Settings.ChatState.NeedsModel")
+                : Loc.Format("Settings.ChatState.Ready", _chatModelId, ProviderDisplayName(_chatProvider));
+
+        private static string ProviderDisplayName(string provider)
+        {
+            return ParseProvider(provider) == ModelProviderType.OpenAICompatible
+                ? Loc.Get("Settings.Provider.OpenAICompatible")
+                : provider;
+        }
 
         private void RaiseChatProfileState()
         {
@@ -2439,6 +2448,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             AiProfileStatus = _aiProfileStatusText();
             this.RaisePropertyChanged(nameof(AiConnectionTestButtonText));
             this.RaisePropertyChanged(nameof(SelectedLanguage));
+            RaiseChatProfileState();
         }
 
         #endregion

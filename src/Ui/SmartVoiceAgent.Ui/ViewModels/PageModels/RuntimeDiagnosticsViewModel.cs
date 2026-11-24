@@ -1194,10 +1194,11 @@ public sealed class RuntimeDiagnosticsViewModel : ViewModelBase
 
     private static RuntimeDiagnosticItemViewModel BuildMcpCard()
     {
-        // The page has no view of the MCP host, so it cannot say more than this.
+        // The page has no view of the MCP host, so it points to where servers are managed
+        // instead of promising a check that never runs.
         return new RuntimeDiagnosticItemViewModel(
             Loc.Get("Diagnostics.Card.Mcp"),
-            Loc.Get("Diagnostics.Card.NotChecked"),
+            Loc.Get("Diagnostics.Card.Mcp.Managed"),
             string.Empty,
             RuntimeDiagnosticSeverity.Neutral,
             Loc.Get("Diagnostics.Card.Mcp.Action"),
