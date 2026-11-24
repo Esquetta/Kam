@@ -190,7 +190,7 @@ public class SkillRuntimeRegistrationTests
                     new { filePath = outsideFile }));
 
             result.Success.Should().BeFalse();
-            result.ErrorMessage.Should().Contain("reddedildi");
+            result.ErrorMessage.Should().Contain("refused for security");
         }
         finally
         {

@@ -34,7 +34,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
 
             if (_contextManager.IsApplicationOpen(applicationName))
             {
-                return $"{applicationName} uygulaması zaten şu an açık.";
+                return $"{applicationName} is already open.";
             }
 
             try
@@ -42,12 +42,12 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
                 var result = await _mediator.SendAsync(new OpenApplicationCommand(applicationName));
                 _contextManager.SetApplicationState(applicationName, true);
                 _contextManager.UpdateContext("app_open", applicationName, "Success");
-                return $"{applicationName} başarıyla başlatıldı.";
+                return $"{applicationName} was started.";
             }
             catch (Exception ex)
             {
                 _contextManager.UpdateContext("app_open_error", applicationName, ex.Message);
-                return $"{applicationName} açılamadı. Hata: {ex.Message}";
+                return $"Error: could not open {applicationName}: {ex.Message}";
             }
         }
 
@@ -59,7 +59,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
 
             if (!_contextManager.IsApplicationOpen(applicationName))
             {
-                return $"{applicationName} zaten kapalı veya çalışmıyor.";
+                return $"{applicationName} is already closed or not running.";
             }
 
             try
@@ -67,11 +67,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
                 await _mediator.SendAsync(new CloseApplicationCommand(applicationName));
                 _contextManager.SetApplicationState(applicationName, false);
                 _contextManager.UpdateContext("app_close", applicationName, "Success");
-                return $"{applicationName} başarıyla kapatıldı.";
+                return $"{applicationName} was closed.";
             }
             catch (Exception ex)
             {
-                return $"{applicationName} kapatılırken bir hata oluştu: {ex.Message}";
+                return $"Error closing {applicationName}: {ex.Message}";
             }
         }
 
@@ -82,11 +82,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             try
             {
                 var result = await _mediator.SendAsync(new CheckApplicationCommand(applicationName));
-                return result?.ToString() ?? $"{applicationName} hakkında bilgi bulunamadı.";
+                return result?.ToString() ?? $"No information found for {applicationName}.";
             }
             catch (Exception ex)
             {
-                return $"Kontrol sırasında hata: {ex.Message}";
+                return $"Error checking application: {ex.Message}";
             }
         }
 
@@ -95,11 +95,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             try
             {
                 var result = await _mediator.SendAsync(new GetApplicationPathCommand(applicationName));
-                return result?.ToString() ?? $"{applicationName} için dosya yolu bulunamadı.";
+                return result?.ToString() ?? $"No file path found for {applicationName}.";
             }
             catch (Exception ex)
             {
-                return $"Dosya yolu alınamadı: {ex.Message}";
+                return $"Error getting file path: {ex.Message}";
             }
         }
 
@@ -112,7 +112,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             }
             catch (Exception ex)
             {
-                return $"Durum kontrolü başarısız: {ex.Message}";
+                return $"Error checking status: {ex.Message}";
             }
         }
 
@@ -121,11 +121,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             try
             {
                 var result = await _mediator.SendAsync(new ListInstalledApplicationsCommand(includeSystemApps));
-                return result?.ToString() ?? "Yüklü uygulama listesi boş.";
+                return result?.ToString() ?? "The installed application list is empty.";
             }
             catch (Exception ex)
             {
-                return $"Liste alınamadı: {ex.Message}";
+                return $"Error listing applications: {ex.Message}";
             }
         }
 
@@ -140,11 +140,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             {
                 var result = await _mediator.SendAsync(new PlayMusicCommand(trackName));
                 _contextManager.UpdateContext("music_play", trackName, "Started");
-                return result?.ToString() ?? $"{trackName} çalınmaya başlandı.";
+                return result?.ToString() ?? $"Started playing {trackName}.";
             }
             catch (Exception ex)
             {
-                return $"{trackName} çalınamadı. Hata: {ex.Message}";
+                return $"Error: could not play {trackName}: {ex.Message}";
             }
         }
 
@@ -159,11 +159,11 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Functions
             try
             {
                 var result = await _mediator.SendAsync(new ControlDeviceCommand(deviceName, action));
-                return result?.ToString() ?? $"{deviceName} üzerinde {action} işlemi uygulandı.";
+                return result?.ToString() ?? $"Applied {action} to {deviceName}.";
             }
             catch (Exception ex)
             {
-                return $"{deviceName} cihazı kontrol edilemedi: {ex.Message}";
+                return $"Error controlling {deviceName}: {ex.Message}";
             }
         }
 
