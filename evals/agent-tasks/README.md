@@ -54,7 +54,7 @@ Rerun on the two cheaper models only, one run each: [`results/2026-11-24`](resul
 | gpt-5.4-nano | 13/16 | 13/16 | 6 of 8 | 5 of 8 |
 
 - **gpt-5.4-mini now answers in the user's language.** English tool text was the main cause for this model.
-- **gpt-5.4-nano still drifts into Turkish.** The tool text was not the only cause for it. Other Turkish signals reach the model: the time zone in the system prompt is "Istanbul", and the Turkish requests in the same run do not share context, so they are not the cause. This is not investigated further.
+- **gpt-5.4-nano still drifts into Turkish.** The tool text was not the only cause for it. Each task runs in its own session, so the Turkish requests in the same run are not the cause. One untested guess is the "Istanbul" time zone in the system prompt.
 - **Pass rates did not change beyond noise.** The new failures:
   - gpt-5.4-mini wrote an answer.txt that did not contain "march.txt", although its reply says it did. The sandbox is deleted after the run, so the file cannot be inspected.
   - gpt-5.4-nano moved `c.log` along with the `.txt` files. Its reply mentions "file in use" errors when it ran several moves at once, which matches the locked file seen on gpt-5.5 before. Parallel `files_move` calls may conflict; this is worth a look.
