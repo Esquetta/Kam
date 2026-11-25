@@ -1094,7 +1094,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public void SetCliAgentDetector(ICliAgentDetector detector)
         {
             _cliAgentDetector = detector;
-            _viewModelCache.Remove(NavView.Integrations);
+            if (_viewModelCache.Remove(NavView.Integrations, out var stale)
+                && stale is IDisposable disposable
+                && !ReferenceEquals(stale, CurrentViewModel))
+            {
+                // The cached page listens to LanguageChanged; dispose it so it does not outlive the cache.
+                disposable.Dispose();
+            }
         }
         
         private void OnHostStateChanged(object? sender, bool isRunning)

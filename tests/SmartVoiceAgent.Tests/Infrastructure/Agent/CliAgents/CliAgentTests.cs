@@ -28,6 +28,7 @@ public sealed class CodexCliAgentTests : IDisposable
         var arguments = CodexCliAgent.BuildArguments(new CliAgentRunRequest("Fix the bug", _workspace, true, TimeSpan.FromMinutes(5)));
 
         arguments.Should().ContainInOrder("--sandbox", "workspace-write");
+        arguments.Should().NotContain("--skip-git-repo-check", "edits stay inside a git repository, where they can be undone");
     }
 
     [Fact]
@@ -157,12 +158,18 @@ public sealed class CliExecutableLocatorTests : IDisposable
             Path.Combine(_bin, "codex.cmd"),
             "@ECHO off\r\nendLocal & goto #_undefined_# 2>NUL || title %COMSPEC% & \"%_prog%\"  \"%dp0%\\node_modules\\@openai\\codex\\bin\\codex.js\" %*\r\n");
 
-        var launch = CliExecutableLocator.Find("codex", _bin, isWindows: true);
+        var nodeBin = Path.Combine(_bin, "nodejs");
+        Directory.CreateDirectory(nodeBin);
+        File.WriteAllText(Path.Combine(nodeBin, "node.exe"), string.Empty);
+
+        var launch = CliExecutableLocator.Find("codex", $"{_bin};{nodeBin}", isWindows: true);
 
         launch.Should().NotBeNull();
-        launch!.FileName.Should().Be("node");
+        launch!.FileName.Should().Be(Path.Combine(nodeBin, "node.exe"), "a bare \"node\" would be found through CreateProcess's search order");
         launch.PrefixArguments.Should().Equal(Path.GetFullPath(script));
         launch.WithArguments("--version").Should().Equal(Path.GetFullPath(script), "--version");
+
+        CliExecutableLocator.Find("codex", _bin, isWindows: true).Should().BeNull("there is no node.exe on that PATH");
     }
 
     [Fact]
@@ -322,6 +329,47 @@ public sealed class CliAgentToolProviderTests : IDisposable
         runner.Requests.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task PrepareArguments_FillsTheFolderAndSandboxBeforeApproval()
+    {
+        var provider = Provider(new CliAgentsOptions { CodexEnabled = true }, new FakeProcessRunner(_ => Ok()));
+        var tool = (await provider.GetToolsAsync(TestContext.Current.CancellationToken)).Single();
+
+        var prepared = tool.PrepareArguments!(new Dictionary<string, object?> { ["agent"] = "codex", ["task"] = "Explain" });
+
+        prepared["workspace"].Should().Be(_workspace);
+        prepared["allow_edits"].Should().Be(false);
+        prepared["sandbox"].Should().Be("read-only");
+        prepared["task"].Should().Be("Explain");
+        provider.PrepareArguments(new Dictionary<string, object?> { ["allow_edits"] = true })["sandbox"].Should().Be("workspace-write");
+    }
+
+    [Theory]
+    [InlineData(@"\\server\share\repo", "network or device path")]
+    [InlineData(@"\\?\C:\repo", "network or device path")]
+    [InlineData(@"C:\", "whole drive")]
+    public void RejectWorkspace_RefusesNetworkPathsAndDrives(string workspace, string reason)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        CliAgentToolProvider.RejectWorkspace(workspace).Should().Contain(reason);
+    }
+
+    [Fact]
+    public void RejectWorkspace_RefusesSystemFoldersAndAllowsProjects()
+    {
+        var windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (windows.Length > 0)
+        {
+            CliAgentToolProvider.RejectWorkspace(Path.Combine(windows, "System32")).Should().Contain("system folder");
+        }
+
+        CliAgentToolProvider.RejectWorkspace(_workspace).Should().BeNull();
+    }
+
     private CliAgentToolProvider Provider(CliAgentsOptions options, FakeProcessRunner runner) =>
         new(new StaticOptionsMonitor<CliAgentsOptions>(options), runner, () => _workspace, name => new CliLaunch(name, []));
 
@@ -356,7 +404,27 @@ public sealed class CodingAgentProcessRunnerTests
             TestContext.Current.CancellationToken);
 
         result.Success.Should().BeTrue();
-        result.StandardOutput.Should().Contain("line two");
+        result.StandardOutput.Should().Contain("satır bir").And.Contain("line two");
+    }
+
+    [Fact]
+    public async Task RunAsync_ChildKeepsTheOutputPipeOpen_ReturnsAfterTheProcessExits()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        // cmd exits at once, but "start /b" leaves ping running with cmd's stdout, so the pipe stays open for ~20 s.
+        var started = DateTime.UtcNow;
+
+        var result = await new CodingAgentProcessRunner().RunAsync(
+            new CodingAgentProcessRequest("cmd.exe", ["/c", "start", "/b", "ping", "-n", "20", "127.0.0.1"], Path.GetTempPath(), TimeSpan.FromMinutes(1)),
+            TestContext.Current.CancellationToken);
+
+        result.TimedOut.Should().BeFalse();
+        result.ExitCode.Should().Be(0);
+        (DateTime.UtcNow - started).Should().BeLessThan(TimeSpan.FromSeconds(10));
     }
 
     [Fact]

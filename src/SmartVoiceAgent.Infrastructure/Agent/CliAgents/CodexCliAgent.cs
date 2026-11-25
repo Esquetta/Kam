@@ -106,14 +106,16 @@ public sealed class CodexCliAgent
     }
 
     /// <summary>
-    /// Builds the <c>codex</c> arguments for a request; the task itself is sent on standard input.
+    /// Builds the <c>codex</c> arguments for a request; the task itself is sent on standard input. A read-only run
+    /// may use any folder. A run that may edit keeps Codex's git repository check, so its changes can be reviewed
+    /// and undone with git.
     /// </summary>
     /// <param name="request">The task.</param>
     public static string[] BuildArguments(CliAgentRunRequest request) =>
     [
         "exec",
         "--json",
-        "--skip-git-repo-check",
+        .. request.AllowEdits ? Array.Empty<string>() : ["--skip-git-repo-check"],
         "--sandbox",
         request.AllowEdits ? "workspace-write" : "read-only",
         "--cd",

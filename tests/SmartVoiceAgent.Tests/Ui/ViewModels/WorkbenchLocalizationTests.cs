@@ -160,6 +160,21 @@ public sealed partial class WorkbenchLocalizationTests
     }
 
     [Fact]
+    public void DelegateStep_ShowsTheWholeTaskFolderAndSandbox()
+    {
+        var task = string.Join(' ', Enumerable.Repeat("Review the permission service and explain the deny order.", 6));
+        var arguments = System.Text.Json.JsonSerializer.Serialize(new { task, workspace = @"C:\repo", sandbox = "read-only" });
+
+        var step = AgentChatMessageViewModel.ToolStep("c1", "cli_agent_run", "Delegate to Codex CLI", arguments, ToolRisk.Delegate);
+        var shell = AgentChatMessageViewModel.ToolStep("c2", "shell_run", "Run Shell Command", System.Text.Json.JsonSerializer.Serialize(new { command = task }), ToolRisk.Execute);
+
+        step.ArgumentsPreview.Should().Contain(task).And.Contain(@"workspace: C:\repo").And.Contain("sandbox: read-only");
+        step.ArgumentsMaxLines.Should().Be(0);
+        shell.ArgumentsPreview.Should().EndWith("...", "other tools keep the short preview");
+        shell.ArgumentsMaxLines.Should().Be(4);
+    }
+
+    [Fact]
     public void RefreshLocalizedText_KeepsTheChosenHistoryStatusFilter()
     {
         var viewModel = new MainWindowViewModel();

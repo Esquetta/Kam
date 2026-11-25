@@ -642,11 +642,14 @@
 
 												<StackPanel Spacing="8" IsVisible="{Binding ShowsToolDetails}">
 													<Border Classes="ToolArguments" IsVisible="{Binding HasArguments}">
-														<SelectableTextBlock Text="{Binding ArgumentsPreview}"
-																			 FontSize="12"
-																			 FontFamily="{StaticResource MonoFontFamily}"
-																			 Foreground="{DynamicResource TextSecondaryBrush}"
-																			 TextWrapping="Wrap"/>
+														<!-- A long brief (a hand-off to another agent shows it whole) scrolls inside the card -->
+														<ScrollViewer MaxHeight="280" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+															<SelectableTextBlock Text="{Binding ArgumentsPreview}"
+																				 FontSize="12"
+																				 FontFamily="{StaticResource MonoFontFamily}"
+																				 Foreground="{DynamicResource TextSecondaryBrush}"
+																				 TextWrapping="Wrap"/>
+														</ScrollViewer>
 													</Border>
 
 													<SelectableTextBlock Text="{Binding ToolSummary}"

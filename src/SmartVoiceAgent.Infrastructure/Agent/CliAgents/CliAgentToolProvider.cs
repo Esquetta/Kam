@@ -54,9 +54,85 @@ public sealed class CliAgentToolProvider : IAgentToolProvider
         var codex = options.CodexEnabled ? _locate(CliAgentDetector.CommandName(CliAgentKind.Codex)) : null;
         IReadOnlyList<AgentToolDescriptor> tools = codex is null
             ? []
-            : [new AgentToolDescriptor(new RunFunction(this, codex), ToolRisk.Delegate, "cli", "Delegate to Codex CLI")];
+            : [new AgentToolDescriptor(new RunFunction(this, codex), ToolRisk.Delegate, "cli", "Delegate to Codex CLI", PrepareArguments)];
         return Task.FromResult(tools);
     }
+
+    /// <summary>
+    /// Fills in the folder and sandbox the run will use, so the approval card shows them before the user answers.
+    /// </summary>
+    /// <param name="arguments">The model's arguments.</param>
+    public IDictionary<string, object?> PrepareArguments(IDictionary<string, object?> arguments)
+    {
+        var workspace = ReadString(arguments, "workspace").Trim();
+        if (workspace.Length == 0)
+        {
+            workspace = _workspaceRoot() ?? string.Empty;
+        }
+
+        if (Path.IsPathFullyQualified(workspace) && !IsNetworkOrDevicePath(workspace))
+        {
+            workspace = Path.GetFullPath(workspace);
+        }
+
+        var allowEdits = ReadBool(arguments, "allow_edits");
+        var prepared = new Dictionary<string, object?>(arguments, StringComparer.Ordinal)
+        {
+            ["workspace"] = workspace,
+            ["allow_edits"] = allowEdits,
+            ["sandbox"] = allowEdits ? "workspace-write" : "read-only"
+        };
+        return prepared;
+    }
+
+    /// <summary>
+    /// Says why a folder may not be handed to a CLI: a network or device path, a whole drive, or a system folder.
+    /// </summary>
+    /// <param name="workspace">A fully qualified folder path.</param>
+    /// <returns>The reason, or null when the folder is allowed.</returns>
+    public static string? RejectWorkspace(string workspace)
+    {
+        if (IsNetworkOrDevicePath(workspace))
+        {
+            return $"Error: {workspace} is a network or device path. Use a folder on this computer.";
+        }
+
+        var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(workspace));
+        var root = Path.TrimEndingDirectorySeparator(Path.GetPathRoot(full) ?? string.Empty);
+        if (string.Equals(full, root, PathComparison) || full.Length == 0)
+        {
+            return $"Error: {workspace} is a whole drive. Use a project folder.";
+        }
+
+        foreach (var folder in SystemFolders())
+        {
+            if (string.Equals(full, folder, PathComparison)
+                || full.StartsWith(folder + Path.DirectorySeparatorChar, PathComparison))
+            {
+                return $"Error: {full} is a system folder. Use a project folder.";
+            }
+        }
+
+        return null;
+    }
+
+    private static StringComparison PathComparison =>
+        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+    private static bool IsNetworkOrDevicePath(string path) =>
+        path.StartsWith(@"\\", StringComparison.Ordinal) || path.StartsWith("//", StringComparison.Ordinal);
+
+    private static IEnumerable<string> SystemFolders() =>
+        new[]
+            {
+                Environment.SpecialFolder.Windows,
+                Environment.SpecialFolder.System,
+                Environment.SpecialFolder.ProgramFiles,
+                Environment.SpecialFolder.ProgramFilesX86
+            }
+            .Select(Environment.GetFolderPath)
+            .Where(folder => folder.Length > 0)
+            .Select(Path.TrimEndingDirectorySeparator);
 
     private async Task<string> RunAsync(CliLaunch codex, AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
@@ -83,6 +159,11 @@ public sealed class CliAgentToolProvider : IAgentToolProvider
             return "Error: workspace must be the full path of a folder. Ask the user which folder to work in.";
         }
 
+        if (RejectWorkspace(workspace) is { } rejected)
+        {
+            return rejected;
+        }
+
         workspace = Path.GetFullPath(workspace);
         if (!Directory.Exists(workspace))
         {
@@ -95,7 +176,7 @@ public sealed class CliAgentToolProvider : IAgentToolProvider
         return result.ToToolResult(CodexCliAgent.DisplayName);
     }
 
-    private static string ReadString(AIFunctionArguments arguments, string key) =>
+    private static string ReadString(IDictionary<string, object?> arguments, string key) =>
         arguments.TryGetValue(key, out var value) switch
         {
             false => string.Empty,
@@ -103,7 +184,7 @@ public sealed class CliAgentToolProvider : IAgentToolProvider
             true => value?.ToString() ?? string.Empty
         };
 
-    private static bool ReadBool(AIFunctionArguments arguments, string key) =>
+    private static bool ReadBool(IDictionary<string, object?> arguments, string key) =>
         arguments.TryGetValue(key, out var value) && value switch
         {
             bool flag => flag,
@@ -139,7 +220,7 @@ public sealed class CliAgentToolProvider : IAgentToolProvider
                 ["allow_edits"] = new JsonObject
                 {
                     ["type"] = "boolean",
-                    ["description"] = "Let the CLI change files inside the workspace. Leave false to review, explain or plan without changes."
+                    ["description"] = "Let the CLI change files inside the workspace, which must then be a git repository. Leave false to review, explain or plan without changes."
                 }
             },
             ["required"] = new JsonArray("agent", "task")

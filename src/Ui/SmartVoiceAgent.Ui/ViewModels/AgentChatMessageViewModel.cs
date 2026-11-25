@@ -102,7 +102,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             CallId = callId;
             ToolName = toolName;
             ToolDisplayName = toolDisplayName;
-            ArgumentsPreview = FormatArguments(argumentsJson);
+            ArgumentsPreview = FormatArguments(argumentsJson, full: risk == ToolRisk.Delegate);
             Risk = risk;
             _toolState = AgentToolStepState.Running;
         }
@@ -172,8 +172,14 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public string ToolDisplayName { get; } = string.Empty;
 
-        /// <summary>Gets the call's arguments as short "name: value" lines.</summary>
+        /// <summary>
+        /// Gets the call's arguments as "name: value" lines, shortened except for a hand-off to another agent,
+        /// whose approval card shows the whole task, folder and sandbox.
+        /// </summary>
         public string ArgumentsPreview { get; } = string.Empty;
+
+        /// <summary>Gets how many argument lines a compact card shows; 0 shows them all (a hand-off to another agent).</summary>
+        public int ArgumentsMaxLines => Risk == ToolRisk.Delegate ? 0 : 4;
 
         public bool HasArguments => ArgumentsPreview.Length > 0;
 
@@ -501,7 +507,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             this.RaisePropertyChanged(nameof(AlwaysAllowHint));
         }
 
-        private static string FormatArguments(string argumentsJson)
+        private static string FormatArguments(string argumentsJson, bool full)
         {
             if (string.IsNullOrWhiteSpace(argumentsJson) || argumentsJson == "{}")
             {
@@ -522,7 +528,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     var value = property.Value.ValueKind == JsonValueKind.String
                         ? property.Value.GetString() ?? string.Empty
                         : property.Value.GetRawText();
-                    lines.Add($"{property.Name}: {Shorten(value.ReplaceLineEndings(" "), 160)}");
+                    lines.Add(full
+                        ? $"{property.Name}: {value.ReplaceLineEndings(Environment.NewLine)}"
+                        : $"{property.Name}: {Shorten(value.ReplaceLineEndings(" "), 160)}");
                 }
 
                 return string.Join(Environment.NewLine, lines);

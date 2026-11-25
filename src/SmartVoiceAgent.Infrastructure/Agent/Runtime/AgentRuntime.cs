@@ -389,8 +389,6 @@ public sealed class AgentRuntime : IAgentRuntime
         ChannelWriter<AgentEvent> events,
         CancellationToken cancellationToken)
     {
-        var argumentsJson = SerializeArguments(call.Arguments);
-
         if (!toolsByName.TryGetValue(call.Name, out var tool))
         {
             var unknown = $"Error: there is no tool named '{call.Name}'.";
@@ -400,6 +398,12 @@ public sealed class AgentRuntime : IAgentRuntime
             return new FunctionResultContent(call.CallId, unknown);
         }
 
+        if (tool.PrepareArguments is not null)
+        {
+            call.Arguments = tool.PrepareArguments(call.Arguments ?? new Dictionary<string, object?>());
+        }
+
+        var argumentsJson = SerializeArguments(call.Arguments);
         await events.WriteAsync(
             new AgentToolCallStarted(sessionId, call.CallId, tool.Name, tool.DisplayName, argumentsJson, tool.Risk),
             cancellationToken);

@@ -205,6 +205,25 @@ public sealed class AgentRuntimeTests : IDisposable
     }
 
     [Fact]
+    public async Task RunTurnAsync_PrepareArguments_ApprovalShowsAndToolGetsTheFilledArguments()
+    {
+        string? ranIn = null;
+        var function = AIFunctionFactory.Create((string task, string workspace) => { ranIn = workspace; return "done"; }, "cli_agent_run");
+        var tool = new AgentToolDescriptor(function, ToolRisk.Delegate, "test", "Delegate", arguments =>
+            new Dictionary<string, object?>(arguments) { ["workspace"] = @"C:\repo", ["sandbox"] = "read-only" });
+        var chat = new ScriptedChatClient(
+            [Call("call-1", "cli_agent_run", ("task", "Explain"))],
+            [new TextContent("done")]);
+        var runtime = CreateRuntime(chat, [tool]);
+
+        var events = await CollectAsync(runtime, "s1", "delegate", approve: true);
+
+        var approval = events.OfType<AgentApprovalRequested>().Single();
+        approval.ArgumentsJson.Should().Contain("C:\\\\repo").And.Contain("read-only");
+        ranIn.Should().Be(@"C:\repo", "the call runs with the arguments the user approved");
+    }
+
+    [Fact]
     public async Task RunTurnAsync_UnknownTool_ReturnsErrorToModel()
     {
         var chat = new ScriptedChatClient(

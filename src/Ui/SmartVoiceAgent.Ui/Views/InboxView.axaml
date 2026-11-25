@@ -88,12 +88,15 @@
                                                            Foreground="{DynamicResource TextMutedBrush}"/>
                                             </StackPanel>
                                             <Border Classes="ToolArguments" IsVisible="{Binding Step.HasArguments}" Margin="0,4,0,0">
-                                                <SelectableTextBlock Text="{Binding Step.ArgumentsPreview}"
-                                                                     FontSize="11.5"
-                                                                     FontFamily="{StaticResource MonoFontFamily}"
-                                                                     Foreground="{DynamicResource TextSecondaryBrush}"
-                                                                     TextWrapping="Wrap"
-                                                                     MaxLines="4"/>
+                                                <!-- Four lines for most tools; a hand-off to another agent shows its whole brief, scrolling -->
+                                                <ScrollViewer MaxHeight="240" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                                    <SelectableTextBlock Text="{Binding Step.ArgumentsPreview}"
+                                                                         FontSize="11.5"
+                                                                         FontFamily="{StaticResource MonoFontFamily}"
+                                                                         Foreground="{DynamicResource TextSecondaryBrush}"
+                                                                         TextWrapping="Wrap"
+                                                                         MaxLines="{Binding Step.ArgumentsMaxLines}"/>
+                                                </ScrollViewer>
                                             </Border>
                                         </StackPanel>
 

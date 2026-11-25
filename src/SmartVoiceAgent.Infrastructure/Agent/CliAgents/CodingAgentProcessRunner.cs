@@ -63,9 +63,25 @@ public sealed record CodingAgentProcessResult(
 /// <summary>
 /// Runs processes with <see cref="Process"/>, reading output as UTF-8.
 /// </summary>
+/// <remarks>
+/// Output is collected as it arrives. Once the process exits, or is killed, the runner waits only a short grace
+/// period for the rest: a child the process left behind (a dev server, a watcher) can hold the output pipe open
+/// forever, and the caller gets what was captured instead of waiting on it.
+/// </remarks>
 public sealed class CodingAgentProcessRunner : ICodingAgentProcessRunner
 {
     private static readonly Encoding Utf8 = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+
+    private readonly TimeSpan _outputGracePeriod;
+
+    /// <summary>
+    /// Creates the runner.
+    /// </summary>
+    /// <param name="outputGracePeriod">How long to keep reading output after the process ends; defaults to 2 seconds.</param>
+    public CodingAgentProcessRunner(TimeSpan? outputGracePeriod = null)
+    {
+        _outputGracePeriod = outputGracePeriod ?? TimeSpan.FromSeconds(2);
+    }
 
     /// <inheritdoc />
     public async Task<CodingAgentProcessResult> RunAsync(
@@ -103,26 +119,18 @@ public sealed class CodingAgentProcessRunner : ICodingAgentProcessRunner
                 return new CodingAgentProcessResult(127, string.Empty, "Process could not be started.", false);
             }
 
-            var stdoutTask = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
-            var stderrTask = process.StandardError.ReadToEndAsync(CancellationToken.None);
-            if (request.StandardInput is not null)
-            {
-                try
-                {
-                    await process.StandardInput.WriteAsync(request.StandardInput.AsMemory(), CancellationToken.None);
-                    process.StandardInput.Close();
-                }
-                catch (IOException)
-                {
-                    // The process exited before reading its input; its exit code and output tell the caller why.
-                }
-            }
-
+            var stdout = OutputCapture.Start(process.StandardOutput);
+            var stderr = OutputCapture.Start(process.StandardError);
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeoutCts.CancelAfter(request.Timeout);
 
             try
             {
+                if (request.StandardInput is not null)
+                {
+                    await WriteInputAsync(process, request.StandardInput, timeoutCts.Token);
+                }
+
                 await process.WaitForExitAsync(timeoutCts.Token);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -132,21 +140,15 @@ public sealed class CodingAgentProcessRunner : ICodingAgentProcessRunner
             }
             catch (OperationCanceledException)
             {
+                // Kill(entireProcessTree) misses descendants whose parent already exited, so the reads below stop
+                // after the grace period rather than at the end of the pipe.
                 TryKill(process);
-                var timedOutOutput = await ReadCompletedOutputAsync(stdoutTask, stderrTask);
-                return new CodingAgentProcessResult(
-                    -1,
-                    timedOutOutput.StandardOutput,
-                    timedOutOutput.StandardError,
-                    true);
+                await WaitForOutputAsync(stdout, stderr, cancellationToken);
+                return new CodingAgentProcessResult(-1, stdout.Text, stderr.Text, true);
             }
 
-            var output = await ReadCompletedOutputAsync(stdoutTask, stderrTask);
-            return new CodingAgentProcessResult(
-                process.ExitCode,
-                output.StandardOutput,
-                output.StandardError,
-                false);
+            await WaitForOutputAsync(stdout, stderr, cancellationToken);
+            return new CodingAgentProcessResult(process.ExitCode, stdout.Text, stderr.Text, false);
         }
         catch (Exception ex) when (ex is InvalidOperationException or Win32Exception)
         {
@@ -154,13 +156,29 @@ public sealed class CodingAgentProcessRunner : ICodingAgentProcessRunner
         }
     }
 
-    private static async Task<(string StandardOutput, string StandardError)> ReadCompletedOutputAsync(
-        Task<string> stdoutTask,
-        Task<string> stderrTask)
+    private static async Task WriteInputAsync(Process process, string input, CancellationToken cancellationToken)
     {
-        var stdout = await stdoutTask;
-        var stderr = await stderrTask;
-        return (stdout, stderr);
+        try
+        {
+            await process.StandardInput.WriteAsync(input.AsMemory(), cancellationToken);
+            process.StandardInput.Close();
+        }
+        catch (IOException)
+        {
+            // The process exited before reading its input; its exit code and output tell the caller why.
+        }
+    }
+
+    private async Task WaitForOutputAsync(OutputCapture stdout, OutputCapture stderr, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.WhenAll(stdout.Completion, stderr.Completion).WaitAsync(_outputGracePeriod, cancellationToken);
+        }
+        catch (TimeoutException)
+        {
+            // Something the process started still holds the pipe; return what arrived so far.
+        }
     }
 
     private static void TryKill(Process process)
@@ -175,6 +193,58 @@ public sealed class CodingAgentProcessRunner : ICodingAgentProcessRunner
         catch
         {
             // Best-effort cleanup; timeout is still reported to the caller.
+        }
+    }
+
+    /// <summary>
+    /// Reads a stream into a buffer in the background, so the text read so far is available at any time.
+    /// </summary>
+    private sealed class OutputCapture
+    {
+        private readonly StringBuilder _text = new();
+
+        private OutputCapture()
+        {
+        }
+
+        public Task Completion { get; private set; } = Task.CompletedTask;
+
+        public string Text
+        {
+            get
+            {
+                lock (_text)
+                {
+                    return _text.ToString();
+                }
+            }
+        }
+
+        public static OutputCapture Start(StreamReader reader)
+        {
+            var capture = new OutputCapture();
+            capture.Completion = Task.Run(() => capture.ReadAsync(reader));
+            return capture;
+        }
+
+        private async Task ReadAsync(StreamReader reader)
+        {
+            var buffer = new char[4096];
+            try
+            {
+                int read;
+                while ((read = await reader.ReadAsync(buffer.AsMemory(), CancellationToken.None)) > 0)
+                {
+                    lock (_text)
+                    {
+                        _text.Append(buffer, 0, read);
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is IOException or ObjectDisposedException or InvalidOperationException)
+            {
+                // The process was disposed while a child still held the pipe; keep what was read.
+            }
         }
     }
 }

@@ -34,7 +34,8 @@ public static partial class CliExecutableLocator
         var windows = isWindows ?? OperatingSystem.IsWindows();
         var directories = (pathVariable ?? Environment.GetEnvironmentVariable("PATH") ?? string.Empty)
             .Split(windows ? ';' : ':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(directory => directory.Trim('"'));
+            .Select(directory => directory.Trim('"'))
+            .ToList();
 
         foreach (var directory in directories)
         {
@@ -56,7 +57,7 @@ public static partial class CliExecutableLocator
             }
 
             var shim = Path.Combine(directory, name + ".cmd");
-            if (File.Exists(shim) && TryResolveNpmShim(shim) is { } launch)
+            if (File.Exists(shim) && TryResolveNpmShim(shim, directories) is { } launch)
             {
                 return launch;
             }
@@ -65,7 +66,7 @@ public static partial class CliExecutableLocator
         return null;
     }
 
-    private static CliLaunch? TryResolveNpmShim(string shimPath)
+    private static CliLaunch? TryResolveNpmShim(string shimPath, IReadOnlyList<string> pathDirectories)
     {
         string text;
         try
@@ -90,8 +91,13 @@ public static partial class CliExecutableLocator
             return null;
         }
 
-        var bundledNode = Path.Combine(directory, "node.exe");
-        return new CliLaunch(File.Exists(bundledNode) ? bundledNode : "node", [script]);
+        // node.exe next to the shim, else the first one on PATH. A bare "node" would let CreateProcess search the
+        // application and current folders before PATH.
+        var node = new[] { directory }
+            .Concat(pathDirectories)
+            .Select(folder => Path.Combine(folder, "node.exe"))
+            .FirstOrDefault(File.Exists);
+        return node is null ? null : new CliLaunch(node, [script]);
     }
 
     // npm's shim ends with: "%_prog%"  "%dp0%\node_modules\@openai\codex\bin\codex.js" %*
