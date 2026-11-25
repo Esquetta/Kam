@@ -51,7 +51,7 @@ public sealed class AccentPaletteTests
 
         violet.Dark.Accent.Should().Be(Color.Parse("#8B7CFF"));
         violet.Dark.Strong.Should().Be(Color.Parse("#6E5BF0"));
-        violet.Light.Accent.Should().Be(Color.Parse("#5B45E0"));
+        violet.Light.Accent.Should().Be(Color.Parse("#5B47E0"));
         AccentPalette.ResourcesFor(violet.Dark, 0x24)["AccentSubtle"].Should().Be(Color.Parse("#248B7CFF"));
     }
 

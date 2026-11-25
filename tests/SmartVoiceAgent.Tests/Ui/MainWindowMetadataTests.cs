@@ -379,7 +379,7 @@ public sealed class MainWindowMetadataTests
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "StackPanel"
-                && AttributeValue(element, "Grid.Row") == "2"
+                && AttributeValue(element, "Grid.Row") == "3"
                 && AttributeValue(element, "Classes") == "SidebarFooter");
 
         bottomNavigation

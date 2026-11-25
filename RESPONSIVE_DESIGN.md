@@ -4,13 +4,16 @@ This document describes the responsive design improvements made to the Smart Voi
 
 ## Breakpoints
 
-The application uses three responsive breakpoints:
+The shell follows the Kam Studio breakpoints:
 
-| Breakpoint | Width Range | Behavior |
-|------------|-------------|----------|
-| **Compact** | < 1024px | Single column layout, log panel hidden |
-| **Medium** | 1024px - 1440px | Two column layout, log panel visible (420px) |
-| **Expanded** | > 1440px | Three column layout, log panel visible (600px) |
+| Width | Behavior |
+|-------|----------|
+| 1280px and up | Tasks shows three panes: task list (270px), thread, context pane (Activity, 290px) |
+| < 1280px | Context pane hides (`IsLogPanelVisible`), task list narrows to 240px |
+| < 980px | Top bar drops the wake phrase pill and the search text (`IsNarrow`) |
+| < 760px | Rail shows icons only and the task list sits above the thread (`IsRailCompact`) |
+
+`IsCompact` (< 1024px), `IsMedium` and `IsExpanded` still drive `GridColumns` and the responsive converters.
 
 ## Files Added
 
@@ -111,13 +114,14 @@ if (WindowStateManager.Instance.ReducedMotion)
 ## Testing Responsive Design
 
 1. **Resize the window** to see layout adapt:
-   - < 1024px: Single column, no log panel
-   - 1024-1440px: Two columns, 420px log panel
-   - > 1440px: Three columns, 600px log panel
+   - 1280px and up: task list, thread and the 290px context pane
+   - < 1280px: no context pane, 240px task list
+   - < 980px: top bar trims to the search icon and the mic
+   - < 760px: icon rail, task list above the thread
 
 2. **Toggle Reduced Motion** in Settings to see animations disable
 
-3. **Minimum size**: Window can now resize down to 800x600
+3. **Minimum size**: Window can resize down to 640x560
 
 ## Future Improvements
 

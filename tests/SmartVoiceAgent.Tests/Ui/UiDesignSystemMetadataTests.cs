@@ -39,7 +39,7 @@ public sealed class UiDesignSystemMetadataTests
             .Attribute("Value")!
             .Value
             .Should()
-            .Be("8");
+            .Be("10");
 
         foreach (var selector in new[] { "Button.PrimaryAction", "Button.SecondaryAction", "Button.DestructiveAction" })
         {

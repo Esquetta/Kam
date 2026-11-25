@@ -46,8 +46,9 @@ public class ResponsiveConvertersTests
 
     [Theory]
     [InlineData(900, 0)]
-    [InlineData(1280, 360)]
-    [InlineData(1600, 420)]
+    [InlineData(1279, 0)]
+    [InlineData(1280, 290)]
+    [InlineData(1600, 290)]
     public void ActivityPanelWidth_UsesCalmerRailWidthsBesideTheChat(double windowWidth, double expectedWidth)
     {
         SetWindowWidth(windowWidth);

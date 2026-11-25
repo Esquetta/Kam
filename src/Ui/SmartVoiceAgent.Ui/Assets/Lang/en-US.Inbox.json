@@ -1,5 +1,6 @@
 {
   "Inbox.Title": "Needs you",
+  "Inbox.Eyebrow": "INBOX",
   "Inbox.Subtitle": "Tool calls waiting for your approval, from every task. Answer here or open the task.",
   "Inbox.Empty.Title": "Nothing is waiting for you",
   "Inbox.Empty.Body": "When a task needs your approval, it shows up here and in the task.",

@@ -176,9 +176,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public bool IsActivityPanelShown =>
             IsChatWorkbenchVisible && _isActivityPanelOpen && WindowStateManager.Instance.IsLogPanelVisible;
 
-        /// <summary>Gets the Activity panel column width: 0 when hidden, narrower on medium windows.</summary>
+        /// <summary>Gets the Activity panel column width: the 290 px context pane of Kam Studio, 0 when hidden.</summary>
         public GridLength ActivityPanelWidth => IsActivityPanelShown
-            ? new GridLength(WindowStateManager.Instance.IsMedium ? 360 : 420)
+            ? new GridLength(290)
             : new GridLength(0);
 
         /// <summary>Shows or hides the Activity panel beside the chat.</summary>

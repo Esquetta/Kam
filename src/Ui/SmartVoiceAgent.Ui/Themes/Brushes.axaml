@@ -11,6 +11,7 @@
     <SolidColorBrush x:Key="ControlPressedBrush" Color="{DynamicResource ControlPressed}" />
     <SolidColorBrush x:Key="SurfaceBgBrush" Color="{DynamicResource SurfaceBg}" />
     <SolidColorBrush x:Key="SurfaceBgElevatedBrush" Color="{DynamicResource SurfaceBgElevated}" />
+    <SolidColorBrush x:Key="RaisedBgBrush" Color="{DynamicResource RaisedBg}" />
 
     <!-- Border brushes -->
     <SolidColorBrush x:Key="BorderSubtleBrush" Color="{DynamicResource BorderSubtle}" />
@@ -55,6 +56,12 @@
     <SolidColorBrush x:Key="AccentErrorDimBrush" Color="{DynamicResource AccentErrorDim}" />
     <SolidColorBrush x:Key="AccentErrorGlowBrush" Color="{DynamicResource AccentErrorGlow}" />
     <SolidColorBrush x:Key="AccentErrorOnBrush" Color="{DynamicResource AccentErrorOn}" />
+    <SolidColorBrush x:Key="AccentInfoBrush" Color="{DynamicResource AccentInfo}" />
+    <SolidColorBrush x:Key="AccentInfoGlowBrush" Color="{DynamicResource AccentInfoGlow}" />
+
+    <!-- Diff line backgrounds -->
+    <SolidColorBrush x:Key="DiffAddBgBrush" Color="{DynamicResource DiffAddBg}" />
+    <SolidColorBrush x:Key="DiffDelBgBrush" Color="{DynamicResource DiffDelBg}" />
 
     <!-- Brand mark gradient -->
     <LinearGradientBrush x:Key="BrandGradientBrush" StartPoint="0%,0%" EndPoint="100%,100%">

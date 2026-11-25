@@ -52,6 +52,12 @@
   "Chat.Composer.Send": "Send (Enter)",
   "Chat.Composer.Stop": "Stop (Esc)",
   "Chat.Composer.Hint": "Enter to send  ·  Shift+Enter for a new line  ·  Type / for commands",
+  "Chat.Composer.Hint.Send": "send",
+  "Chat.Composer.Hint.NewLine": "new line",
+  "Chat.Composer.Hint.Commands": "commands",
+  "Chat.Composer.Attach": "Attach",
+  "Chat.Composer.SendLabel": "Send",
+  "Chat.Composer.StopLabel": "Stop",
   "Chat.Composer.SlashPlaceholder": "Type / for commands...",
 
   "Chat.Markdown.CopyCode": "Copy code",
