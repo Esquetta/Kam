@@ -59,6 +59,8 @@ public sealed class IntegrationsViewMetadataTests
         xaml.Should().Contain("ItemsSource=\"{Binding Agents}\"");
         xaml.Should().Contain("IsChecked=\"{Binding IsEnabled, Mode=TwoWay}\"");
         xaml.Should().Contain("IsEnabled=\"{Binding CanToggle}\"");
+        xaml.Should().Contain("AutomationProperties.Name=\"{Binding Name}\"", "screen readers name each switch after its CLI");
+        xaml.Should().Contain("AutomationProperties.Name=\"Check again\"");
         xaml.Should().Contain("Text=\"{Binding VersionText}\"");
         xaml.Should().Contain("RefreshCommand");
         xaml.Should().Contain("it never reads the CLI");

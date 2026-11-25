@@ -227,6 +227,7 @@
                             <Button Grid.Column="2"
                                     Classes="SecondaryAction"
                                     Command="{Binding RefreshCommand}"
+                                    AutomationProperties.Name="{DynamicResource Lang.Integrations.CliAgents.Refresh}"
                                     IsEnabled="{Binding !IsChecking}">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
@@ -282,6 +283,7 @@
 
                                         <ToggleSwitch Grid.Column="2"
                                                       Classes="RowToggle"
+                                                      AutomationProperties.Name="{Binding Name}"
                                                       IsChecked="{Binding IsEnabled, Mode=TwoWay}"
                                                       IsEnabled="{Binding CanToggle}"/>
                                     </Grid>
