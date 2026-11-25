@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Tasks: the workbench page is now called Tasks (Görevler) and lives in its own view. Task rows show an orange dot and "Needs approval" while a tool call waits for you, and an accent dot while the agent works. Finished tool steps fold to one line with their duration; click one to see its arguments and result. Steps waiting for approval or that failed stay open.
 - Activity panel: shown only beside the chat, with a close button and a way back from the chat header. Its first tab, Steps, shows the latest turn in the selected chat: each tool call with its outcome and time, then the totals for tools, time and tokens. The second message box on other pages is gone, so those pages use the full width.
 - Diagnostics leads with four plain status cards (model, tools, MCP servers, voice), each with one action when something needs attention; the technical checklist and reports moved under "Details for troubleshooting".
 - Skills, Integrations and Extensions: no developer message on a clean profile, status badges in sentence case with colours that match their meaning, and the Docs link in the same place on every Discover card.

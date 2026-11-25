@@ -207,8 +207,8 @@ public sealed partial class WorkbenchLocalizationTests
         turkish.Should().NotBeEmpty();
         turkish.Should().NotContain(entry =>
             Regex.IsMatch(entry.Value, @"\b(agent|chat|thread|skill|settings|workbench)\b", RegexOptions.IgnoreCase),
-            "Turkish copy says ajan, sohbet, yetenek, Ayarlar and çalışma masası");
-        turkish.Single(entry => entry.Key == "Workbench.Page.Workbench").Value.Should().Be("Çalışma masası");
+            "Turkish copy says ajan, sohbet, yetenek and Ayarlar");
+        turkish.Single(entry => entry.Key == "Workbench.Page.Workbench").Value.Should().Be("Görevler");
         turkish.Single(entry => entry.Key == "Workbench.Thread.NewChat").Value.Should().Be("Yeni sohbet");
     }
 

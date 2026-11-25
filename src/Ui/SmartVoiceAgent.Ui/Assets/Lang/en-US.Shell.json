@@ -1,7 +1,7 @@
 {
   "Shell.Brand.Tagline": "Agent workspace",
   "Shell.Nav.Workspace": "WORKSPACE",
-  "Shell.Nav.Workbench": "Workbench",
+  "Shell.Nav.Workbench": "Tasks",
   "Shell.Nav.Diagnostics": "Diagnostics",
   "Shell.Nav.DiagnosticsTip": "Runtime Diagnostics",
   "Shell.Nav.Skills": "Skills",
