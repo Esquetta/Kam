@@ -25,4 +25,16 @@ public sealed class AgentRuntimeOptions
     /// earlier turns are summarized. 0 turns compaction off.
     /// </summary>
     public int ContextTokenBudget { get; set; } = 64000;
+
+    /// <summary>Clamps a step limit to 1-200.</summary>
+    /// <param name="value">The requested limit.</param>
+    public static int ClampMaxIterations(int value) => Math.Clamp(value, 1, 200);
+
+    /// <summary>Clamps a tool result length to 1000-200000 characters.</summary>
+    /// <param name="value">The requested length.</param>
+    public static int ClampMaxToolResultCharacters(int value) => Math.Clamp(value, 1000, 200000);
+
+    /// <summary>Clamps a context budget to 0 (compaction off) or 8000-1000000 tokens.</summary>
+    /// <param name="value">The requested budget.</param>
+    public static int ClampContextTokenBudget(int value) => value <= 0 ? 0 : Math.Clamp(value, 8000, 1000000);
 }

@@ -77,13 +77,11 @@
     <Style Selector="Grid.WorkbenchPage">
         <Setter Property="Margin" Value="0" />
         <Setter Property="RowSpacing" Value="20" />
-        <Setter Property="MaxWidth" Value="1040" />
     </Style>
 
     <Style Selector="StackPanel.WorkbenchPage">
         <Setter Property="Margin" Value="0" />
         <Setter Property="Spacing" Value="20" />
-        <Setter Property="MaxWidth" Value="1040" />
     </Style>
 
     <Style Selector="Border.WorkbenchSection">

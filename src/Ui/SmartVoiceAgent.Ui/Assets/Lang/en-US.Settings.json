@@ -40,6 +40,8 @@
   "Settings.ChatState.NeedsModel": "Pick a model below.",
   "Settings.ChatState.UsesPlanner": "No key here yet, so chat uses {0} on {1} from the planner profile. Add a key to use this model.",
   "Settings.Provider.OpenAICompatible": "an OpenAI-compatible endpoint",
+  "Settings.DeepSeekKeyHint": "DeepSeek uses its own API key.",
+  "Settings.DeepSeekKeyLink": "Get a key at platform.deepseek.com",
   "Settings.PlannerAdvanced": "Command mode planner (advanced)",
   "Settings.PlannerAdvancedDesc": "A separate model that picks one skill per request. Kam uses it only when the agent loop is turned off; the agent model above handles chat, voice and tasks.",
   "Settings.Provider": "Provider",

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
+using SmartVoiceAgent.Core.Models.Agents;
 using SmartVoiceAgent.Core.Models.AI;
 
 namespace SmartVoiceAgent.Ui.Services;
@@ -107,6 +108,24 @@ public class JsonSettingsService : ISettingsService, IDisposable
     {
         get => _data.CodexCliEnabled;
         set => SetProperty(nameof(CodexCliEnabled), value, v => _data.CodexCliEnabled = v);
+    }
+
+    public int AgentMaxIterations
+    {
+        get => AgentRuntimeOptions.ClampMaxIterations(_data.AgentMaxIterations);
+        set => SetProperty(nameof(AgentMaxIterations), AgentRuntimeOptions.ClampMaxIterations(value), v => _data.AgentMaxIterations = v);
+    }
+
+    public int AgentMaxToolResultCharacters
+    {
+        get => AgentRuntimeOptions.ClampMaxToolResultCharacters(_data.AgentMaxToolResultCharacters);
+        set => SetProperty(nameof(AgentMaxToolResultCharacters), AgentRuntimeOptions.ClampMaxToolResultCharacters(value), v => _data.AgentMaxToolResultCharacters = v);
+    }
+
+    public int AgentContextTokenBudget
+    {
+        get => AgentRuntimeOptions.ClampContextTokenBudget(_data.AgentContextTokenBudget);
+        set => SetProperty(nameof(AgentContextTokenBudget), AgentRuntimeOptions.ClampContextTokenBudget(value), v => _data.AgentContextTokenBudget = v);
     }
 
     #region Email (SMTP) Properties
@@ -433,6 +452,9 @@ public class JsonSettingsService : ISettingsService, IDisposable
             nameof(WebSearchApiKey) => (T?)(object?)_data.WebSearchApiKey,
             nameof(WebSearchEngineId) => (T?)(object?)_data.WebSearchEngineId,
             nameof(CodexCliEnabled) => (T?)(object?)_data.CodexCliEnabled,
+            nameof(AgentMaxIterations) => (T?)(object?)_data.AgentMaxIterations,
+            nameof(AgentMaxToolResultCharacters) => (T?)(object?)_data.AgentMaxToolResultCharacters,
+            nameof(AgentContextTokenBudget) => (T?)(object?)_data.AgentContextTokenBudget,
             nameof(SmtpHost) => (T?)(object?)_data.SmtpHost,
             nameof(SmtpPort) => (T?)(object?)_data.SmtpPort,
             nameof(SmtpUsername) => (T?)(object?)_data.SmtpUsername,
@@ -628,6 +650,9 @@ public class JsonSettingsService : ISettingsService, IDisposable
             WebSearchApiKey = source.WebSearchApiKey,
             WebSearchEngineId = source.WebSearchEngineId,
             CodexCliEnabled = source.CodexCliEnabled,
+            AgentMaxIterations = source.AgentMaxIterations,
+            AgentMaxToolResultCharacters = source.AgentMaxToolResultCharacters,
+            AgentContextTokenBudget = source.AgentContextTokenBudget,
             SmtpHost = source.SmtpHost,
             SmtpPort = source.SmtpPort,
             SmtpUsername = source.SmtpUsername,
@@ -766,6 +791,11 @@ public class JsonSettingsService : ISettingsService, IDisposable
         public string? WebSearchApiKey { get; set; }
         public string? WebSearchEngineId { get; set; }
         public bool CodexCliEnabled { get; set; }
+
+        // Agent loop
+        public int AgentMaxIterations { get; set; } = new AgentRuntimeOptions().MaxIterations;
+        public int AgentMaxToolResultCharacters { get; set; } = new AgentRuntimeOptions().MaxToolResultCharacters;
+        public int AgentContextTokenBudget { get; set; } = new AgentRuntimeOptions().ContextTokenBudget;
 
         // Email (SMTP)
         public string? SmtpHost { get; set; }

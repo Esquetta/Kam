@@ -1,0 +1,233 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:pagevm="using:SmartVoiceAgent.Ui.ViewModels.PageModels"
+             x:Class="SmartVoiceAgent.Ui.Views.PromptsView"
+             x:DataType="pagevm:PromptsViewModel">
+    <UserControl.Styles>
+        <!-- Two columns (.p-cols): the list on the left, the selected prompt on the right.
+             Below 980 px (the code-behind sets "narrow") the panes stack. -->
+        <Style Selector="Border.PromptListPane">
+            <Setter Property="Grid.Column" Value="0"/>
+            <Setter Property="Grid.Row" Value="0"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+        </Style>
+        <Style Selector="Border.PromptDetailPane">
+            <Setter Property="Grid.Column" Value="1"/>
+            <Setter Property="Grid.Row" Value="0"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+        </Style>
+        <Style Selector="StackPanel.narrow Border.PromptListPane">
+            <Setter Property="Grid.ColumnSpan" Value="2"/>
+        </Style>
+        <Style Selector="StackPanel.narrow Border.PromptDetailPane">
+            <Setter Property="Grid.Column" Value="0"/>
+            <Setter Property="Grid.Row" Value="1"/>
+            <Setter Property="Grid.ColumnSpan" Value="2"/>
+        </Style>
+
+        <!-- A list row: /name in mono, the description under it -->
+        <Style Selector="Button.PromptRow">
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.PromptRow /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="CornerRadius" Value="0"/>
+        </Style>
+        <Style Selector="Button.PromptRow:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
+        </Style>
+        <Style Selector="Button.PromptRow.Selected /template/ ContentPresenter#PART_ContentPresenter, Button.PromptRow.Selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <!-- Prompts: the Markdown slash commands as a library -->
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel x:Name="Page" Classes="WorkbenchPage" Margin="16,18" Spacing="14">
+
+            <!-- Page head (.page-head): eyebrow, title and the explanation strip -->
+            <StackPanel Spacing="10">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock Text="{DynamicResource Lang.Prompts.Eyebrow}" Classes="Overline" VerticalAlignment="Center"/>
+                    <TextBlock Text="{DynamicResource Lang.Prompts.Title}" Classes="PageTitle" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Border Classes="Explain">
+                    <TextBlock Text="{DynamicResource Lang.Prompts.Subtitle}"/>
+                </Border>
+            </StackPanel>
+
+            <!-- Action result, shown only when something failed -->
+            <Border Classes="Note" IsVisible="{Binding HasMessage}">
+                <TextBlock Text="{Binding Message}"/>
+            </Border>
+
+            <!-- No catalog behind the page -->
+            <Border Classes="Pane" IsVisible="{Binding IsUnavailable}">
+                <StackPanel Spacing="6" Margin="22" HorizontalAlignment="Center">
+                    <Viewbox Width="18" Height="18" HorizontalAlignment="Center"><Path Classes="Icon Muted" Data="{StaticResource IconAlertCircle}"/></Viewbox>
+                    <TextBlock Text="{DynamicResource Lang.Prompts.Unavailable.Title}" FontSize="13.5" FontWeight="Medium" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{DynamicResource Lang.Prompts.Unavailable.Body}" Classes="Caption" TextAlignment="Center" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Empty library: where the files go, and a way to start -->
+            <Border Classes="Pane" IsVisible="{Binding IsEmpty}">
+                <StackPanel Spacing="8" Margin="22" HorizontalAlignment="Center" MaxWidth="520">
+                    <Viewbox Width="18" Height="18" HorizontalAlignment="Center"><Path Classes="Icon Muted" Data="{StaticResource IconBookOpen}"/></Viewbox>
+                    <TextBlock Text="{DynamicResource Lang.Prompts.Empty.Title}" FontSize="13.5" FontWeight="Medium" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{DynamicResource Lang.Prompts.Empty.Body}" Classes="Caption" TextAlignment="Center" TextWrapping="Wrap"/>
+                    <Border Classes="Code">
+                        <SelectableTextBlock Text="{Binding UserDirectory}" TextWrapping="Wrap"/>
+                    </Border>
+                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" Margin="0,4,0,0">
+                        <Button Classes="PrimaryAction Sm"
+                                Content="{DynamicResource Lang.Prompts.Action.New}"
+                                Command="{Binding NewPromptCommand}"/>
+                        <Button Classes="SecondaryAction Sm"
+                                Content="{DynamicResource Lang.Prompts.Action.OpenFolder}"
+                                Command="{Binding OpenFolderCommand}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- The two panes -->
+            <Grid ColumnDefinitions="240,*" RowDefinitions="Auto,Auto" ColumnSpacing="14" RowSpacing="14" IsVisible="{Binding HasPrompts}">
+
+                <!-- Left: search and the prompts grouped by source -->
+                <Border Classes="Pane PromptListPane">
+                    <StackPanel>
+                        <Border Classes="PaneHead">
+                            <TextBox Text="{Binding SearchText}"
+                                     PlaceholderText="{DynamicResource Lang.Prompts.Search.Placeholder}">
+                                <TextBox.InnerLeftContent>
+                                    <Viewbox Width="14" Height="14" Margin="10,0,0,0">
+                                        <Path Classes="Icon Muted" Data="{StaticResource IconSearch}"/>
+                                    </Viewbox>
+                                </TextBox.InnerLeftContent>
+                            </TextBox>
+                        </Border>
+
+                        <TextBlock Text="{DynamicResource Lang.Prompts.NoMatches}" Classes="Caption" Margin="14,12"
+                                   TextWrapping="Wrap" IsVisible="{Binding HasNoMatches}"/>
+
+                        <ItemsControl ItemsSource="{Binding Groups}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="pagevm:PromptGroupViewModel">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Title}" Classes="Overline" Margin="14,10,14,4"/>
+                                        <ItemsControl ItemsSource="{Binding Items}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="pagevm:PromptItemViewModel">
+                                                    <Button Classes="PromptRow"
+                                                            Classes.Selected="{Binding IsSelected}"
+                                                            Command="{Binding SelectCommand}">
+                                                        <StackPanel Spacing="2">
+                                                            <TextBlock Text="{Binding Slash}"
+                                                                       FontSize="12.5"
+                                                                       FontFamily="{StaticResource MonoFontFamily}"
+                                                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Text="{Binding Description}"
+                                                                       Classes="Caption"
+                                                                       IsVisible="{Binding HasDescription}"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Footer: make a prompt or open the folder -->
+                        <Border Classes="PaneHead" BorderThickness="0,1,0,0" Margin="0,8,0,0">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Button Classes="SecondaryAction Sm"
+                                        Content="{DynamicResource Lang.Prompts.Action.New}"
+                                        Command="{Binding NewPromptCommand}"/>
+                                <Button Classes="GhostAction Sm"
+                                        Content="{DynamicResource Lang.Prompts.Action.OpenFolder}"
+                                        Command="{Binding OpenFolderCommand}"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- Right: the selected prompt -->
+                <Border Classes="Pane PromptDetailPane">
+                    <Panel>
+                        <TextBlock Text="{DynamicResource Lang.Prompts.Detail.Select}" Classes="Caption" Margin="16"
+                                   IsVisible="{Binding !HasSelection}"/>
+
+                        <StackPanel IsVisible="{Binding HasSelection}" Spacing="12" Margin="16">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" DataContext="{Binding SelectedPrompt}" x:DataType="pagevm:PromptItemViewModel">
+                                <StackPanel Spacing="4">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{Binding Slash}"
+                                                   FontSize="16"
+                                                   FontWeight="SemiBold"
+                                                   FontFamily="{StaticResource MonoFontFamily}"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                                   VerticalAlignment="Center"/>
+                                        <Border Classes="Pill" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding SourceLabel}"/>
+                                        </Border>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding Description}"
+                                               Classes="Caption"
+                                               TextWrapping="Wrap"
+                                               IsVisible="{Binding HasDescription}"/>
+                                    <TextBlock Text="{DynamicResource Lang.Prompts.Detail.NoDescription}"
+                                               Classes="Caption"
+                                               IsVisible="{Binding !HasDescription}"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Classes="PrimaryAction Sm"
+                                        Content="{DynamicResource Lang.Prompts.Action.Use}"
+                                        Command="{Binding UseInNewTaskCommand}"/>
+                                <Button Classes="SecondaryAction Sm"
+                                        Content="{DynamicResource Lang.Prompts.Action.OpenFile}"
+                                        Command="{Binding OpenFileCommand}"/>
+                            </StackPanel>
+
+                            <!-- Key/value facts -->
+                            <Grid ColumnDefinitions="90,*" RowDefinitions="Auto,Auto" RowSpacing="6"
+                                  DataContext="{Binding SelectedPrompt}" x:DataType="pagevm:PromptItemViewModel">
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource Lang.Prompts.Detail.Arguments}" Classes="KvKey"
+                                           IsVisible="{Binding HasArgumentHint}"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ArgumentHint}" Classes="KvValue"
+                                           TextAlignment="Left"
+                                           FontFamily="{StaticResource MonoFontFamily}"
+                                           IsVisible="{Binding HasArgumentHint}"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="{DynamicResource Lang.Prompts.Detail.File}" Classes="KvKey"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding FilePath}" Classes="KvValue"
+                                           TextAlignment="Left"
+                                           FontFamily="{StaticResource MonoFontFamily}"
+                                           FontSize="11.5"
+                                           ToolTip.Tip="{Binding FilePath}"/>
+                            </Grid>
+
+                            <!-- Read-only preview of the file body -->
+                            <TextBlock Text="{DynamicResource Lang.Prompts.Detail.Preview}" Classes="Overline"/>
+                            <Border Classes="Code">
+                                <ScrollViewer MaxHeight="360" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                    <SelectableTextBlock Text="{Binding PreviewText}" TextWrapping="Wrap"/>
+                                </ScrollViewer>
+                            </Border>
+                        </StackPanel>
+                    </Panel>
+                </Border>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

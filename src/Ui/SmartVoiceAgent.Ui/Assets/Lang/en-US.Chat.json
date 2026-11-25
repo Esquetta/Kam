@@ -4,7 +4,7 @@
   "Chat.Group.Recent": "RECENT",
   "Chat.NewTask": "New task",
   "Chat.NewChatTip": "New chat (Ctrl+N)",
-  "Chat.Search.Placeholder": "Search tasks (Ctrl+K)",
+  "Chat.Search.Placeholder": "Search tasks",
   "Chat.Search.Clear": "Clear search",
   "Chat.Search.NoResults": "No tasks match",
   "Chat.Options": "Chat options",

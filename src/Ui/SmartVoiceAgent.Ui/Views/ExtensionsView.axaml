@@ -79,7 +79,7 @@
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel x:Name="Page" Classes="WorkbenchPage" Margin="32,28,32,40" MaxWidth="900" Spacing="20">
+        <StackPanel x:Name="Page" Classes="WorkbenchPage" Margin="18,16,18,24" Spacing="20">
 
             <!-- Header -->
             <Grid ColumnDefinitions="*,Auto">

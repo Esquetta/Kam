@@ -40,6 +40,8 @@
   "Settings.ChatState.NeedsModel": "Aşağıdan bir model seçin.",
   "Settings.ChatState.UsesPlanner": "Burada henüz anahtar yok; sohbet planlayıcı profilindeki {1} üzerinde {0} kullanıyor. Bu modeli kullanmak için anahtar ekleyin.",
   "Settings.Provider.OpenAICompatible": "OpenAI uyumlu bir uç nokta",
+  "Settings.DeepSeekKeyHint": "DeepSeek kendi API anahtarını kullanır.",
+  "Settings.DeepSeekKeyLink": "platform.deepseek.com adresinden anahtar al",
   "Settings.PlannerAdvanced": "Komut modu planlayıcısı (gelişmiş)",
   "Settings.PlannerAdvancedDesc": "Her istek için tek bir yetenek seçen ayrı bir model. Kam bunu yalnızca ajan döngüsü kapalıyken kullanır; sohbet, ses ve görevleri yukarıdaki ajan modeli yürütür.",
   "Settings.Provider": "Sağlayıcı",

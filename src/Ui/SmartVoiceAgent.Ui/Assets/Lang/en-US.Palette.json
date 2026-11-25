@@ -1,0 +1,9 @@
+{
+  "Palette.Placeholder": "Search tasks, pages, commands",
+  "Palette.Empty": "Nothing matches",
+  "Palette.Hint": "↑↓ to move · Enter to open · Esc to close",
+  "Palette.Group.Tasks": "Tasks",
+  "Palette.Group.Pages": "Pages",
+  "Palette.Group.Commands": "Commands",
+  "Palette.Group.Actions": "Actions"
+}

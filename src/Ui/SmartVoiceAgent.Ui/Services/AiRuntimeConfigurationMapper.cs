@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using SmartVoiceAgent.Core.Models.Agents;
 using SmartVoiceAgent.Core.Models.AI;
 
 namespace SmartVoiceAgent.Ui.Services;
@@ -176,6 +177,14 @@ public static class AiRuntimeConfigurationMapper
         AddIfNotBlank(overrides, "WebResearch:SearchApiKey", settings.WebSearchApiKey?.Trim());
         AddIfNotBlank(overrides, "WebResearch:SearchEngineId", settings.WebSearchEngineId?.Trim());
         overrides["CliAgents:CodexEnabled"] = settings.CodexCliEnabled.ToString(CultureInfo.InvariantCulture);
+        // Loop limits override appsettings only once the user changed them on the Loops page.
+        var loopDefaults = new AgentRuntimeOptions();
+        AddIfChanged(overrides, "AgentRuntime:MaxIterations",
+            AgentRuntimeOptions.ClampMaxIterations(settings.AgentMaxIterations), loopDefaults.MaxIterations);
+        AddIfChanged(overrides, "AgentRuntime:MaxToolResultCharacters",
+            AgentRuntimeOptions.ClampMaxToolResultCharacters(settings.AgentMaxToolResultCharacters), loopDefaults.MaxToolResultCharacters);
+        AddIfChanged(overrides, "AgentRuntime:ContextTokenBudget",
+            AgentRuntimeOptions.ClampContextTokenBudget(settings.AgentContextTokenBudget), loopDefaults.ContextTokenBudget);
 
         if (!string.IsNullOrWhiteSpace(settings.SmtpUsername)
             && !string.IsNullOrWhiteSpace(settings.SmtpPassword))
@@ -247,6 +256,18 @@ public static class AiRuntimeConfigurationMapper
         }
 
         return profile.Provider == ModelProviderType.Ollama ? "ollama" : string.Empty;
+    }
+
+    private static void AddIfChanged(
+        IDictionary<string, string?> overrides,
+        string key,
+        int value,
+        int defaultValue)
+    {
+        if (value != defaultValue)
+        {
+            overrides[key] = value.ToString(CultureInfo.InvariantCulture);
+        }
     }
 
     private static void AddIfNotBlank(

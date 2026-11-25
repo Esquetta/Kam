@@ -6,5 +6,6 @@ public enum ModelProviderType
     OpenAICompatible = 1,
     Ollama = 2,
     OpenAI = 3,
-    Anthropic = 4
+    Anthropic = 4,
+    DeepSeek = 5
 }
