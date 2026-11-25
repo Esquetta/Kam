@@ -211,6 +211,32 @@ public sealed class MainWindowAgentRuntimeTests
     }
 
     [Fact]
+    public void BuildTimeline_SavedToolCallsKeepTheirNameRiskAndTarget()
+    {
+        List<ChatMessage> history =
+        [
+            new(ChatRole.User, "run the tests"),
+            new(ChatRole.Assistant, [
+                new FunctionCallContent("a", "shell_run", new Dictionary<string, object?> { ["timeoutMilliseconds"] = 1000, ["command"] = "git status" }),
+                new FunctionCallContent("b", "files_write", new Dictionary<string, object?> { ["filePath"] = @"C:\work\notes.txt", ["content"] = "hi" }),
+                new FunctionCallContent("c", "mcp__github__create_issue", new Dictionary<string, object?> { ["title"] = "Bug" })
+            ]),
+            new(ChatRole.Tool, [
+                new FunctionResultContent("a", "Exit Code: 0"),
+                new FunctionResultContent("b", "Saved"),
+                new FunctionResultContent("c", "Created")
+            ])
+        ];
+
+        var steps = MainWindowViewModel.BuildTimeline(history).Where(m => m.IsToolStep).ToList();
+
+        steps.Select(m => $"{m.ToolDisplayName}|{m.Risk}|{m.ToolTarget}").Should().Equal(
+            "Run Shell Command|Execute|git status",
+            @"Write File|Write|C:\work\notes.txt",
+            "mcp__github__create_issue|External|Bug");
+    }
+
+    [Fact]
     public async Task RunAgentTurnAsync_ContextCompacted_ShowsNoticeInThread()
     {
         var runtime = new ScriptedRuntime();

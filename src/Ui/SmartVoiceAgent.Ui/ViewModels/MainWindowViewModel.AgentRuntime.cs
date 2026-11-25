@@ -2,6 +2,10 @@ using Microsoft.Extensions.AI;
 using ReactiveUI;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Agents;
+using SmartVoiceAgent.Infrastructure.Agent.CliAgents;
+using SmartVoiceAgent.Infrastructure.Agent.Extensions;
+using SmartVoiceAgent.Infrastructure.Agent.Runtime;
+using SmartVoiceAgent.Infrastructure.Skills.BuiltIn;
 using SmartVoiceAgent.Ui.Services;
 using System;
 using System.Collections.Generic;
@@ -613,12 +617,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
                                 break;
                             case FunctionCallContent call:
                                 FlushText(items, text);
+                                var (displayName, risk) = DescribeSavedTool(call.Name);
                                 var step = AgentChatMessageViewModel.ToolStep(
                                     call.CallId,
                                     call.Name,
-                                    call.Name,
+                                    displayName,
                                     SerializeArguments(call.Arguments),
-                                    ToolRisk.Read);
+                                    risk);
                                 steps[call.CallId] = step;
                                 items.Add(step);
                                 break;
@@ -660,6 +665,41 @@ namespace SmartVoiceAgent.Ui.ViewModels
             }
 
             return items;
+        }
+
+        private static readonly Lazy<Dictionary<string, (string DisplayName, ToolRisk Risk)>> BuiltInToolLabels = new(() =>
+        {
+            var labels = new Dictionary<string, (string DisplayName, ToolRisk Risk)>(StringComparer.Ordinal);
+            foreach (var manifest in BuiltInSkillManifestCatalog.CreateAll())
+            {
+                labels.TryAdd(
+                    SkillToolProvider.ToToolName(manifest.Id),
+                    (string.IsNullOrWhiteSpace(manifest.DisplayName) ? manifest.Id : manifest.DisplayName,
+                        SkillToolProvider.ClassifyRisk(manifest)));
+            }
+
+            return labels;
+        });
+
+        /// <summary>
+        /// Returns the name and risk a saved tool call shows. A thread file keeps only the tool's id, so built-in
+        /// tools are looked up again; a tool Kam cannot look up (an MCP server's, a plugin's) keeps its id and is
+        /// shown as acting outside Kam, because its real risk is not known any more.
+        /// </summary>
+        /// <param name="toolName">The model-facing tool name, such as <c>shell_run</c>.</param>
+        public static (string DisplayName, ToolRisk Risk) DescribeSavedTool(string toolName)
+        {
+            if (BuiltInToolLabels.Value.TryGetValue(toolName, out var label))
+            {
+                return label;
+            }
+
+            return toolName switch
+            {
+                CliAgentToolProvider.ToolName => ("Delegate to Codex CLI", ToolRisk.Delegate),
+                AgentSkillToolProvider.ToolName => ("Load skill", ToolRisk.Read),
+                _ => (toolName, ToolRisk.External)
+            };
         }
 
         /// <summary>
