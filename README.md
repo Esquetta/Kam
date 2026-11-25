@@ -118,7 +118,7 @@ Kam runs tools with your user's permissions, so treat it accordingly.
 - Shell commands are checked by `ShellCommandGuard`; file paths, application names and URLs are validated before use (`SecurityUtilities`).
 - API keys are kept in the user secret store (DPAPI-encrypted), and are masked in logs.
 - Plugins, MCP servers and Agent Skills you install run with the same access as you do. Install only ones you trust.
-- A task handed to the Codex CLI runs under Codex's own sandbox (read-only, or workspace-write when edits are allowed) and its own rules. Kam shows what Codex changed afterwards but cannot approve its steps one by one.
+- A task handed to the Codex CLI runs under Codex's own sandbox (read-only, or workspace-write when edits are allowed) and its own rules. It skips your `~/.codex/config.toml`, so the MCP servers and plugins you set up for Codex, which that sandbox does not cover, are not loaded; sign-in still comes from Codex. Kam shows what Codex changed afterwards but cannot approve its steps one by one.
 
 Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
 
