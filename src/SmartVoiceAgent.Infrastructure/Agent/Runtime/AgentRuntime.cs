@@ -13,7 +13,8 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Runtime;
 
 /// <summary>
 /// Tool-calling agent loop: the model calls tools natively, each call passes the approval gate,
-/// results go back to the model, and the loop repeats until the model answers.
+/// results go back to the model, and the loop repeats until the model answers. A model request that
+/// fails with a temporary error is sent again a few times, and read-only calls from one response run together.
 /// </summary>
 public sealed class AgentRuntime : IAgentRuntime
 {
@@ -24,6 +25,8 @@ public sealed class AgentRuntime : IAgentRuntime
         "Blocked: the user's permission rules deny this call. Do not retry it; continue without it or tell the user.";
 
     private const string NotRunResult = "Not run: the turn was stopped before this call finished.";
+
+    private static readonly TimeSpan MaxModelRetryDelay = TimeSpan.FromSeconds(30);
 
     private readonly Func<string?, IChatClient> _chatClientFactory;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -198,18 +201,8 @@ public sealed class AgentRuntime : IAgentRuntime
                 var modelMessages = await PrepareModelMessagesAsync(
                     sessionId, history, systemPrompt, toolTokens, chatClient, usage, events, cancellationToken);
 
-                var updates = new List<ChatResponseUpdate>();
-                await foreach (var update in chatClient.GetStreamingResponseAsync(modelMessages, chatOptions, cancellationToken))
-                {
-                    updates.Add(update);
-                    var text = update.Text;
-                    if (!string.IsNullOrEmpty(text))
-                    {
-                        await events.WriteAsync(new AgentTextDelta(sessionId, text), cancellationToken);
-                    }
-                }
-
-                var response = updates.ToChatResponse();
+                var response = await GetModelResponseAsync(
+                    sessionId, chatClient, modelMessages, chatOptions, events, cancellationToken);
                 usage.Add(response.Usage);
                 history.AddRange(response.Messages);
 
@@ -227,14 +220,10 @@ public sealed class AgentRuntime : IAgentRuntime
                     return;
                 }
 
-                var results = new List<AIContent>(calls.Count);
-                foreach (var call in calls)
-                {
-                    toolCallCount++;
-                    results.Add(await RunToolCallAsync(sessionId, call, toolsByName, events, cancellationToken));
-                }
+                toolCallCount += calls.Count;
+                var results = await RunToolCallsAsync(sessionId, calls, toolsByName, events, cancellationToken);
 
-                history.Add(new ChatMessage(ChatRole.Tool, results));
+                history.Add(new ChatMessage(ChatRole.Tool, [.. results]));
                 await _sessionStore.SaveAsync(sessionId, history, CancellationToken.None);
             }
 
@@ -268,6 +257,86 @@ public sealed class AgentRuntime : IAgentRuntime
 
             events.TryComplete();
         }
+    }
+
+    /// <summary>
+    /// Streams one model response. A temporary failure (timeout, 429, 5xx, dropped stream) sends the same
+    /// request again after a growing wait, at most <see cref="AgentRuntimeOptions.MaxModelRetries"/> times;
+    /// any other failure ends the turn at once. Nothing from a failed attempt reaches the thread, and a
+    /// Stop during the wait cancels the retry.
+    /// </summary>
+    private async Task<ChatResponse> GetModelResponseAsync(
+        string sessionId,
+        IChatClient chatClient,
+        List<ChatMessage> modelMessages,
+        ChatOptions chatOptions,
+        ChannelWriter<AgentEvent> events,
+        CancellationToken cancellationToken)
+    {
+        var maxRetries = Math.Max(0, _options.MaxModelRetries);
+
+        for (var retry = 0; ; retry++)
+        {
+            var streamedText = false;
+            try
+            {
+                var updates = new List<ChatResponseUpdate>();
+                await foreach (var update in chatClient.GetStreamingResponseAsync(modelMessages, chatOptions, cancellationToken))
+                {
+                    updates.Add(update);
+                    var text = update.Text;
+                    if (!string.IsNullOrEmpty(text))
+                    {
+                        streamedText = true;
+                        await events.WriteAsync(new AgentTextDelta(sessionId, text), cancellationToken);
+                    }
+                }
+
+                return updates.ToChatResponse();
+            }
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                var error = ModelErrorClassifier.Classify(ex);
+                if (!error.IsTransient)
+                {
+                    throw new ModelRequestException(error.UserMessage, ex);
+                }
+
+                if (retry >= maxRetries)
+                {
+                    throw new ModelRequestException(
+                        maxRetries == 0
+                            ? $"The model request failed: {error.Reason}. Try again in a moment."
+                            : $"The model did not answer after {maxRetries + 1} attempts. Last error: {error.Reason}. Check your connection or try again in a moment.",
+                        ex);
+                }
+
+                var delay = ModelRetryDelay(retry + 1, _options.ModelRetryBaseDelayMilliseconds);
+                _logger.LogWarning(
+                    ex,
+                    "Model request failed in session {SessionId} ({Reason}); retry {Retry} of {MaxRetries} in {Delay} ms",
+                    sessionId,
+                    error.Reason,
+                    retry + 1,
+                    maxRetries,
+                    delay.TotalMilliseconds);
+                await events.WriteAsync(
+                    new AgentModelRetryScheduled(sessionId, retry + 1, maxRetries, delay, error.Reason, streamedText),
+                    cancellationToken);
+                await Task.Delay(delay, cancellationToken);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Returns the wait before a retry: the base delay, doubled for each retry after the first, at most 30 seconds.
+    /// </summary>
+    /// <param name="retry">The retry about to be made, counted from 1.</param>
+    /// <param name="baseDelayMilliseconds">The wait before the first retry.</param>
+    public static TimeSpan ModelRetryDelay(int retry, int baseDelayMilliseconds)
+    {
+        var milliseconds = Math.Max(0, baseDelayMilliseconds) * Math.Pow(2, Math.Max(0, retry - 1));
+        return TimeSpan.FromMilliseconds(Math.Min(milliseconds, MaxModelRetryDelay.TotalMilliseconds));
     }
 
     /// <summary>
@@ -382,7 +451,89 @@ public sealed class AgentRuntime : IAgentRuntime
     private static bool IsCompactCommand(string message) =>
         message.Trim().Equals("/compact", StringComparison.OrdinalIgnoreCase);
 
-    private async Task<AIContent> RunToolCallAsync(
+    /// <summary>
+    /// Runs the tool calls of one model response and returns their results in the order the model asked.
+    /// The permission gate handles one call at a time, in that order, so approvals never overlap. Calls that
+    /// only read run together; a call that changes something waits for the reads before it and runs alone.
+    /// </summary>
+    private async Task<AIContent[]> RunToolCallsAsync(
+        string sessionId,
+        IReadOnlyList<FunctionCallContent> calls,
+        IReadOnlyDictionary<string, AgentToolDescriptor> toolsByName,
+        ChannelWriter<AgentEvent> events,
+        CancellationToken cancellationToken)
+    {
+        var results = new AIContent[calls.Count];
+        var maxParallel = Math.Max(1, _options.MaxParallelToolCalls);
+        var reads = new List<Task>();
+        using var batch = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        using var slots = new SemaphoreSlim(maxParallel, maxParallel);
+
+        try
+        {
+            for (var index = 0; index < calls.Count; index++)
+            {
+                var call = calls[index];
+                var (tool, refusal) = await GateToolCallAsync(sessionId, call, toolsByName, events, batch.Token);
+                if (tool is null)
+                {
+                    results[index] = refusal!;
+                    continue;
+                }
+
+                if (maxParallel > 1 && CanRunTogether(tool))
+                {
+                    var slot = index;
+                    reads.Add(Task.Run(
+                        async () =>
+                        {
+                            await slots.WaitAsync(batch.Token);
+                            try
+                            {
+                                results[slot] = await InvokeToolAsync(sessionId, call, tool, events, batch.Token);
+                            }
+                            finally
+                            {
+                                slots.Release();
+                            }
+                        },
+                        CancellationToken.None));
+                    continue;
+                }
+
+                await Task.WhenAll(reads);
+                reads.Clear();
+                results[index] = await InvokeToolAsync(sessionId, call, tool, events, batch.Token);
+            }
+
+            await Task.WhenAll(reads);
+            return results;
+        }
+        catch
+        {
+            // The turn is ending: stop the reads still running and wait for them, so no tool outlives it.
+            await batch.CancelAsync();
+            await Task.WhenAll(reads).ContinueWith(
+                _ => { },
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Read-only tools (local reads and network reads without side effects) may run at the same time.
+    /// Everything that writes, executes, acts outside the machine or delegates runs alone.
+    /// </summary>
+    private static bool CanRunTogether(AgentToolDescriptor tool) =>
+        tool.Risk is ToolRisk.Read or ToolRisk.Network;
+
+    /// <summary>
+    /// Announces a call and passes it through the permission policy, asking the user when needed.
+    /// Returns the tool to run, or the result to give the model when the call must not run.
+    /// </summary>
+    private async Task<(AgentToolDescriptor? Tool, AIContent? Refusal)> GateToolCallAsync(
         string sessionId,
         FunctionCallContent call,
         IReadOnlyDictionary<string, AgentToolDescriptor> toolsByName,
@@ -395,7 +546,7 @@ public sealed class AgentRuntime : IAgentRuntime
             await events.WriteAsync(
                 new AgentToolCallCompleted(sessionId, call.CallId, call.Name, false, unknown),
                 cancellationToken);
-            return new FunctionResultContent(call.CallId, unknown);
+            return (null, new FunctionResultContent(call.CallId, unknown));
         }
 
         if (tool.PrepareArguments is not null)
@@ -414,7 +565,7 @@ public sealed class AgentRuntime : IAgentRuntime
             await events.WriteAsync(
                 new AgentToolCallCompleted(sessionId, call.CallId, tool.Name, false, "Blocked by a deny rule"),
                 cancellationToken);
-            return new FunctionResultContent(call.CallId, BlockedResult);
+            return (null, new FunctionResultContent(call.CallId, BlockedResult));
         }
 
         if (decision == ToolPermissionDecision.Ask)
@@ -434,9 +585,19 @@ public sealed class AgentRuntime : IAgentRuntime
             await events.WriteAsync(
                 new AgentToolCallCompleted(sessionId, call.CallId, tool.Name, false, "Declined"),
                 cancellationToken);
-            return new FunctionResultContent(call.CallId, DeclinedResult);
+            return (null, new FunctionResultContent(call.CallId, DeclinedResult));
         }
 
+        return (tool, null);
+    }
+
+    private async Task<AIContent> InvokeToolAsync(
+        string sessionId,
+        FunctionCallContent call,
+        AgentToolDescriptor tool,
+        ChannelWriter<AgentEvent> events,
+        CancellationToken cancellationToken)
+    {
         string resultText;
         bool success;
         try
@@ -644,6 +805,10 @@ public sealed class AgentRuntime : IAgentRuntime
     }
 
     private readonly record struct ApprovalAnswer(bool Approved, bool AlwaysAllow);
+
+    /// <summary>A model request failed for good; the message is written for the user.</summary>
+    private sealed class ModelRequestException(string message, Exception innerException)
+        : Exception(message, innerException);
 
     private sealed class TurnUsage
     {

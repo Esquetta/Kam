@@ -51,6 +51,21 @@ public sealed record AgentContextCompacted(
     int TokensAfter) : AgentEvent(SessionId);
 
 /// <summary>
+/// A model request failed with a temporary error and is sent again after <paramref name="Delay"/>.
+/// <paramref name="Attempt"/> counts retries of that request from 1 to <paramref name="MaxRetries"/>.
+/// When <paramref name="PartialOutputDiscarded"/> is true, the text already streamed for this step
+/// is dropped: the request starts over and its text arrives again.
+/// </summary>
+/// <param name="Reason">Short English cause, such as "rate limited (HTTP 429)".</param>
+public sealed record AgentModelRetryScheduled(
+    string SessionId,
+    int Attempt,
+    int MaxRetries,
+    TimeSpan Delay,
+    string Reason,
+    bool PartialOutputDiscarded) : AgentEvent(SessionId);
+
+/// <summary>
 /// The turn ended with a final answer. <paramref name="ContextTokens"/> is the input size of the
 /// turn's last model request, as the provider reported it: how full the context was at the end.
 /// 0 when the provider reported no usage.
