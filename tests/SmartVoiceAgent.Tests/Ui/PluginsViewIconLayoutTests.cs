@@ -173,6 +173,7 @@ public sealed class PluginsViewIconLayoutTests
 
     [Theory]
     [InlineData("MainWindow.axaml")]
+    [InlineData("TasksView.axaml")]
     [InlineData("PluginsView.axaml")]
     [InlineData("ExtensionsView.axaml")]
     [InlineData("SettingsView.axaml")]

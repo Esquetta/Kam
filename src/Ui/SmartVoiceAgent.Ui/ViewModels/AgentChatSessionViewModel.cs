@@ -3,6 +3,9 @@ using SmartVoiceAgent.Ui.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Linq;
 
 namespace SmartVoiceAgent.Ui.ViewModels
 {
@@ -24,6 +27,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private string _relativeTimeText;
         private bool _isSelected;
         private bool _isRunning;
+        private bool _hasPendingApproval;
         private bool _isRenaming;
         private bool _isConfirmingDelete;
         private bool _isVisibleInList = true;
@@ -59,6 +63,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _title = title;
             _summary = summary;
             _relativeTimeText = relativeTimeText;
+            Messages.CollectionChanged += OnMessagesChanged;
         }
 
         /// <summary>
@@ -82,8 +87,25 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 this.RaiseAndSetIfChanged(ref _isRunning, value);
                 this.RaisePropertyChanged(nameof(StatusText));
                 this.RaisePropertyChanged(nameof(CanDelete));
+                this.RaisePropertyChanged(nameof(IsWorking));
+                this.RaisePropertyChanged(nameof(HasStatus));
             }
         }
+
+        /// <summary>
+        /// Gets whether a tool call in this thread waits for the user to approve or deny it.
+        /// </summary>
+        public bool HasPendingApproval => _hasPendingApproval;
+
+        /// <summary>
+        /// Gets whether a turn is running and nothing waits for the user.
+        /// </summary>
+        public bool IsWorking => IsRunning && !HasPendingApproval;
+
+        /// <summary>
+        /// Gets whether the task list shows a state for this thread: working or waiting for approval.
+        /// </summary>
+        public bool HasStatus => IsRunning || HasPendingApproval;
 
         /// <summary>
         /// Gets or sets the thread title. Setting it replaces a placeholder such as "New chat" for good.
@@ -234,11 +256,57 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// <summary>
         /// Gets the thread state shown in the sidebar: working, active or ready.
         /// </summary>
-        public string StatusText => IsRunning
+        public string StatusText => HasPendingApproval
+            ? Loc.Get("Workbench.State.NeedsApproval")
+            : IsRunning
             ? Loc.Get("Workbench.State.Working")
             : IsSelected
                 ? Loc.Get("Workbench.State.Active")
                 : Loc.Get("Workbench.State.Ready");
+
+        private void OnMessagesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems is not null)
+            {
+                foreach (AgentChatMessageViewModel message in e.OldItems)
+                {
+                    message.PropertyChanged -= OnMessagePropertyChanged;
+                }
+            }
+
+            if (e.NewItems is not null)
+            {
+                foreach (AgentChatMessageViewModel message in e.NewItems)
+                {
+                    message.PropertyChanged += OnMessagePropertyChanged;
+                }
+            }
+
+            UpdatePendingApproval();
+        }
+
+        private void OnMessagePropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(AgentChatMessageViewModel.IsAwaitingApproval))
+            {
+                UpdatePendingApproval();
+            }
+        }
+
+        private void UpdatePendingApproval()
+        {
+            var pending = Messages.Any(message => message.IsAwaitingApproval);
+            if (pending == _hasPendingApproval)
+            {
+                return;
+            }
+
+            _hasPendingApproval = pending;
+            this.RaisePropertyChanged(nameof(HasPendingApproval));
+            this.RaisePropertyChanged(nameof(IsWorking));
+            this.RaisePropertyChanged(nameof(HasStatus));
+            this.RaisePropertyChanged(nameof(StatusText));
+        }
 
         /// <summary>
         /// Gets the number of items in the thread, such as "4 messages".
@@ -376,6 +444,12 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// </summary>
         public void LoadHistory(IEnumerable<AgentChatMessageViewModel> messages)
         {
+            // Clear raises Reset without the old items, so detach them here.
+            foreach (var message in Messages)
+            {
+                message.PropertyChanged -= OnMessagePropertyChanged;
+            }
+
             Messages.Clear();
             foreach (var message in messages)
             {

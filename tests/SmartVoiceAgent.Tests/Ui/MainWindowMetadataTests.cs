@@ -46,7 +46,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_UsesModernWorkbenchShellChrome()
     {
-        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
+        var mainWindowText = ReadShellText();
 
         mainWindowText.Should().Contain("Agent workspace");
         mainWindowText.Should().Contain("Border.Sidebar");
@@ -83,7 +83,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_ComposerExposesFileAttachmentChips()
     {
-        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
+        var mainWindowText = ReadShellText();
 
         mainWindowText.Should().Contain("Attach files");
         mainWindowText.Should().Contain("OnAttachFilesClick");
@@ -102,7 +102,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_ExposesMultiSessionAgentWorkbench()
     {
-        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
+        var mainWindowText = ReadShellText();
 
         mainWindowText.Should().Contain("AgentChatSessions");
         mainWindowText.Should().Contain("SelectedAgentChatSession.Messages");
@@ -126,7 +126,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_ThreadListSupportsSearchRenameAndDelete()
     {
-        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
+        var mainWindowText = ReadShellText();
 
         mainWindowText.Should().Contain("x:Name=\"ChatSearchInput\"");
         mainWindowText.Should().Contain("PlaceholderText=\"Search chats (Ctrl+K)\"");
@@ -149,7 +149,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_ChatRendersMarkdownWithCopyButtonsAndAModelPicker()
     {
-        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
+        var mainWindowText = ReadShellText();
 
         mainWindowText.Should().Contain("xmlns:controls=\"using:SmartVoiceAgent.Ui.Controls\"");
         mainWindowText.Should().Contain("<controls:MarkdownView Markdown=\"{Binding Content}\"/>");
@@ -165,15 +165,15 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_ComposerSendsOnEnterAndAddsLinesOnShiftEnter()
     {
-        var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root;
-        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
+        var mainWindow = LoadShell();
+        var mainWindowText = ReadShellText();
 
         var prompt = mainWindow!
             .Descendants()
             .Single(element => AttributeValue(element, "Name") == "WorkbenchPromptInput");
 
         AttributeValue(prompt, "AcceptsReturn").Should().Be("True");
-        AttributeValue(prompt, "KeyDown").Should().BeNull("MainWindow handles prompt keys before the TextBox adds a line");
+        AttributeValue(prompt, "KeyDown").Should().BeNull("TasksView handles prompt keys before the TextBox adds a line");
         mainWindowText.Should().Contain("Enter to send  ·  Shift+Enter for a new line  ·  Type / for commands");
         mainWindowText.Should().Contain("ToolTip.Tip=\"Stop (Esc)\"");
     }
@@ -193,7 +193,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_ChatRendersAgentToolStepsAndApprovalCards()
     {
-        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
+        var mainWindowText = ReadShellText();
 
         mainWindowText.Should().Contain("IsVisible=\"{Binding IsToolStep}\"");
         mainWindowText.Should().Contain("Classes.Approval=\"{Binding IsAwaitingApproval}\"");
@@ -258,7 +258,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_ExposesSlashCommandPaletteBindings()
     {
-        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
+        var mainWindowText = ReadShellText();
 
         mainWindowText.Should().Contain("IsSlashCommandPaletteVisible");
         mainWindowText.Should().Contain("SlashCommandSuggestions");
@@ -269,8 +269,8 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_SlashCommandPaletteUsesCalmSuggestionChrome()
     {
-        var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root;
-        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
+        var mainWindow = LoadShell();
+        var mainWindowText = ReadShellText();
 
         var templates = mainWindow!
             .Descendants()
@@ -297,7 +297,7 @@ public sealed class MainWindowMetadataTests
 
             AttributeValue(suggestionButton, "Command")
                 .Should()
-                .Be("{Binding $parent[Window].DataContext.SelectSlashCommandCommand}");
+                .Be("{Binding $parent[local:TasksView].DataContext.SelectSlashCommandCommand}");
             AttributeValue(suggestionChrome, "Background")
                 .Should()
                 .Contain("ConverterParameter='CardBgHoverBrush|TransparentBrush'");
@@ -317,7 +317,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_SlashCommandPaletteAvoidsAlertColorsAndShadowEffects()
     {
-        var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root;
+        var mainWindow = LoadShell();
 
         var templates = mainWindow!
             .Descendants()
@@ -431,7 +431,7 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_ComposerTogglesReadingRepliesAloud()
     {
-        var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root!;
+        var mainWindow = LoadShell()!;
         var button = mainWindow.Descendants().Single(element => AttributeValue(element, "Name") == "SpokenRepliesButton");
 
         AttributeValue(button, "Command").Should().Be("{Binding ToggleSpokenRepliesCommand}");
@@ -449,8 +449,8 @@ public sealed class MainWindowMetadataTests
     [Fact]
     public void MainWindow_MicButtonsTalkAndTheComposerShowsVoiceStatus()
     {
-        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
-        var mainWindow = XDocument.Parse(mainWindowText).Root!;
+        var mainWindowText = ReadShellText();
+        var mainWindow = LoadShell()!;
         var talkButtons = mainWindow
             .Descendants()
             .Where(element => element.Name.LocalName == "Button"
@@ -500,6 +500,32 @@ public sealed class MainWindowMetadataTests
             .Attributes()
             .FirstOrDefault(attribute => attribute.Name.LocalName == attributeName)
             ?.Value;
+    }
+
+    /// <summary>
+    /// The window and the Tasks view it hosts, as one text: the chat parts moved from MainWindow into TasksView.
+    /// </summary>
+    private static string ReadShellText()
+    {
+        return LocalizedXaml.ReadAllText(FindMainWindowXamlPath())
+            + Environment.NewLine
+            + LocalizedXaml.ReadAllText(FindTasksViewXamlPath());
+    }
+
+    /// <summary>
+    /// The window and the Tasks view under one element, so Descendants() searches both.
+    /// </summary>
+    private static XElement LoadShell()
+    {
+        return new XElement(
+            "Shell",
+            XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root,
+            XDocument.Parse(LocalizedXaml.ReadAllText(FindTasksViewXamlPath())).Root);
+    }
+
+    private static string FindTasksViewXamlPath()
+    {
+        return FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Views", "TasksView.axaml");
     }
 
     private static string FindMainWindowXamlPath()

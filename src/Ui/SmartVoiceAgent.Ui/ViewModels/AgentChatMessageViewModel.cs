@@ -67,6 +67,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private string? _approvalRequestId;
         private string? _alwaysAllowRule;
         private bool _isCopied;
+        private bool _isExpanded;
 
         /// <summary>
         /// Creates a message.
@@ -192,8 +193,28 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 this.RaisePropertyChanged(nameof(IsToolRunning));
                 this.RaisePropertyChanged(nameof(IsToolSucceeded));
                 this.RaisePropertyChanged(nameof(IsToolFailed));
+                this.RaisePropertyChanged(nameof(ShowsToolDetails));
             }
         }
+
+        /// <summary>
+        /// Gets or sets whether the user opened the step to see its arguments and result.
+        /// </summary>
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _isExpanded, value);
+                this.RaisePropertyChanged(nameof(ShowsToolDetails));
+            }
+        }
+
+        /// <summary>
+        /// Gets whether the step shows its arguments and result: when opened, while it waits for
+        /// approval, and after it failed or was declined. A finished step is one line otherwise.
+        /// </summary>
+        public bool ShowsToolDetails => IsExpanded || IsAwaitingApproval || IsToolFailed;
 
         /// <summary>Gets the step's state as its pill shows it, such as "Done".</summary>
         public string ToolStatusText => ToolState switch
