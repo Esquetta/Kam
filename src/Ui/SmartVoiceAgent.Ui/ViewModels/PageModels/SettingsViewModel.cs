@@ -1062,7 +1062,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             if (provider == ModelProviderType.DeepSeek)
             {
                 return string.IsNullOrWhiteSpace(modelId) || modelId.Contains('/', StringComparison.Ordinal)
-                    ? "deepseek-chat"
+                    ? "deepseek-v4-flash"
                     : modelId;
             }
 
