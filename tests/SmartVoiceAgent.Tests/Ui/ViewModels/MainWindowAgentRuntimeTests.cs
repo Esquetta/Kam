@@ -211,6 +211,32 @@ public sealed class MainWindowAgentRuntimeTests
     }
 
     [Fact]
+    public void BuildTimeline_SavedToolCallsKeepTheirNameRiskAndTarget()
+    {
+        List<ChatMessage> history =
+        [
+            new(ChatRole.User, "run the tests"),
+            new(ChatRole.Assistant, [
+                new FunctionCallContent("a", "shell_run", new Dictionary<string, object?> { ["timeoutMilliseconds"] = 1000, ["command"] = "git status" }),
+                new FunctionCallContent("b", "files_write", new Dictionary<string, object?> { ["filePath"] = @"C:\work\notes.txt", ["content"] = "hi" }),
+                new FunctionCallContent("c", "mcp__github__create_issue", new Dictionary<string, object?> { ["title"] = "Bug" })
+            ]),
+            new(ChatRole.Tool, [
+                new FunctionResultContent("a", "Exit Code: 0"),
+                new FunctionResultContent("b", "Saved"),
+                new FunctionResultContent("c", "Created")
+            ])
+        ];
+
+        var steps = MainWindowViewModel.BuildTimeline(history).Where(m => m.IsToolStep).ToList();
+
+        steps.Select(m => $"{m.ToolDisplayName}|{m.Risk}|{m.ToolTarget}").Should().Equal(
+            "Run Shell Command|Execute|git status",
+            @"Write File|Write|C:\work\notes.txt",
+            "mcp__github__create_issue|External|Bug");
+    }
+
+    [Fact]
     public async Task RunAgentTurnAsync_ContextCompacted_ShowsNoticeInThread()
     {
         var runtime = new ScriptedRuntime();
@@ -228,6 +254,25 @@ public sealed class MainWindowAgentRuntimeTests
         session.Messages.Select(m => $"{m.Role}:{m.Content}").Should().Equal(
             "System:Earlier messages were summarized to save context.",
             "Kam:Continuing.");
+    }
+
+    [Fact]
+    public async Task RunAgentTurnAsync_ModelRetryAfterPartialText_ShowsTheAnswerOnce()
+    {
+        var runtime = new ScriptedRuntime();
+        var viewModel = CreateViewModel(runtime);
+        var session = viewModel.SelectedAgentChatSession!;
+        var sid = session.SessionId;
+        runtime.Script(
+            new AgentTextDelta(sid, "The ans"),
+            new AgentModelRetryScheduled(sid, 1, 3, TimeSpan.FromSeconds(2), "connection lost", PartialOutputDiscarded: true),
+            new AgentTextDelta(sid, "The answer."),
+            new AgentTurnCompleted(sid, "The answer.", 0, 0, 0));
+        runtime.Finish();
+
+        await viewModel.RunAgentTurnAsync(session, "question");
+
+        session.Messages.Select(m => $"{m.Role}:{m.Content}").Should().Equal("Kam:The answer.");
     }
 
     [Fact]

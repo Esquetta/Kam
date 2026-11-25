@@ -406,7 +406,7 @@ See `RESPONSIVE_DESIGN.md` for full details.
 
 ---
 
-*Last Updated: 2026-11-24*
+*Last Updated: 2026-11-25*
 
 ## Current Project Status
 
@@ -422,6 +422,8 @@ See `RESPONSIVE_DESIGN.md` for full details.
 - **Chat runs a tool-calling agent loop**: `IAgentRuntime` (`Infrastructure/Agent/Runtime/AgentRuntime.cs`) streams `AgentEvent`s; the model calls built-in skills natively through `SkillToolProvider`, and every call passes `IToolPermissionService` (Ask / Auto-edit / Full auto plus "always allow" rules)
 - **Threads persist** as `%AppData%/Kam/sessions/<id>.json` via `IAgentSessionStore`
 - **Context**: `AgentContextWindow` keeps requests under `AgentRuntime:ContextTokenBudget` by shortening old tool results, then inserting a summary message into the thread (`/compact` forces it); the model sees only the newest summary and what follows
+- **Model errors**: `AgentRuntime.GetModelResponseAsync` retries a request that fails with a temporary error (`ModelErrorClassifier`: timeout, 408, 425, 429, 5xx, lost connection or stream) up to `AgentRuntime:MaxModelRetries` times (3), waiting 2, 4, 8 s (`ModelRetryBaseDelayMilliseconds`, capped at 30 s), and emits `AgentModelRetryScheduled`. Auth, quota, unknown model, context too long and other 4xx fail at once with a message for the user. The view model drops partial text when `PartialOutputDiscarded` is set
+- **Parallel tool calls**: `RunToolCallsAsync` gates the calls of one response one at a time in the model's order; Read and Network calls then run together (at most `AgentRuntime:MaxParallelToolCalls`, 8), every other risk waits for the reads before it and runs alone, and results keep the model's order. A new tool that must not run beside others needs a risk other than Read or Network
 - **Shell**: `ShellCommandGuard` matches destructive commands by command position, not substring; `shell.run` timeout is up to 10 minutes
 - **Fallback**: `AgentRuntime:Enabled=false` keeps the legacy single-skill planner for chat and voice
 - **Permission rules**: `shell_run(git status:*)`, `files_write(*/docs/*)`, `mcp__github__*`; deny rules win, and allow rules never match chained shell commands (`ToolPermissionRule`)
@@ -482,7 +484,7 @@ See `RESPONSIVE_DESIGN.md` for full details.
 ### Test Status
 ```
 Build: ✅ Success (CI runs on windows-2025)
-Tests: 1503 total; on Linux 13 fail because they assume Windows paths or tessdata
+Tests: 1833 total; on Linux 13 fail because they assume Windows paths or tessdata
 Run locally on Linux: DOTNET_ROLL_FORWARD=Major dotnet test tests/SmartVoiceAgent.Tests -p:EnableWindowsTargeting=true
 ```
 

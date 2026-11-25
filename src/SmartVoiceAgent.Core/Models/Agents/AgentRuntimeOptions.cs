@@ -26,6 +26,24 @@ public sealed class AgentRuntimeOptions
     /// </summary>
     public int ContextTokenBudget { get; set; } = 64000;
 
+    /// <summary>
+    /// Gets or sets how many times one model request is sent again after a temporary error
+    /// (timeout, 429, 5xx, dropped stream). 0 turns retries off.
+    /// </summary>
+    public int MaxModelRetries { get; set; } = 3;
+
+    /// <summary>
+    /// Gets or sets the wait before the first retry, in milliseconds. Each further retry waits twice as
+    /// long, up to 30 seconds.
+    /// </summary>
+    public int ModelRetryBaseDelayMilliseconds { get; set; } = 2000;
+
+    /// <summary>
+    /// Gets or sets how many read-only tool calls from one model response may run at the same time.
+    /// 1 runs every call one after another.
+    /// </summary>
+    public int MaxParallelToolCalls { get; set; } = 8;
+
     /// <summary>Clamps a step limit to 1-200.</summary>
     /// <param name="value">The requested limit.</param>
     public static int ClampMaxIterations(int value) => Math.Clamp(value, 1, 200);

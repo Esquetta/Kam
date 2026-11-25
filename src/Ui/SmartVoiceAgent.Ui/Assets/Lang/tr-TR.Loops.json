@@ -17,8 +17,6 @@
   "Loops.Coming.Badge": "planlandı",
   "Loops.Coming.Budgets.Title": "Görev başına token ve maliyet bütçesi",
   "Loops.Coming.Budgets.Body": "Bir görev belirlenen token ya da para miktarını harcadığında durur.",
-  "Loops.Coming.Retries.Title": "Geri çekilmeli yeniden deneme",
-  "Loops.Coming.Retries.Body": "Başarısız bir model çağrısını, her seferinde daha uzun bekleyerek birkaç kez yeniden dener.",
   "Loops.Coming.Plan.Title": "Önce plan",
   "Loops.Coming.Plan.Body": "İlk araç çağrısından önce bir görev listesi yazar.",
   "Loops.Coming.Verify.Title": "Doğrulama adımı",

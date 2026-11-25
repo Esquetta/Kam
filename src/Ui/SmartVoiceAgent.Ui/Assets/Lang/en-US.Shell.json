@@ -19,7 +19,7 @@
   "Shell.Ladder.Agents": "Agents",
   "Shell.Ladder.AgentsTip": "Partial: Kam runs one-shot role agents for a task. Saved agents (instructions, model, tools, permission mode) are planned.",
   "Shell.Ladder.Loops": "Loops",
-  "Shell.Ladder.LoopsTip": "Partial: set the step limit and context budget of the tool loop. Budgets, retries, plan first and a verify step are planned.",
+  "Shell.Ladder.LoopsTip": "Partial: set the step limit and context budget of the tool loop. Model errors are retried. Budgets, plan first and a verify step are planned.",
   "Shell.Ladder.Graphs": "Graphs",
   "Shell.Ladder.GraphsTip": "Planned: split work across agents, run read-only ones in parallel and stop for your approval.",
   "Shell.Ladder.Builder": "Agent Builder",

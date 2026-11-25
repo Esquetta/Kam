@@ -116,15 +116,6 @@
                         <Border Classes="PaneRow">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                 <StackPanel Spacing="3">
-                                    <TextBlock Text="{DynamicResource Lang.Loops.Coming.Retries.Title}" FontSize="13" FontWeight="Medium"/>
-                                    <TextBlock Text="{DynamicResource Lang.Loops.Coming.Retries.Body}" Classes="Caption"/>
-                                </StackPanel>
-                                <Border Grid.Column="1" Classes="Pill" VerticalAlignment="Top"><TextBlock Text="{DynamicResource Lang.Loops.Coming.Badge}"/></Border>
-                            </Grid>
-                        </Border>
-                        <Border Classes="PaneRow">
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                <StackPanel Spacing="3">
                                     <TextBlock Text="{DynamicResource Lang.Loops.Coming.Plan.Title}" FontSize="13" FontWeight="Medium"/>
                                     <TextBlock Text="{DynamicResource Lang.Loops.Coming.Plan.Body}" Classes="Caption"/>
                                 </StackPanel>
