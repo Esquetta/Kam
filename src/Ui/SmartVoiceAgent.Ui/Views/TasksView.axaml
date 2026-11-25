@@ -362,7 +362,7 @@
 					<Button Grid.Column="4"
 							Classes="SecondaryAction Sm"
 							VerticalAlignment="Center"
-							IsVisible="{Binding !IsActivityPanelOpen}"
+							IsVisible="{Binding !IsActivityPanelShown}"
 							AutomationProperties.Name="{DynamicResource Lang.Activity.Show}"
 							ToolTip.Tip="{DynamicResource Lang.Activity.Show}"
 							Command="{Binding ToggleActivityPanelCommand}">

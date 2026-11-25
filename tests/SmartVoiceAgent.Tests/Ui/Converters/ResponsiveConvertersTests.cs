@@ -74,6 +74,24 @@ public class ResponsiveConvertersTests
         viewModel.IsActivityPanelShown.Should().BeTrue();
     }
 
+    [Fact]
+    public void ActivityPanel_OpensOnNarrowWindowsWhenAsked()
+    {
+        SetWindowWidth(1100);
+        var viewModel = new SmartVoiceAgent.Ui.ViewModels.MainWindowViewModel();
+        viewModel.IsActivityPanelShown.Should().BeFalse();
+
+        viewModel.ToggleActivityPanelCommand.Execute(null);
+
+        viewModel.IsActivityPanelShown.Should().BeTrue();
+        viewModel.ActivityPanelWidth.Value.Should().Be(290);
+
+        viewModel.ToggleActivityPanelCommand.Execute(null);
+
+        viewModel.IsActivityPanelShown.Should().BeFalse();
+        viewModel.ActivityPanelWidth.Value.Should().Be(0);
+    }
+
     [Theory]
     [InlineData(900, 1)]
     [InlineData(1024, 2)]

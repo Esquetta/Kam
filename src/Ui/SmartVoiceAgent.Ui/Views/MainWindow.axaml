@@ -124,9 +124,6 @@
 			<Setter Property="CornerRadius" Value="7"/>
 			<Setter Property="Background" Value="Transparent"/>
 		</Style>
-		<Style Selector="Border.LadderStep:pointerover">
-			<Setter Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
-		</Style>
 		<Style Selector="Border.LadderStep TextBlock.NavLabel">
 			<Setter Property="FontSize" Value="13.5"/>
 			<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
