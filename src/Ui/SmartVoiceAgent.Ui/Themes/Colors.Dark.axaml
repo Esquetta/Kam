@@ -20,7 +20,7 @@
     <!-- Brand accent: Accent is for text and icons, AccentStrong for fills and focus rings -->
     <Color x:Key="Accent">#8B7CFF</Color>
     <Color x:Key="AccentStrong">#6E5BF0</Color>
-    <Color x:Key="AccentStrongHover">#7B69F6</Color>
+    <Color x:Key="AccentStrongHover">#5F4BE6</Color>
     <Color x:Key="AccentSubtle">#248B7CFF</Color>
     <Color x:Key="AccentOn">#FFFFFF</Color>
 
