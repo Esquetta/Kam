@@ -170,6 +170,7 @@ namespace SmartVoiceAgent.Ui
                         services.GetRequiredService<IToolPermissionService>(),
                         services.GetRequiredService<IAgentSessionStore>(),
                         services.GetService<IAgentCommandCatalog>());
+                    _mainViewModel.SetContextTokenBudget(agentRuntimeOptions.ContextTokenBudget);
                     _mainViewModel.SetExtensionServices(
                         services.GetService<IMcpHost>(),
                         services.GetService<IAgentPluginCatalog>(),

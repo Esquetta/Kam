@@ -182,6 +182,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _selectedApprovalMode = ApprovalModes.FirstOrDefault(option => option.Mode == toolPermissions.Mode) ?? ApprovalModes[0];
             this.RaisePropertyChanged(nameof(SelectedApprovalMode));
             this.RaisePropertyChanged(nameof(IsAgentRuntimeEnabled));
+            RaiseSelectedContext();
             UpdateStatusProperties();
             _ = LoadSavedAgentSessionsAsync();
         }
@@ -281,6 +282,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
                         case AgentContextCompacted compacted:
                             FinishStreaming(session, ref streaming);
                             session.AddMessage(AgentChatMessageViewModel.System(CompactedNotice));
+                            session.CompactionCount++;
+                            // TokensAfter is Kam's own estimate, not the provider's count, so it is not shown
+                            // next to measured sizes; the next turn measures the compacted context.
+                            session.ContextTokens = 0;
                             AddLog($"CONTEXT_COMPACTED: {compacted.SummarizedMessageCount} messages, ~{compacted.TokensBefore} to ~{compacted.TokensAfter} tokens");
                             break;
 
@@ -298,6 +303,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
                             }
 
                             trace.Complete(done.ToolCallCount, done.InputTokens, done.OutputTokens);
+                            if (done.ContextTokens > 0)
+                            {
+                                session.ContextTokens = done.ContextTokens;
+                            }
                             AddLog($"AGENT_TURN_DONE: {done.ToolCallCount} tool calls, {done.InputTokens + done.OutputTokens} tokens");
                             break;
 

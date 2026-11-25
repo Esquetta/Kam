@@ -50,13 +50,18 @@ public sealed record AgentContextCompacted(
     int TokensBefore,
     int TokensAfter) : AgentEvent(SessionId);
 
-/// <summary>The turn ended with a final answer.</summary>
+/// <summary>
+/// The turn ended with a final answer. <paramref name="ContextTokens"/> is the input size of the
+/// turn's last model request, as the provider reported it: how full the context was at the end.
+/// 0 when the provider reported no usage.
+/// </summary>
 public sealed record AgentTurnCompleted(
     string SessionId,
     string FinalText,
     int ToolCallCount,
     long InputTokens,
-    long OutputTokens) : AgentEvent(SessionId);
+    long OutputTokens,
+    long ContextTokens = 0) : AgentEvent(SessionId);
 
 /// <summary>The turn stopped because of an error or a limit.</summary>
 public sealed record AgentTurnFailed(string SessionId, string Message) : AgentEvent(SessionId);

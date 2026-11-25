@@ -53,6 +53,22 @@ public sealed class AgentRuntimeTests : IDisposable
     }
 
     [Fact]
+    public async Task RunTurnAsync_ReportsTheLastRequestSizeAsTheContext()
+    {
+        var tool = Tool(AIFunctionFactory.Create((string path) => "hello", "files_read"), ToolRisk.Read);
+        var chat = new ScriptedChatClient(
+            [Call("call-1", "files_read", ("path", "notes.txt")), new UsageContent(new UsageDetails { InputTokenCount = 30, OutputTokenCount = 5 })],
+            [new TextContent("Done."), new UsageContent(new UsageDetails { InputTokenCount = 45, OutputTokenCount = 2 })]);
+        var runtime = CreateRuntime(chat, [tool]);
+
+        var events = await CollectAsync(runtime, "s1", "read notes.txt");
+
+        var completed = events.Last().Should().BeOfType<AgentTurnCompleted>().Subject;
+        completed.InputTokens.Should().Be(75, "the turn total counts every request");
+        completed.ContextTokens.Should().Be(45, "the context is what the last request sent");
+    }
+
+    [Fact]
     public async Task RunTurnAsync_UsesTheModelChosenForTheThread()
     {
         var store = new JsonAgentSessionStore(Path.Combine(_directory, "sessions"));

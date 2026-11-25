@@ -28,6 +28,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private bool _isSelected;
         private bool _isRunning;
         private bool _hasPendingApproval;
+        private long _contextTokens;
+        private int _compactionCount;
         private bool _isRenaming;
         private bool _isConfirmingDelete;
         private bool _isVisibleInList = true;
@@ -170,6 +172,25 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 this.RaiseAndSetIfChanged(ref _isSelected, value);
                 this.RaisePropertyChanged(nameof(StatusText));
             }
+        }
+
+        /// <summary>
+        /// Gets or sets how many tokens the last model request of this thread sent: how full its context
+        /// window is. 0 until a turn reports it; not saved with the thread.
+        /// </summary>
+        public long ContextTokens
+        {
+            get => _contextTokens;
+            set => this.RaiseAndSetIfChanged(ref _contextTokens, value);
+        }
+
+        /// <summary>
+        /// Gets or sets how often this thread was compacted since Kam started.
+        /// </summary>
+        public int CompactionCount
+        {
+            get => _compactionCount;
+            set => this.RaiseAndSetIfChanged(ref _compactionCount, value);
         }
 
         /// <summary>

@@ -581,6 +581,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
                 this.RaisePropertyChanged(nameof(HasAgentChatMessages));
                 RefreshAgentChatModelOptions();
+                WatchSelectedSessionContext(_selectedAgentChatSession);
             }
         }
 
@@ -884,6 +885,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             AlwaysAllowToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: true, alwaysAllow: true));
             DenyToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: false, alwaysAllow: false));
             InitializeInbox();
+            InitializeTaskContext();
             StopAgentTurnCommand = ReactiveCommand.Create(StopAgentTurn);
             ClearQueuedAgentMessagesCommand = ReactiveCommand.Create(ClearQueuedAgentMessages);
             InitializeChatExperience();

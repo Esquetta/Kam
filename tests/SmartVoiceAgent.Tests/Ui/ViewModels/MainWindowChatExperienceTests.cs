@@ -302,6 +302,44 @@ public sealed class MainWindowChatExperienceTests : IDisposable
     }
 
     [Fact]
+    public void TaskContext_ShowsHowFullTheSelectedTasksContextIs()
+    {
+        var viewModel = CreateViewModel(new RecordingStore());
+        viewModel.SetContextTokenBudget(64000);
+        var session = viewModel.SelectedAgentChatSession!;
+
+        viewModel.HasSelectedContextTokens.Should().BeFalse();
+        viewModel.SelectedContextText.Should().Be("Measured after the next turn");
+        viewModel.SelectedCompactionText.Should().Be("Not compacted yet");
+        viewModel.CanCompactSelectedTask.Should().BeFalse("there is nothing to compact yet");
+
+        session.AddMessage(new AgentChatMessageViewModel("You", "hello", "10:00"));
+        session.ContextTokens = 54_400;
+        session.CompactionCount = 2;
+
+        viewModel.HasSelectedContextTokens.Should().BeTrue();
+        viewModel.SelectedContextText.Should().Be("54.4k of 64k tokens");
+        viewModel.SelectedContextPercent.Should().BeApproximately(85, 0.01);
+        viewModel.IsSelectedContextNearBudget.Should().BeTrue();
+        viewModel.SelectedCompactionText.Should().Be("Compacted 2 times since Kam started");
+        viewModel.CanCompactSelectedTask.Should().BeTrue();
+
+        viewModel.NewAgentChatCommand.Execute(null);
+
+        viewModel.HasSelectedContextTokens.Should().BeFalse("the section follows the selected task");
+    }
+
+    [Theory]
+    [InlineData(850, "850")]
+    [InlineData(12_400, "12.4k")]
+    [InlineData(64_000, "64k")]
+    [InlineData(128_000, "128k")]
+    public void FormatTokenCount_IsShort(long tokens, string expected)
+    {
+        MainWindowViewModel.FormatTokenCount(tokens).Should().Be(expected);
+    }
+
+    [Fact]
     public void FormatConversation_WritesMarkdownWithToolCallsOnOneLine()
     {
         var session = AgentChatSessionViewModel.Create("Build fix", "summary", "now");
