@@ -103,6 +103,35 @@
 			<Setter Property="VerticalAlignment" Value="Center"/>
 		</Style>
 
+		<!-- Title bar search field: looks like an input, opens the task search -->
+		<Style Selector="Button.TitleSearch">
+			<Setter Property="Width" Value="260"/>
+			<Setter Property="Height" Value="30"/>
+			<Setter Property="Padding" Value="10,0,6,0"/>
+			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+			<Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
+			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+			<Setter Property="Cursor" Value="Hand"/>
+		</Style>
+		<Style Selector="Button.TitleSearch:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+		</Style>
+		<Style Selector="Border.Kbd">
+			<Setter Property="Padding" Value="5,1"/>
+			<Setter Property="CornerRadius" Value="4"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+		<Style Selector="Border.Kbd TextBlock">
+			<Setter Property="FontSize" Value="10"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+		</Style>
+
 		<!-- Context meter in the Activity panel: thin, accent, orange near the budget -->
 		<Style Selector="ProgressBar.ContextMeter">
 			<Setter Property="Height" Value="6"/>
@@ -642,7 +671,7 @@
 				PointerPressed="OnHeaderPointerPressed">
 			<Grid ColumnDefinitions="Auto,Auto,*"
 				  ColumnSpacing="12"
-				  Margin="20,0,150,0">
+				  Margin="20,0,210,0">
 				<TextBlock Grid.Column="0"
 						   Text="{Binding ActivePageTitle}"
 						   FontSize="13"
@@ -664,6 +693,25 @@
 						</StackPanel>
 					</Border>
 				</Button>
+				<!-- Right side: the wake phrase state and a search field for tasks -->
+				<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" VerticalAlignment="Center">
+					<Border Classes="Pill" IsVisible="{Binding IsWakeWordEnabled}" ToolTip.Tip="{DynamicResource Lang.Shell.WakeOnTip}" VerticalAlignment="Center">
+						<StackPanel Orientation="Horizontal" Spacing="6">
+							<Border Classes="StatusDot Success" VerticalAlignment="Center"/>
+							<TextBlock Text="{DynamicResource Lang.Shell.WakeOn}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+						</StackPanel>
+					</Border>
+					<Button Classes="TitleSearch"
+							Click="OnTitleSearchClick"
+							AutomationProperties.Name="{DynamicResource Lang.Shell.SearchTasksTip}"
+							ToolTip.Tip="{DynamicResource Lang.Shell.SearchTasksTip}">
+						<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+							<Viewbox Width="13" Height="13" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconSearch}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
+							<TextBlock Grid.Column="1" Text="{DynamicResource Lang.Shell.SearchTasks}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+							<Border Grid.Column="2" Classes="Kbd"><TextBlock Text="Ctrl K"/></Border>
+						</Grid>
+					</Button>
+				</StackPanel>
 			</Grid>
 		</Border>
 
@@ -1167,13 +1215,13 @@
 							</StackPanel>
 						</Border>
 
-						<!-- Planner Trace -->
+						<!-- Planner Trace (command mode history; shown with the event stream) -->
 						<Border Grid.Row="3"
 								Background="{DynamicResource CardBgBrush}"
 								BorderBrush="{DynamicResource BorderSubtleBrush}"
 								BorderThickness="0,0,0,1"
 								Padding="16,12"
-								IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Context}}">
+								IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Events}}">
 							<StackPanel Spacing="8">
 								<Grid ColumnDefinitions="*, Auto">
 									<StackPanel Grid.Column="0"
@@ -1275,13 +1323,13 @@
 							</StackPanel>
 						</Border>
 
-						<!-- Skill Execution History -->
+						<!-- Skill Execution History (shown with the event stream) -->
 						<Border Grid.Row="4"
 								Background="{DynamicResource CardBgBrush}"
 								BorderBrush="{DynamicResource BorderSubtleBrush}"
 								BorderThickness="0,0,0,1"
 								Padding="16,12"
-								IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Context}}">
+								IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Events}}">
 							<StackPanel Spacing="8">
 								<Grid ColumnDefinitions="*, Auto">
 									<StackPanel Grid.Column="0"

@@ -14,6 +14,10 @@
   "Shell.Nav.Settings": "Ayarlar",
 
   "Shell.ToggleTheme": "Temayı değiştir",
+  "Shell.SearchTasks": "Görevlerde ara",
+  "Shell.SearchTasksTip": "Görevlerde ara (Ctrl+K)",
+  "Shell.WakeOn": "“Hey Kam” açık",
+  "Shell.WakeOnTip": "Bu bilgisayarda uyandırma sözcüğü dinleniyor; siz konuşana kadar hiçbir şey gönderilmez",
   "Shell.LightMode": "Açık tema",
   "Shell.DarkMode": "Koyu tema",
 
