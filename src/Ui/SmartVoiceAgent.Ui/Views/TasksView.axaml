@@ -362,7 +362,7 @@
 					<Button Grid.Column="4"
 							Classes="SecondaryAction Sm"
 							VerticalAlignment="Center"
-							IsVisible="{Binding !IsActivityPanelShown}"
+							IsVisible="{Binding CanOpenActivityPanel}"
 							AutomationProperties.Name="{DynamicResource Lang.Activity.Show}"
 							ToolTip.Tip="{DynamicResource Lang.Activity.Show}"
 							Command="{Binding ToggleActivityPanelCommand}">
@@ -559,7 +559,11 @@
 										<StackPanel Spacing="2"
 													IsVisible="{Binding IsAgent}"
 													ToolTip.Tip="{Binding TimeText}">
-												<controls:MarkdownView Markdown="{Binding Content}"/>
+												<!-- Kam's own notices (errors, compaction) carry a System label and a quiet note background -->
+												<TextBlock Text="{Binding Role}" Classes="Overline" IsVisible="{Binding IsSystem}" Margin="0,0,0,2"/>
+												<Border Classes.Note="{Binding IsSystem}">
+													<controls:MarkdownView Markdown="{Binding Content}"/>
+												</Border>
 												<StackPanel Orientation="Horizontal"
 															Spacing="2"
 															Margin="-4,0,0,-8"

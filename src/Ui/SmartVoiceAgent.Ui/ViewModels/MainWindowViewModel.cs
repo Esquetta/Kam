@@ -172,12 +172,20 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         /// <summary>
         /// Gets whether the Activity panel is on screen: only beside the chat, when the user has it open
-        /// and the window is wide enough, or when the user opened it on a narrower window. Other pages use the full width.
+        /// and the window is wide enough, or when the user opened it on a narrower window that still has room
+        /// for it (760 px and up). Other pages use the full width.
         /// </summary>
         public bool IsActivityPanelShown =>
             IsChatWorkbenchVisible
             && _isActivityPanelOpen
-            && (WindowStateManager.Instance.IsLogPanelVisible || _isActivityPanelPinned);
+            && (WindowStateManager.Instance.IsLogPanelVisible
+                || (_isActivityPanelPinned && !WindowStateManager.Instance.IsRailCompact));
+
+        /// <summary>
+        /// Gets whether the thread header offers to open the Activity panel: it is off screen and the window has room for it.
+        /// </summary>
+        public bool CanOpenActivityPanel =>
+            IsChatWorkbenchVisible && !IsActivityPanelShown && !WindowStateManager.Instance.IsRailCompact;
 
         /// <summary>Gets the Activity panel column width: the 290 px context pane of Kam Studio, 0 when hidden.</summary>
         public GridLength ActivityPanelWidth => IsActivityPanelShown
@@ -208,6 +216,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private void RaiseActivityPanelLayout()
         {
             this.RaisePropertyChanged(nameof(IsActivityPanelShown));
+            this.RaisePropertyChanged(nameof(CanOpenActivityPanel));
             this.RaisePropertyChanged(nameof(ActivityPanelWidth));
         }
 
@@ -899,8 +908,17 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ToggleActivityPanelCommand = ReactiveCommand.Create(ToggleActivityPanel);
             WindowStateManager.Instance.PropertyChanged += (_, args) =>
             {
-                if (args.PropertyName is nameof(WindowStateManager.IsLogPanelVisible) or nameof(WindowStateManager.IsMedium))
+                if (args.PropertyName is nameof(WindowStateManager.IsLogPanelVisible)
+                    or nameof(WindowStateManager.IsMedium)
+                    or nameof(WindowStateManager.IsRailCompact))
                 {
+                    // Once the window is wide enough the pane shows by itself, so a pin from a narrower
+                    // window must not bring it back after the next shrink.
+                    if (WindowStateManager.Instance.IsLogPanelVisible)
+                    {
+                        _isActivityPanelPinned = false;
+                    }
+
                     RaiseActivityPanelLayout();
                 }
             };

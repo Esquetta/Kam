@@ -103,13 +103,18 @@ public sealed class KamStudioShellMetadataTests
             .Should().Equal(
                 "LadderBadge Planned", "LadderBadge Partial", "LadderBadge Partial",
                 "LadderBadge Planned", "LadderBadge Planned", "LadderBadge Planned");
+        // Not links, but keyboard and screen reader users can still reach what each row says.
         steps.Should().OnlyContain(step => step.Descendants().All(element => element.Name.LocalName != "Button")
-            && AttributeValue(step, "ToolTip.Tip") != null);
+            && AttributeValue(step, "ToolTip.Tip") != null
+            && AttributeValue(step, "AutomationProperties.HelpText") != null
+            && AttributeValue(step, "Focusable") == "True");
 
         // The spend meter has no data behind it yet, so it shows the planned badge and no number.
         var spend = mainWindow.Descendants().Single(element => AttributeValue(element, "Classes") == "SpendCard");
         spend.Descendants().Should().Contain(element => AttributeValue(element, "Classes") == "LadderBadge Planned");
         spend.Descendants().Should().NotContain(element => element.Name.LocalName == "ProgressBar");
+        AttributeValue(spend, "AutomationProperties.HelpText").Should().NotBeNullOrEmpty();
+        AttributeValue(spend, "Focusable").Should().Be("True");
 
         mainWindow.Descendants().Should().Contain(element =>
             AttributeValue(element, "Classes") == "Sidebar"
@@ -161,6 +166,27 @@ public sealed class KamStudioShellMetadataTests
 
         var mainWindowText = LocalizedXaml.ReadAllText(FindView("MainWindow.axaml"));
         mainWindowText.Should().NotContain("Border.AgentAvatar");
+    }
+
+    [Fact]
+    public void Thread_SetsKamsOwnNoticesApartFromAgentReplies()
+    {
+        var tasks = XDocument.Parse(File.ReadAllText(FindView("TasksView.axaml"))).Root!;
+
+        var agentMessage = tasks.Descendants().Single(element => AttributeValue(element, "IsVisible") == "{Binding IsAgent}");
+        agentMessage.Descendants().Should().Contain(element =>
+            element.Name.LocalName == "TextBlock"
+            && AttributeValue(element, "Text") == "{Binding Role}"
+            && AttributeValue(element, "IsVisible") == "{Binding IsSystem}");
+        agentMessage.Descendants().Should().Contain(element =>
+            element.Name.LocalName == "Border"
+            && AttributeValue(element, "Classes.Note") == "{Binding IsSystem}"
+            && element.Elements().Any(child => child.Name.LocalName == "MarkdownView"));
+
+        new SmartVoiceAgent.Ui.ViewModels.AgentChatMessageViewModel(
+            SmartVoiceAgent.Ui.ViewModels.AgentChatMessageViewModel.SystemRole, "Compacted", "10:00").IsSystem.Should().BeTrue();
+        new SmartVoiceAgent.Ui.ViewModels.AgentChatMessageViewModel(
+            SmartVoiceAgent.Ui.ViewModels.AgentChatMessageViewModel.AgentRole, "Done", "10:00").IsSystem.Should().BeFalse();
     }
 
     [Fact]

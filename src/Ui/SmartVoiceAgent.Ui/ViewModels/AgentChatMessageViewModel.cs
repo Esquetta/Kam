@@ -142,6 +142,12 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// </summary>
         public bool IsAgent => Kind == AgentChatItemKind.Message && !IsUser;
 
+        /// <summary>
+        /// Gets whether the message came from Kam itself, such as an error or a compaction notice,
+        /// so the thread can set it apart from the agent's replies.
+        /// </summary>
+        public bool IsSystem => Kind == AgentChatItemKind.Message && RoleId.Equals(SystemRole, StringComparison.OrdinalIgnoreCase);
+
         /// <summary>Gets whether the item is a tool call.</summary>
         public bool IsToolStep => Kind == AgentChatItemKind.ToolStep;
 

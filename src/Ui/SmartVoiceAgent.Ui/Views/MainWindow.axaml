@@ -124,6 +124,11 @@
 			<Setter Property="CornerRadius" Value="7"/>
 			<Setter Property="Background" Value="Transparent"/>
 		</Style>
+		<!-- Ladder rows and the spend card are focusable so keyboard and screen reader users reach their explanations -->
+		<Style Selector="Border.LadderStep:focus-visible, Border.SpendCard:focus-visible">
+			<Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+		</Style>
 		<Style Selector="Border.LadderStep TextBlock.NavLabel">
 			<Setter Property="FontSize" Value="13.5"/>
 			<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
@@ -745,6 +750,7 @@
 						<Border Classes="LadderLine"/>
 						<StackPanel>
 							<Border Classes="LadderStep"
+									Focusable="True"
 									AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Prompts}"
 									AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.PromptsTip}"
 									ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.PromptsTip}">
@@ -758,6 +764,7 @@
 								</Grid>
 							</Border>
 							<Border Classes="LadderStep"
+									Focusable="True"
 									AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Agents}"
 									AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.AgentsTip}"
 									ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.AgentsTip}">
@@ -771,6 +778,7 @@
 								</Grid>
 							</Border>
 							<Border Classes="LadderStep"
+									Focusable="True"
 									AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Loops}"
 									AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.LoopsTip}"
 									ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.LoopsTip}">
@@ -784,6 +792,7 @@
 								</Grid>
 							</Border>
 							<Border Classes="LadderStep"
+									Focusable="True"
 									AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Graphs}"
 									AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.GraphsTip}"
 									ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.GraphsTip}">
@@ -797,6 +806,7 @@
 								</Grid>
 							</Border>
 							<Border Classes="LadderStep"
+									Focusable="True"
 									AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Builder}"
 									AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.BuilderTip}"
 									ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.BuilderTip}">
@@ -817,6 +827,7 @@
 								   Text="{DynamicResource Lang.Shell.Nav.Manage}"
 								   Margin="8,12,0,6"/>
 					<Border Classes="LadderStep"
+							Focusable="True"
 							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Runs}"
 							AutomationProperties.HelpText="{DynamicResource Lang.Shell.Nav.RunsTip}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.RunsTip}">
@@ -887,6 +898,8 @@
 						Classes="SpendCard"
 						Margin="0,12,0,6"
 						AutomationProperties.Name="{DynamicResource Lang.Shell.Spend.Title}"
+						AutomationProperties.HelpText="{DynamicResource Lang.Shell.Spend.Tip}"
+						Focusable="True"
 						ToolTip.Tip="{DynamicResource Lang.Shell.Spend.Tip}">
 					<Grid ColumnDefinitions="*,Auto">
 						<TextBlock Text="{DynamicResource Lang.Shell.Spend.Title}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
