@@ -72,7 +72,7 @@
                                            FontWeight="Medium"
                                            Foreground="{DynamicResource TextSecondaryBrush}"/>
                                 <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,0,0">
-                                    <Border Classes="StatusDot Warning" IsVisible="{Binding ChatProfileNeedsKey}"/>
+                                    <Border Classes="StatusDot Warning" IsVisible="{Binding ChatProfileShowsWarning}"/>
                                     <TextBlock Text="{Binding ChatProfileStateText}"
                                                FontSize="11"
                                                Foreground="{DynamicResource TextMutedBrush}"/>

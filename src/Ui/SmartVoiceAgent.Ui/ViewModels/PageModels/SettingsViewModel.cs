@@ -294,10 +294,27 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             ParseProvider(_chatProvider) != ModelProviderType.Ollama && string.IsNullOrWhiteSpace(_chatApiKey);
 
         /// <summary>
-        /// Gets the agent model's state in words: what is missing, or which model it uses.
+        /// Gets the profile chat turns run on while the agent model has no key: the planner profile,
+        /// when it is usable, as the runtime falls back to it. Null when the agent model has a key or
+        /// nothing is usable.
+        /// </summary>
+        private ModelProviderProfile? ChatFallbackProfile => ChatProfileNeedsKey
+            ? AiRuntimeConfigurationMapper.ResolveChatProfile(_settingsService)
+            : null;
+
+        /// <summary>
+        /// Gets whether the agent model card warns: it has no key and chat has nothing to fall back to.
+        /// </summary>
+        public bool ChatProfileShowsWarning => ChatProfileNeedsKey && ChatFallbackProfile is null;
+
+        /// <summary>
+        /// Gets the agent model's state in words: what is missing, or which model it uses, including
+        /// the planner profile chat falls back to while this one has no key.
         /// </summary>
         public string ChatProfileStateText => ChatProfileNeedsKey
-            ? Loc.Get("Settings.ChatState.NeedsKey")
+            ? ChatFallbackProfile is { } fallback
+                ? Loc.Format("Settings.ChatState.UsesPlanner", fallback.ModelId, ProviderDisplayName(fallback.Provider.ToString()))
+                : Loc.Get("Settings.ChatState.NeedsKey")
             : string.IsNullOrWhiteSpace(_chatModelId)
                 ? Loc.Get("Settings.ChatState.NeedsModel")
                 : Loc.Format("Settings.ChatState.Ready", _chatModelId, ProviderDisplayName(_chatProvider));
@@ -312,6 +329,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private void RaiseChatProfileState()
         {
             this.RaisePropertyChanged(nameof(ChatProfileNeedsKey));
+            this.RaisePropertyChanged(nameof(ChatProfileShowsWarning));
             this.RaisePropertyChanged(nameof(ChatProfileStateText));
         }
 
@@ -481,6 +499,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _settingsService.ModelProviderProfiles = profiles;
             _settingsService.ActivePlannerProfileId = profile.Id;
             _settingsService.ActiveChatProfileId = chatProfile.Id;
+
+            // The agent model card can depend on the planner profile, which chat falls back to.
+            RaiseChatProfileState();
         }
 
         private async Task TestAiProfileSettingsAsync()

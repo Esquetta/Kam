@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- The agent prompt says to reply in the language of the latest message, even when tool output or files are in another language, and gives the time zone as an offset (UTC+03:00) instead of a city name. An English request on a Turkish-region PC got a Turkish reply.
+- Settings: while the agent model has no key, its card names the planner model chat actually runs on ("No key here yet, so chat uses gpt-5.5 on OpenAI from the planner profile") instead of saying nothing is set up.
 - A tool step's time no longer includes the wait for your approval: a command approved after 25 s that ran in 0.4 s shows 0.4 s.
 - Tasks: the workbench page is now called Tasks (Görevler) and lives in its own view. Task rows show an orange dot and "Needs approval" while a tool call waits for you, and an accent dot while the agent works. Finished tool steps fold to one line with their duration; click one to see its arguments and result. Steps waiting for approval or that failed stay open.
 - Activity panel: shown only beside the chat, with a close button and a way back from the chat header. Its first tab, Steps, shows the latest turn in the selected chat: each tool call with its outcome and time, then the totals for tools, time and tokens. The second message box on other pages is gone, so those pages use the full width.
