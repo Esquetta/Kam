@@ -124,7 +124,7 @@ public static class AgentTaskEvalCommand
                     Endpoint = options.Endpoint,
                     ApiKey = apiKey,
                     ModelId = model
-                });
+                }, sdkRetries: false);
                 var sandbox = new AgentTaskSandbox(Path.Combine(scratch, "workspaces"));
                 var runtime = new AgentRuntime(
                     _ => client,
