@@ -103,6 +103,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ToolName = toolName;
             ToolDisplayName = toolDisplayName;
             ArgumentsPreview = FormatArguments(argumentsJson, full: risk == ToolRisk.Delegate);
+            ToolTarget = SummarizeTarget(argumentsJson);
             Risk = risk;
             _toolState = AgentToolStepState.Running;
         }
@@ -182,6 +183,12 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public int ArgumentsMaxLines => Risk == ToolRisk.Delegate ? 0 : 4;
 
         public bool HasArguments => ArgumentsPreview.Length > 0;
+
+        /// <summary>
+        /// Gets what the call acts on, on one line: the command, file, folder, address or search text.
+        /// The step header shows it next to the tool's name, so several calls to one tool can be told apart.
+        /// </summary>
+        public string ToolTarget { get; } = string.Empty;
 
         public ToolRisk Risk { get; }
 
@@ -538,6 +545,53 @@ namespace SmartVoiceAgent.Ui.ViewModels
             catch (JsonException)
             {
                 return Shorten(argumentsJson, 400);
+            }
+        }
+
+        private static readonly string[] TargetArgumentNames =
+        [
+            "command", "filePath", "path", "directoryPath", "directory", "url", "query", "pattern", "applicationName", "task"
+        ];
+
+        private static string SummarizeTarget(string argumentsJson)
+        {
+            if (string.IsNullOrWhiteSpace(argumentsJson))
+            {
+                return string.Empty;
+            }
+
+            try
+            {
+                using var document = JsonDocument.Parse(argumentsJson);
+                if (document.RootElement.ValueKind != JsonValueKind.Object)
+                {
+                    return string.Empty;
+                }
+
+                string? first = null;
+                foreach (var property in document.RootElement.EnumerateObject())
+                {
+                    if (property.Value.ValueKind != JsonValueKind.String
+                        || string.IsNullOrWhiteSpace(property.Value.GetString()))
+                    {
+                        continue;
+                    }
+
+                    var value = property.Value.GetString()!;
+                    if (Array.Exists(TargetArgumentNames, name => name.Equals(property.Name, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        first = value;
+                        break;
+                    }
+
+                    first ??= value;
+                }
+
+                return first is null ? string.Empty : Shorten(first.ReplaceLineEndings(" ").Trim(), 120);
+            }
+            catch (JsonException)
+            {
+                return string.Empty;
             }
         }
 

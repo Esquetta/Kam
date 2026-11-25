@@ -595,7 +595,7 @@
 											<StackPanel Spacing="8">
 												<ToggleButton Classes="ToolStepHeader"
 															  IsChecked="{Binding IsExpanded, Mode=TwoWay}"
-															  AutomationProperties.Name="{Binding ToolDisplayName}">
+															  ToolTip.Tip="{Binding ToolName}" AutomationProperties.Name="{Binding ToolDisplayName}">
 													<Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="8">
 														<!-- Risk badge (.risk): read, write or shell -->
 														<Border Grid.Column="0"
@@ -613,7 +613,7 @@
 																	   Foreground="{DynamicResource TextPrimaryBrush}"
 																	   TextTrimming="CharacterEllipsis"
 																	   VerticalAlignment="Center"/>
-															<TextBlock Text="{Binding ToolName}"
+															<TextBlock Text="{Binding ToolTarget}"
 																	   FontSize="11.5"
 																	   FontFamily="{StaticResource MonoFontFamily}"
 																	   Foreground="{DynamicResource TextMutedBrush}"
