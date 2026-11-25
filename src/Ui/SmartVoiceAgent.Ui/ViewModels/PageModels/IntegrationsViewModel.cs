@@ -97,7 +97,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public IntegrationsViewModel(
             ISettingsService settingsService,
             IGitHubAppClientFactory? githubAppClientFactory = null,
-            IGitHubDesktopConnector? githubDesktopConnector = null)
+            IGitHubDesktopConnector? githubDesktopConnector = null,
+            ICliAgentDetector? cliAgentDetector = null)
         {
             Title = Loc.Get("Integrations.Title");
             _settingsService = settingsService;
@@ -107,6 +108,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             // Load saved settings
             _settingsService.Load();
             LoadAllSettings();
+            CliAgents = new CliAgentsViewModel(settingsService, cliAgentDetector);
             
             // Commands
             SaveTodoistCommand = ReactiveCommand.Create(SaveTodoist);
@@ -171,6 +173,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             this.RaisePropertyChanged(nameof(SmsDescription));
             this.RaisePropertyChanged(nameof(SmsStatusText));
             this.RaisePropertyChanged(nameof(SmsBadge));
+            CliAgents.RefreshLocalizedText();
             EmailProviderOptions = CreateEmailProviderOptions();
             this.RaisePropertyChanged(nameof(SelectedEmailProviderOption));
             RefreshGitHubConnectionText();
@@ -185,6 +188,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             LocalizationService.Instance.LanguageChanged -= OnLanguageChanged;
             GC.SuppressFinalize(this);
         }
+
+        /// <summary>Gets the coding-agent CLI card.</summary>
+        public CliAgentsViewModel CliAgents { get; }
 
         #region Todoist Properties
 

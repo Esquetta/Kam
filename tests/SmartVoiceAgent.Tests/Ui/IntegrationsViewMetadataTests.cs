@@ -50,6 +50,23 @@ public sealed class IntegrationsViewMetadataTests
     }
 
     [Fact]
+    public void IntegrationsView_ShouldExposeCodingAgentCliCard()
+    {
+        var xaml = LocalizedXaml.ReadAllText(Path.GetFullPath(ViewPath));
+
+        xaml.Should().Contain("Text=\"Coding agent CLIs\"");
+        xaml.Should().Contain("DataContext=\"{Binding CliAgents}\"");
+        xaml.Should().Contain("ItemsSource=\"{Binding Agents}\"");
+        xaml.Should().Contain("IsChecked=\"{Binding IsEnabled, Mode=TwoWay}\"");
+        xaml.Should().Contain("IsEnabled=\"{Binding CanToggle}\"");
+        xaml.Should().Contain("AutomationProperties.Name=\"{Binding Name}\"", "screen readers name each switch after its CLI");
+        xaml.Should().Contain("AutomationProperties.Name=\"Check again\"");
+        xaml.Should().Contain("Text=\"{Binding VersionText}\"");
+        xaml.Should().Contain("RefreshCommand");
+        xaml.Should().Contain("it never reads the CLI");
+    }
+
+    [Fact]
     public void IntegrationsView_GitHubAppCard_ShouldNotAskForRawPrivateKeyMaterial()
     {
         var xaml = LocalizedXaml.ReadAllText(Path.GetFullPath(ViewPath));

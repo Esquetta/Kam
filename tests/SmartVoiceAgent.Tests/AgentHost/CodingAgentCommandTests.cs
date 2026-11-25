@@ -6,6 +6,7 @@ using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Commands;
 using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Core.Models.Skills;
+using SmartVoiceAgent.Infrastructure.Agent.CliAgents;
 using SmartVoiceAgent.Infrastructure.Mcp;
 
 namespace SmartVoiceAgent.Tests.AgentHost;

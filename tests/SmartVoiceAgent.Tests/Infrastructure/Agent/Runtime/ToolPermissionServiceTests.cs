@@ -150,6 +150,28 @@ public sealed class ToolPermissionServiceTests : IDisposable
     private static string Json(params (string Key, string Value)[] values) =>
         System.Text.Json.JsonSerializer.Serialize(values.ToDictionary(v => v.Key, v => v.Value));
 
+    [Theory]
+    [InlineData(ApprovalMode.Ask)]
+    [InlineData(ApprovalMode.AutoEdit)]
+    [InlineData(ApprovalMode.FullAuto)]
+    public void Evaluate_DelegateTool_AlwaysAsksEvenWithAnAllowRule(ApprovalMode mode)
+    {
+        var service = new ToolPermissionService(_path, mode);
+        service.AddRule("cli_agent_run", allow: true);
+
+        service.Evaluate(Tool("cli_agent_run", ToolRisk.Delegate), "{}").Should().Be(ToolPermissionDecision.Ask);
+        service.SuggestAllowRule(Tool("cli_agent_run", ToolRisk.Delegate), "{}").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Evaluate_DelegateTool_DenyRuleStillBlocks()
+    {
+        var service = new ToolPermissionService(_path, ApprovalMode.FullAuto);
+        service.AddRule("cli_agent_run", allow: false);
+
+        service.Evaluate(Tool("cli_agent_run", ToolRisk.Delegate), "{}").Should().Be(ToolPermissionDecision.Deny);
+    }
+
     private static AgentToolDescriptor Tool(string name, ToolRisk risk) =>
         new(AIFunctionFactory.Create(() => "ok", name), risk, "test", name);
 }

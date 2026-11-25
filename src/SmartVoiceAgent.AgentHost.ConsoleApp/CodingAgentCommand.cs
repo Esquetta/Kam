@@ -7,6 +7,7 @@ using SmartVoiceAgent.Core.Models.Commands;
 using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Core.Security;
+using SmartVoiceAgent.Infrastructure.Agent.CliAgents;
 using SmartVoiceAgent.Infrastructure.Mcp;
 
 namespace SmartVoiceAgent.AgentHost.ConsoleApp;

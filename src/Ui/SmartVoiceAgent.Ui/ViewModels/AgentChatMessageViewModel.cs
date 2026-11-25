@@ -102,7 +102,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             CallId = callId;
             ToolName = toolName;
             ToolDisplayName = toolDisplayName;
-            ArgumentsPreview = FormatArguments(argumentsJson);
+            ArgumentsPreview = FormatArguments(argumentsJson, full: risk == ToolRisk.Delegate);
             Risk = risk;
             _toolState = AgentToolStepState.Running;
         }
@@ -172,8 +172,14 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public string ToolDisplayName { get; } = string.Empty;
 
-        /// <summary>Gets the call's arguments as short "name: value" lines.</summary>
+        /// <summary>
+        /// Gets the call's arguments as "name: value" lines, shortened except for a hand-off to another agent,
+        /// whose approval card shows the whole task, folder and sandbox.
+        /// </summary>
         public string ArgumentsPreview { get; } = string.Empty;
+
+        /// <summary>Gets how many argument lines a compact card shows; 0 shows them all (a hand-off to another agent).</summary>
+        public int ArgumentsMaxLines => Risk == ToolRisk.Delegate ? 0 : 4;
 
         public bool HasArguments => ArgumentsPreview.Length > 0;
 
@@ -187,10 +193,17 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ToolRisk.Write => Loc.Get("Workbench.Tool.Risk.Write"),
             ToolRisk.Execute => Loc.Get("Workbench.Tool.Risk.Execute"),
             ToolRisk.External => Loc.Get("Workbench.Tool.Risk.External"),
+            ToolRisk.Delegate => Loc.Get("Workbench.Tool.Risk.Delegate"),
             _ => Risk.ToString()
         };
 
-        /// <summary>Gets the short risk badge label: read, web, write, shell or external.</summary>
+        /// <summary>
+        /// Gets whether "Always allow" is offered. Delegating to another agent asks every time, because Kam cannot
+        /// gate what that agent does.
+        /// </summary>
+        public bool CanAlwaysAllow => Risk != ToolRisk.Delegate;
+
+        /// <summary>Gets the short risk badge label: read, web, write, shell, external or delegate.</summary>
         public string RiskTag => Risk switch
         {
             ToolRisk.Read => Loc.Get("Workbench.Tool.RiskTag.Read"),
@@ -198,6 +211,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ToolRisk.Write => Loc.Get("Workbench.Tool.RiskTag.Write"),
             ToolRisk.Execute => Loc.Get("Workbench.Tool.RiskTag.Execute"),
             ToolRisk.External => Loc.Get("Workbench.Tool.RiskTag.External"),
+            ToolRisk.Delegate => Loc.Get("Workbench.Tool.RiskTag.Delegate"),
             _ => Risk.ToString()
         };
 
@@ -207,8 +221,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// <summary>Gets whether the risk badge uses the warning color: file writes.</summary>
         public bool IsWriteRisk => Risk == ToolRisk.Write;
 
-        /// <summary>Gets whether the risk badge uses the danger color: programs and anything sent outside.</summary>
-        public bool IsShellRisk => Risk is ToolRisk.Execute or ToolRisk.External;
+        /// <summary>Gets whether the risk badge uses the danger color: programs, anything sent outside, and hand-offs to another agent.</summary>
+        public bool IsShellRisk => Risk is ToolRisk.Execute or ToolRisk.External or ToolRisk.Delegate;
 
         public AgentToolStepState ToolState
         {
@@ -493,7 +507,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             this.RaisePropertyChanged(nameof(AlwaysAllowHint));
         }
 
-        private static string FormatArguments(string argumentsJson)
+        private static string FormatArguments(string argumentsJson, bool full)
         {
             if (string.IsNullOrWhiteSpace(argumentsJson) || argumentsJson == "{}")
             {
@@ -514,7 +528,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     var value = property.Value.ValueKind == JsonValueKind.String
                         ? property.Value.GetString() ?? string.Empty
                         : property.Value.GetRawText();
-                    lines.Add($"{property.Name}: {Shorten(value.ReplaceLineEndings(" "), 160)}");
+                    lines.Add(full
+                        ? $"{property.Name}: {value.ReplaceLineEndings(Environment.NewLine)}"
+                        : $"{property.Name}: {Shorten(value.ReplaceLineEndings(" "), 160)}");
                 }
 
                 return string.Join(Environment.NewLine, lines);

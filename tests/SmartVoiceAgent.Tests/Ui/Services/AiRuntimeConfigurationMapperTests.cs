@@ -224,6 +224,18 @@ public class AiRuntimeConfigurationMapperTests
     }
 
     [Fact]
+    public void CreateIntegrationOverrides_CodexCliSwitch_MapsCliAgentsOptions()
+    {
+        using var settings = new JsonSettingsService(CreateTempSettingsDirectory());
+
+        AiRuntimeConfigurationMapper.CreateIntegrationOverrides(settings).Should().Contain("CliAgents:CodexEnabled", "False");
+
+        settings.CodexCliEnabled = true;
+
+        AiRuntimeConfigurationMapper.CreateIntegrationOverrides(settings).Should().Contain("CliAgents:CodexEnabled", "True");
+    }
+
+    [Fact]
     public void CreateIntegrationOverrides_EmailSettings_MapsMailRuntimeConfiguration()
     {
         using var settings = new JsonSettingsService(CreateTempSettingsDirectory());

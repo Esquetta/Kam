@@ -103,6 +103,12 @@ public class JsonSettingsService : ISettingsService, IDisposable
         set => SetProperty(nameof(WebSearchEngineId), value, v => _data.WebSearchEngineId = v);
     }
 
+    public bool CodexCliEnabled
+    {
+        get => _data.CodexCliEnabled;
+        set => SetProperty(nameof(CodexCliEnabled), value, v => _data.CodexCliEnabled = v);
+    }
+
     #region Email (SMTP) Properties
 
     public string SmtpHost
@@ -426,6 +432,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
             nameof(GitHubAppPrivateKeyPath) => (T?)(object?)_data.GitHubAppPrivateKeyPath,
             nameof(WebSearchApiKey) => (T?)(object?)_data.WebSearchApiKey,
             nameof(WebSearchEngineId) => (T?)(object?)_data.WebSearchEngineId,
+            nameof(CodexCliEnabled) => (T?)(object?)_data.CodexCliEnabled,
             nameof(SmtpHost) => (T?)(object?)_data.SmtpHost,
             nameof(SmtpPort) => (T?)(object?)_data.SmtpPort,
             nameof(SmtpUsername) => (T?)(object?)_data.SmtpUsername,
@@ -620,6 +627,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
             GitHubAppPrivateKeyPath = source.GitHubAppPrivateKeyPath,
             WebSearchApiKey = source.WebSearchApiKey,
             WebSearchEngineId = source.WebSearchEngineId,
+            CodexCliEnabled = source.CodexCliEnabled,
             SmtpHost = source.SmtpHost,
             SmtpPort = source.SmtpPort,
             SmtpUsername = source.SmtpUsername,
@@ -757,6 +765,7 @@ public class JsonSettingsService : ISettingsService, IDisposable
         public string? GitHubAppPrivateKeyPath { get; set; }
         public string? WebSearchApiKey { get; set; }
         public string? WebSearchEngineId { get; set; }
+        public bool CodexCliEnabled { get; set; }
 
         // Email (SMTP)
         public string? SmtpHost { get; set; }
