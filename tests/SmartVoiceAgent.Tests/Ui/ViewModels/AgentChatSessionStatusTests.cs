@@ -53,6 +53,31 @@ public sealed class AgentChatSessionStatusTests
     }
 
     [Fact]
+    public void ToolDurationText_LeavesOutTheWaitForApproval()
+    {
+        var step = AgentChatMessageViewModel.ToolStep("c1", "shell_run", "Run Shell Command", "{}", ToolRisk.Execute);
+
+        step.RequestApproval("r1");
+        Thread.Sleep(1200);
+        step.ApprovalAnswered(approved: true);
+        step.CompleteTool(success: true, "git version 2.56.0");
+
+        step.ToolDurationText.Should().EndWith("ms", "the step ran for milliseconds; the 1.2 s before Approve was the user's time");
+    }
+
+    [Fact]
+    public void ToolDurationText_LeavesOutTheWaitWhenTheTurnStopsDuringApproval()
+    {
+        var step = AgentChatMessageViewModel.ToolStep("c1", "shell_run", "Run Shell Command", "{}", ToolRisk.Execute);
+
+        step.RequestApproval("r1");
+        Thread.Sleep(1200);
+        step.Abandon();
+
+        step.ToolDurationText.Should().EndWith("ms");
+    }
+
+    [Fact]
     public void ShowsToolDetails_OnlyWhenOpenedWaitingOrFailed()
     {
         var step = AgentChatMessageViewModel.ToolStep("c1", "files_read", "Read File", "{\"path\":\"a.txt\"}", ToolRisk.Read);
