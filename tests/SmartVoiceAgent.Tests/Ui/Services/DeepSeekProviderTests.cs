@@ -105,10 +105,10 @@ public sealed class DeepSeekProviderTests : IDisposable
     }
 
     [Fact]
-    public void ModelDefaults_DeepSeek_ListsChatAndReasoner()
+    public void ModelDefaults_DeepSeek_ListsTheV4Models()
     {
-        ModelCatalogDefaults.GetModelIds(ModelProviderType.DeepSeek, "deepseek-chat")
-            .Should().Equal("deepseek-chat", "deepseek-reasoner");
+        ModelCatalogDefaults.GetModelIds(ModelProviderType.DeepSeek, "deepseek-v4-flash")
+            .Should().Equal("deepseek-v4-flash", "deepseek-v4-pro", "deepseek-flash");
     }
 
     [Fact]
@@ -123,8 +123,8 @@ public sealed class DeepSeekProviderTests : IDisposable
         viewModel.ChatProvider = "DeepSeek";
 
         viewModel.ChatEndpoint.Should().Be("https://api.deepseek.com/v1");
-        viewModel.ChatModelId.Should().Be("deepseek-chat");
-        viewModel.ChatModelOptions.Should().Equal("deepseek-chat", "deepseek-reasoner");
+        viewModel.ChatModelId.Should().Be("deepseek-v4-flash");
+        viewModel.ChatModelOptions.Should().Equal("deepseek-v4-flash", "deepseek-v4-pro", "deepseek-flash");
         viewModel.IsChatModelCatalogBacked.Should().BeTrue();
         viewModel.ChatShowsDeepSeekKeyLink.Should().BeTrue();
         viewModel.AiShowsDeepSeekKeyLink.Should().BeFalse();

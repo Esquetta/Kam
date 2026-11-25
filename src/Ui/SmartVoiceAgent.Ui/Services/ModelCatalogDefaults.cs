@@ -50,8 +50,9 @@ public static class ModelCatalogDefaults
             ],
             ModelProviderType.DeepSeek =>
             [
-                "deepseek-chat",
-                "deepseek-reasoner"
+                "deepseek-v4-flash",
+                "deepseek-v4-pro",
+                "deepseek-flash"
             ],
             ModelProviderType.Ollama =>
             [
