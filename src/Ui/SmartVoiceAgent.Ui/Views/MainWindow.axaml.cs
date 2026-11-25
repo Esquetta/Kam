@@ -185,6 +185,15 @@ namespace SmartVoiceAgent.Ui.Views
             }
         }
 
+        private void OnTitleSearchClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel vm)
+            {
+                ShowChat(vm);
+                _tasksView?.FocusSearch();
+            }
+        }
+
         private void MainWindow_Closed(object? sender, CancelEventArgs e)
         {
             e.Cancel = true;

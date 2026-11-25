@@ -302,6 +302,39 @@ public sealed class MainWindowChatExperienceTests : IDisposable
     }
 
     [Fact]
+    public void TaskGroups_SortTasksIntoWaitingRunningAndRecent()
+    {
+        var viewModel = CreateViewModel(new RecordingStore());
+        var first = viewModel.SelectedAgentChatSession!;
+        viewModel.NewAgentChatCommand.Execute(null);
+        var second = viewModel.SelectedAgentChatSession!;
+
+        viewModel.WaitingTasks.Should().BeEmpty();
+        viewModel.RunningTasks.Should().BeEmpty();
+        viewModel.RecentTasks.Should().Equal(viewModel.AgentChatSessions);
+
+        var step = AgentChatMessageViewModel.ToolStep("c1", "shell_run", "Run Shell Command", "{}", ToolRisk.Execute);
+        first.AddMessage(step);
+        first.IsRunning = true;
+        second.IsRunning = true;
+        step.RequestApproval("r1");
+
+        viewModel.WaitingTasks.Should().Equal(first);
+        viewModel.RunningTasks.Should().Equal(second);
+        viewModel.RecentTasks.Should().NotContain([first, second]);
+        viewModel.HasWaitingTasks.Should().BeTrue();
+
+        step.ApprovalAnswered(approved: true);
+        first.IsRunning = false;
+        second.IsRunning = false;
+
+        viewModel.WaitingTasks.Should().BeEmpty();
+        viewModel.RunningTasks.Should().BeEmpty();
+        viewModel.HasRunningTaskGroup.Should().BeFalse();
+        viewModel.RecentTasks.Should().Equal(viewModel.AgentChatSessions);
+    }
+
+    [Fact]
     public void TaskContext_ShowsHowFullTheSelectedTasksContextIs()
     {
         var viewModel = CreateViewModel(new RecordingStore());

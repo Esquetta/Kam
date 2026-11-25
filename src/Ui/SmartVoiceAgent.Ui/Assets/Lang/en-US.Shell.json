@@ -14,6 +14,10 @@
   "Shell.Nav.Settings": "Settings",
 
   "Shell.ToggleTheme": "Toggle Theme",
+  "Shell.SearchTasks": "Search tasks",
+  "Shell.SearchTasksTip": "Search tasks (Ctrl+K)",
+  "Shell.WakeOn": "“Hey Kam” on",
+  "Shell.WakeOnTip": "Listening for the wake phrase on this PC; nothing is sent until you speak",
   "Shell.LightMode": "Light mode",
   "Shell.DarkMode": "Dark mode",
 

@@ -5,6 +5,127 @@
 			 xmlns:local="using:SmartVoiceAgent.Ui.Views"
 			 x:Class="SmartVoiceAgent.Ui.Views.TasksView"
 			 x:DataType="vm:MainWindowViewModel">
+	<UserControl.Resources>
+		<!-- One task row; the three groups of the task list share it -->
+		<DataTemplate x:Key="TaskRowTemplate" DataType="vm:AgentChatSessionViewModel">
+			<Panel Classes="ChatSessionRow" IsVisible="{Binding IsVisibleInList}">
+				<Button Classes="ChatSessionItem"
+						IsVisible="{Binding IsShowingSummary}"
+						Command="{Binding $parent[local:TasksView].DataContext.SelectAgentChatCommand}"
+						CommandParameter="{Binding}">
+					<Button.ContextMenu>
+						<ContextMenu>
+							<MenuItem Header="{DynamicResource Lang.Common.Rename}" InputGesture="F2" Click="OnRenameChatClick"/>
+							<MenuItem Header="{DynamicResource Lang.Common.Delete}" IsEnabled="{Binding CanDelete}" Click="OnDeleteChatClick"/>
+						</ContextMenu>
+					</Button.ContextMenu>
+					<Border Classes="ChatSessionChrome"
+							Background="{Binding IsSelected, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentSubtleBrush|TransparentBrush'}">
+						<Grid RowDefinitions="Auto,Auto,Auto"
+							  ColumnDefinitions="*,Auto"
+							  RowSpacing="3"
+							  ColumnSpacing="8">
+							<TextBlock Grid.Row="0" Grid.Column="0"
+									   Text="{Binding Title}"
+									   FontSize="13"
+									   FontWeight="SemiBold"
+									   Foreground="{DynamicResource TextPrimaryBrush}"
+									   TextTrimming="CharacterEllipsis"/>
+							<TextBlock Grid.Row="0" Grid.Column="1"
+									   Classes="ChatRowTime"
+									   Text="{Binding RelativeTimeText}"
+									   FontSize="11"
+									   Foreground="{DynamicResource TextMutedBrush}"/>
+							<TextBlock Grid.Row="1" Grid.ColumnSpan="2"
+									   Text="{Binding Summary}"
+									   FontSize="12"
+									   Foreground="{DynamicResource TextMutedBrush}"
+									   TextTrimming="CharacterEllipsis"/>
+							<StackPanel Grid.Row="2" Grid.ColumnSpan="2"
+										Orientation="Horizontal"
+										Spacing="6"
+										Margin="0,3,0,0">
+								<!-- Working, or waiting for the user to approve a tool call -->
+								<Border Classes="StatusDot Warning" IsVisible="{Binding HasPendingApproval}" VerticalAlignment="Center"/>
+								<Border Classes="StatusDot Accent" IsVisible="{Binding IsWorking}" VerticalAlignment="Center"/>
+								<TextBlock Text="{Binding StatusText}"
+										   IsVisible="{Binding HasStatus}"
+										   FontSize="11"
+										   FontWeight="SemiBold"
+										   Foreground="{Binding HasPendingApproval, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentOrangeBrush|AccentBrush'}"/>
+								<TextBlock Text="·" IsVisible="{Binding HasStatus}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+								<TextBlock Text="{Binding MessageCountText}"
+										   FontSize="11"
+										   Foreground="{DynamicResource TextMutedBrush}"/>
+							</StackPanel>
+						</Grid>
+					</Border>
+				</Button>
+
+				<!-- Row menu; shown on hover in place of the time -->
+				<Button Classes="IconButton CompactIconButton ChatRowMenu"
+						IsVisible="{Binding IsShowingSummary}"
+						HorizontalAlignment="Right"
+						VerticalAlignment="Top"
+						Margin="0,6,6,0"
+						Background="Transparent"
+						BorderThickness="0"
+						ToolTip.Tip="{DynamicResource Lang.Chat.Options}">
+					<Button.Flyout>
+						<MenuFlyout Placement="BottomEdgeAlignedRight">
+							<MenuItem Header="{DynamicResource Lang.Common.Rename}" InputGesture="F2" Click="OnRenameChatClick"/>
+							<MenuItem Header="{DynamicResource Lang.Common.Delete}" IsEnabled="{Binding CanDelete}" Click="OnDeleteChatClick"/>
+						</MenuFlyout>
+					</Button.Flyout>
+					<Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconMore}" StrokeThickness="3" Stretch="None"/></Viewbox>
+				</Button>
+
+				<!-- Rename: Enter saves, Esc cancels -->
+				<Border Classes="ChatSessionChrome ChatSessionEditor"
+						IsVisible="{Binding IsRenaming}"
+						PropertyChanged="OnRenameEditorPropertyChanged">
+					<TextBox Classes="ChatRenameInput"
+							 Text="{Binding EditTitle, Mode=TwoWay}"
+							 MaxLength="120"
+							 KeyDown="OnRenameKeyDown"
+							 LostFocus="OnRenameLostFocus"/>
+				</Border>
+
+				<!-- Delete confirmation -->
+				<Border Classes="ChatSessionChrome ChatSessionEditor"
+						IsVisible="{Binding IsConfirmingDelete}">
+					<StackPanel Spacing="8">
+						<StackPanel Spacing="2">
+							<TextBlock Text="{DynamicResource Lang.Chat.DeleteConfirm.Title}"
+									   FontSize="13"
+									   FontWeight="SemiBold"
+									   Foreground="{DynamicResource TextPrimaryBrush}"/>
+							<TextBlock Text="{DynamicResource Lang.Chat.DeleteConfirm.Body}"
+									   Classes="Caption"
+									   TextWrapping="Wrap"/>
+						</StackPanel>
+						<StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+							<Button Classes="SecondaryAction ChatRowAction"
+									Content="{DynamicResource Lang.Common.Cancel}"
+									Command="{Binding $parent[local:TasksView].DataContext.CancelDeleteAgentChatCommand}"
+									CommandParameter="{Binding}"/>
+							<Button Classes="DestructiveAction ChatRowAction"
+									Content="{DynamicResource Lang.Common.Delete}"
+									Command="{Binding $parent[local:TasksView].DataContext.ConfirmDeleteAgentChatCommand}"
+									CommandParameter="{Binding}"/>
+						</StackPanel>
+					</StackPanel>
+				</Border>
+			</Panel>
+		</DataTemplate>
+	</UserControl.Resources>
+
+	<UserControl.Styles>
+		<Style Selector="Grid.TaskGroupHeader">
+			<Setter Property="Margin" Value="8,0,8,4"/>
+		</Style>
+	</UserControl.Styles>
+
 	<!-- Tasks: the task list, the selected task's conversation and the composer.
 	     Styles for these parts live in MainWindow's styles and apply here through the window. -->
 	<Grid ColumnDefinitions="260,*">
@@ -14,15 +135,8 @@
 				BorderBrush="{DynamicResource BorderSubtleBrush}"
 				BorderThickness="0,0,1,0"
 				Padding="12,16,12,12">
-			<Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">
-				<Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="4,0">
-					<TextBlock Text="{DynamicResource Lang.Chat.Threads.Title}" Classes="SectionTitle" VerticalAlignment="Center"/>
-					<Border Grid.Column="1" Classes="Pill">
-						<TextBlock Text="{Binding AgentChatSessionCountText}"/>
-					</Border>
-				</Grid>
-
-				<Button Grid.Row="1"
+			<Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+				<Button Grid.Row="0"
 						Classes="PrimaryAction"
 						HorizontalAlignment="Stretch"
 						ToolTip.Tip="{DynamicResource Lang.Chat.NewChatTip}"
@@ -34,7 +148,7 @@
 				</Button>
 
 				<!-- Search: matches titles and the last message -->
-				<TextBox Grid.Row="2"
+				<TextBox Grid.Row="1"
 						 x:Name="ChatSearchInput"
 						 Classes="ChatSearch"
 						 PlaceholderText="{DynamicResource Lang.Chat.Search.Placeholder}"
@@ -57,129 +171,33 @@
 					</TextBox.InnerRightContent>
 				</TextBox>
 
-				<Panel Grid.Row="3">
+				<Panel Grid.Row="2">
 					<ScrollViewer VerticalScrollBarVisibility="Auto"
 								  HorizontalScrollBarVisibility="Disabled">
-						<ItemsControl x:Name="ChatThreadList" ItemsSource="{Binding AgentChatSessions}">
-							<ItemsControl.ItemsPanel>
-								<ItemsPanelTemplate>
-									<VirtualizingStackPanel/>
-								</ItemsPanelTemplate>
-							</ItemsControl.ItemsPanel>
-							<ItemsControl.ItemTemplate>
-								<DataTemplate DataType="vm:AgentChatSessionViewModel">
-									<Panel Classes="ChatSessionRow" IsVisible="{Binding IsVisibleInList}">
-										<Button Classes="ChatSessionItem"
-												IsVisible="{Binding IsShowingSummary}"
-												Command="{Binding $parent[local:TasksView].DataContext.SelectAgentChatCommand}"
-												CommandParameter="{Binding}">
-											<Button.ContextMenu>
-												<ContextMenu>
-													<MenuItem Header="{DynamicResource Lang.Common.Rename}" InputGesture="F2" Click="OnRenameChatClick"/>
-													<MenuItem Header="{DynamicResource Lang.Common.Delete}" IsEnabled="{Binding CanDelete}" Click="OnDeleteChatClick"/>
-												</ContextMenu>
-											</Button.ContextMenu>
-											<Border Classes="ChatSessionChrome"
-													Background="{Binding IsSelected, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentSubtleBrush|TransparentBrush'}">
-												<Grid RowDefinitions="Auto,Auto,Auto"
-													  ColumnDefinitions="*,Auto"
-													  RowSpacing="3"
-													  ColumnSpacing="8">
-													<TextBlock Grid.Row="0" Grid.Column="0"
-															   Text="{Binding Title}"
-															   FontSize="13"
-															   FontWeight="SemiBold"
-															   Foreground="{DynamicResource TextPrimaryBrush}"
-															   TextTrimming="CharacterEllipsis"/>
-													<TextBlock Grid.Row="0" Grid.Column="1"
-															   Classes="ChatRowTime"
-															   Text="{Binding RelativeTimeText}"
-															   FontSize="11"
-															   Foreground="{DynamicResource TextMutedBrush}"/>
-													<TextBlock Grid.Row="1" Grid.ColumnSpan="2"
-															   Text="{Binding Summary}"
-															   FontSize="12"
-															   Foreground="{DynamicResource TextMutedBrush}"
-															   TextTrimming="CharacterEllipsis"/>
-													<StackPanel Grid.Row="2" Grid.ColumnSpan="2"
-																Orientation="Horizontal"
-																Spacing="6"
-																Margin="0,3,0,0">
-														<!-- Working, or waiting for the user to approve a tool call -->
-														<Border Classes="StatusDot Warning" IsVisible="{Binding HasPendingApproval}" VerticalAlignment="Center"/>
-														<Border Classes="StatusDot Accent" IsVisible="{Binding IsWorking}" VerticalAlignment="Center"/>
-														<TextBlock Text="{Binding StatusText}"
-																   IsVisible="{Binding HasStatus}"
-																   FontSize="11"
-																   FontWeight="SemiBold"
-																   Foreground="{Binding HasPendingApproval, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentOrangeBrush|AccentBrush'}"/>
-														<TextBlock Text="·" IsVisible="{Binding HasStatus}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
-														<TextBlock Text="{Binding MessageCountText}"
-																   FontSize="11"
-																   Foreground="{DynamicResource TextMutedBrush}"/>
-													</StackPanel>
-												</Grid>
-											</Border>
-										</Button>
-
-										<!-- Row menu; shown on hover in place of the time -->
-										<Button Classes="IconButton CompactIconButton ChatRowMenu"
-												IsVisible="{Binding IsShowingSummary}"
-												HorizontalAlignment="Right"
-												VerticalAlignment="Top"
-												Margin="0,6,6,0"
-												Background="Transparent"
-												BorderThickness="0"
-												ToolTip.Tip="{DynamicResource Lang.Chat.Options}">
-											<Button.Flyout>
-												<MenuFlyout Placement="BottomEdgeAlignedRight">
-													<MenuItem Header="{DynamicResource Lang.Common.Rename}" InputGesture="F2" Click="OnRenameChatClick"/>
-													<MenuItem Header="{DynamicResource Lang.Common.Delete}" IsEnabled="{Binding CanDelete}" Click="OnDeleteChatClick"/>
-												</MenuFlyout>
-											</Button.Flyout>
-											<Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconMore}" StrokeThickness="3" Stretch="None"/></Viewbox>
-										</Button>
-
-										<!-- Rename: Enter saves, Esc cancels -->
-										<Border Classes="ChatSessionChrome ChatSessionEditor"
-												IsVisible="{Binding IsRenaming}"
-												PropertyChanged="OnRenameEditorPropertyChanged">
-											<TextBox Classes="ChatRenameInput"
-													 Text="{Binding EditTitle, Mode=TwoWay}"
-													 MaxLength="120"
-													 KeyDown="OnRenameKeyDown"
-													 LostFocus="OnRenameLostFocus"/>
-										</Border>
-
-										<!-- Delete confirmation -->
-										<Border Classes="ChatSessionChrome ChatSessionEditor"
-												IsVisible="{Binding IsConfirmingDelete}">
-											<StackPanel Spacing="8">
-												<StackPanel Spacing="2">
-													<TextBlock Text="{DynamicResource Lang.Chat.DeleteConfirm.Title}"
-															   FontSize="13"
-															   FontWeight="SemiBold"
-															   Foreground="{DynamicResource TextPrimaryBrush}"/>
-													<TextBlock Text="{DynamicResource Lang.Chat.DeleteConfirm.Body}"
-															   Classes="Caption"
-															   TextWrapping="Wrap"/>
-												</StackPanel>
-												<StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
-													<Button Classes="SecondaryAction ChatRowAction"
-															Content="{DynamicResource Lang.Common.Cancel}"
-															Command="{Binding $parent[local:TasksView].DataContext.CancelDeleteAgentChatCommand}"
-															CommandParameter="{Binding}"/>
-													<Button Classes="DestructiveAction ChatRowAction"
-															Content="{DynamicResource Lang.Common.Delete}"
-															Command="{Binding $parent[local:TasksView].DataContext.ConfirmDeleteAgentChatCommand}"
-															CommandParameter="{Binding}"/>
-												</StackPanel>
-											</StackPanel>
-										</Border>
-									</Panel>
-								</DataTemplate>
-							</ItemsControl.ItemTemplate>
-						</ItemsControl>
+						<!-- Tasks grouped by state: waiting for you, running, then the rest -->
+						<StackPanel x:Name="ChatThreadList" Spacing="14">
+							<StackPanel Spacing="2" IsVisible="{Binding HasWaitingTasks}">
+								<Grid ColumnDefinitions="*,Auto" Classes="TaskGroupHeader">
+									<TextBlock Text="{DynamicResource Lang.Chat.Group.NeedsYou}" Classes="Overline"/>
+									<TextBlock Grid.Column="1" Text="{Binding WaitingTasks.Count}" Classes="Overline"/>
+								</Grid>
+								<ItemsControl ItemsSource="{Binding WaitingTasks}" ItemTemplate="{StaticResource TaskRowTemplate}"/>
+							</StackPanel>
+							<StackPanel Spacing="2" IsVisible="{Binding HasRunningTaskGroup}">
+								<Grid ColumnDefinitions="*,Auto" Classes="TaskGroupHeader">
+									<TextBlock Text="{DynamicResource Lang.Chat.Group.Running}" Classes="Overline"/>
+									<TextBlock Grid.Column="1" Text="{Binding RunningTasks.Count}" Classes="Overline"/>
+								</Grid>
+								<ItemsControl ItemsSource="{Binding RunningTasks}" ItemTemplate="{StaticResource TaskRowTemplate}"/>
+							</StackPanel>
+							<StackPanel Spacing="2" IsVisible="{Binding HasRecentTasks}">
+								<Grid ColumnDefinitions="*,Auto" Classes="TaskGroupHeader">
+									<TextBlock Text="{DynamicResource Lang.Chat.Group.Recent}" Classes="Overline"/>
+									<TextBlock Grid.Column="1" Text="{Binding RecentTasks.Count}" Classes="Overline"/>
+								</Grid>
+								<ItemsControl ItemsSource="{Binding RecentTasks}" ItemTemplate="{StaticResource TaskRowTemplate}"/>
+							</StackPanel>
+						</StackPanel>
 					</ScrollViewer>
 
 					<TextBlock Text="{DynamicResource Lang.Chat.Search.NoResults}"

@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Tasks: the list is grouped into Needs you, Running and Recent, and drops the "Chats" header; search says tasks. The title bar has a search field (Ctrl+K) and shows when the "Hey Kam" wake phrase is on. The Activity panel's Context tab shows only the task's context; Plan trace and Skill results moved to Event stream.
 - Activity panel, Context tab: a "This task" section shows how full the selected task's context window is (for example "54.4k of 64k tokens", with a meter that turns orange near the budget), how often it was compacted, and a Compact now button. After a compaction the size is measured again on the next turn. The size comes from the last model request of the latest turn; `AgentTurnCompleted` now carries it as `ContextTokens`.
 - Sidebar: grouped into Work (Tasks, Needs you), Build (Skills, Extensions) and Manage (Integrations, Diagnostics, Settings). Tasks shows how many tasks are running. The new Needs you page lists every tool call waiting for approval across all tasks, with Approve, Always allow, Deny and Open task, and its count shows in the sidebar.
 - The agent prompt says to reply in the language of the latest message, even when tool output or files are in another language, and gives the time zone as an offset (UTC+03:00) instead of a city name. An English request on a Turkish-region PC got a Turkish reply.
