@@ -10,6 +10,7 @@ The shell follows the Kam Studio breakpoints:
 |-------|----------|
 | 1280px and up | Tasks shows three panes: task list (270px), thread, context pane (Activity, 290px) |
 | < 1280px | Context pane hides (`IsLogPanelVisible`), task list narrows to 240px |
+| < 1100px | The thread header no longer offers to open the context pane (`CanPinContextPane`); the thread would be too narrow |
 | < 980px | Top bar drops the wake phrase pill and the search text (`IsNarrow`) |
 | < 760px | Rail shows icons only and the task list sits above the thread (`IsRailCompact`) |
 
@@ -33,7 +34,7 @@ A singleton service that tracks window dimensions and provides responsive state:
 XAML converters for responsive bindings:
 - `ResponsiveColumnConverter` - Returns column count from WindowStateManager
 - `LogPanelVisibilityConverter` - Returns visibility boolean
-- `MainWindowViewModel.ActivityPanelWidth` - Activity panel width (0 when hidden or away from the chat, 360 medium, 420 wide)
+- `MainWindowViewModel.ActivityPanelWidth` - Activity panel width (0 when hidden or away from the chat, otherwise 290)
 - `ResponsiveScaleConverter` - Scales values based on breakpoint
 - `ResponsiveFontSizeConverter` - Returns scaled font sizes
 - `CompactModeConverter` / `MediumModeConverter` / `ExpandedModeConverter` - Breakpoint checks

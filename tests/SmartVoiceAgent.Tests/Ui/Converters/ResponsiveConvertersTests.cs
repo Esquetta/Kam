@@ -92,6 +92,21 @@ public class ResponsiveConvertersTests
         viewModel.ActivityPanelWidth.Value.Should().Be(0);
     }
 
+    [Theory]
+    [InlineData(800)]
+    [InlineData(1000)]
+    public void ActivityPanel_StaysClosedWhereTheThreadWouldBeTooNarrow(double width)
+    {
+        SetWindowWidth(width);
+        var viewModel = new SmartVoiceAgent.Ui.ViewModels.MainWindowViewModel();
+
+        viewModel.CanOpenActivityPanel.Should().BeFalse("rail, list and a 290 px pane would leave the thread too little room");
+        viewModel.ToggleActivityPanelCommand.Execute(null);
+
+        viewModel.IsActivityPanelShown.Should().BeFalse();
+        viewModel.ActivityPanelWidth.Value.Should().Be(0);
+    }
+
     [Fact]
     public void ActivityPanel_PinFromANarrowWindowEndsWhenTheWindowGrows()
     {

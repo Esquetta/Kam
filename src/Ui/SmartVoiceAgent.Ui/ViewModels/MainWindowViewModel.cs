@@ -173,19 +173,19 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// <summary>
         /// Gets whether the Activity panel is on screen: only beside the chat, when the user has it open
         /// and the window is wide enough, or when the user opened it on a narrower window that still has room
-        /// for it (760 px and up). Other pages use the full width.
+        /// for it beside the thread (1100 px and up). Other pages use the full width.
         /// </summary>
         public bool IsActivityPanelShown =>
             IsChatWorkbenchVisible
             && _isActivityPanelOpen
             && (WindowStateManager.Instance.IsLogPanelVisible
-                || (_isActivityPanelPinned && !WindowStateManager.Instance.IsRailCompact));
+                || (_isActivityPanelPinned && WindowStateManager.Instance.CanPinContextPane));
 
         /// <summary>
         /// Gets whether the thread header offers to open the Activity panel: it is off screen and the window has room for it.
         /// </summary>
         public bool CanOpenActivityPanel =>
-            IsChatWorkbenchVisible && !IsActivityPanelShown && !WindowStateManager.Instance.IsRailCompact;
+            IsChatWorkbenchVisible && !IsActivityPanelShown && WindowStateManager.Instance.CanPinContextPane;
 
         /// <summary>Gets the Activity panel column width: the 290 px context pane of Kam Studio, 0 when hidden.</summary>
         public GridLength ActivityPanelWidth => IsActivityPanelShown
@@ -910,7 +910,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 if (args.PropertyName is nameof(WindowStateManager.IsLogPanelVisible)
                     or nameof(WindowStateManager.IsMedium)
-                    or nameof(WindowStateManager.IsRailCompact))
+                    or nameof(WindowStateManager.IsRailCompact)
+                    or nameof(WindowStateManager.CanPinContextPane))
                 {
                     // Once the window is wide enough the pane shows by itself, so a pin from a narrower
                     // window must not bring it back after the next shrink.
