@@ -14,6 +14,8 @@
     <Color x:Key="ControlPressed">#1CFFFFFF</Color>
     <Color x:Key="BorderSubtle">#262632</Color>
     <Color x:Key="BorderMuted">#363645</Color>
+    <!-- Off switch track: 3:1 against cards and against the white knob -->
+    <Color x:Key="SwitchOffTrack">#6B6979</Color>
     <Color x:Key="TextPrimary">#F2F1F7</Color>
     <Color x:Key="TextSecondary">#BAB9C7</Color>
     <Color x:Key="TextMuted">#8C8B9C</Color>

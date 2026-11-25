@@ -40,6 +40,28 @@ public sealed class ThemeContrastTests
         Contrast(colors["TextMuted"], colors["SurfaceBg"]).Should().BeGreaterThanOrEqualTo(4.5);
     }
 
+    [Theory]
+    [InlineData("Colors.Light.axaml")]
+    [InlineData("Colors.Dark.axaml")]
+    public void ThemePalette_KeepsHoveredRowsAndErrorsReadable(string themeFileName)
+    {
+        var colors = LoadThemeColors(themeFileName);
+
+        Contrast(colors["TextMuted"], colors["CardBgHover"]).Should().BeGreaterThanOrEqualTo(4.5, "summaries on a hovered task row");
+        Contrast(colors["AccentError"], colors["SurfaceBg"]).Should().BeGreaterThanOrEqualTo(4.5, "error text and the shell risk badge");
+    }
+
+    [Theory]
+    [InlineData("Colors.Light.axaml")]
+    [InlineData("Colors.Dark.axaml")]
+    public void ThemePalette_ShowsAnOffSwitchAgainstCardsAndItsKnob(string themeFileName)
+    {
+        var colors = LoadThemeColors(themeFileName);
+
+        Contrast(colors["SwitchOffTrack"], colors["CardBg"]).Should().BeGreaterThanOrEqualTo(3, "a UI component needs 3:1 against its surface");
+        Contrast(Colors.White, colors["SwitchOffTrack"]).Should().BeGreaterThanOrEqualTo(3, "the white knob must stand out on the track");
+    }
+
     private static Dictionary<string, Color> LoadThemeColors(string themeFileName)
     {
         var document = XDocument.Load(FindThemePath(themeFileName));

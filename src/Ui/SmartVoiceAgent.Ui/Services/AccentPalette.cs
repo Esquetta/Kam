@@ -38,6 +38,12 @@ public sealed record AccentPreset(string Id, AccentColors Dark, AccentColors Lig
 /// </summary>
 public static class AccentPalette
 {
+    /// <summary>Opacity of the dark theme's AccentSubtle tint, as <c>Themes/Colors.Dark.axaml</c> uses it.</summary>
+    public const byte DarkSubtleAlpha = 0x24;
+
+    /// <summary>Opacity of the light theme's AccentSubtle tint, as <c>Themes/Colors.Light.axaml</c> uses it.</summary>
+    public const byte LightSubtleAlpha = 0x1A;
+
     /// <summary>The preset used when settings name none or an unknown one.</summary>
     public const string DefaultId = "violet";
 
@@ -95,8 +101,8 @@ public static class AccentPalette
         ArgumentNullException.ThrowIfNull(app);
         ArgumentNullException.ThrowIfNull(preset);
 
-        SetVariant(app, ThemeVariant.Dark, preset.Dark, subtleAlpha: 0x24);
-        SetVariant(app, ThemeVariant.Light, preset.Light, subtleAlpha: 0x16);
+        SetVariant(app, ThemeVariant.Dark, preset.Dark, DarkSubtleAlpha);
+        SetVariant(app, ThemeVariant.Light, preset.Light, LightSubtleAlpha);
 
         var brand = new LinearGradientBrush
         {

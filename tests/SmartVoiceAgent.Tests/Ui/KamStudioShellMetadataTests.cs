@@ -32,7 +32,7 @@ public sealed class KamStudioShellMetadataTests
         light["CardBg"].Should().Be("#FFFFFF");
         light["RaisedBg"].Should().Be("#F0EFF6");
         light["Accent"].Should().Be("#5B47E0");
-        light["AccentError"].Should().Be("#DC2626");
+        light["AccentError"].Should().Be("#C81E1E", "the prototype's #DC2626 is 4.4:1 on the light surface");
         light["AccentInfo"].Should().Be("#2563EB");
 
         // Every token exists in both themes, so a DynamicResource never falls back in one of them.
