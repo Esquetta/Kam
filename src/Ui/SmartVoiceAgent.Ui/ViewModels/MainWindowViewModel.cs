@@ -151,6 +151,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 this.RaiseAndSetIfChanged(ref _activeView, value);
                 this.RaisePropertyChanged(nameof(IsChatWorkbenchVisible));
                 this.RaisePropertyChanged(nameof(IsPageHostVisible));
+                this.RaisePropertyChanged(nameof(IsInboxVisible));
                 this.RaisePropertyChanged(nameof(ActivePageTitle));
                 RaiseActivityPanelLayout();
             }
@@ -202,12 +203,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
             NavView.Extensions => Loc.Get("Workbench.Page.Extensions"),
             NavView.Integrations => Loc.Get("Workbench.Page.Integrations"),
             NavView.Settings => Loc.Get("Workbench.Page.Settings"),
+            NavView.Inbox => Loc.Get("Workbench.Page.Inbox"),
             _ => string.Empty
         };
 
         public bool IsChatWorkbenchVisible => ActiveView == NavView.Coordinator;
 
-        public bool IsPageHostVisible => ActiveView != NavView.Coordinator;
+        public bool IsPageHostVisible => ActiveView is not (NavView.Coordinator or NavView.Inbox);
 
         /* ========================= */
         /* SYSTEM STATUS (HEADER) */
@@ -882,6 +884,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ApproveToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: true, alwaysAllow: false));
             AlwaysAllowToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: true, alwaysAllow: true));
             DenyToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: false, alwaysAllow: false));
+            InitializeInbox();
             StopAgentTurnCommand = ReactiveCommand.Create(StopAgentTurn);
             ClearQueuedAgentMessagesCommand = ReactiveCommand.Create(ClearQueuedAgentMessages);
             InitializeChatExperience();

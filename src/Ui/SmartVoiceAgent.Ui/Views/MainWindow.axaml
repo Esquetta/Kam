@@ -103,6 +103,18 @@
 			<Setter Property="VerticalAlignment" Value="Center"/>
 		</Style>
 
+		<!-- Count badge on a nav row, e.g. running tasks or approvals waiting -->
+		<Style Selector="Border.NavCount">
+			<Setter Property="Padding" Value="7,1"/>
+			<Setter Property="MinWidth" Value="20"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+		<Style Selector="Border.NavCount TextBlock">
+			<Setter Property="FontSize" Value="11"/>
+			<Setter Property="FontWeight" Value="SemiBold"/>
+			<Setter Property="HorizontalAlignment" Value="Center"/>
+		</Style>
+
 		<Style Selector="Button.NavBtn.Active TextBlock.NavLabel">
 			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
 			<Setter Property="FontWeight" Value="SemiBold"/>
@@ -495,31 +507,44 @@
 					</StackPanel>
 				</Button>
 
-				<!-- Primary navigation -->
+				<!-- Primary navigation: Work (daily use), Build (what agents can use), Manage -->
 				<StackPanel Grid.Row="1" VerticalAlignment="Top">
 					<TextBlock Classes="NavLabel Overline"
-							   Text="{DynamicResource Lang.Shell.Nav.Workspace}"
-							   Margin="10,0,0,8"/>
+								   Text="{DynamicResource Lang.Shell.Nav.Work}"
+								   Margin="10,0,0,8"/>
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Coordinator}}"
 							Command="{Binding NavigateToCoordinatorCommand}"
 							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Workbench}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Workbench}">
-						<StackPanel Orientation="Horizontal" Spacing="12">
+						<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
 							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconChat}"/></Viewbox>
-							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Workbench}"/>
-						</StackPanel>
+							<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Workbench}"/>
+							<Panel Grid.Column="2" Classes="NavLabelGroup">
+								<Border Classes="Pill Accent NavCount" IsVisible="{Binding HasRunningTasks}">
+									<TextBlock Text="{Binding RunningTaskCount}"/>
+								</Border>
+							</Panel>
+						</Grid>
 					</Button>
 					<Button Classes.NavBtn="True"
-							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Diagnostics}}"
-							Command="{Binding NavigateToDiagnosticsCommand}"
-							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Diagnostics}"
-							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.DiagnosticsTip}">
-						<StackPanel Orientation="Horizontal" Spacing="12">
-							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconActivity}"/></Viewbox>
-							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Diagnostics}"/>
-						</StackPanel>
+							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Inbox}}"
+							Command="{Binding NavigateToInboxCommand}"
+							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Inbox}"
+							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.InboxTip}">
+						<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconInbox}"/></Viewbox>
+							<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Inbox}"/>
+							<Panel Grid.Column="2" Classes="NavLabelGroup">
+								<Border Classes="Pill Warning NavCount" IsVisible="{Binding HasPendingApprovals}">
+									<TextBlock Text="{Binding PendingApprovalCount}"/>
+								</Border>
+							</Panel>
+						</Grid>
 					</Button>
+					<TextBlock Classes="NavLabel Overline"
+								   Text="{DynamicResource Lang.Shell.Nav.Build}"
+								   Margin="10,16,0,8"/>
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Plugins}}"
 							Command="{Binding NavigateToPluginsCommand}"
@@ -540,6 +565,9 @@
 							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Extensions}"/>
 						</StackPanel>
 					</Button>
+					<TextBlock Classes="NavLabel Overline"
+								   Text="{DynamicResource Lang.Shell.Nav.Manage}"
+								   Margin="10,16,0,8"/>
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Integrations}}"
 							Command="{Binding NavigateToIntegrationsCommand}"
@@ -548,6 +576,16 @@
 						<StackPanel Orientation="Horizontal" Spacing="12">
 							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconPlug}"/></Viewbox>
 							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Integrations}"/>
+						</StackPanel>
+					</Button>
+					<Button Classes.NavBtn="True"
+							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Diagnostics}}"
+							Command="{Binding NavigateToDiagnosticsCommand}"
+							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Diagnostics}"
+							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.DiagnosticsTip}">
+						<StackPanel Orientation="Horizontal" Spacing="12">
+							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconActivity}"/></Viewbox>
+							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Diagnostics}"/>
 						</StackPanel>
 					</Button>
 					<Button Classes.NavBtn="True"
@@ -636,6 +674,10 @@
 				<local:TasksView x:Name="TasksPanel"
 								 Grid.Column="0"
 								 IsVisible="{Binding IsChatWorkbenchVisible}"/>
+
+				<!-- Needs you: approvals waiting across all tasks -->
+				<local:InboxView Grid.Column="0"
+								 IsVisible="{Binding IsInboxVisible}"/>
 
 				<!-- Page host -->
 				<ContentControl Content="{Binding CurrentViewModel}"
