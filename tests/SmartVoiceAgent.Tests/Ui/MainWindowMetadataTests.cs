@@ -494,6 +494,40 @@ public sealed class MainWindowMetadataTests
             element.Name.LocalName == "TextBlock" && AttributeValue(element, "Text") == "{Binding StatusText, Mode=OneWay}");
     }
 
+    [Fact]
+    public void MainWindow_SidebarGroupsWorkBuildManageAndHostsNeedsYou()
+    {
+        var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root!;
+        var navCommands = mainWindow.Descendants()
+            .Where(element => element.Name.LocalName == "Button"
+                && (AttributeValue(element, "Classes.NavBtn") == "True"))
+            .Select(element => AttributeValue(element, "Command"))
+            .ToArray();
+
+        navCommands.Should().Equal(
+            "{Binding NavigateToCoordinatorCommand}",
+            "{Binding NavigateToInboxCommand}",
+            "{Binding NavigateToPluginsCommand}",
+            "{Binding NavigateToExtensionsCommand}",
+            "{Binding NavigateToIntegrationsCommand}",
+            "{Binding NavigateToDiagnosticsCommand}",
+            "{Binding NavigateToSettingsCommand}");
+
+        var groupLabels = mainWindow.Descendants()
+            .Where(element => element.Name.LocalName == "TextBlock"
+                && AttributeValue(element, "Classes") == "NavLabel Overline")
+            .Select(element => AttributeValue(element, "Text"))
+            .ToArray();
+        groupLabels.Should().Equal("WORK", "BUILD", "MANAGE");
+
+        mainWindow.Descendants().Should().Contain(element =>
+            element.Name.LocalName == "InboxView" && AttributeValue(element, "IsVisible") == "{Binding IsInboxVisible}");
+        mainWindow.Descendants().Should().Contain(element =>
+            element.Name.LocalName == "Border"
+            && AttributeValue(element, "Classes") == "Pill Warning NavCount"
+            && AttributeValue(element, "IsVisible") == "{Binding HasPendingApprovals}");
+    }
+
     private static string? AttributeValue(XElement element, string attributeName)
     {
         return element

@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Sidebar: grouped into Work (Tasks, Needs you), Build (Skills, Extensions) and Manage (Integrations, Diagnostics, Settings). Tasks shows how many tasks are running. The new Needs you page lists every tool call waiting for approval across all tasks, with Approve, Always allow, Deny and Open task, and its count shows in the sidebar.
 - The agent prompt says to reply in the language of the latest message, even when tool output or files are in another language, and gives the time zone as an offset (UTC+03:00) instead of a city name. An English request on a Turkish-region PC got a Turkish reply.
 - Settings: while the agent model has no key, its card names the planner model chat actually runs on ("No key here yet, so chat uses gpt-5.5 on OpenAI from the planner profile") instead of saying nothing is set up.
 - A tool step's time no longer includes the wait for your approval: a command approved after 25 s that ran in 0.4 s shows 0.4 s.

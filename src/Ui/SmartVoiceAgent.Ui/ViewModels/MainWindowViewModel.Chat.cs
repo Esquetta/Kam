@@ -505,7 +505,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 session.Title,
                 step.ToolDisplayName,
                 step.RiskText,
-                ActiveView == NavView.Coordinator && SelectedAgentChatSession == session,
+                ActiveView == NavView.Inbox || (ActiveView == NavView.Coordinator && SelectedAgentChatSession == session),
                 () =>
                 {
                     NavigateTo(NavView.Coordinator);
