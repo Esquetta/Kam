@@ -528,6 +528,22 @@ public sealed class MainWindowMetadataTests
             && AttributeValue(element, "IsVisible") == "{Binding HasPendingApprovals}");
     }
 
+    [Theory]
+    [InlineData("TasksView.axaml", "{Binding CanAlwaysAllow}")]
+    [InlineData("InboxView.axaml", "{Binding Step.CanAlwaysAllow}")]
+    public void AlwaysAllowButtons_HideForToolsThatAlwaysAsk(string view, string visibility)
+    {
+        var root = XDocument.Load(FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Views", view)).Root!;
+
+        var alwaysAllowButtons = root.Descendants()
+            .Where(element => element.Name.LocalName == "Button"
+                && (AttributeValue(element, "Command") ?? string.Empty).Contains("AlwaysAllowToolCallCommand", StringComparison.Ordinal))
+            .ToArray();
+
+        alwaysAllowButtons.Should().NotBeEmpty();
+        alwaysAllowButtons.Should().OnlyContain(button => AttributeValue(button, "IsVisible") == visibility);
+    }
+
     private static string? AttributeValue(XElement element, string attributeName)
     {
         return element

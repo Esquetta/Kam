@@ -83,6 +83,7 @@
                                     <Button Grid.Column="3"
                                             Classes="SecondaryAction"
                                             Content="{DynamicResource Lang.Common.AlwaysAllow}"
+                                            IsVisible="{Binding Step.CanAlwaysAllow}"
                                             ToolTip.Tip="{Binding Step.AlwaysAllowHint}"
                                             Command="{Binding $parent[local:InboxView].DataContext.AlwaysAllowToolCallCommand}"
                                             CommandParameter="{Binding Step}"/>
