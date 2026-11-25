@@ -2,7 +2,7 @@
 
 Kam is a desktop AI agent for Windows. You talk or type to it, and a model calls tools to act on your machine: open apps, read and edit files, run shell commands, search the web, and use any MCP server you add. Every tool call goes through a permission check you control.
 
-This is an early pre-release (v0.1.0), built by one person. Windows only for now.
+This is an early pre-release (v0.2.0), built by one person. Windows only for now.
 
 [![.NET CI](https://github.com/Esquetta/Kam/actions/workflows/dotnet.yml/badge.svg)](https://github.com/Esquetta/Kam/actions/workflows/dotnet.yml)
 [![.NET](https://img.shields.io/badge/.NET-9.0-512BD4)](https://dotnet.microsoft.com/)
@@ -29,13 +29,13 @@ This is an early pre-release (v0.1.0), built by one person. Windows only for now
 
 ## Download
 
-Get `Kam-0.1.0-win-x64.zip` from the [v0.1.0 pre-release](https://github.com/Esquetta/Kam/releases/tag/v0.1.0); newer builds are listed under [Releases](https://github.com/Esquetta/Kam/releases). A `.sha256` file sits next to it.
+Get `Kam-0.2.0-win-x64.zip` from the [v0.2.0 pre-release](https://github.com/Esquetta/Kam/releases/tag/v0.2.0); newer builds are listed under [Releases](https://github.com/Esquetta/Kam/releases). A `.sha256` file sits next to it.
 
 - Windows 10/11 x64. The build is self-contained, so no .NET install is needed.
 - About 106 MB to download, about 260 MB unpacked. Unzip anywhere and run `Kam.exe`.
 - The build is not code-signed. Windows SmartScreen may warn; choose "More info" > "Run anyway".
 - First run: the title bar shows "Set up a model". Open Settings > AI Runtime, pick a provider and a model. Until then, chat replies with a message asking you to set one up.
-  - Providers: OpenRouter, OpenAI, Anthropic, Ollama, or any OpenAI-compatible endpoint. Ollama at `http://localhost:11434/v1` needs no key.
+  - Providers: OpenRouter, OpenAI, Anthropic, DeepSeek, Ollama, or any OpenAI-compatible endpoint. Ollama at `http://localhost:11434/v1` needs no key.
 - Settings are stored in `%LocalAppData%\SmartVoiceAgent` and `%AppData%\Kam`. API keys are encrypted with Windows DPAPI for the current user.
 - There is no installer and no auto-start. Delete the folder to uninstall.
 
@@ -66,7 +66,7 @@ Design notes and roadmap: [docs/architecture/agent-platform.md](docs/architectur
 ## What it does not do yet
 
 - **One agent, one loop.** A turn stops when the model stops calling tools, after 24 steps, or when you cancel. A model request that fails with a temporary error (timeout, 429, 5xx, dropped stream) is retried up to three times with a growing wait; other errors end the turn with a message that says what to fix. There is no cost budget and no self-check pass.
-- **No subagents or workflows in the loop.** Read-only tool calls from one model response run together; calls that write or run commands run one after another. Parallel subagents and a `task` tool are on the roadmap, not in the code.
+- **No full subagents or workflows.** Read-only tool calls from one model response run together (up to 8); calls that write or run commands run one after another. The agent can ask a short-lived task agent (`agents.run`, read-only file and git tools) or, when you switch it on, your Codex CLI for help, but there is no `task` tool that starts agents with the full tool set, and no graph or workflow runner. Those are on the roadmap.
 - **The agent cannot extend itself.** You install skills, plugins and MCP servers from the Extensions page; the agent has no tool for it.
 - **Evals cover short tasks.** 38 smoke cases check that built-in skills run, and a [skill routing eval](evals/skill-routing/README.md) checks that models pick the right skill for 48 one-step requests, and an [agent task eval](evals/agent-tasks/README.md) runs 16 multi-step file tasks through the real agent loop in a sandbox. Nothing yet measures long tasks, the shell or answer quality.
 - **Hooks and long-term memory** are described in the roadmap only.
@@ -85,7 +85,7 @@ dotnet run --project src/Ui/SmartVoiceAgent.Ui/SmartVoiceAgent.Ui.csproj --confi
 
 Then configure a model in Settings > AI Runtime.
 
-`scripts/package-release.ps1 -Version 0.1.0` builds the release zip and its SHA-256 file. Pushing a `v*` tag runs the same script in CI and publishes the release.
+`scripts/package-release.ps1 -Version 0.2.0` builds the release zip and its SHA-256 file. Pushing a `v*` tag runs the same script in CI and publishes the release.
 
 ## Secrets
 
