@@ -1,3 +1,4 @@
+using System.Net;
 using System.Runtime.CompilerServices;
 using FluentAssertions;
 using Microsoft.Extensions.AI;
@@ -497,6 +498,440 @@ public sealed class AgentRuntimeTests : IDisposable
         chat.SummaryRequests.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task RunTurnAsync_TransientModelError_RetriesAndCompletes()
+    {
+        var chat = new ScriptedChatClient(
+            [Fail(new HttpRequestException("Service Unavailable", null, HttpStatusCode.ServiceUnavailable))],
+            [new TextContent("Back again.")]);
+        var runtime = CreateRuntime(chat, []);
+
+        var events = await CollectAsync(runtime, "s1", "hi");
+
+        chat.Requests.Should().HaveCount(2);
+        events.Last().Should().BeOfType<AgentTurnCompleted>().Which.FinalText.Should().Be("Back again.");
+    }
+
+    [Theory]
+    [InlineData(408, "request timed out (HTTP 408)")]
+    [InlineData(429, "rate limited (HTTP 429)")]
+    [InlineData(500, "provider error (HTTP 500)")]
+    [InlineData(502, "provider error (HTTP 502)")]
+    [InlineData(503, "provider error (HTTP 503)")]
+    [InlineData(504, "provider error (HTTP 504)")]
+    [InlineData(529, "provider error (HTTP 529)")]
+    public async Task RunTurnAsync_TransientStatus_ReportsTheRetryInTheEventStream(int status, string reason)
+    {
+        var chat = new ScriptedChatClient(
+            [Fail(new HttpRequestException("failed", null, (HttpStatusCode)status))],
+            [new TextContent("ok")]);
+        var runtime = CreateRuntime(chat, [], maxModelRetries: 2);
+
+        var events = await CollectAsync(runtime, "s1", "hi");
+
+        events.OfType<AgentModelRetryScheduled>().Should().ContainSingle().Which.Should().Be(
+            new AgentModelRetryScheduled("s1", 1, 2, TimeSpan.FromMilliseconds(5), reason, PartialOutputDiscarded: false));
+        events.Last().Should().BeOfType<AgentTurnCompleted>();
+    }
+
+    [Fact]
+    public async Task RunTurnAsync_RequestTimesOut_Retries()
+    {
+        var timeout = new TaskCanceledException("The request was canceled due to the configured HttpClient.Timeout.", new TimeoutException());
+        var chat = new ScriptedChatClient([Fail(timeout)], [new TextContent("ok")]);
+        var runtime = CreateRuntime(chat, []);
+
+        var events = await CollectAsync(runtime, "s1", "hi");
+
+        events.OfType<AgentModelRetryScheduled>().Should().ContainSingle().Which.Reason.Should().Be("request timed out");
+        events.Last().Should().BeOfType<AgentTurnCompleted>().Which.FinalText.Should().Be("ok");
+    }
+
+    [Fact]
+    public async Task RunTurnAsync_StreamDropsAfterSomeText_StartsTheRequestOverAndKeepsOnlyTheFullAnswer()
+    {
+        var store = new JsonAgentSessionStore(Path.Combine(_directory, "sessions"));
+        var chat = new ScriptedChatClient(
+            [new TextContent("The ans"), Fail(new IOException("The response ended prematurely."))],
+            [new TextContent("The answer.")]);
+        var runtime = CreateRuntime(chat, [], store: store);
+
+        var events = await CollectAsync(runtime, "s1", "question");
+
+        var retry = events.OfType<AgentModelRetryScheduled>().Should().ContainSingle().Subject;
+        retry.Reason.Should().Be("connection lost");
+        retry.PartialOutputDiscarded.Should().BeTrue("the UI has to drop the text it already showed");
+        events.Last().Should().BeOfType<AgentTurnCompleted>().Which.FinalText.Should().Be("The answer.");
+
+        chat.Requests[1].Select(m => m.Text).Should().Equal(chat.Requests[0].Select(m => m.Text), "the partial reply is not sent back");
+        var saved = await store.LoadAsync("s1", TestContext.Current.CancellationToken);
+        saved.Select(m => $"{m.Role}:{m.Text}").Should().Equal("user:question", "assistant:The answer.");
+    }
+
+    [Fact]
+    public async Task RunTurnAsync_TransientErrorAfterAToolCall_RetriesTheRequestWithoutRunningTheToolAgain()
+    {
+        var runs = 0;
+        var tool = Tool(AIFunctionFactory.Create(() => { runs++; return "42"; }, "calc"), ToolRisk.Read);
+        var chat = new ScriptedChatClient(
+            [Call("c1", "calc")],
+            [Fail(new HttpRequestException("failed", null, HttpStatusCode.BadGateway))],
+            [new TextContent("It is 42.")]);
+        var runtime = CreateRuntime(chat, [tool]);
+
+        var events = await CollectAsync(runtime, "s1", "calculate");
+
+        runs.Should().Be(1);
+        chat.Requests.Should().HaveCount(3);
+        events.Last().Should().BeOfType<AgentTurnCompleted>().Which.ToolCallCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task RunTurnAsync_ModelKeepsFailing_StopsAtTheRetryCapWithDoublingWaits()
+    {
+        IList<AIContent> unavailable = [Fail(new HttpRequestException("failed", null, HttpStatusCode.ServiceUnavailable))];
+        var chat = new ScriptedChatClient(unavailable, unavailable, unavailable, unavailable, unavailable);
+        var runtime = CreateRuntime(chat, [], maxModelRetries: 2);
+
+        var events = await CollectAsync(runtime, "s1", "hi");
+
+        chat.Requests.Should().HaveCount(3, "one request and two retries");
+        events.OfType<AgentModelRetryScheduled>().Select(e => (e.Attempt, e.Delay.TotalMilliseconds))
+            .Should().Equal((1, 5), (2, 10));
+        events.Last().Should().BeOfType<AgentTurnFailed>().Which.Message.Should()
+            .Be("The model did not answer after 3 attempts. Last error: provider error (HTTP 503). Check your connection or try again in a moment.");
+    }
+
+    [Fact]
+    public async Task RunTurnAsync_RetriesTurnedOff_FailsOnTheFirstTransientError()
+    {
+        var chat = new ScriptedChatClient(
+            [Fail(new HttpRequestException("failed", null, HttpStatusCode.ServiceUnavailable))],
+            [new TextContent("unreachable")]);
+        var runtime = CreateRuntime(chat, [], maxModelRetries: 0);
+
+        var events = await CollectAsync(runtime, "s1", "hi");
+
+        chat.Requests.Should().HaveCount(1);
+        events.Should().ContainSingle().Which.Should().BeOfType<AgentTurnFailed>()
+            .Which.Message.Should().StartWith("The model request failed: provider error (HTTP 503).");
+    }
+
+    [Theory]
+    [InlineData(1, 2000, 2000)]
+    [InlineData(2, 2000, 4000)]
+    [InlineData(3, 2000, 8000)]
+    [InlineData(5, 2000, 30000)]
+    [InlineData(12, 2000, 30000)]
+    [InlineData(1, 0, 0)]
+    [InlineData(1, -50, 0)]
+    public void ModelRetryDelay_DoublesAndStopsAtThirtySeconds(int retry, int baseMilliseconds, int expectedMilliseconds)
+    {
+        AgentRuntime.ModelRetryDelay(retry, baseMilliseconds).Should().Be(TimeSpan.FromMilliseconds(expectedMilliseconds));
+    }
+
+    [Theory]
+    [InlineData(400, "The provider rejected the request (HTTP 400): unsupported parameter")]
+    [InlineData(401, "The provider rejected the API key (HTTP 401). Check the key for this model in Settings, then send the message again. Detail: unsupported parameter")]
+    [InlineData(403, "The provider rejected the API key (HTTP 403). Check the key for this model in Settings, then send the message again. Detail: unsupported parameter")]
+    [InlineData(404, "The provider did not find the model or endpoint (HTTP 404). Check the model name and endpoint in Settings. Detail: unsupported parameter")]
+    [InlineData(422, "The provider rejected the request (HTTP 422): unsupported parameter")]
+    public async Task RunTurnAsync_ErrorTheUserMustFix_FailsAtOnceWithWhatToDo(int status, string message)
+    {
+        var chat = new ScriptedChatClient(
+            [Fail(new HttpRequestException("unsupported parameter", null, (HttpStatusCode)status))],
+            [new TextContent("unreachable")]);
+        var runtime = CreateRuntime(chat, []);
+
+        var events = await CollectAsync(runtime, "s1", "hi");
+
+        chat.Requests.Should().HaveCount(1);
+        events.Should().ContainSingle().Which.Should().BeOfType<AgentTurnFailed>().Which.Message.Should().Be(message);
+    }
+
+    [Fact]
+    public async Task RunTurnAsync_ContextTooLong_FailsAtOnceAndPointsToCompact()
+    {
+        var chat = new ScriptedChatClient(
+            [Fail(new HttpRequestException("This model's maximum context length is 8192 tokens.", null, HttpStatusCode.BadRequest))],
+            [new TextContent("unreachable")]);
+        var runtime = CreateRuntime(chat, []);
+
+        var events = await CollectAsync(runtime, "s1", "hi");
+
+        chat.Requests.Should().HaveCount(1);
+        events.Should().ContainSingle().Which.Should().BeOfType<AgentTurnFailed>().Which.Message.Should()
+            .Be("The conversation is too long for this model. Send /compact to summarize earlier turns, or start a new task.");
+    }
+
+    [Fact]
+    public async Task RunTurnAsync_StoppedWhileWaitingToRetry_EndsTheTurnWithoutAnotherRequest()
+    {
+        var chat = new ScriptedChatClient(
+            [Fail(new HttpRequestException("failed", null, HttpStatusCode.ServiceUnavailable))],
+            [new TextContent("unreachable")]);
+        var runtime = CreateRuntime(chat, [], retryDelayMilliseconds: 25000);
+        using var cancellation = new CancellationTokenSource();
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        var events = new List<AgentEvent>();
+        await foreach (var agentEvent in runtime.RunTurnAsync("s1", "hi", cancellation.Token))
+        {
+            events.Add(agentEvent);
+            if (agentEvent is AgentModelRetryScheduled)
+            {
+                cancellation.Cancel();
+            }
+        }
+
+        events.Last().Should().BeOfType<AgentTurnFailed>().Which.Message.Should().Be("Stopped.");
+        chat.Requests.Should().HaveCount(1);
+        stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10), "Stop does not wait out the 25 second retry delay");
+    }
+
+    [Theory]
+    [InlineData(ToolRisk.Read)]
+    [InlineData(ToolRisk.Network)]
+    public async Task RunTurnAsync_ReadOnlyToolCallsInOneResponse_RunTogether(ToolRisk risk)
+    {
+        var probe = new ConcurrencyProbe(expected: 2, waitMilliseconds: 5000);
+        var tool = Tool(AIFunctionFactory.Create(probe.RunAsync, "files_read"), risk);
+        var chat = new ScriptedChatClient(
+            [Call("c1", "files_read", ("name", "a")), Call("c2", "files_read", ("name", "b"))],
+            [new TextContent("Read both.")]);
+        var runtime = CreateRuntime(chat, [tool]);
+
+        var events = await CollectAsync(runtime, "s1", "read both");
+
+        probe.MaxRunning.Should().Be(2, "read-only calls from one response do not wait for each other");
+        events.Last().Should().BeOfType<AgentTurnCompleted>().Which.ToolCallCount.Should().Be(2);
+        chat.Requests[1].SelectMany(m => m.Contents).OfType<FunctionResultContent>()
+            .Select(r => r.CallId).Should().Equal("c1", "c2");
+    }
+
+    [Fact]
+    public async Task RunTurnAsync_SecondReadFinishesFirst_ResultsStillGoBackInTheOrderTheModelAsked()
+    {
+        var fastDone = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var tool = Tool(
+            AIFunctionFactory.Create(
+                async (string name, CancellationToken cancellationToken) =>
+                {
+                    if (name == "slow")
+                    {
+                        await fastDone.Task.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+                        await Task.Delay(50, cancellationToken);
+                    }
+
+                    return "read " + name;
+                },
+                "files_read"),
+            ToolRisk.Read);
+        var chat = new ScriptedChatClient(
+            [Call("c1", "files_read", ("name", "slow")), Call("c2", "files_read", ("name", "fast"))],
+            [new TextContent("Read both.")]);
+        var runtime = CreateRuntime(chat, [tool]);
+
+        var events = new List<AgentEvent>();
+        await foreach (var agentEvent in runtime.RunTurnAsync("s1", "read both", TestContext.Current.CancellationToken))
+        {
+            events.Add(agentEvent);
+            if (agentEvent is AgentToolCallCompleted { CallId: "c2" })
+            {
+                fastDone.TrySetResult();
+            }
+        }
+
+        events.OfType<AgentToolCallStarted>().Select(e => e.CallId).Should().Equal("c1", "c2");
+        events.OfType<AgentToolCallCompleted>().Select(e => e.CallId).Should().Equal("c2", "c1");
+        chat.Requests[1].SelectMany(m => m.Contents).OfType<FunctionResultContent>()
+            .Select(r => $"{r.CallId}={r.Result}").Should().Equal("c1=read slow", "c2=read fast");
+    }
+
+    [Theory]
+    [InlineData(ToolRisk.Write)]
+    [InlineData(ToolRisk.Execute)]
+    [InlineData(ToolRisk.External)]
+    [InlineData(ToolRisk.Delegate)]
+    public async Task RunTurnAsync_CallsThatChangeSomething_RunOneAfterAnother(ToolRisk risk)
+    {
+        var probe = new ConcurrencyProbe(expected: 2);
+        var tool = Tool(AIFunctionFactory.Create(probe.RunAsync, "act"), risk);
+        var permissions = new ToolPermissionService(Path.Combine(_directory, "permissions.json"), ApprovalMode.FullAuto);
+        var chat = new ScriptedChatClient(
+            [Call("c1", "act", ("name", "a")), Call("c2", "act", ("name", "b"))],
+            [new TextContent("Done.")]);
+        var runtime = CreateRuntime(chat, [tool], permissions);
+
+        await CollectAsync(runtime, "s1", "do both");
+
+        probe.MaxRunning.Should().Be(1);
+        probe.Log.Should().Equal("start a", "end a", "start b", "end b");
+    }
+
+    [Fact]
+    public async Task RunTurnAsync_WriteBetweenReads_WaitsForEarlierReadsAndFinishesBeforeLaterOnes()
+    {
+        var probe = new ConcurrencyProbe(expected: 2, waitMilliseconds: 5000);
+        var read = Tool(AIFunctionFactory.Create(probe.RunAsync, "files_read"), ToolRisk.Read);
+        var write = Tool(AIFunctionFactory.Create(probe.RunAsync, "files_write"), ToolRisk.Write);
+        var permissions = new ToolPermissionService(Path.Combine(_directory, "permissions.json"), ApprovalMode.FullAuto);
+        var chat = new ScriptedChatClient(
+            [
+                Call("c1", "files_read", ("name", "a")),
+                Call("c2", "files_read", ("name", "b")),
+                Call("c3", "files_write", ("name", "w")),
+                Call("c4", "files_read", ("name", "c"))
+            ],
+            [new TextContent("Done.")]);
+        var runtime = CreateRuntime(chat, [read, write], permissions);
+
+        await CollectAsync(runtime, "s1", "read, write, read");
+
+        probe.MaxRunning.Should().Be(2, "the two reads before the write run together");
+        probe.Log.Take(4).Should().BeEquivalentTo("start a", "start b", "end a", "end b");
+        probe.Log.Skip(4).Should().Equal("start w", "end w", "start c", "end c");
+        chat.Requests[1].SelectMany(m => m.Contents).OfType<FunctionResultContent>()
+            .Select(r => r.CallId).Should().Equal("c1", "c2", "c3", "c4");
+    }
+
+    [Fact]
+    public async Task RunTurnAsync_DeniedCallAmongReads_IsBlockedOnItsOwnWhileTheOthersRun()
+    {
+        var probe = new ConcurrencyProbe(expected: 2, waitMilliseconds: 5000);
+        var secretRuns = 0;
+        var read = Tool(AIFunctionFactory.Create(probe.RunAsync, "files_read"), ToolRisk.Read);
+        var secret = Tool(AIFunctionFactory.Create(() => { secretRuns++; return "secret"; }, "secrets_read"), ToolRisk.Read);
+        var permissions = new ToolPermissionService(Path.Combine(_directory, "permissions.json"));
+        permissions.AddRule("secrets_read", allow: false);
+        var chat = new ScriptedChatClient(
+            [Call("c1", "files_read", ("name", "a")), Call("c2", "secrets_read"), Call("c3", "files_read", ("name", "b"))],
+            [new TextContent("Done.")]);
+        var runtime = CreateRuntime(chat, [read, secret], permissions);
+
+        var events = await CollectAsync(runtime, "s1", "read all");
+
+        secretRuns.Should().Be(0);
+        probe.MaxRunning.Should().Be(2);
+        events.OfType<AgentToolCallCompleted>().Should().ContainSingle(e => e.CallId == "c2" && !e.Success && e.Summary == "Blocked by a deny rule");
+        chat.Requests[1].SelectMany(m => m.Contents).OfType<FunctionResultContent>()
+            .Select(r => $"{r.CallId}={r.Result!.ToString()!.Split(':')[0]}").Should().Equal("c1=read a", "c2=Blocked", "c3=read b");
+    }
+
+    [Fact]
+    public async Task RunTurnAsync_PolicyAsksForReads_AsksOneCallAtATime()
+    {
+        var tool = Tool(AIFunctionFactory.Create((string name) => "read " + name, "files_read"), ToolRisk.Read);
+        var chat = new ScriptedChatClient(
+            [Call("c1", "files_read", ("name", "a")), Call("c2", "files_read", ("name", "b"))],
+            [new TextContent("Done.")]);
+        var runtime = CreateRuntime(chat, [tool], new AskForEverything());
+
+        var events = new List<AgentEvent>();
+        await using var turn = runtime.RunTurnAsync("s1", "read both", TestContext.Current.CancellationToken).GetAsyncEnumerator();
+        while (await turn.MoveNextAsync())
+        {
+            events.Add(turn.Current);
+            if (turn.Current is AgentApprovalRequested)
+            {
+                break;
+            }
+        }
+
+        var next = turn.MoveNextAsync().AsTask();
+        (await Task.WhenAny(next, Task.Delay(200, TestContext.Current.CancellationToken)))
+            .Should().NotBeSameAs(next, "the second call is not announced while the first waits for the user");
+        events.OfType<AgentToolCallStarted>().Select(e => e.CallId).Should().Equal("c1");
+
+        runtime.ResolveApproval(events.OfType<AgentApprovalRequested>().Single().RequestId, approved: true).Should().BeTrue();
+        while (await next)
+        {
+            events.Add(turn.Current);
+            if (turn.Current is AgentApprovalRequested { CallId: "c2" } second)
+            {
+                runtime.ResolveApproval(second.RequestId, approved: false);
+            }
+
+            next = turn.MoveNextAsync().AsTask();
+        }
+
+        events.OfType<AgentApprovalRequested>().Select(e => e.CallId).Should().Equal("c1", "c2");
+        chat.Requests[1].SelectMany(m => m.Contents).OfType<FunctionResultContent>()
+            .Select(r => r.CallId).Should().Equal("c1", "c2");
+        events.OfType<AgentToolCallCompleted>().Should().Contain(e => e.CallId == "c1" && e.Success)
+            .And.Contain(e => e.CallId == "c2" && e.Summary == "Declined");
+    }
+
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(2, 2)]
+    public async Task RunTurnAsync_MaxParallelToolCalls_CapsHowManyReadsRunAtOnce(int cap, int expectedRunning)
+    {
+        var probe = new ConcurrencyProbe(expected: 4, waitMilliseconds: 1000);
+        var tool = Tool(AIFunctionFactory.Create(probe.RunAsync, "files_read"), ToolRisk.Read);
+        var chat = new ScriptedChatClient(
+            [.. Enumerable.Range(1, 4).Select(i => Call($"c{i}", "files_read", ("name", $"f{i}")))],
+            [new TextContent("Done.")]);
+        var runtime = CreateRuntime(chat, [tool], maxParallelToolCalls: cap);
+
+        var events = await CollectAsync(runtime, "s1", "read four");
+
+        probe.MaxRunning.Should().Be(expectedRunning);
+        events.Last().Should().BeOfType<AgentTurnCompleted>().Which.ToolCallCount.Should().Be(4);
+    }
+
+    [Fact]
+    public async Task RunTurnAsync_StoppedWhileReadsRunTogether_StopsThemAllAndKeepsTheThreadValid()
+    {
+        var store = new JsonAgentSessionStore(Path.Combine(_directory, "sessions"));
+        var bothRunning = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var started = 0;
+        var stopped = 0;
+        var tool = Tool(
+            AIFunctionFactory.Create(
+                async (string name, CancellationToken cancellationToken) =>
+                {
+                    if (Interlocked.Increment(ref started) == 2)
+                    {
+                        bothRunning.TrySetResult();
+                    }
+
+                    try
+                    {
+                        await Task.Delay(Timeout.Infinite, cancellationToken);
+                    }
+                    finally
+                    {
+                        Interlocked.Increment(ref stopped);
+                    }
+
+                    return "unreachable";
+                },
+                "files_read"),
+            ToolRisk.Read);
+        var chat = new ScriptedChatClient(
+            [Call("c1", "files_read", ("name", "a")), Call("c2", "files_read", ("name", "b"))],
+            [new TextContent("Fine.")]);
+        var runtime = CreateRuntime(chat, [tool], store: store);
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        _ = bothRunning.Task.ContinueWith(_ => cancellation.Cancel(), TaskScheduler.Default);
+
+        var events = new List<AgentEvent>();
+        await foreach (var agentEvent in runtime.RunTurnAsync("s1", "read both", cancellation.Token))
+        {
+            events.Add(agentEvent);
+        }
+
+        events.Last().Should().BeOfType<AgentTurnFailed>().Which.Message.Should().Be("Stopped.");
+        stopped.Should().Be(2, "no tool call outlives the turn");
+
+        await CollectAsync(runtime, "s1", "never mind");
+
+        var saved = await store.LoadAsync("s1", TestContext.Current.CancellationToken);
+        saved.Select(m => m.Role).Should().Equal(ChatRole.User, ChatRole.Assistant, ChatRole.Tool, ChatRole.User, ChatRole.Assistant);
+        saved[2].Contents.OfType<FunctionResultContent>().Select(r => r.CallId).Should().Equal("c1", "c2");
+    }
+
     private static List<ChatMessage> ThreeLongTurns() =>
     [
         new(ChatRole.User, "first"),
@@ -517,7 +952,10 @@ public sealed class AgentRuntimeTests : IDisposable
         int contextTokenBudget = 64000,
         IReadOnlyList<IAgentPromptContributor>? contributors = null,
         string? workspaceRoot = null,
-        Func<string?, IChatClient>? chatFactory = null)
+        Func<string?, IChatClient>? chatFactory = null,
+        int maxModelRetries = 3,
+        int retryDelayMilliseconds = 5,
+        int maxParallelToolCalls = 8)
     {
         var services = new ServiceCollection();
         services.AddScoped<IAgentToolProvider>(_ => new StaticToolProvider(tools));
@@ -536,7 +974,10 @@ public sealed class AgentRuntimeTests : IDisposable
             {
                 MaxIterations = maxIterations,
                 MaxToolResultCharacters = maxResultCharacters,
-                ContextTokenBudget = contextTokenBudget
+                ContextTokenBudget = contextTokenBudget,
+                MaxModelRetries = maxModelRetries,
+                ModelRetryBaseDelayMilliseconds = retryDelayMilliseconds,
+                MaxParallelToolCalls = maxParallelToolCalls
             }),
             NullLogger<AgentRuntime>.Instance,
             () => new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero),
@@ -568,6 +1009,74 @@ public sealed class AgentRuntimeTests : IDisposable
 
     private static AIContent Call(string callId, string name, params (string Key, object? Value)[] arguments) =>
         new FunctionCallContent(callId, name, arguments.ToDictionary(a => a.Key, a => a.Value));
+
+    private static AIContent Fail(Exception exception) => new FailContent(exception);
+
+    /// <summary>Makes the scripted model stream throw at this point of a response.</summary>
+    private sealed class FailContent(Exception exception) : AIContent
+    {
+        public Exception Exception { get; } = exception;
+    }
+
+    /// <summary>
+    /// A tool body that records how many calls run at once. Each call waits until the expected number
+    /// run together, or gives up after a short wait when the runtime runs them one after another.
+    /// </summary>
+    private sealed class ConcurrencyProbe(int expected, int waitMilliseconds = 300)
+    {
+        private readonly TaskCompletionSource _together = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly object _gate = new();
+        private int _running;
+
+        public int MaxRunning { get; private set; }
+
+        public List<string> Log { get; } = [];
+
+        public async Task<string> RunAsync(string name, CancellationToken cancellationToken)
+        {
+            lock (_gate)
+            {
+                _running++;
+                MaxRunning = Math.Max(MaxRunning, _running);
+                Log.Add($"start {name}");
+                if (_running >= expected)
+                {
+                    _together.TrySetResult();
+                }
+            }
+
+            await Task.WhenAny(_together.Task, Task.Delay(waitMilliseconds, cancellationToken));
+
+            lock (_gate)
+            {
+                _running--;
+                Log.Add($"end {name}");
+            }
+
+            return "read " + name;
+        }
+    }
+
+    private sealed class AskForEverything : IToolPermissionService
+    {
+        public ApprovalMode Mode { get; set; } = ApprovalMode.Ask;
+
+        public IReadOnlyCollection<string> AllowRules => [];
+
+        public IReadOnlyCollection<string> DenyRules => [];
+
+        public ToolPermissionDecision Evaluate(AgentToolDescriptor tool, string argumentsJson) => ToolPermissionDecision.Ask;
+
+        public string SuggestAllowRule(AgentToolDescriptor tool, string argumentsJson) => tool.Name;
+
+        public void AddRule(string rule, bool allow)
+        {
+        }
+
+        public void RemoveRule(string rule)
+        {
+        }
+    }
 
     private sealed class FixedPromptContributor(string? section = null, bool throws = false) : IAgentPromptContributor
     {
@@ -624,6 +1133,11 @@ public sealed class AgentRuntimeTests : IDisposable
             await Task.Yield();
             foreach (var content in _responses.Dequeue())
             {
+                if (content is FailContent fail)
+                {
+                    throw fail.Exception;
+                }
+
                 yield return new ChatResponseUpdate(ChatRole.Assistant, [content]) { MessageId = $"m{Requests.Count}" };
             }
         }

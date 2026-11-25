@@ -257,6 +257,25 @@ public sealed class MainWindowAgentRuntimeTests
     }
 
     [Fact]
+    public async Task RunAgentTurnAsync_ModelRetryAfterPartialText_ShowsTheAnswerOnce()
+    {
+        var runtime = new ScriptedRuntime();
+        var viewModel = CreateViewModel(runtime);
+        var session = viewModel.SelectedAgentChatSession!;
+        var sid = session.SessionId;
+        runtime.Script(
+            new AgentTextDelta(sid, "The ans"),
+            new AgentModelRetryScheduled(sid, 1, 3, TimeSpan.FromSeconds(2), "connection lost", PartialOutputDiscarded: true),
+            new AgentTextDelta(sid, "The answer."),
+            new AgentTurnCompleted(sid, "The answer.", 0, 0, 0));
+        runtime.Finish();
+
+        await viewModel.RunAgentTurnAsync(session, "question");
+
+        session.Messages.Select(m => $"{m.Role}:{m.Content}").Should().Equal("Kam:The answer.");
+    }
+
+    [Fact]
     public async Task SubmitCommandInputAsync_CompactCommand_GoesToAgentRuntime()
     {
         var runtime = new ScriptedRuntime();

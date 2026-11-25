@@ -293,6 +293,17 @@ namespace SmartVoiceAgent.Ui.ViewModels
                             AddLog($"CONTEXT_COMPACTED: {compacted.SummarizedMessageCount} messages, ~{compacted.TokensBefore} to ~{compacted.TokensAfter} tokens");
                             break;
 
+                        case AgentModelRetryScheduled retry:
+                            // The request starts over, so text streamed before the failure would show twice.
+                            if (retry.PartialOutputDiscarded && streaming is not null)
+                            {
+                                session.RemoveMessage(streaming);
+                                streaming = null;
+                            }
+
+                            AddLog($"MODEL_RETRY: {retry.Attempt}/{retry.MaxRetries} in {retry.Delay.TotalSeconds:0.#}s, {retry.Reason}");
+                            break;
+
                         case AgentTurnCompleted done:
                             FinishStreaming(session, ref streaming);
                             if (!wroteText && !string.IsNullOrWhiteSpace(done.FinalText))
