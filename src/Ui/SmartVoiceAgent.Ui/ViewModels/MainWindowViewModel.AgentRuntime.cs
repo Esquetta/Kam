@@ -283,7 +283,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
                             FinishStreaming(session, ref streaming);
                             session.AddMessage(AgentChatMessageViewModel.System(CompactedNotice));
                             session.CompactionCount++;
-                            session.ContextTokens = compacted.TokensAfter;
+                            // TokensAfter is Kam's own estimate, not the provider's count, so it is not shown
+                            // next to measured sizes; the next turn measures the compacted context.
+                            session.ContextTokens = 0;
                             AddLog($"CONTEXT_COMPACTED: {compacted.SummarizedMessageCount} messages, ~{compacted.TokensBefore} to ~{compacted.TokensAfter} tokens");
                             break;
 
