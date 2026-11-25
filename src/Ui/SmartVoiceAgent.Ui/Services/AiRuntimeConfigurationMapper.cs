@@ -175,6 +175,7 @@ public static class AiRuntimeConfigurationMapper
 
         AddIfNotBlank(overrides, "WebResearch:SearchApiKey", settings.WebSearchApiKey?.Trim());
         AddIfNotBlank(overrides, "WebResearch:SearchEngineId", settings.WebSearchEngineId?.Trim());
+        overrides["CliAgents:CodexEnabled"] = settings.CodexCliEnabled.ToString(CultureInfo.InvariantCulture);
 
         if (!string.IsNullOrWhiteSpace(settings.SmtpUsername)
             && !string.IsNullOrWhiteSpace(settings.SmtpPassword))

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using OpenAI;
 using SmartVoiceAgent.Core.Interfaces;
@@ -9,7 +10,9 @@ using SmartVoiceAgent.Core.Models;
 using SmartVoiceAgent.Core.Models.CodingAgent;
 using SmartVoiceAgent.Core.Models.GitHub;
 using SmartVoiceAgent.Core.Models.Agents;
+using SmartVoiceAgent.Core.Models.Agents.CliAgents;
 using SmartVoiceAgent.Infrastructure.Agent.Agents;
+using SmartVoiceAgent.Infrastructure.Agent.CliAgents;
 using SmartVoiceAgent.Infrastructure.Agent.Runtime;
 using SmartVoiceAgent.Infrastructure.Agent.Mcp;
 using SmartVoiceAgent.Infrastructure.Agent.Extensions;
@@ -165,6 +168,15 @@ public static class ServiceCollectionExtensions
             sp.GetService<ISecretValueProvider>(),
             sp.GetService<ILoggerFactory>()));
         services.AddScoped<IAgentToolProvider, McpToolProvider>();
+
+        // The user's own signed-in coding-agent CLIs (Codex), switched on in Integrations.
+        services.Configure<CliAgentsOptions>(configuration.GetSection(CliAgentsOptions.SectionName));
+        services.TryAddSingleton<ICodingAgentProcessRunner, CodingAgentProcessRunner>();
+        services.AddSingleton<ICliAgentDetector>(sp => new CliAgentDetector(sp.GetRequiredService<ICodingAgentProcessRunner>()));
+        services.AddScoped<IAgentToolProvider>(sp => new CliAgentToolProvider(
+            sp.GetRequiredService<IOptionsMonitor<CliAgentsOptions>>(),
+            sp.GetRequiredService<ICodingAgentProcessRunner>(),
+            WorkspaceRoot(sp)));
         services.AddSingleton<IAgentRuntime>(sp =>
         {
             var cache = sp.GetRequiredService<ChatClientCache>();

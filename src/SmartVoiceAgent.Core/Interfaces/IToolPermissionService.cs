@@ -30,7 +30,8 @@ public interface IToolPermissionService
 
     /// <summary>
     /// Returns the allow rule that "Always allow" saves for this call: the tool name, or for shell commands
-    /// the command and its subcommand, such as <c>shell_run(git status:*)</c>.
+    /// the command and its subcommand, such as <c>shell_run(git status:*)</c>. Empty when the call cannot be
+    /// always allowed, as for <see cref="ToolRisk.Delegate"/> tools.
     /// </summary>
     /// <param name="tool">The tool being called.</param>
     /// <param name="argumentsJson">The call arguments as JSON.</param>

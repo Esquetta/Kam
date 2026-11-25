@@ -67,6 +67,11 @@ public interface ISettingsService
     /// </summary>
     string WebSearchEngineId { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether the agent may hand tasks to the user's signed-in Codex CLI.
+    /// </summary>
+    bool CodexCliEnabled { get; set; }
+
     #region Email (SMTP) Settings
 
     /// <summary>
