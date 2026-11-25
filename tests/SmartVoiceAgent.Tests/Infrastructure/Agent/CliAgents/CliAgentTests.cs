@@ -18,8 +18,7 @@ public sealed class CodexCliAgentTests : IDisposable
     {
         var arguments = CodexCliAgent.BuildArguments(new CliAgentRunRequest("Explain Program.cs", _workspace, false, TimeSpan.FromMinutes(5)));
 
-        arguments.Should().Equal(
-            "exec", "--json", "--skip-git-repo-check", "--ignore-user-config", "--sandbox", "read-only", "--cd", _workspace, "-");
+        arguments.Should().Equal("exec", "--json", "--skip-git-repo-check", "--sandbox", "read-only", "--cd", _workspace, "-");
         arguments.Should().NotContain(argument => argument.Contains("dangerously", StringComparison.Ordinal));
     }
 

@@ -85,8 +85,7 @@ public sealed record CliAgentRunResult(
 /// <summary>
 /// Runs a task with <c>codex exec --json</c> on the user's installed, signed-in Codex CLI. The task goes in on
 /// standard input, the run uses Codex's read-only sandbox unless edits are allowed (then workspace-write), and the
-/// JSONL event stream is reduced to the final answer, changed files and commands. The run skips the user's
-/// <c>config.toml</c>, so their MCP servers and plugins, which the sandbox does not cover, are not loaded.
+/// JSONL event stream is reduced to the final answer, changed files and commands.
 /// </summary>
 public sealed class CodexCliAgent
 {
@@ -115,7 +114,6 @@ public sealed class CodexCliAgent
         "exec",
         "--json",
         "--skip-git-repo-check",
-        "--ignore-user-config",
         "--sandbox",
         request.AllowEdits ? "workspace-write" : "read-only",
         "--cd",
