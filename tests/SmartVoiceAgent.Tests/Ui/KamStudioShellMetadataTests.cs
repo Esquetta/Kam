@@ -88,33 +88,35 @@ public sealed class KamStudioShellMetadataTests
     }
 
     [Fact]
-    public void Rail_ShowsTheBuildLadderWithoutLinkingToPagesThatDoNotExist()
+    public void Rail_LadderStepsOpenTheirPagesAndSayHowMuchIsBuilt()
     {
         var mainWindow = LoadXaml("MainWindow.axaml");
 
         var steps = mainWindow.Descendants()
-            .Where(element => element.Name.LocalName == "Border" && AttributeValue(element, "Classes") == "LadderStep")
+            .Where(element => element.Name.LocalName == "Button" && AttributeValue(element, "Classes.LadderStep") == "True")
             .ToArray();
 
         steps.Select(step => AttributeValue(step, "AutomationProperties.Name")).Should().Equal(
-            "Prompts", "Agents", "Loops", "Graphs", "Agent Builder", "Runs");
+            "Prompts", "Agents", "Loops", "Graphs", "Agent Builder");
+        steps.Select(step => AttributeValue(step, "CommandParameter")).Should().Equal(
+            "{x:Static vm:NavView.Prompts}", "{x:Static vm:NavView.Agents}", "{x:Static vm:NavView.Loops}",
+            "{x:Static vm:NavView.Graphs}", "{x:Static vm:NavView.Builder}");
         steps.Select(step => step.Descendants().Single(element => AttributeValue(element, "Classes")?.StartsWith("LadderBadge", StringComparison.Ordinal) == true))
             .Select(badge => AttributeValue(badge, "Classes"))
             .Should().Equal(
-                "LadderBadge Planned", "LadderBadge Partial", "LadderBadge Partial",
-                "LadderBadge Planned", "LadderBadge Planned", "LadderBadge Planned");
-        // Not links, but keyboard and screen reader users can still reach what each row says.
-        steps.Should().OnlyContain(step => step.Descendants().All(element => element.Name.LocalName != "Button")
+                "LadderBadge Partial", "LadderBadge Partial", "LadderBadge Partial",
+                "LadderBadge Planned", "LadderBadge Planned");
+        steps.Should().OnlyContain(step => AttributeValue(step, "Command") == "{Binding NavigateToPageCommand}"
             && AttributeValue(step, "ToolTip.Tip") != null
-            && AttributeValue(step, "AutomationProperties.HelpText") != null
-            && AttributeValue(step, "Focusable") == "True");
+            && AttributeValue(step, "AutomationProperties.HelpText") != null);
 
-        // The spend meter has no data behind it yet, so it shows the planned badge and no number.
+        // The spend meter has no data behind it yet: it shows the planned badge, no number, and opens Runs.
         var spend = mainWindow.Descendants().Single(element => AttributeValue(element, "Classes") == "SpendCard");
+        spend.Name.LocalName.Should().Be("Button");
+        AttributeValue(spend, "CommandParameter").Should().Be("{x:Static vm:NavView.Runs}");
         spend.Descendants().Should().Contain(element => AttributeValue(element, "Classes") == "LadderBadge Planned");
         spend.Descendants().Should().NotContain(element => element.Name.LocalName == "ProgressBar");
         AttributeValue(spend, "AutomationProperties.HelpText").Should().NotBeNullOrEmpty();
-        AttributeValue(spend, "Focusable").Should().Be("True");
 
         mainWindow.Descendants().Should().Contain(element =>
             AttributeValue(element, "Classes") == "Sidebar"

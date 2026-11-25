@@ -236,6 +236,25 @@ public class AiRuntimeConfigurationMapperTests
     }
 
     [Fact]
+    public void CreateOverrides_AgentLoopLimits_MapsAgentRuntimeOptions()
+    {
+        using var settings = new JsonSettingsService(CreateTempSettingsDirectory());
+
+        // Unchanged limits leave appsettings, environment and user secrets in charge.
+        var defaults = AiRuntimeConfigurationMapper.CreateOverrides(settings);
+        defaults.Keys.Should().NotContain(key => key.StartsWith("AgentRuntime:", StringComparison.Ordinal));
+
+        settings.AgentMaxIterations = 40;
+        settings.AgentMaxToolResultCharacters = 30000;
+        settings.AgentContextTokenBudget = 0;
+
+        var changed = AiRuntimeConfigurationMapper.CreateOverrides(settings);
+        changed.Should().Contain("AgentRuntime:MaxIterations", "40");
+        changed.Should().Contain("AgentRuntime:MaxToolResultCharacters", "30000");
+        changed.Should().Contain("AgentRuntime:ContextTokenBudget", "0");
+    }
+
+    [Fact]
     public void CreateIntegrationOverrides_EmailSettings_MapsMailRuntimeConfiguration()
     {
         using var settings = new JsonSettingsService(CreateTempSettingsDirectory());

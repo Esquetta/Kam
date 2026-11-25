@@ -1,0 +1,9 @@
+{
+  "Palette.Placeholder": "Görev, sayfa veya komut ara",
+  "Palette.Empty": "Eşleşen sonuç yok",
+  "Palette.Hint": "↑↓ gezin · Enter aç · Esc kapat",
+  "Palette.Group.Tasks": "Görevler",
+  "Palette.Group.Pages": "Sayfalar",
+  "Palette.Group.Commands": "Komutlar",
+  "Palette.Group.Actions": "Eylemler"
+}

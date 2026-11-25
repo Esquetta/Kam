@@ -72,7 +72,7 @@
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel Classes="WorkbenchPage" Margin="32,28,32,40" MaxWidth="760" HorizontalAlignment="Center">
+        <StackPanel Classes="WorkbenchPage" Margin="18,16,18,24" MaxWidth="760" HorizontalAlignment="Left">
 
             <!-- Title Section -->
             <StackPanel Spacing="6" Margin="0,0,0,8">
@@ -146,7 +146,7 @@
                                   Grid.Column="0"
                                   Grid.ColumnSpan="2"
                                   ColumnDefinitions="*, Auto"
-                                  RowDefinitions="Auto, Auto, Auto"
+                                  RowDefinitions="Auto, Auto, Auto, Auto"
                                   ColumnSpacing="10"
                                   RowSpacing="6">
                                 <TextBlock Grid.Row="0"
@@ -178,6 +178,20 @@
                                            FontSize="10"
                                            Foreground="{DynamicResource TextMutedBrush}"
                                            TextTrimming="CharacterEllipsis"/>
+                                <StackPanel Grid.Row="3"
+                                            Grid.Column="0"
+                                            Grid.ColumnSpan="2"
+                                            Orientation="Horizontal"
+                                            Spacing="6"
+                                            IsVisible="{Binding ChatShowsDeepSeekKeyLink}">
+                                    <TextBlock Text="{DynamicResource Lang.Settings.DeepSeekKeyHint}"
+                                               FontSize="11"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextMutedBrush}"/>
+                                    <Button Classes="LinkAction"
+                                            Command="{Binding OpenDeepSeekKeyPageCommand}"
+                                            Content="{DynamicResource Lang.Settings.DeepSeekKeyLink}"/>
+                                </StackPanel>
                             </Grid>
                         </Grid>
                         <TextBlock Text="{Binding AiProfileStatus}"
@@ -260,6 +274,17 @@
                                                FontSize="10"
                                                Foreground="{DynamicResource TextMutedBrush}"
                                                TextTrimming="CharacterEllipsis"/>
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="6"
+                                                IsVisible="{Binding AiShowsDeepSeekKeyLink}">
+                                        <TextBlock Text="{DynamicResource Lang.Settings.DeepSeekKeyHint}"
+                                                   FontSize="11"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextMutedBrush}"/>
+                                        <Button Classes="LinkAction"
+                                                Command="{Binding OpenDeepSeekKeyPageCommand}"
+                                                Content="{DynamicResource Lang.Settings.DeepSeekKeyLink}"/>
+                                    </StackPanel>
                                 </StackPanel>
                             </Grid>
                         </StackPanel>

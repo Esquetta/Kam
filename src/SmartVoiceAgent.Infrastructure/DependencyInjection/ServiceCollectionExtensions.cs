@@ -189,7 +189,7 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<IServiceScopeFactory>(),
                 sp.GetRequiredService<IToolPermissionService>(),
                 sp.GetRequiredService<IAgentSessionStore>(),
-                sp.GetRequiredService<IOptions<AgentRuntimeOptions>>(),
+                sp.GetRequiredService<IOptionsMonitor<AgentRuntimeOptions>>(),
                 sp.GetRequiredService<ILogger<AgentRuntime>>(),
                 workspaceRoot: WorkspaceRoot(sp));
         });
@@ -282,6 +282,7 @@ public static class ServiceCollectionExtensions
         return provider.Equals("OpenRouter", StringComparison.OrdinalIgnoreCase)
             || provider.Equals("OpenAI", StringComparison.OrdinalIgnoreCase)
             || provider.Equals("OpenAICompatible", StringComparison.OrdinalIgnoreCase)
+            || provider.Equals("DeepSeek", StringComparison.OrdinalIgnoreCase)
             || IsOllamaProvider(provider);
     }
 

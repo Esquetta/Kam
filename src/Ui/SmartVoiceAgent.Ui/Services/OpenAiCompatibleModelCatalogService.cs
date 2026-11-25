@@ -257,6 +257,7 @@ public sealed class OpenAiCompatibleModelCatalogService : IModelCatalogService, 
             ModelProviderType.OpenAI => "openai",
             ModelProviderType.OpenRouter => "openrouter",
             ModelProviderType.Ollama => "ollama",
+            ModelProviderType.DeepSeek => "deepseek",
             _ => "openai-compatible"
         };
     }

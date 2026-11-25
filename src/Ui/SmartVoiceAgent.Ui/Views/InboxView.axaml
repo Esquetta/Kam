@@ -29,7 +29,6 @@
         <StackPanel Classes="WorkbenchPage"
                     Classes.narrow="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsRailCompact}"
                     Margin="18,16,18,24"
-                    MaxWidth="1040"
                     Spacing="14">
 
             <!-- Page head (.page-head): eyebrow, title and the explanation strip -->

@@ -48,6 +48,11 @@ public static class ModelCatalogDefaults
                 "anthropic/claude-haiku-4.5",
                 "google/gemini-3.8-flash"
             ],
+            ModelProviderType.DeepSeek =>
+            [
+                "deepseek-chat",
+                "deepseek-reasoner"
+            ],
             ModelProviderType.Ollama =>
             [
                 "qwen3",

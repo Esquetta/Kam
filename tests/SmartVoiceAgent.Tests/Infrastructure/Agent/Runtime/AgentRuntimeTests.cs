@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Agents;
 using SmartVoiceAgent.Infrastructure.Agent.Runtime;
+using SmartVoiceAgent.Tests.Infrastructure.Agent.CliAgents;
 
 namespace SmartVoiceAgent.Tests.Infrastructure.Agent.Runtime;
 
@@ -269,16 +270,45 @@ public sealed class AgentRuntimeTests : IDisposable
     }
 
     [Fact]
+    public async Task RunTurnAsync_ChangedLimits_ApplyToTheNextTurn()
+    {
+        var tool = Tool(AIFunctionFactory.Create(() => "again", "loop_tool"), ToolRisk.Read);
+        var options = new MutableOptionsMonitor(new AgentRuntimeOptions { MaxIterations = 2 });
+        var chat = new ScriptedChatClient(Enumerable.Range(0, 20).Select(i => (IList<AIContent>)[Call($"c{i}", "loop_tool")]).ToArray());
+        var runtime = CreateRuntime(chat, [tool], options: options);
+
+        await CollectAsync(runtime, "s1", "loop");
+        chat.Requests.Should().HaveCount(2);
+
+        options.CurrentValue = new AgentRuntimeOptions { MaxIterations = 5 };
+        await CollectAsync(runtime, "s2", "loop");
+        chat.Requests.Should().HaveCount(2 + 5);
+    }
+
+    [Fact]
+    public async Task RunTurnAsync_OutOfRangeLimits_AreClamped()
+    {
+        var tool = Tool(AIFunctionFactory.Create(() => "again", "loop_tool"), ToolRisk.Read);
+        var chat = new ScriptedChatClient(Enumerable.Range(0, 300).Select(i => (IList<AIContent>)[Call($"c{i}", "loop_tool")]).ToArray());
+        var runtime = CreateRuntime(chat, [tool], options: new MutableOptionsMonitor(new AgentRuntimeOptions { MaxIterations = 100000 }));
+
+        var events = await CollectAsync(runtime, "s1", "loop");
+
+        chat.Requests.Should().HaveCount(200);
+        events.Last().Should().BeOfType<AgentTurnFailed>().Which.Message.Should().Contain("200 steps");
+    }
+
+    [Fact]
     public async Task RunTurnAsync_LongToolResult_IsTruncatedForModel()
     {
-        var tool = Tool(AIFunctionFactory.Create(() => new string('x', 500), "big"), ToolRisk.Read);
+        var tool = Tool(AIFunctionFactory.Create(() => new string('x', 1500), "big"), ToolRisk.Read);
         var chat = new ScriptedChatClient([Call("c1", "big")], [new TextContent("done")]);
-        var runtime = CreateRuntime(chat, [tool], maxResultCharacters: 100);
+        var runtime = CreateRuntime(chat, [tool], maxResultCharacters: 1000);
 
         await CollectAsync(runtime, "s1", "go");
 
         var result = chat.Requests[1].SelectMany(m => m.Contents).OfType<FunctionResultContent>().Single().Result!.ToString()!;
-        result.Should().StartWith(new string('x', 100)).And.Contain("[truncated 400 characters]");
+        result.Should().StartWith(new string('x', 1000)).And.Contain("[truncated 500 characters]");
     }
 
     [Fact]
@@ -386,7 +416,7 @@ public sealed class AgentRuntimeTests : IDisposable
         var store = new JsonAgentSessionStore(Path.Combine(_directory, "sessions"));
         await store.SaveAsync("long", ThreeLongTurns(), TestContext.Current.CancellationToken);
         var chat = new ScriptedChatClient([new TextContent("Still with you.")]) { Summary = "Goals: finish the report." };
-        var runtime = CreateRuntime(chat, [], store: store, contextTokenBudget: 6000);
+        var runtime = CreateRuntime(chat, [], store: store, contextTokenBudget: 8000);
 
         var events = await CollectAsync(runtime, "long", "fourth");
 
@@ -420,12 +450,12 @@ public sealed class AgentRuntimeTests : IDisposable
             [
                 new(ChatRole.User, "check everything"),
                 new(ChatRole.Assistant, callIds.Select(id => (AIContent)new FunctionCallContent(id, "files_read")).ToList()),
-                new(ChatRole.Tool, callIds.Select(id => (AIContent)new FunctionResultContent(id, new string('x', 3000))).ToList()),
+                new(ChatRole.Tool, callIds.Select(id => (AIContent)new FunctionResultContent(id, new string('x', 6000))).ToList()),
                 new(ChatRole.Assistant, "All read.")
             ],
             TestContext.Current.CancellationToken);
         var chat = new ScriptedChatClient([new TextContent("Done.")]) { Summary = "unused" };
-        var runtime = CreateRuntime(chat, [], store: store, contextTokenBudget: 4200);
+        var runtime = CreateRuntime(chat, [], store: store, contextTokenBudget: 8000);
 
         var events = await CollectAsync(runtime, "tools", "again");
 
@@ -435,11 +465,11 @@ public sealed class AgentRuntimeTests : IDisposable
             .ToDictionary(r => r.CallId, r => r.Result!.ToString()!);
         results["r1"].Should().Contain("Older tool result shortened").And.HaveLength(results["r2"].Length);
         results["r1"].Length.Should().BeLessThan(600);
-        results["r3"].Should().HaveLength(3000);
-        results["r6"].Should().HaveLength(3000);
+        results["r3"].Should().HaveLength(6000);
+        results["r6"].Should().HaveLength(6000);
 
         var saved = await store.LoadAsync("tools", TestContext.Current.CancellationToken);
-        saved[2].Contents.OfType<FunctionResultContent>().First().Result!.ToString().Should().HaveLength(3000);
+        saved[2].Contents.OfType<FunctionResultContent>().First().Result!.ToString().Should().HaveLength(6000);
     }
 
     [Fact]
@@ -448,7 +478,7 @@ public sealed class AgentRuntimeTests : IDisposable
         var store = new JsonAgentSessionStore(Path.Combine(_directory, "sessions"));
         await store.SaveAsync("long", ThreeLongTurns(), TestContext.Current.CancellationToken);
         var chat = new ScriptedChatClient([new TextContent("Answer.")]) { SummaryFailure = new InvalidOperationException("rate limited") };
-        var runtime = CreateRuntime(chat, [], store: store, contextTokenBudget: 6000);
+        var runtime = CreateRuntime(chat, [], store: store, contextTokenBudget: 8000);
 
         var events = await CollectAsync(runtime, "long", "fourth");
 
@@ -935,11 +965,11 @@ public sealed class AgentRuntimeTests : IDisposable
     private static List<ChatMessage> ThreeLongTurns() =>
     [
         new(ChatRole.User, "first"),
-        new(ChatRole.Assistant, new string('a', 8000)),
+        new(ChatRole.Assistant, new string('a', 11000)),
         new(ChatRole.User, "second"),
-        new(ChatRole.Assistant, new string('b', 8000)),
+        new(ChatRole.Assistant, new string('b', 11000)),
         new(ChatRole.User, "third"),
-        new(ChatRole.Assistant, new string('c', 8000))
+        new(ChatRole.Assistant, new string('c', 11000))
     ];
 
     private AgentRuntime CreateRuntime(
@@ -955,7 +985,8 @@ public sealed class AgentRuntimeTests : IDisposable
         Func<string?, IChatClient>? chatFactory = null,
         int maxModelRetries = 3,
         int retryDelayMilliseconds = 5,
-        int maxParallelToolCalls = 8)
+        int maxParallelToolCalls = 8,
+        IOptionsMonitor<AgentRuntimeOptions>? options = null)
     {
         var services = new ServiceCollection();
         services.AddScoped<IAgentToolProvider>(_ => new StaticToolProvider(tools));
@@ -970,7 +1001,7 @@ public sealed class AgentRuntimeTests : IDisposable
             provider.GetRequiredService<IServiceScopeFactory>(),
             permissions ?? new ToolPermissionService(Path.Combine(_directory, "permissions.json")),
             store ?? new JsonAgentSessionStore(Path.Combine(_directory, "sessions")),
-            Options.Create(new AgentRuntimeOptions
+            options ?? new StaticOptionsMonitor<AgentRuntimeOptions>(new AgentRuntimeOptions
             {
                 MaxIterations = maxIterations,
                 MaxToolResultCharacters = maxResultCharacters,
@@ -1148,4 +1179,13 @@ public sealed class AgentRuntimeTests : IDisposable
         {
         }
     }
+}
+
+internal sealed class MutableOptionsMonitor(AgentRuntimeOptions value) : IOptionsMonitor<AgentRuntimeOptions>
+{
+    public AgentRuntimeOptions CurrentValue { get; set; } = value;
+
+    public AgentRuntimeOptions Get(string? name) => CurrentValue;
+
+    public IDisposable? OnChange(Action<AgentRuntimeOptions, string?> listener) => null;
 }

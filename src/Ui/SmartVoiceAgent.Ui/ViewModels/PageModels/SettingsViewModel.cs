@@ -34,6 +34,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public ReactiveCommand<Unit, Unit> TestAiConnectionCommand { get; }
         public ReactiveCommand<Unit, Unit> RefreshAiModelsCommand { get; }
         public ReactiveCommand<Unit, Unit> RefreshChatModelsCommand { get; }
+        public ReactiveCommand<Unit, Unit> OpenDeepSeekKeyPageCommand { get; }
 
         public SettingsViewModel() : this(new JsonSettingsService(), null, null, null, null)
         {
@@ -98,6 +99,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 : null;
 
             // Initialize commands
+            OpenDeepSeekKeyPageCommand = ReactiveCommand.Create(OpenDeepSeekKeyPage);
             StartMicTestCommand = ReactiveCommand.Create(StartMicTest);
             StopMicTestCommand = ReactiveCommand.Create(StopMicTest);
             PlayTestRecordingCommand = ReactiveCommand.Create(PlayTestRecording);
@@ -202,6 +204,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             "OpenAI",
             "Anthropic",
             "OpenRouter",
+            "DeepSeek",
             "OpenAICompatible",
             "Ollama"
         ];
@@ -215,6 +218,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 {
                     this.RaiseAndSetIfChanged(ref _aiProvider, value);
                     ApplyProviderDefaults(ModelProviderRole.Planner);
+                    this.RaisePropertyChanged(nameof(AiShowsDeepSeekKeyLink));
                     SaveAiProfileSettings();
                 }
             }
@@ -260,6 +264,31 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
         }
 
+        /// <summary>
+        /// Gets whether the planner provider is DeepSeek, so Settings links to where its key is created.
+        /// </summary>
+        public bool AiShowsDeepSeekKeyLink => ParseProvider(_aiProvider) == ModelProviderType.DeepSeek;
+
+        /// <summary>
+        /// Gets whether the agent model provider is DeepSeek, so Settings links to where its key is created.
+        /// </summary>
+        public bool ChatShowsDeepSeekKeyLink => ParseProvider(_chatProvider) == ModelProviderType.DeepSeek;
+
+        private void OpenDeepSeekKeyPage()
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(ModelProviderEndpoints.DeepSeekKeyPage)
+                {
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception)
+            {
+                // No browser is available; the link text still names the key page.
+            }
+        }
+
         public string MaskedAiApiKey => new ModelProviderProfile { ApiKey = _aiApiKey }.MaskedApiKey;
 
         public string ActivePlannerProfileId
@@ -284,6 +313,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 {
                     this.RaiseAndSetIfChanged(ref _chatProvider, value);
                     ApplyProviderDefaults(ModelProviderRole.Chat);
+                    this.RaisePropertyChanged(nameof(ChatShowsDeepSeekKeyLink));
                     SaveAiProfileSettings();
                     RaiseChatProfileState();
                 }
@@ -835,7 +865,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             return provider is ModelProviderType.OpenAI
                 or ModelProviderType.Anthropic
                 or ModelProviderType.OpenRouter
-                or ModelProviderType.Ollama;
+                or ModelProviderType.Ollama
+                or ModelProviderType.DeepSeek;
         }
 
         private static IReadOnlyList<ConnectionTestTarget> CreateConnectionTestTargets(
@@ -990,6 +1021,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 ModelProviderType.Anthropic => "https://api.anthropic.com",
                 ModelProviderType.OpenRouter => "https://openrouter.ai/api/v1",
                 ModelProviderType.Ollama => "http://localhost:11434/v1",
+                ModelProviderType.DeepSeek => ModelProviderEndpoints.DeepSeek,
                 _ => string.Empty
             };
         }
@@ -1024,6 +1056,13 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 return string.IsNullOrWhiteSpace(modelId) || modelId.Contains('/', StringComparison.Ordinal)
                     ? "qwen3"
+                    : modelId;
+            }
+
+            if (provider == ModelProviderType.DeepSeek)
+            {
+                return string.IsNullOrWhiteSpace(modelId) || modelId.Contains('/', StringComparison.Ordinal)
+                    ? "deepseek-chat"
                     : modelId;
             }
 
@@ -1105,6 +1144,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 ModelProviderType.Anthropic => "anthropic",
                 ModelProviderType.OpenRouter => "openrouter",
                 ModelProviderType.Ollama => "ollama",
+                ModelProviderType.DeepSeek => "deepseek",
                 _ => "openai-compatible"
             };
         }

@@ -72,7 +72,7 @@ namespace SmartVoiceAgent.Ui.Views
         }
 
         /// <summary>
-        /// Window shortcuts: Ctrl+N new chat, Ctrl+K search chats, Ctrl+L composer, F2 rename,
+        /// Window shortcuts: Ctrl+N new chat, Ctrl+K command palette, Ctrl+L composer, F2 rename,
         /// Ctrl+, Settings, the talk shortcut when Windows doesn't deliver it globally, and Esc to cancel
         /// voice or stop the running turn.
         /// </summary>
@@ -106,8 +106,7 @@ namespace SmartVoiceAgent.Ui.Views
                         e.Handled = true;
                         break;
                     case Key.K:
-                        ShowChat(vm);
-                        _tasksView?.FocusSearch();
+                        vm.OpenCommandPalette();
                         e.Handled = true;
                         break;
                     case Key.L:
@@ -152,6 +151,7 @@ namespace SmartVoiceAgent.Ui.Views
             {
                 _viewModel.LogUpdated -= OnLogUpdated;
                 _viewModel.TalkShortcutChanged -= OnTalkShortcutChanged;
+                _viewModel.ComposerFocusRequested -= OnComposerFocusRequested;
             }
 
             // Subscribe to new view model
@@ -160,6 +160,7 @@ namespace SmartVoiceAgent.Ui.Views
             {
                 _viewModel.LogUpdated += OnLogUpdated;
                 _viewModel.TalkShortcutChanged += OnTalkShortcutChanged;
+                _viewModel.ComposerFocusRequested += OnComposerFocusRequested;
             }
 
             RegisterTalkShortcut();
@@ -189,9 +190,13 @@ namespace SmartVoiceAgent.Ui.Views
         {
             if (DataContext is MainWindowViewModel vm)
             {
-                ShowChat(vm);
-                _tasksView?.FocusSearch();
+                vm.OpenCommandPalette();
             }
+        }
+
+        private void OnComposerFocusRequested(object? sender, EventArgs e)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => _tasksView?.FocusPrompt());
         }
 
         private void MainWindow_Closed(object? sender, CancelEventArgs e)

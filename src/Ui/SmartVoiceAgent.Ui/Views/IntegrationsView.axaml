@@ -11,7 +11,7 @@
     </UserControl.Resources>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <Grid Classes="WorkbenchPage" RowDefinitions="Auto,*" Margin="32,28,32,40" MaxWidth="860">
+        <Grid Classes="WorkbenchPage" RowDefinitions="Auto,*" Margin="18,16,18,24" MaxWidth="860" HorizontalAlignment="Left">
 
             <!-- Header Section -->
             <StackPanel Grid.Row="0" Spacing="6" Margin="0,0,0,24">

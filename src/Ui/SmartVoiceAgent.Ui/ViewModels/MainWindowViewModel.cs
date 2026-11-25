@@ -1,4 +1,4 @@
-﻿using Avalonia;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
@@ -234,6 +234,12 @@ namespace SmartVoiceAgent.Ui.ViewModels
             NavView.Integrations => Loc.Get("Workbench.Page.Integrations"),
             NavView.Settings => Loc.Get("Workbench.Page.Settings"),
             NavView.Inbox => Loc.Get("Workbench.Page.Inbox"),
+            NavView.Prompts => Loc.Get("Shell.Ladder.Prompts"),
+            NavView.Agents => Loc.Get("Shell.Ladder.Agents"),
+            NavView.Loops => Loc.Get("Shell.Ladder.Loops"),
+            NavView.Graphs => Loc.Get("Shell.Ladder.Graphs"),
+            NavView.Builder => Loc.Get("Shell.Ladder.Builder"),
+            NavView.Runs => Loc.Get("Shell.Nav.Runs"),
             _ => string.Empty
         };
 
@@ -931,6 +937,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             AlwaysAllowToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: true, alwaysAllow: true));
             DenyToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: false, alwaysAllow: false));
             InitializeInbox();
+            InitializeBuild();
             InitializeTaskContext();
             InitializeAppearance();
             StopAgentTurnCommand = ReactiveCommand.Create(StopAgentTurn);
@@ -1202,6 +1209,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     _githubAppClientFactory,
                     cliAgentDetector: _cliAgentDetector),
                 NavView.Settings => new SettingsViewModel(_pageSettingsService, this),
+                NavView.Prompts => new PromptsViewModel(_agentCommands, UsePromptInNewTask),
+                NavView.Agents => new AgentsViewModel(_runtimeAgentRunStore, _cliAgentDetector, () => NavigateTo(NavView.Integrations)),
+                NavView.Loops => new LoopsViewModel(_pageSettingsService),
+                NavView.Runs => new RunsViewModel(_agentSessionStore, _runtimeAgentRunStore, OpenTaskById, LiveTaskStatus),
+                NavView.Graphs or NavView.Builder => new PlannedStepViewModel(view, NavigateTo),
                 _ => null
             };
 

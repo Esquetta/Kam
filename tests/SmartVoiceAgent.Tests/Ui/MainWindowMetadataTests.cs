@@ -133,7 +133,7 @@ public sealed class MainWindowMetadataTests
         var mainWindowText = ReadShellText();
 
         mainWindowText.Should().Contain("x:Name=\"ChatSearchInput\"");
-        mainWindowText.Should().Contain("PlaceholderText=\"Search tasks (Ctrl+K)\"");
+        mainWindowText.Should().Contain("PlaceholderText=\"Search tasks\"");
         mainWindowText.Should().Contain("Text=\"{Binding AgentChatSearchText, Mode=TwoWay}\"");
         mainWindowText.Should().Contain("ClearAgentChatSearchCommand");
         mainWindowText.Should().Contain("IsVisible=\"{Binding HasNoAgentChatSearchResults}\"");
@@ -505,12 +505,18 @@ public sealed class MainWindowMetadataTests
         var navCommands = mainWindow.Descendants()
             .Where(element => element.Name.LocalName == "Button"
                 && (AttributeValue(element, "Classes.NavBtn") == "True"))
-            .Select(element => AttributeValue(element, "Command"))
+            .Select(element => AttributeValue(element, "Command") + AttributeValue(element, "CommandParameter"))
             .ToArray();
 
         navCommands.Should().Equal(
             "{Binding NavigateToCoordinatorCommand}",
             "{Binding NavigateToInboxCommand}",
+            "{Binding NavigateToPageCommand}{x:Static vm:NavView.Prompts}",
+            "{Binding NavigateToPageCommand}{x:Static vm:NavView.Agents}",
+            "{Binding NavigateToPageCommand}{x:Static vm:NavView.Loops}",
+            "{Binding NavigateToPageCommand}{x:Static vm:NavView.Graphs}",
+            "{Binding NavigateToPageCommand}{x:Static vm:NavView.Builder}",
+            "{Binding NavigateToPageCommand}{x:Static vm:NavView.Runs}",
             "{Binding NavigateToPluginsCommand}",
             "{Binding NavigateToExtensionsCommand}",
             "{Binding NavigateToIntegrationsCommand}",

@@ -1,4 +1,4 @@
-﻿namespace SmartVoiceAgent.Ui.ViewModels
+namespace SmartVoiceAgent.Ui.ViewModels
 {
     public enum NavView
     {
@@ -9,6 +9,12 @@
         Extensions,
         Integrations,
         Settings,
-        Inbox
+        Inbox,
+        Prompts,
+        Agents,
+        Loops,
+        Graphs,
+        Builder,
+        Runs
     }
 }

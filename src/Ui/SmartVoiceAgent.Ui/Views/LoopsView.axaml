@@ -1,0 +1,139 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:SmartVoiceAgent.Ui.ViewModels.PageModels"
+             xmlns:services="using:SmartVoiceAgent.Ui.Services"
+             x:Class="SmartVoiceAgent.Ui.Views.LoopsView"
+             x:DataType="vm:LoopsViewModel">
+    <UserControl.Styles>
+        <!-- The panel border closes the last row -->
+        <Style Selector="StackPanel.LastRowFlush > Border.PaneRow:nth-last-child(1)">
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <!-- Limit row: label and help on the left, input and unit on the right; stacked below 760 px -->
+        <Style Selector="Grid.LimitRow > StackPanel.LimitInput">
+            <Setter Property="Grid.Column" Value="1"/>
+            <Setter Property="Grid.Row" Value="0"/>
+        </Style>
+        <Style Selector="StackPanel.WorkbenchPage.narrow Grid.LimitRow > StackPanel.LimitInput">
+            <Setter Property="Grid.Column" Value="0"/>
+            <Setter Property="Grid.Row" Value="1"/>
+        </Style>
+        <Style Selector="Grid.LimitRow TextBox.LimitBox">
+            <Setter Property="Width" Value="110"/>
+            <Setter Property="TextAlignment" Value="Right"/>
+            <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Classes="WorkbenchPage"
+                    Classes.narrow="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsRailCompact}"
+                    Margin="16,18"
+                    Spacing="14">
+
+            <!-- Page head: overline, title and the explanation strip -->
+            <StackPanel Spacing="10">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock Text="{DynamicResource Lang.Loops.Eyebrow}" Classes="Overline" VerticalAlignment="Center"/>
+                    <TextBlock Text="{DynamicResource Lang.Loops.Title}" Classes="PageTitle" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Border Classes="Explain">
+                    <TextBlock Text="{DynamicResource Lang.Loops.Explain}" Classes="PageSubtitle"/>
+                </Border>
+            </StackPanel>
+
+            <!-- Limits: saved on commit and used by the next message -->
+            <Border Classes="Pane">
+                <StackPanel>
+                    <Border Classes="PaneHead">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{DynamicResource Lang.Loops.Limits.Title}" Classes="SectionTitle" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1"
+                                    Command="{Binding ResetCommand}"
+                                    Classes="SecondaryAction Sm">
+                                <TextBlock Text="{DynamicResource Lang.Loops.Reset}" FontSize="12" FontWeight="Medium"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Classes="LastRowFlush">
+                        <Border Classes="PaneRow">
+                            <Grid Classes="LimitRow" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="8">
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="{DynamicResource Lang.Loops.Steps.Label}" FontSize="13" FontWeight="Medium"/>
+                                    <TextBlock Text="{DynamicResource Lang.Loops.Steps.Help}" Classes="Caption"/>
+                                </StackPanel>
+                                <StackPanel Classes="LimitInput" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <TextBox Classes="LimitBox" Text="{Binding MaxIterationsText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" KeyDown="OnLimitKeyDown" AutomationProperties.Name="{DynamicResource Lang.Loops.Steps.Label}"/>
+                                    <TextBlock Text="{DynamicResource Lang.Loops.Steps.Unit}" Classes="Caption" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <Border Classes="PaneRow">
+                            <Grid Classes="LimitRow" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="8">
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="{DynamicResource Lang.Loops.Result.Label}" FontSize="13" FontWeight="Medium"/>
+                                    <TextBlock Text="{DynamicResource Lang.Loops.Result.Help}" Classes="Caption"/>
+                                </StackPanel>
+                                <StackPanel Classes="LimitInput" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <TextBox Classes="LimitBox" Text="{Binding MaxToolResultCharactersText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" KeyDown="OnLimitKeyDown" AutomationProperties.Name="{DynamicResource Lang.Loops.Result.Label}"/>
+                                    <TextBlock Text="{DynamicResource Lang.Loops.Result.Unit}" Classes="Caption" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <Border Classes="PaneRow">
+                            <Grid Classes="LimitRow" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="8">
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="{DynamicResource Lang.Loops.Context.Label}" FontSize="13" FontWeight="Medium"/>
+                                    <TextBlock Text="{DynamicResource Lang.Loops.Context.Help}" Classes="Caption"/>
+                                </StackPanel>
+                                <StackPanel Classes="LimitInput" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <TextBox Classes="LimitBox" Text="{Binding ContextTokenBudgetText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" KeyDown="OnLimitKeyDown" AutomationProperties.Name="{DynamicResource Lang.Loops.Context.Label}"/>
+                                    <TextBlock Text="{DynamicResource Lang.Loops.Context.Unit}" Classes="Caption" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- What's coming: plain rows, nothing here works yet -->
+            <Border Classes="Pane">
+                <StackPanel>
+                    <Border Classes="PaneHead">
+                        <TextBlock Text="{DynamicResource Lang.Loops.Coming.Title}" Classes="SectionTitle" VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel Classes="LastRowFlush">
+                        <Border Classes="PaneRow">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="{DynamicResource Lang.Loops.Coming.Budgets.Title}" FontSize="13" FontWeight="Medium"/>
+                                    <TextBlock Text="{DynamicResource Lang.Loops.Coming.Budgets.Body}" Classes="Caption"/>
+                                </StackPanel>
+                                <Border Grid.Column="1" Classes="Pill" VerticalAlignment="Top"><TextBlock Text="{DynamicResource Lang.Loops.Coming.Badge}"/></Border>
+                            </Grid>
+                        </Border>
+                        <Border Classes="PaneRow">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="{DynamicResource Lang.Loops.Coming.Plan.Title}" FontSize="13" FontWeight="Medium"/>
+                                    <TextBlock Text="{DynamicResource Lang.Loops.Coming.Plan.Body}" Classes="Caption"/>
+                                </StackPanel>
+                                <Border Grid.Column="1" Classes="Pill" VerticalAlignment="Top"><TextBlock Text="{DynamicResource Lang.Loops.Coming.Badge}"/></Border>
+                            </Grid>
+                        </Border>
+                        <Border Classes="PaneRow">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="{DynamicResource Lang.Loops.Coming.Verify.Title}" FontSize="13" FontWeight="Medium"/>
+                                    <TextBlock Text="{DynamicResource Lang.Loops.Coming.Verify.Body}" Classes="Caption"/>
+                                </StackPanel>
+                                <Border Grid.Column="1" Classes="Pill" VerticalAlignment="Top"><TextBlock Text="{DynamicResource Lang.Loops.Coming.Badge}"/></Border>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

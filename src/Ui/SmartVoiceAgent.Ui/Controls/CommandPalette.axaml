@@ -1,0 +1,131 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SmartVoiceAgent.Ui.ViewModels"
+             xmlns:converters="clr-namespace:SmartVoiceAgent.Ui.Converters"
+             x:Class="SmartVoiceAgent.Ui.Controls.CommandPalette"
+             x:DataType="vm:CommandPaletteViewModel"
+             IsVisible="{Binding IsOpen}">
+
+    <UserControl.Resources>
+        <converters:IconResourceConverter x:Key="IconResource"/>
+        <SolidColorBrush x:Key="PaletteScrimBrush" Color="#8C000000"/>
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <Style Selector="Border.PaletteRow">
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Border.PaletteRow:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+        </Style>
+        <Style Selector="Border.PaletteRow.Selected">
+            <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+        </Style>
+        <!-- The search field has no box of its own; the card is the box -->
+        <Style Selector="TextBox#Input /template/ Border#PART_BorderElement, TextBox#Input:pointerover /template/ Border#PART_BorderElement, TextBox#Input:focus /template/ Border#PART_BorderElement">
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid>
+        <Border x:Name="Scrim" Background="{DynamicResource PaletteScrimBrush}"/>
+
+        <Grid RowDefinitions="12*,Auto,88*">
+            <Border Grid.Row="1"
+                    MaxWidth="560"
+                    HorizontalAlignment="Stretch"
+                    Margin="16,0"
+                    Background="{DynamicResource CardBgBrush}"
+                    BorderBrush="{DynamicResource BorderMutedBrush}"
+                    BorderThickness="1"
+                    CornerRadius="14"
+                    ClipToBounds="True"
+                    BoxShadow="0 24 60 0 #66000000">
+                <StackPanel>
+                    <Grid ColumnDefinitions="Auto,*" Margin="16,12">
+                        <Viewbox Width="16" Height="16" Margin="0,0,10,0" VerticalAlignment="Center">
+                            <Path Classes="Icon" Data="{Binding ., Converter={StaticResource IconResource}, ConverterParameter=IconSearch}"/>
+                        </Viewbox>
+                        <TextBox x:Name="Input"
+                                 Grid.Column="1"
+                                 Text="{Binding Query}"
+                                 PlaceholderText="{DynamicResource Lang.Palette.Placeholder}"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 Padding="0"
+                                 MinHeight="0"
+                                 FontSize="15"
+                                 VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <Border Height="1" Background="{DynamicResource BorderSubtleBrush}"/>
+
+                    <Grid>
+                        <ScrollViewer x:Name="ListScroll" MaxHeight="360">
+                            <ItemsControl x:Name="List" ItemsSource="{Binding Results}" Margin="6">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:PaletteRow">
+                                        <Panel>
+                                            <TextBlock IsVisible="{Binding IsHeader}"
+                                                       Text="{Binding HeaderText}"
+                                                       FontSize="10.5"
+                                                       FontWeight="SemiBold"
+                                                       LetterSpacing="0.8"
+                                                       Margin="10,10,10,4"
+                                                       Foreground="{DynamicResource TextMutedBrush}"/>
+                                            <Border IsVisible="{Binding IsItem}"
+                                                    Classes="PaletteRow"
+                                                    Classes.Selected="{Binding IsSelected}"
+                                                    PointerPressed="OnRowPressed">
+                                                <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                                                    <Viewbox Width="16" Height="16" Margin="0,0,10,0" VerticalAlignment="Center">
+                                                        <Path Classes="Icon" Data="{Binding Item.IconKey, Converter={StaticResource IconResource}}"/>
+                                                    </Viewbox>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding Item.Title}"
+                                                               FontSize="13.5"
+                                                               VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                    <TextBlock Grid.Column="2"
+                                                               IsVisible="{Binding HasDetail}"
+                                                               Text="{Binding Item.Detail}"
+                                                               FontSize="12"
+                                                               Margin="10,0,10,0"
+                                                               VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               Foreground="{DynamicResource TextMutedBrush}"/>
+                                                    <Border Grid.Column="3"
+                                                            Classes="Kbd"
+                                                            IsVisible="{Binding HasShortcut}">
+                                                        <TextBlock Text="{Binding Item.Shortcut}"/>
+                                                    </Border>
+                                                </Grid>
+                                            </Border>
+                                        </Panel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <TextBlock IsVisible="{Binding IsEmpty}"
+                                   Text="{DynamicResource Lang.Palette.Empty}"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,28"
+                                   FontSize="13"
+                                   Foreground="{DynamicResource TextMutedBrush}"/>
+                    </Grid>
+
+                    <Border Height="1" Background="{DynamicResource BorderSubtleBrush}"/>
+                    <TextBlock Text="{DynamicResource Lang.Palette.Hint}"
+                               Margin="16,8"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextMutedBrush}"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

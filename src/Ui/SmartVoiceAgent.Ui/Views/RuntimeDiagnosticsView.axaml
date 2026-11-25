@@ -57,7 +57,7 @@
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <StackPanel Classes="WorkbenchPage"
-                    Margin="32,28,32,40"
+                    Margin="18,16,18,24"
                     HorizontalAlignment="Stretch">
 
             <Grid ColumnDefinitions="*, Auto" ColumnSpacing="16">

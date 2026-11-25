@@ -13,6 +13,7 @@
 		FontSize="13.5"
 		TransparencyLevelHint="Mica"
 		ExtendClientAreaToDecorationsHint="True"
+		ExtendClientAreaTitleBarHeightHint="48"
 		Title="Kam"
 		Icon="/Assets/favicon.ico"
 		Width="1360" Height="860"
@@ -45,7 +46,7 @@
 			<Setter Property="Width" Value="60"/>
 		</Style>
 
-		<Style Selector="Border.Sidebar.Compact Border.LadderBadge, Border.Sidebar.Compact Panel.LadderBadge, Border.Sidebar.Compact Border.SpendCard, Border.Sidebar.Compact Border.LadderLine">
+		<Style Selector="Border.Sidebar.Compact Border.LadderBadge, Border.Sidebar.Compact Panel.LadderBadge, Border.Sidebar.Compact Button.SpendCard, Border.Sidebar.Compact Border.LadderLine">
 			<Setter Property="IsVisible" Value="False"/>
 		</Style>
 
@@ -69,6 +70,9 @@
 			<Setter Property="BorderThickness" Value="0"/>
 			<Setter Property="CornerRadius" Value="7"/>
 			<Setter Property="Cursor" Value="Hand"/>
+			<!-- Tips open beside the rail, so they never cover the next row -->
+			<Setter Property="ToolTip.Placement" Value="Right"/>
+			<Setter Property="ToolTip.HorizontalOffset" Value="8"/>
 		</Style>
 
 		<Style Selector="Button.NavBtn /template/ ContentPresenter#PART_ContentPresenter">
@@ -110,30 +114,25 @@
 			<Setter Property="VerticalAlignment" Value="Center"/>
 		</Style>
 
-		<!-- Build ladder: numbered steps on a vertical line; none has a page yet, so the rows are not buttons -->
+		<!-- Build ladder: numbered steps on a vertical line; each row is a nav button -->
 		<Style Selector="Border.LadderLine">
 			<Setter Property="Width" Value="1"/>
 			<Setter Property="Margin" Value="18,16,0,16"/>
 			<Setter Property="HorizontalAlignment" Value="Left"/>
 			<Setter Property="Background" Value="{DynamicResource BorderMutedBrush}"/>
 		</Style>
-		<Style Selector="Border.LadderStep">
-			<Setter Property="MinHeight" Value="32"/>
-			<Setter Property="Padding" Value="8,5"/>
-			<Setter Property="Margin" Value="0,0,0,1"/>
-			<Setter Property="CornerRadius" Value="7"/>
-			<Setter Property="Background" Value="Transparent"/>
-		</Style>
-		<!-- Ladder rows and the spend card are focusable so keyboard and screen reader users reach their explanations -->
-		<Style Selector="Border.LadderStep:focus-visible, Border.SpendCard:focus-visible">
-			<Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-			<Setter Property="BorderThickness" Value="1"/>
-		</Style>
-		<Style Selector="Border.LadderStep TextBlock.NavLabel">
-			<Setter Property="FontSize" Value="13.5"/>
-			<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-			<Setter Property="VerticalAlignment" Value="Center"/>
+		<Style Selector="Button.LadderStep TextBlock.NavLabel">
 			<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+		</Style>
+		<Style Selector="Button.LadderStep.Active Border.LadderLevel">
+			<Setter Property="Background" Value="{DynamicResource AccentStrongBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource AccentStrongBrush}"/>
+		</Style>
+		<Style Selector="Button.LadderStep.Active Border.LadderLevel TextBlock">
+			<Setter Property="Foreground" Value="{DynamicResource AccentOnBrush}"/>
+		</Style>
+		<Style Selector="Button.NavBtn.Active TextBlock.NavLabel">
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
 		</Style>
 		<Style Selector="Border.LadderLevel">
 			<Setter Property="Width" Value="22"/>
@@ -175,12 +174,20 @@
 			<Setter Property="Foreground" Value="{DynamicResource AccentOrangeBrush}"/>
 		</Style>
 
-		<!-- Spend meter in the rail foot: Kam does not track spend yet, so it only says planned -->
-		<Style Selector="Border.SpendCard">
+		<!-- Spend meter in the rail foot: Kam does not track spend yet, so it only says planned; it opens Runs -->
+		<Style Selector="Button.SpendCard">
+			<Setter Property="HorizontalAlignment" Value="Stretch"/>
+			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
 			<Setter Property="BorderThickness" Value="1"/>
 			<Setter Property="CornerRadius" Value="10"/>
 			<Setter Property="Padding" Value="10,9"/>
+			<Setter Property="Cursor" Value="Hand"/>
+		</Style>
+		<Style Selector="Button.SpendCard:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
 		</Style>
 
 		<!-- Top bar search: looks like an input, opens the task search -->
@@ -678,6 +685,7 @@
 						Padding="4,0"
 						Margin="0,0,0,4"
 						Command="{Binding NavigateToCoordinatorCommand}"
+						AutomationProperties.Name="Kam"
 						ToolTip.Tip="Kam">
 					<StackPanel Orientation="Horizontal" Spacing="10">
 						<Border Width="28" Height="28"
@@ -742,83 +750,98 @@
 						</Grid>
 					</Button>
 
-					<!-- Build: none of the five steps has a page yet. Each row says what exists today and is not a link. -->
+					<!-- Build: the five-step ladder. Each step opens its page; the badge says how much of it Kam has today. -->
 					<TextBlock Classes="NavLabel Overline"
 								   Text="{DynamicResource Lang.Shell.Nav.Build}"
 								   Margin="8,12,0,6"/>
 					<Panel Classes="Ladder">
 						<Border Classes="LadderLine"/>
 						<StackPanel>
-							<Border Classes="LadderStep"
-									Focusable="True"
-									AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Prompts}"
-									AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.PromptsTip}"
-									ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.PromptsTip}">
-								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
-									<Border Classes="LadderLevel"><TextBlock Text="1"/></Border>
-									<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Prompts}"/>
-									<Panel Grid.Column="2" Classes="LadderBadge Planned">
-										<Rectangle/>
-										<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Planned}"/>
-									</Panel>
-								</Grid>
-							</Border>
-							<Border Classes="LadderStep"
-									Focusable="True"
-									AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Agents}"
-									AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.AgentsTip}"
-									ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.AgentsTip}">
-								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
-									<Border Classes="LadderLevel"><TextBlock Text="2"/></Border>
-									<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Agents}"/>
-									<Panel Grid.Column="2" Classes="LadderBadge Partial">
-										<Rectangle/>
-										<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Partial}"/>
-									</Panel>
-								</Grid>
-							</Border>
-							<Border Classes="LadderStep"
-									Focusable="True"
-									AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Loops}"
-									AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.LoopsTip}"
-									ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.LoopsTip}">
-								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
-									<Border Classes="LadderLevel"><TextBlock Text="3"/></Border>
-									<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Loops}"/>
-									<Panel Grid.Column="2" Classes="LadderBadge Partial">
-										<Rectangle/>
-										<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Partial}"/>
-									</Panel>
-								</Grid>
-							</Border>
-							<Border Classes="LadderStep"
-									Focusable="True"
-									AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Graphs}"
-									AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.GraphsTip}"
-									ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.GraphsTip}">
-								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
-									<Border Classes="LadderLevel"><TextBlock Text="4"/></Border>
-									<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Graphs}"/>
-									<Panel Grid.Column="2" Classes="LadderBadge Planned">
-										<Rectangle/>
-										<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Planned}"/>
-									</Panel>
-								</Grid>
-							</Border>
-							<Border Classes="LadderStep"
-									Focusable="True"
-									AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Builder}"
-									AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.BuilderTip}"
-									ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.BuilderTip}">
-								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
-									<Border Classes="LadderLevel"><TextBlock Text="5"/></Border>
-									<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Builder}"/>
-									<Panel Grid.Column="2" Classes="LadderBadge Planned">
-										<Rectangle/>
-										<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Planned}"/>
-									</Panel>
-								</Grid>
-							</Border>
+								<Button Classes.NavBtn="True"
+										Classes.LadderStep="True"
+										Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Prompts}}"
+										Command="{Binding NavigateToPageCommand}"
+										CommandParameter="{x:Static vm:NavView.Prompts}"
+										AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Prompts}"
+										AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.PromptsTip}"
+										ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.PromptsTip}">
+									<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
+										<Border Classes="LadderLevel"><TextBlock Text="1"/></Border>
+										<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Prompts}"/>
+										<Panel Grid.Column="2" Classes="LadderBadge Partial">
+											<Rectangle/>
+											<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Partial}"/>
+										</Panel>
+									</Grid>
+								</Button>
+								<Button Classes.NavBtn="True"
+										Classes.LadderStep="True"
+										Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Agents}}"
+										Command="{Binding NavigateToPageCommand}"
+										CommandParameter="{x:Static vm:NavView.Agents}"
+										AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Agents}"
+										AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.AgentsTip}"
+										ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.AgentsTip}">
+									<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
+										<Border Classes="LadderLevel"><TextBlock Text="2"/></Border>
+										<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Agents}"/>
+										<Panel Grid.Column="2" Classes="LadderBadge Partial">
+											<Rectangle/>
+											<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Partial}"/>
+										</Panel>
+									</Grid>
+								</Button>
+								<Button Classes.NavBtn="True"
+										Classes.LadderStep="True"
+										Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Loops}}"
+										Command="{Binding NavigateToPageCommand}"
+										CommandParameter="{x:Static vm:NavView.Loops}"
+										AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Loops}"
+										AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.LoopsTip}"
+										ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.LoopsTip}">
+									<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
+										<Border Classes="LadderLevel"><TextBlock Text="3"/></Border>
+										<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Loops}"/>
+										<Panel Grid.Column="2" Classes="LadderBadge Partial">
+											<Rectangle/>
+											<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Partial}"/>
+										</Panel>
+									</Grid>
+								</Button>
+								<Button Classes.NavBtn="True"
+										Classes.LadderStep="True"
+										Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Graphs}}"
+										Command="{Binding NavigateToPageCommand}"
+										CommandParameter="{x:Static vm:NavView.Graphs}"
+										AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Graphs}"
+										AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.GraphsTip}"
+										ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.GraphsTip}">
+									<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
+										<Border Classes="LadderLevel"><TextBlock Text="4"/></Border>
+										<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Graphs}"/>
+										<Panel Grid.Column="2" Classes="LadderBadge Planned">
+											<Rectangle/>
+											<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Planned}"/>
+										</Panel>
+									</Grid>
+								</Button>
+								<Button Classes.NavBtn="True"
+										Classes.LadderStep="True"
+										Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Builder}}"
+										Command="{Binding NavigateToPageCommand}"
+										CommandParameter="{x:Static vm:NavView.Builder}"
+										AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Builder}"
+										AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.BuilderTip}"
+										ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.BuilderTip}">
+									<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
+										<Border Classes="LadderLevel"><TextBlock Text="5"/></Border>
+										<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Builder}"/>
+										<Panel Grid.Column="2" Classes="LadderBadge Planned">
+											<Rectangle/>
+											<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Planned}"/>
+										</Panel>
+									</Grid>
+								</Button>
 						</StackPanel>
 					</Panel>
 
@@ -826,20 +849,17 @@
 					<TextBlock Classes="NavLabel Overline"
 								   Text="{DynamicResource Lang.Shell.Nav.Manage}"
 								   Margin="8,12,0,6"/>
-					<Border Classes="LadderStep"
-							Focusable="True"
+					<Button Classes.NavBtn="True"
+							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Runs}}"
+							Command="{Binding NavigateToPageCommand}"
+							CommandParameter="{x:Static vm:NavView.Runs}"
 							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Runs}"
-							AutomationProperties.HelpText="{DynamicResource Lang.Shell.Nav.RunsTip}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.RunsTip}">
-						<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconActivity}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
-							<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Runs}"/>
-							<Panel Grid.Column="2" Classes="LadderBadge Planned">
-								<Rectangle/>
-								<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Planned}"/>
-							</Panel>
-						</Grid>
-					</Border>
+						<StackPanel Orientation="Horizontal" Spacing="10">
+							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconActivity}"/></Viewbox>
+							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Runs}"/>
+						</StackPanel>
+					</Button>
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Plugins}}"
 							Command="{Binding NavigateToPluginsCommand}"
@@ -893,13 +913,14 @@
 				</StackPanel>
 				</ScrollViewer>
 
-				<!-- Spend meter: Kam does not record model spend yet, so the card says so instead of showing a number -->
-				<Border Grid.Row="2"
+				<!-- Spend meter: Kam does not record model spend yet, so the card says so instead of showing a number; it opens Runs -->
+				<Button Grid.Row="2"
 						Classes="SpendCard"
 						Margin="0,12,0,6"
+						Command="{Binding NavigateToPageCommand}"
+						CommandParameter="{x:Static vm:NavView.Runs}"
 						AutomationProperties.Name="{DynamicResource Lang.Shell.Spend.Title}"
 						AutomationProperties.HelpText="{DynamicResource Lang.Shell.Spend.Tip}"
-						Focusable="True"
 						ToolTip.Tip="{DynamicResource Lang.Shell.Spend.Tip}">
 					<Grid ColumnDefinitions="*,Auto">
 						<TextBlock Text="{DynamicResource Lang.Shell.Spend.Title}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
@@ -908,7 +929,7 @@
 							<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Planned}"/>
 						</Panel>
 					</Grid>
-				</Border>
+				</Button>
 
 				<!-- Bottom navigation: theme toggle -->
 				<StackPanel Grid.Row="3" Classes="SidebarFooter" Spacing="4">
@@ -955,6 +976,7 @@
 						x:Name="HeaderStatusButton"
 						Classes="PillButton"
 						Command="{Binding HeaderStatusCommand}"
+						AutomationProperties.Name="{Binding StatusText, Mode=OneWay}"
 						ToolTip.Tip="{Binding StatusToolTip}">
 					<Border Classes="Pill">
 						<StackPanel Orientation="Horizontal" Spacing="6">
@@ -1043,6 +1065,26 @@
 
 						<DataTemplate DataType="pagevm:SettingsViewModel">
 							<local:SettingsView/>
+						</DataTemplate>
+
+						<DataTemplate DataType="pagevm:PromptsViewModel">
+							<local:PromptsView/>
+						</DataTemplate>
+
+						<DataTemplate DataType="pagevm:AgentsViewModel">
+							<local:AgentsView/>
+						</DataTemplate>
+
+						<DataTemplate DataType="pagevm:LoopsViewModel">
+							<local:LoopsView/>
+						</DataTemplate>
+
+						<DataTemplate DataType="pagevm:RunsViewModel">
+							<local:RunsView/>
+						</DataTemplate>
+
+						<DataTemplate DataType="pagevm:PlannedStepViewModel">
+							<local:PlannedStepView/>
 						</DataTemplate>
 					</ContentControl.DataTemplates>
 				</ContentControl>
@@ -1909,5 +1951,9 @@
 				</Border>
 			</Grid>
 		</Border>
+
+		<!-- Command palette (Ctrl+K): over everything, closed by default -->
+		<controls:CommandPalette Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Grid.ColumnSpan="2"
+							  DataContext="{Binding CommandPalette}"/>
 	</Grid>
 </Window>

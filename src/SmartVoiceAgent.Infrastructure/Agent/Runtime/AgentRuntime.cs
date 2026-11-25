@@ -32,7 +32,7 @@ public sealed class AgentRuntime : IAgentRuntime
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IToolPermissionService _permissions;
     private readonly IAgentSessionStore _sessionStore;
-    private readonly AgentRuntimeOptions _options;
+    private readonly IOptionsMonitor<AgentRuntimeOptions> _options;
     private readonly ILogger<AgentRuntime> _logger;
     private readonly Func<DateTimeOffset> _clock;
     private readonly Func<string?> _workspaceRoot;
@@ -46,7 +46,7 @@ public sealed class AgentRuntime : IAgentRuntime
     /// <param name="scopeFactory">Creates a scope per turn to resolve tool providers.</param>
     /// <param name="permissions">Approval mode and rules.</param>
     /// <param name="sessionStore">Thread persistence.</param>
-    /// <param name="options">Runtime limits.</param>
+    /// <param name="options">Runtime limits; the current values are read at the start of each turn.</param>
     /// <param name="logger">Logger.</param>
     /// <param name="clock">Optional clock for tests.</param>
     /// <param name="workspaceRoot">Returns the folder the user is working in, or null when none is selected.</param>
@@ -55,7 +55,7 @@ public sealed class AgentRuntime : IAgentRuntime
         IServiceScopeFactory scopeFactory,
         IToolPermissionService permissions,
         IAgentSessionStore sessionStore,
-        IOptions<AgentRuntimeOptions> options,
+        IOptionsMonitor<AgentRuntimeOptions> options,
         ILogger<AgentRuntime> logger,
         Func<DateTimeOffset>? clock = null,
         Func<string?>? workspaceRoot = null)
@@ -73,7 +73,7 @@ public sealed class AgentRuntime : IAgentRuntime
     /// <param name="scopeFactory">Creates a scope per turn to resolve tool providers.</param>
     /// <param name="permissions">Approval mode and rules.</param>
     /// <param name="sessionStore">Thread persistence.</param>
-    /// <param name="options">Runtime limits.</param>
+    /// <param name="options">Runtime limits; the current values are read at the start of each turn.</param>
     /// <param name="logger">Logger.</param>
     /// <param name="clock">Optional clock for tests.</param>
     /// <param name="workspaceRoot">Returns the folder the user is working in, or null when none is selected.</param>
@@ -82,7 +82,7 @@ public sealed class AgentRuntime : IAgentRuntime
         IServiceScopeFactory scopeFactory,
         IToolPermissionService permissions,
         IAgentSessionStore sessionStore,
-        IOptions<AgentRuntimeOptions> options,
+        IOptionsMonitor<AgentRuntimeOptions> options,
         ILogger<AgentRuntime> logger,
         Func<DateTimeOffset>? clock = null,
         Func<string?>? workspaceRoot = null)
@@ -91,7 +91,7 @@ public sealed class AgentRuntime : IAgentRuntime
         _scopeFactory = scopeFactory;
         _permissions = permissions;
         _sessionStore = sessionStore;
-        _options = options.Value;
+        _options = options;
         _logger = logger;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _workspaceRoot = workspaceRoot ?? (() => null);
@@ -150,6 +150,7 @@ public sealed class AgentRuntime : IAgentRuntime
         {
             await sessionLock.WaitAsync(cancellationToken);
             lockTaken = true;
+            var limits = TurnLimits.From(_options.CurrentValue);
 
             using var scope = _scopeFactory.CreateScope();
             var tools = await CollectToolsAsync(scope.ServiceProvider, cancellationToken);
@@ -173,7 +174,7 @@ public sealed class AgentRuntime : IAgentRuntime
             {
                 var cut = AgentContextWindow.FindCompactionCut(history, keepUserTurns: 0);
                 var compacted = cut is not null
-                    && await CompactAsync(sessionId, history, cut.Value, systemPrompt, toolTokens, chatClient, usage, events, cancellationToken);
+                    && await CompactAsync(sessionId, history, cut.Value, systemPrompt, toolTokens, chatClient, usage, events, limits, cancellationToken);
                 await events.WriteAsync(
                     new AgentTurnCompleted(
                         sessionId,
@@ -196,10 +197,10 @@ public sealed class AgentRuntime : IAgentRuntime
 
             var toolCallCount = 0;
 
-            for (var iteration = 0; iteration < Math.Max(1, _options.MaxIterations); iteration++)
+            for (var iteration = 0; iteration < limits.MaxIterations; iteration++)
             {
                 var modelMessages = await PrepareModelMessagesAsync(
-                    sessionId, history, systemPrompt, toolTokens, chatClient, usage, events, cancellationToken);
+                    sessionId, history, systemPrompt, toolTokens, chatClient, usage, events, limits, cancellationToken);
 
                 var response = await GetModelResponseAsync(
                     sessionId, chatClient, modelMessages, chatOptions, events, cancellationToken);
@@ -221,7 +222,7 @@ public sealed class AgentRuntime : IAgentRuntime
                 }
 
                 toolCallCount += calls.Count;
-                var results = await RunToolCallsAsync(sessionId, calls, toolsByName, events, cancellationToken);
+                var results = await RunToolCallsAsync(sessionId, calls, toolsByName, events, limits, cancellationToken);
 
                 history.Add(new ChatMessage(ChatRole.Tool, [.. results]));
                 await _sessionStore.SaveAsync(sessionId, history, CancellationToken.None);
@@ -230,7 +231,7 @@ public sealed class AgentRuntime : IAgentRuntime
             await events.WriteAsync(
                 new AgentTurnFailed(
                     sessionId,
-                    $"Stopped after {_options.MaxIterations} steps without a final answer. Ask me to continue if you want me to keep going."),
+                    $"Stopped after {limits.MaxIterations} steps without a final answer. Ask me to continue if you want me to keep going."),
                 CancellationToken.None);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -273,7 +274,7 @@ public sealed class AgentRuntime : IAgentRuntime
         ChannelWriter<AgentEvent> events,
         CancellationToken cancellationToken)
     {
-        var maxRetries = Math.Max(0, _options.MaxModelRetries);
+        var maxRetries = Math.Max(0, _options.CurrentValue.MaxModelRetries);
 
         for (var retry = 0; ; retry++)
         {
@@ -311,7 +312,7 @@ public sealed class AgentRuntime : IAgentRuntime
                         ex);
                 }
 
-                var delay = ModelRetryDelay(retry + 1, _options.ModelRetryBaseDelayMilliseconds);
+                var delay = ModelRetryDelay(retry + 1, _options.CurrentValue.ModelRetryBaseDelayMilliseconds);
                 _logger.LogWarning(
                     ex,
                     "Model request failed in session {SessionId} ({Reason}); retry {Retry} of {MaxRetries} in {Delay} ms",
@@ -351,9 +352,10 @@ public sealed class AgentRuntime : IAgentRuntime
         IChatClient chatClient,
         TurnUsage usage,
         ChannelWriter<AgentEvent> events,
+        TurnLimits limits,
         CancellationToken cancellationToken)
     {
-        var budget = _options.ContextTokenBudget;
+        var budget = limits.ContextTokenBudget;
         var messages = AgentContextWindow.BuildModelMessages(systemPrompt, history, shortenOldToolResults: false);
         if (budget <= 0 || toolTokens + AgentContextWindow.EstimateTokens(messages) <= budget)
         {
@@ -374,7 +376,7 @@ public sealed class AgentRuntime : IAgentRuntime
         }
 
         if (cut is not null
-            && await CompactAsync(sessionId, history, cut.Value, systemPrompt, toolTokens, chatClient, usage, events, cancellationToken))
+            && await CompactAsync(sessionId, history, cut.Value, systemPrompt, toolTokens, chatClient, usage, events, limits, cancellationToken))
         {
             messages = AgentContextWindow.BuildModelMessages(systemPrompt, history, shortenOldToolResults: true);
         }
@@ -391,12 +393,13 @@ public sealed class AgentRuntime : IAgentRuntime
         IChatClient chatClient,
         TurnUsage usage,
         ChannelWriter<AgentEvent> events,
+        TurnLimits limits,
         CancellationToken cancellationToken)
     {
         var start = AgentContextWindow.FindActiveStart(history);
         var tokensBefore = toolTokens + AgentContextWindow.EstimateTokens(
             AgentContextWindow.BuildModelMessages(systemPrompt, history, shortenOldToolResults: false));
-        var maxTranscriptCharacters = Math.Max(8000, _options.ContextTokenBudget * 3);
+        var maxTranscriptCharacters = Math.Max(8000, limits.ContextTokenBudget * 3);
 
         string summary;
         try
@@ -461,10 +464,11 @@ public sealed class AgentRuntime : IAgentRuntime
         IReadOnlyList<FunctionCallContent> calls,
         IReadOnlyDictionary<string, AgentToolDescriptor> toolsByName,
         ChannelWriter<AgentEvent> events,
+        TurnLimits limits,
         CancellationToken cancellationToken)
     {
         var results = new AIContent[calls.Count];
-        var maxParallel = Math.Max(1, _options.MaxParallelToolCalls);
+        var maxParallel = Math.Max(1, _options.CurrentValue.MaxParallelToolCalls);
         var reads = new List<Task>();
         using var batch = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         using var slots = new SemaphoreSlim(maxParallel, maxParallel);
@@ -490,7 +494,7 @@ public sealed class AgentRuntime : IAgentRuntime
                             await slots.WaitAsync(batch.Token);
                             try
                             {
-                                results[slot] = await InvokeToolAsync(sessionId, call, tool, events, batch.Token);
+                                results[slot] = await InvokeToolAsync(sessionId, call, tool, events, limits.MaxToolResultCharacters, batch.Token);
                             }
                             finally
                             {
@@ -503,7 +507,7 @@ public sealed class AgentRuntime : IAgentRuntime
 
                 await Task.WhenAll(reads);
                 reads.Clear();
-                results[index] = await InvokeToolAsync(sessionId, call, tool, events, batch.Token);
+                results[index] = await InvokeToolAsync(sessionId, call, tool, events, limits.MaxToolResultCharacters, batch.Token);
             }
 
             await Task.WhenAll(reads);
@@ -596,6 +600,7 @@ public sealed class AgentRuntime : IAgentRuntime
         FunctionCallContent call,
         AgentToolDescriptor tool,
         ChannelWriter<AgentEvent> events,
+        int maxResultCharacters,
         CancellationToken cancellationToken)
     {
         string resultText;
@@ -619,7 +624,7 @@ public sealed class AgentRuntime : IAgentRuntime
             success = false;
         }
 
-        resultText = Truncate(resultText, _options.MaxToolResultCharacters);
+        resultText = Truncate(resultText, maxResultCharacters);
         await events.WriteAsync(
             new AgentToolCallCompleted(sessionId, call.CallId, tool.Name, success, Summarize(resultText)),
             cancellationToken);
@@ -805,6 +810,15 @@ public sealed class AgentRuntime : IAgentRuntime
     }
 
     private readonly record struct ApprovalAnswer(bool Approved, bool AlwaysAllow);
+
+    /// <summary>The limits one turn runs with, read once when the turn starts and clamped to safe ranges.</summary>
+    private readonly record struct TurnLimits(int MaxIterations, int MaxToolResultCharacters, int ContextTokenBudget)
+    {
+        public static TurnLimits From(AgentRuntimeOptions options) => new(
+            AgentRuntimeOptions.ClampMaxIterations(options.MaxIterations),
+            AgentRuntimeOptions.ClampMaxToolResultCharacters(options.MaxToolResultCharacters),
+            AgentRuntimeOptions.ClampContextTokenBudget(options.ContextTokenBudget));
+    }
 
     /// <summary>A model request failed for good; the message is written for the user.</summary>
     private sealed class ModelRequestException(string message, Exception innerException)

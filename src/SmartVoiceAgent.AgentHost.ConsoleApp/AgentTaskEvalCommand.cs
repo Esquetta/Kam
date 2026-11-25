@@ -111,7 +111,7 @@ public static class AgentTaskEvalCommand
         try
         {
             await using var services = BuildServices(scratch);
-            var runtimeOptions = Options.Create(new AgentRuntimeOptions());
+            var runtimeOptions = new FixedOptionsMonitor(new AgentRuntimeOptions());
             var outputLock = new object();
 
             await output.WriteLineAsync($"{tasks.Count} tasks x {options.Models.Count} models.");
@@ -218,5 +218,14 @@ public static class AgentTaskEvalCommand
         services.Replace(ServiceDescriptor.Singleton<ISkillPlannerTraceStore>(new InMemorySkillPlannerTraceStore()));
 
         return services.BuildServiceProvider();
+    }
+
+    private sealed class FixedOptionsMonitor(AgentRuntimeOptions value) : IOptionsMonitor<AgentRuntimeOptions>
+    {
+        public AgentRuntimeOptions CurrentValue => value;
+
+        public AgentRuntimeOptions Get(string? name) => value;
+
+        public IDisposable? OnChange(Action<AgentRuntimeOptions, string?> listener) => null;
     }
 }

@@ -72,6 +72,25 @@ public interface ISettingsService
     /// </summary>
     bool CodexCliEnabled { get; set; }
 
+    #region Agent Loop Settings
+
+    /// <summary>
+    /// Gets or sets the most model round trips one turn may take (1-200).
+    /// </summary>
+    int AgentMaxIterations { get; set; }
+
+    /// <summary>
+    /// Gets or sets the longest tool result, in characters, sent back to the model (1000-200000).
+    /// </summary>
+    int AgentMaxToolResultCharacters { get; set; }
+
+    /// <summary>
+    /// Gets or sets the estimated tokens a request may use before the thread is compacted; 0 turns compaction off.
+    /// </summary>
+    int AgentContextTokenBudget { get; set; }
+
+    #endregion
+
     #region Email (SMTP) Settings
 
     /// <summary>
