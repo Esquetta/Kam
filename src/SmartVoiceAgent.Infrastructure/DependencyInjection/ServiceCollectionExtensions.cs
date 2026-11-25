@@ -25,6 +25,7 @@ using SmartVoiceAgent.Infrastructure.Skills.BuiltIn.AgentTools;
 using SmartVoiceAgent.Infrastructure.Skills.External;
 using SmartVoiceAgent.Infrastructure.Skills.Planning;
 using System.ClientModel;
+using System.ClientModel.Primitives;
 using Microsoft.Extensions.Options;
 
 namespace SmartVoiceAgent.Infrastructure.Extensions;
@@ -179,7 +180,9 @@ public static class ServiceCollectionExtensions
             WorkspaceRoot(sp)));
         services.AddSingleton<IAgentRuntime>(sp =>
         {
-            var cache = sp.GetRequiredService<ChatClientCache>();
+            // The agent loop retries model requests itself and reports each retry, so its clients
+            // must not add the SDK's hidden ones on top.
+            var cache = new ChatClientCache(config => CreateObservedChatClient(sp, config, sdkRetries: false));
 
             return new AgentRuntime(
                 modelId => cache.Get(ChatClientCache.WithModel(ResolveChatModelConfiguration(configuration), modelId)),
@@ -204,31 +207,39 @@ public static class ServiceCollectionExtensions
     /// Builds a chat client for one provider, endpoint, key and model.
     /// </summary>
     /// <param name="config">Model settings.</param>
-    public static IChatClient CreateChatClient(AIServiceConfiguration config)
+    /// <param name="sdkRetries">
+    /// Whether the provider SDK may retry a failed request on its own. Pass false when the caller retries,
+    /// as the agent loop does.
+    /// </param>
+    public static IChatClient CreateChatClient(AIServiceConfiguration config, bool sdkRetries = true)
     {
         return config.Provider switch
         {
-            var provider when IsAnthropicProvider(provider) => CreateAnthropicClient(config),
-            var provider when IsOpenAICompatibleProvider(provider) => CreateOpenAICompatibleClient(config),
+            var provider when IsAnthropicProvider(provider) => CreateAnthropicClient(config, sdkRetries),
+            var provider when IsOpenAICompatibleProvider(provider) => CreateOpenAICompatibleClient(config, sdkRetries),
             _ => throw new NotSupportedException(
                 $"AI provider '{config.Provider}' is not supported.")
         };
     }
 
-    static IChatClient CreateObservedChatClient(IServiceProvider sp, AIServiceConfiguration config)
+    static IChatClient CreateObservedChatClient(IServiceProvider sp, AIServiceConfiguration config, bool sdkRetries = true)
     {
         return new AiProviderAlertingChatClient(
-            CreateChatClient(config),
+            CreateChatClient(config, sdkRetries),
             sp.GetService<IUiLogService>(),
             config.ModelId);
     }
 
-    static IChatClient CreateOpenAICompatibleClient(AIServiceConfiguration config)
+    static IChatClient CreateOpenAICompatibleClient(AIServiceConfiguration config, bool sdkRetries)
     {
         var options = new OpenAIClientOptions
         {
             Endpoint = new Uri(config.Endpoint)
         };
+        if (!sdkRetries)
+        {
+            options.RetryPolicy = new ClientRetryPolicy(maxRetries: 0);
+        }
 
         var apiKey = string.IsNullOrWhiteSpace(config.ApiKey) && IsOllamaProvider(config.Provider)
             ? "ollama"
@@ -241,11 +252,16 @@ public static class ServiceCollectionExtensions
         return client.GetChatClient(config.ModelId).AsIChatClient();
     }
 
-    static IChatClient CreateAnthropicClient(AIServiceConfiguration config)
+    static IChatClient CreateAnthropicClient(AIServiceConfiguration config, bool sdkRetries)
     {
         var client = new AnthropicClient().WithOptions(options =>
         {
             options.ApiKey = config.ApiKey;
+            if (!sdkRetries)
+            {
+                options.MaxRetries = 0;
+            }
+
             if (!string.IsNullOrWhiteSpace(config.Endpoint))
             {
                 options.BaseUrl = config.Endpoint.TrimEnd('/');
