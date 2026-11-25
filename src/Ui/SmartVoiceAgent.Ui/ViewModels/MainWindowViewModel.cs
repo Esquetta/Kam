@@ -55,6 +55,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private ISlashCommandService? _slashCommandService;
         private IAgentCommandCatalog? _agentCommands;
         private IMcpHost? _mcpHost;
+        private ICliAgentDetector? _cliAgentDetector;
         private IAgentPluginCatalog? _pluginCatalog;
         private IAgentSkillCatalog? _skillCatalog;
         private IRuntimeAgentRunStore? _runtimeAgentRunStore;
@@ -1038,6 +1039,15 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             _githubAppClientFactory = githubAppClientFactory;
         }
+
+        /// <summary>
+        /// Supplies the detector the Integrations page uses to show the coding-agent CLIs.
+        /// </summary>
+        public void SetCliAgentDetector(ICliAgentDetector detector)
+        {
+            _cliAgentDetector = detector;
+            _viewModelCache.Remove(NavView.Integrations);
+        }
         
         private void OnHostStateChanged(object? sender, bool isRunning)
         {
@@ -1135,7 +1145,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 NavView.Extensions => new ExtensionsViewModel(_mcpHost, _pluginCatalog, _skillCatalog, _agentCommands),
                 NavView.Integrations => new IntegrationsViewModel(
                     _pageSettingsService,
-                    _githubAppClientFactory),
+                    _githubAppClientFactory,
+                    cliAgentDetector: _cliAgentDetector),
                 NavView.Settings => new SettingsViewModel(_pageSettingsService, this),
                 _ => null
             };

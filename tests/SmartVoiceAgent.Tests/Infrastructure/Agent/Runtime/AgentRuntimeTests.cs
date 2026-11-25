@@ -167,6 +167,28 @@ public sealed class AgentRuntimeTests : IDisposable
     }
 
     [Fact]
+    public async Task RunTurnAsync_DelegateTool_AsksInFullAutoAndAlwaysAllowSavesNothing()
+    {
+        var runs = 0;
+        var tool = Tool(AIFunctionFactory.Create(() => { runs++; return "done"; }, "cli_agent_run"), ToolRisk.Delegate);
+        var permissions = new ToolPermissionService(Path.Combine(_directory, "permissions.json"), ApprovalMode.FullAuto);
+        var chat = new ScriptedChatClient(
+            [Call("call-1", "cli_agent_run")],
+            [new TextContent("first")],
+            [Call("call-2", "cli_agent_run")],
+            [new TextContent("second")]);
+        var runtime = CreateRuntime(chat, [tool], permissions);
+
+        var first = await CollectAsync(runtime, "s1", "delegate", approve: true, alwaysAllow: true);
+        var second = await CollectAsync(runtime, "s1", "delegate again");
+
+        first.OfType<AgentApprovalRequested>().Should().ContainSingle(request => request.AlwaysAllowRule == string.Empty);
+        second.OfType<AgentApprovalRequested>().Should().ContainSingle();
+        permissions.AllowRules.Should().BeEmpty();
+        runs.Should().Be(2);
+    }
+
+    [Fact]
     public async Task RunTurnAsync_UnknownTool_ReturnsErrorToModel()
     {
         var chat = new ScriptedChatClient(

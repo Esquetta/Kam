@@ -7,6 +7,7 @@ using SmartVoiceAgent.Application.DependencyInjection;
 using SmartVoiceAgent.Application.Commands;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.AgentHost.ConsoleApp;
+using SmartVoiceAgent.Infrastructure.Agent.CliAgents;
 using SmartVoiceAgent.Infrastructure.DependencyInjection;
 using SmartVoiceAgent.Infrastructure.Extensions;
 using SmartVoiceAgent.Mailing.Entities;

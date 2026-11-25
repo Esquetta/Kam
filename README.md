@@ -48,12 +48,14 @@ user input -> AgentRuntime -> model <-> tools -> reply
                                         |- built-in skills (files, shell, apps, web, clipboard, windows, ...)
                                         |- MCP servers
                                         |- Agent Skills (SKILL.md, loaded on demand)
+                                        |- your Codex CLI (cli_agent_run, optional)
 ```
 
 - **Permissions.** Every tool call passes `IToolPermissionService`. Modes are Ask, Auto-edit and Full auto, plus "always allow" and deny rules such as `shell_run(git status:*)` or `mcp__github__*`. Deny rules win, and allow rules never match chained shell commands. `ShellCommandGuard` blocks destructive shell commands by command position.
 - **Sessions.** Threads persist as JSON under `%AppData%\Kam\sessions`. Each thread can use its own model.
 - **Context.** `AgentContextWindow` keeps requests under a token budget by shortening old tool results and then inserting a summary message. `/compact` forces it.
 - **MCP host.** Reads `%AppData%\Kam\mcp.json` (Claude Desktop format) and plugin `.mcp.json` files; tools appear as `mcp__{server}__{tool}`. The Extensions page can add well-known keyless servers.
+- **Codex CLI.** Switch on Integrations > Coding agent CLIs and the agent can hand a coding task to your installed, signed-in Codex CLI (`codex exec --json`), so the work runs on your ChatGPT plan instead of an API key. Kam asks the CLI for its version and sign-in state and never reads its credentials. Runs are read-only unless the agent asks for edits, and every run needs your approval, even in Full auto, because Kam cannot gate the commands Codex runs. Claude Code is detected but not offered: Anthropic's terms do not clearly allow another app to use a Claude plan through the CLI.
 - **Extensions.** Agent Skills, Claude Code layout plugins and Markdown slash commands load from disk and are managed on the Extensions page.
 - **Voice.** Push to talk, an optional "Hey Kam" wake phrase, and spoken replies. Speech-to-text runs on local Whisper models (downloaded on first use, Vulkan GPU with CPU fallback) or an OpenAI-compatible transcription endpoint.
 - **Interface.** English and Turkish.
@@ -116,6 +118,7 @@ Kam runs tools with your user's permissions, so treat it accordingly.
 - Shell commands are checked by `ShellCommandGuard`; file paths, application names and URLs are validated before use (`SecurityUtilities`).
 - API keys are kept in the user secret store (DPAPI-encrypted), and are masked in logs.
 - Plugins, MCP servers and Agent Skills you install run with the same access as you do. Install only ones you trust.
+- A task handed to the Codex CLI runs under Codex's own sandbox (read-only, or workspace-write when edits are allowed) and its own rules. Kam shows what Codex changed afterwards but cannot approve its steps one by one.
 
 Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
 

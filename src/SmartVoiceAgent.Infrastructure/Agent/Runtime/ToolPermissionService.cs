@@ -7,7 +7,8 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Runtime;
 
 /// <summary>
 /// Applies the user's deny rules, then allow rules, then the approval mode. Saved in
-/// <c>%AppData%/Kam/agent-permissions.json</c>.
+/// <c>%AppData%/Kam/agent-permissions.json</c>. A <see cref="ToolRisk.Delegate"/> tool hands work to another agent
+/// Kam cannot gate, so it always asks unless a deny rule blocks it.
 /// </summary>
 public sealed class ToolPermissionService : IToolPermissionService
 {
@@ -94,6 +95,11 @@ public sealed class ToolPermissionService : IToolPermissionService
                 return ToolPermissionDecision.Deny;
             }
 
+            if (tool.Risk == ToolRisk.Delegate)
+            {
+                return ToolPermissionDecision.Ask;
+            }
+
             if (Matches(_state.AllowedTools, tool.Name, argumentsJson, isDenyRule: false))
             {
                 return ToolPermissionDecision.Allow;
@@ -111,7 +117,7 @@ public sealed class ToolPermissionService : IToolPermissionService
 
     /// <inheritdoc />
     public string SuggestAllowRule(AgentToolDescriptor tool, string argumentsJson) =>
-        ToolPermissionRule.Suggest(tool.Name, argumentsJson);
+        tool.Risk == ToolRisk.Delegate ? string.Empty : ToolPermissionRule.Suggest(tool.Name, argumentsJson);
 
     /// <inheritdoc />
     public void AddRule(string rule, bool allow)

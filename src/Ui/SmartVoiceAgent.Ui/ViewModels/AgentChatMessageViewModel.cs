@@ -181,8 +181,15 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ToolRisk.Write => Loc.Get("Workbench.Tool.Risk.Write"),
             ToolRisk.Execute => Loc.Get("Workbench.Tool.Risk.Execute"),
             ToolRisk.External => Loc.Get("Workbench.Tool.Risk.External"),
+            ToolRisk.Delegate => Loc.Get("Workbench.Tool.Risk.Delegate"),
             _ => Risk.ToString()
         };
+
+        /// <summary>
+        /// Gets whether "Always allow" is offered. Delegating to another agent asks every time, because Kam cannot
+        /// gate what that agent does.
+        /// </summary>
+        public bool CanAlwaysAllow => Risk != ToolRisk.Delegate;
 
         public AgentToolStepState ToolState
         {

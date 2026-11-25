@@ -1,21 +1,42 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Text;
 
-namespace SmartVoiceAgent.AgentHost.ConsoleApp;
+namespace SmartVoiceAgent.Infrastructure.Agent.CliAgents;
 
+/// <summary>
+/// Runs a process to completion with a timeout, capturing its output.
+/// </summary>
 public interface ICodingAgentProcessRunner
 {
+    /// <summary>
+    /// Runs the process. Cancelling the token kills the process tree and throws <see cref="OperationCanceledException"/>.
+    /// </summary>
+    /// <param name="request">What to run.</param>
+    /// <param name="cancellationToken">Stops the process.</param>
     Task<CodingAgentProcessResult> RunAsync(
         CodingAgentProcessRequest request,
         CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// A process to run.
+/// </summary>
+/// <param name="FileName">The executable.</param>
+/// <param name="Arguments">Arguments, passed without shell parsing.</param>
+/// <param name="WorkingDirectory">The folder the process starts in.</param>
+/// <param name="Timeout">How long the process may run before it is killed.</param>
+/// <param name="StandardInput">Text written to the process's standard input, which is then closed; null leaves it unredirected.</param>
 public sealed record CodingAgentProcessRequest(
     string FileName,
     IReadOnlyList<string> Arguments,
     string WorkingDirectory,
-    TimeSpan Timeout);
+    TimeSpan Timeout,
+    string? StandardInput = null);
 
+/// <summary>
+/// The outcome of a process run.
+/// </summary>
 public sealed record CodingAgentProcessResult(
     int ExitCode,
     string StandardOutput,
@@ -39,8 +60,14 @@ public sealed record CodingAgentProcessResult(
     }
 }
 
+/// <summary>
+/// Runs processes with <see cref="Process"/>, reading output as UTF-8.
+/// </summary>
 public sealed class CodingAgentProcessRunner : ICodingAgentProcessRunner
 {
+    private static readonly Encoding Utf8 = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+
+    /// <inheritdoc />
     public async Task<CodingAgentProcessResult> RunAsync(
         CodingAgentProcessRequest request,
         CancellationToken cancellationToken = default)
@@ -55,6 +82,10 @@ public sealed class CodingAgentProcessRunner : ICodingAgentProcessRunner
                 WorkingDirectory = request.WorkingDirectory,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                RedirectStandardInput = request.StandardInput is not null,
+                StandardOutputEncoding = Utf8,
+                StandardErrorEncoding = Utf8,
+                StandardInputEncoding = request.StandardInput is not null ? Utf8 : null,
                 UseShellExecute = false,
                 CreateNoWindow = true
             }
@@ -72,8 +103,21 @@ public sealed class CodingAgentProcessRunner : ICodingAgentProcessRunner
                 return new CodingAgentProcessResult(127, string.Empty, "Process could not be started.", false);
             }
 
-            var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-            var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
+            var stdoutTask = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
+            var stderrTask = process.StandardError.ReadToEndAsync(CancellationToken.None);
+            if (request.StandardInput is not null)
+            {
+                try
+                {
+                    await process.StandardInput.WriteAsync(request.StandardInput.AsMemory(), CancellationToken.None);
+                    process.StandardInput.Close();
+                }
+                catch (IOException)
+                {
+                    // The process exited before reading its input; its exit code and output tell the caller why.
+                }
+            }
+
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeoutCts.CancelAfter(request.Timeout);
 
@@ -81,7 +125,12 @@ public sealed class CodingAgentProcessRunner : ICodingAgentProcessRunner
             {
                 await process.WaitForExitAsync(timeoutCts.Token);
             }
-            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                TryKill(process);
+                throw;
+            }
+            catch (OperationCanceledException)
             {
                 TryKill(process);
                 var timedOutOutput = await ReadCompletedOutputAsync(stdoutTask, stderrTask);

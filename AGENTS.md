@@ -427,6 +427,7 @@ See `RESPONSIVE_DESIGN.md` for full details.
 - **MCP host**: `%AppData%/Kam/mcp.json` (Claude Desktop format) plus plugin `.mcp.json` and Todoist; servers start on the first turn and their tools are `mcp__{server}__{tool}` (`Infrastructure/Agent/Mcp`)
 - **Extensions** (`Infrastructure/Agent/Extensions`): Agent Skills (`SKILL.md`, loaded on demand with `load_skill`), Claude Code layout plugins in `%AppData%/Kam/plugins`, and Markdown slash commands; managed on the Extensions page
 - **Voice and tray**: voice commands and the tray's "New task" run in the agent chat
+- **Codex CLI subagent** (`Infrastructure/Agent/CliAgents`): `CliAgentToolProvider` offers `cli_agent_run` when `CliAgents:CodexEnabled` is on (Integrations card, `CliAgentsViewModel`) and `codex` is on PATH (`CliExecutableLocator` runs npm `.cmd` shims as `node <script>`, never through `cmd.exe`). The task goes in on stdin to `codex exec --json --sandbox read-only|workspace-write`. Its risk is `ToolRisk.Delegate`: always asks, only deny rules apply, no "Always allow". `CliAgentDetector` runs `codex login status` / `claude auth status --json` and keeps no account details. Claude Code is detected only, pending Anthropic's terms. `CodingAgentProcessRunner` (also used by `--coding-agent`) lives here
 - **Roadmap**: `docs/architecture/agent-platform.md` (MCP host, Agent Skills, plugins, coding mode, subagents)
 
 #### Reliability and performance (October 2026)

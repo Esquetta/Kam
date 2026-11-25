@@ -18,5 +18,11 @@ public enum ToolRisk
     Network = 3,
 
     /// <summary>Acts outside the machine, such as sending email or calling a third-party API.</summary>
-    External = 4
+    External = 4,
+
+    /// <summary>
+    /// Hands the task to another agent, such as the user's Codex CLI, whose own actions Kam cannot see or gate.
+    /// Always asks for approval; only deny rules apply.
+    /// </summary>
+    Delegate = 5
 }

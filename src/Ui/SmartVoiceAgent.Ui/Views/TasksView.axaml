@@ -589,6 +589,7 @@
 															Classes="SecondaryAction"
 															Content="{DynamicResource Lang.Common.AlwaysAllow}"
 															ToolTip.Tip="{Binding AlwaysAllowHint}"
+															IsVisible="{Binding CanAlwaysAllow}"
 															Command="{Binding $parent[local:TasksView].DataContext.AlwaysAllowToolCallCommand}"
 															CommandParameter="{Binding}"/>
 													<Button Grid.Column="4"

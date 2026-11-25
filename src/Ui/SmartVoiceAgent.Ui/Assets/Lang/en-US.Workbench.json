@@ -80,6 +80,7 @@
   "Workbench.Tool.Risk.Write": "Writes files",
   "Workbench.Tool.Risk.Execute": "Runs programs",
   "Workbench.Tool.Risk.External": "Sends externally",
+  "Workbench.Tool.Risk.Delegate": "Hands off to another agent",
   "Workbench.Tool.Stopped": "Stopped before it finished.",
   "Workbench.Tool.AlwaysAllowHint": "Run this tool without asking from now on",
   "Workbench.Tool.AlwaysAllowRuleHint": "Stop asking for {0}",

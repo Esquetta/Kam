@@ -417,7 +417,7 @@ public sealed class AgentRuntime : IAgentRuntime
         {
             var alwaysAllowRule = _permissions.SuggestAllowRule(tool, argumentsJson);
             var answer = await WaitForApprovalAsync(sessionId, call, tool, argumentsJson, alwaysAllowRule, events, cancellationToken);
-            if (answer.Approved && answer.AlwaysAllow)
+            if (answer.Approved && answer.AlwaysAllow && !string.IsNullOrWhiteSpace(alwaysAllowRule))
             {
                 _permissions.AddRule(alwaysAllowRule, allow: true);
             }
