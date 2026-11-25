@@ -14,9 +14,11 @@
     <Color x:Key="ControlPressed">#20302060</Color>
     <Color x:Key="BorderSubtle">#E2E0EB</Color>
     <Color x:Key="BorderMuted">#CDCADB</Color>
+    <!-- Off switch track: 3:1 against cards and against the white knob -->
+    <Color x:Key="SwitchOffTrack">#858296</Color>
     <Color x:Key="TextPrimary">#17161F</Color>
     <Color x:Key="TextSecondary">#45434F</Color>
-    <Color x:Key="TextMuted">#6B6979</Color>
+    <Color x:Key="TextMuted">#646274</Color>
 
     <!-- Brand accent: Accent is for text and icons, AccentStrong for fills and focus rings -->
     <Color x:Key="Accent">#5B47E0</Color>
@@ -36,7 +38,7 @@
     <Color x:Key="AccentOrange">#B45309</Color>
     <Color x:Key="AccentOrangeDim">#92400E</Color>
     <Color x:Key="AccentOrangeGlow">#1AB45309</Color>
-    <Color x:Key="AccentError">#DC2626</Color>
+    <Color x:Key="AccentError">#C81E1E</Color>
     <Color x:Key="AccentErrorDim">#B91C1C</Color>
     <Color x:Key="AccentErrorGlow">#17DC2626</Color>
     <Color x:Key="AccentErrorOn">#FFFFFF</Color>

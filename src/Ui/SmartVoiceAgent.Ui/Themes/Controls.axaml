@@ -799,7 +799,7 @@
         <Setter Property="BorderThickness" Value="0" />
     </Style>
     <Style Selector="ToggleSwitch /template/ Border#OuterBorder">
-        <Setter Property="Background" Value="{DynamicResource BorderMutedBrush}" />
+        <Setter Property="Background" Value="{DynamicResource SwitchOffTrackBrush}" />
     </Style>
     <Style Selector="ToggleSwitch /template/ Canvas#PART_SwitchKnob, ToggleSwitch /template/ Grid#PART_MovingKnobs">
         <Setter Property="Width" Value="17" />

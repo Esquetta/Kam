@@ -22,6 +22,8 @@
     <SolidColorBrush x:Key="TextSecondaryBrush" Color="{DynamicResource TextSecondary}" />
     <SolidColorBrush x:Key="TextMutedBrush" Color="{DynamicResource TextMuted}" />
 
+    <SolidColorBrush x:Key="SwitchOffTrackBrush" Color="{DynamicResource SwitchOffTrack}" />
+
     <!-- Brand accent brushes -->
     <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource Accent}" />
     <SolidColorBrush x:Key="AccentStrongBrush" Color="{DynamicResource AccentStrong}" />
