@@ -192,6 +192,16 @@ public interface ISettingsService
     bool WakeWordEnabled { get; set; }
 
     /// <summary>
+    /// Gets or sets the accent color preset, such as <c>violet</c> (see <see cref="AccentPalette"/>).
+    /// </summary>
+    string AccentColor { get; set; }
+
+    /// <summary>
+    /// Gets or sets the theme: <c>dark</c> or <c>light</c>.
+    /// </summary>
+    string Theme { get; set; }
+
+    /// <summary>
     /// Gets or sets the wake phrase, such as <c>Hey Kam</c>.
     /// </summary>
     string WakeWord { get; set; }

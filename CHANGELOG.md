@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Settings > Appearance: pick the theme (dark or light, now remembered across starts) and an accent color: Violet, Blue, Teal, Green, Rose or Graphite. The choice recolors buttons, links, selection, switches and the logo at once. Every preset keeps button and accent text at 4.5:1 contrast or more; the dark theme's button hover is darker so its text stays readable.
 - Tasks: the list is grouped into Needs you, Running and Recent, and drops the "Chats" header; search says tasks. The title bar has a search field (Ctrl+K) and shows when the "Hey Kam" wake phrase is on. The Activity panel's Context tab shows only the task's context; Plan trace and Skill results moved to Event stream.
 - Activity panel, Context tab: a "This task" section shows how full the selected task's context window is (for example "54.4k of 64k tokens", with a meter that turns orange near the budget), how often it was compacted, and a Compact now button. After a compaction the size is measured again on the next turn. The size comes from the last model request of the latest turn; `AgentTurnCompleted` now carries it as `ContextTokens`.
 - Sidebar: grouped into Work (Tasks, Needs you), Build (Skills, Extensions) and Manage (Integrations, Diagnostics, Settings). Tasks shows how many tasks are running. The new Needs you page lists every tool call waiting for approval across all tasks, with Approve, Always allow, Deny and Open task, and its count shows in the sidebar.

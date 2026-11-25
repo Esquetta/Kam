@@ -398,6 +398,31 @@ public class SettingsViewModelAiProfileTests : IDisposable
     }
 
     [Fact]
+    public void Appearance_SavesThePickedAccentAndTheme()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        using var viewModel = CreateViewModel(settingsService);
+
+        viewModel.AccentOptions.Select(option => option.Preset.Id)
+            .Should().Equal("violet", "blue", "teal", "green", "rose", "graphite");
+        viewModel.AccentOptions.Single(option => option.IsSelected).Preset.Id.Should().Be("violet");
+        viewModel.IsDarkThemeSelected.Should().BeTrue();
+
+        viewModel.AccentOptions.Single(option => option.Preset.Id == "teal").SelectCommand.Execute(null);
+        viewModel.UseLightThemeCommand.Execute(null);
+
+        settingsService.AccentColor.Should().Be("teal");
+        settingsService.Theme.Should().Be("light");
+        viewModel.AccentOptions.Single(option => option.IsSelected).Preset.Id.Should().Be("teal");
+        viewModel.SelectedAccentName.Should().Be("Teal");
+        viewModel.IsLightThemeSelected.Should().BeTrue();
+
+        using var reloaded = new JsonSettingsService(_settingsDirectory);
+        reloaded.AccentColor.Should().Be("teal", "the choice survives a restart");
+        reloaded.Theme.Should().Be("light");
+    }
+
+    [Fact]
     public void ChatProfileState_OllamaNeedsNoKey()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);

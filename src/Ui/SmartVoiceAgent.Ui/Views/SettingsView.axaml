@@ -41,6 +41,34 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource AccentStrongBrush}"/>
         </Style>
+        <!-- Accent swatches in Settings > Appearance: a ring marks the one in use -->
+        <Style Selector="Button.AccentSwatch">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="Margin" Value="0,0,8,4"/>
+            <Setter Property="MinWidth" Value="64"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.AccentSwatch:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+        </Style>
+        <Style Selector="Button.AccentSwatch Border.SwatchRing">
+            <Setter Property="Padding" Value="3"/>
+            <Setter Property="CornerRadius" Value="99"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.AccentSwatch.Selected Border.SwatchRing">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+        </Style>
+        <Style Selector="Button.AccentSwatch TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        </Style>
+        <Style Selector="Button.AccentSwatch.Selected TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
@@ -236,6 +264,89 @@
                             </Grid>
                         </StackPanel>
                     </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Appearance: theme and accent color, applied at once and saved -->
+            <StackPanel Spacing="8" Margin="0,8,0,8">
+                <TextBlock Text="{DynamicResource Lang.Settings.Look}"
+                           Classes="Overline"
+                           Margin="4,0,0,4"/>
+
+                <Border Classes="SettingsItem">
+                    <Grid ColumnDefinitions="Auto, *, Auto">
+                        <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
+                            <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconMoon}"/></Viewbox>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Lang.Settings.Theme}"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="{DynamicResource Lang.Settings.ThemeDesc}"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <Border Grid.Column="2" Classes="Segmented" Width="200" VerticalAlignment="Center">
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="2">
+                                <Button Grid.Column="0"
+                                        Classes="DrawerTab"
+                                        Classes.Selected="{Binding IsDarkThemeSelected}"
+                                        Content="{DynamicResource Lang.Settings.Theme.Dark}"
+                                        Command="{Binding UseDarkThemeCommand}"/>
+                                <Button Grid.Column="1"
+                                        Classes="DrawerTab"
+                                        Classes.Selected="{Binding IsLightThemeSelected}"
+                                        Content="{DynamicResource Lang.Settings.Theme.Light}"
+                                        Command="{Binding UseLightThemeCommand}"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <Border Classes="SettingsItem">
+                    <Grid ColumnDefinitions="Auto, *">
+                        <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0" VerticalAlignment="Top">
+                            <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconSparkles}"/></Viewbox>
+                        </Border>
+                        <StackPanel Grid.Column="1" Spacing="12">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Lang.Settings.Accent}"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="{DynamicResource Lang.Settings.AccentDesc}"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding AccentOptions}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:AccentOptionViewModel">
+                                        <Button Classes="AccentSwatch"
+                                                Classes.Selected="{Binding IsSelected}"
+                                                Command="{Binding SelectCommand}"
+                                                AutomationProperties.Name="{Binding Name}"
+                                                ToolTip.Tip="{Binding Name}">
+                                            <StackPanel Spacing="6" HorizontalAlignment="Center">
+                                                <Border Classes="SwatchRing" HorizontalAlignment="Center">
+                                                    <Ellipse Width="26" Height="26" Fill="{Binding Swatch}"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding Name}" FontSize="11" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Grid>
                 </Border>
             </StackPanel>
 

@@ -119,11 +119,57 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _settingsService.SettingChanged += (s, e) =>
             {
                 System.Diagnostics.Debug.WriteLine($"Setting changed: {e.SettingName} = {e.NewValue}");
+                if (e.SettingName is nameof(ISettingsService.Theme) or nameof(ISettingsService.AccentColor))
+                {
+                    RefreshAppearance();
+                }
             };
+
+            AccentOptions = AccentPalette.Presets
+                .Select(preset => new AccentOptionViewModel(preset, option => _settingsService.AccentColor = option.Preset.Id))
+                .ToList();
+            UseDarkThemeCommand = ReactiveCommand.Create(() => { _settingsService.Theme = "dark"; });
+            UseLightThemeCommand = ReactiveCommand.Create(() => { _settingsService.Theme = "light"; });
+            RefreshAppearance();
 
             // Initialize voice settings
             InitializeVoiceSettings();
         }
+
+        #region Appearance
+
+        /// <summary>Gets the accent color swatches, in the order <see cref="AccentPalette"/> lists them.</summary>
+        public IReadOnlyList<AccentOptionViewModel> AccentOptions { get; } = [];
+
+        /// <summary>Switches to the dark theme; the window applies it at once.</summary>
+        public System.Windows.Input.ICommand UseDarkThemeCommand { get; } = null!;
+
+        /// <summary>Switches to the light theme; the window applies it at once.</summary>
+        public System.Windows.Input.ICommand UseLightThemeCommand { get; } = null!;
+
+        /// <summary>Gets whether the dark theme is in use.</summary>
+        public bool IsDarkThemeSelected => !string.Equals(_settingsService.Theme, "light", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>Gets whether the light theme is in use.</summary>
+        public bool IsLightThemeSelected => !IsDarkThemeSelected;
+
+        /// <summary>Gets the name of the accent color in use.</summary>
+        public string SelectedAccentName => AccentPalette.Find(_settingsService.AccentColor).Name;
+
+        private void RefreshAppearance()
+        {
+            var selected = AccentPalette.Find(_settingsService.AccentColor).Id;
+            foreach (var option in AccentOptions)
+            {
+                option.IsSelected = option.Preset.Id == selected;
+            }
+
+            this.RaisePropertyChanged(nameof(IsDarkThemeSelected));
+            this.RaisePropertyChanged(nameof(IsLightThemeSelected));
+            this.RaisePropertyChanged(nameof(SelectedAccentName));
+        }
+
+        #endregion
 
         #region AI Runtime Settings
 
@@ -2470,6 +2516,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             this.RaisePropertyChanged(nameof(AiConnectionTestButtonText));
             this.RaisePropertyChanged(nameof(SelectedLanguage));
             RaiseChatProfileState();
+            foreach (var option in AccentOptions)
+            {
+                option.RefreshLocalizedText();
+            }
+
+            this.RaisePropertyChanged(nameof(SelectedAccentName));
         }
 
         #endregion

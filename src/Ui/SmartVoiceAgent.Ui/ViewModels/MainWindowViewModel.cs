@@ -471,6 +471,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 this.RaiseAndSetIfChanged(ref _isDarkMode, value);
                 ApplyTheme(value);
+                var theme = value ? "dark" : "light";
+                if (_pageSettingsService.Theme != theme)
+                {
+                    _pageSettingsService.Theme = theme;
+                }
             }
         }
 
@@ -886,6 +891,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             DenyToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: false, alwaysAllow: false));
             InitializeInbox();
             InitializeTaskContext();
+            InitializeAppearance();
             StopAgentTurnCommand = ReactiveCommand.Create(StopAgentTurn);
             ClearQueuedAgentMessagesCommand = ReactiveCommand.Create(ClearQueuedAgentMessages);
             InitializeChatExperience();
@@ -897,11 +903,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             Dispatcher.UIThread.Post(() =>
             {
-                // Initialize theme
-                if (global::Avalonia.Application.Current != null)
-                {
-                    IsDarkMode = global::Avalonia.Application.Current.ActualThemeVariant == ThemeVariant.Dark;
-                }
+                // Theme and accent color as saved in Settings > Appearance
+                ApplySavedAppearance();
 
                 // Initialize View - CoordinatorViewModel will be created by SetVoiceAgentHostControl
                 // when the host control is available. For now, leave CurrentViewModel null
