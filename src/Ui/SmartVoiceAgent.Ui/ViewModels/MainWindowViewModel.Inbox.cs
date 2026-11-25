@@ -1,4 +1,5 @@
 using ReactiveUI;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -34,6 +35,24 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         /// <summary>Gets whether any task has a turn running.</summary>
         public bool HasRunningTasks => RunningTaskCount > 0;
+
+        /// <summary>Gets the tasks with a tool call waiting for approval: the task list's first group.</summary>
+        public ObservableCollection<AgentChatSessionViewModel> WaitingTasks { get; } = new();
+
+        /// <summary>Gets the tasks with a turn running and nothing waiting.</summary>
+        public ObservableCollection<AgentChatSessionViewModel> RunningTasks { get; } = new();
+
+        /// <summary>Gets the other tasks, in the task list's order.</summary>
+        public ObservableCollection<AgentChatSessionViewModel> RecentTasks { get; } = new();
+
+        /// <summary>Gets whether the task list shows its "Needs you" group.</summary>
+        public bool HasWaitingTasks => WaitingTasks.Count > 0;
+
+        /// <summary>Gets whether the task list shows its "Running" group.</summary>
+        public bool HasRunningTaskGroup => RunningTasks.Count > 0;
+
+        /// <summary>Gets whether the task list shows its "Recent" group.</summary>
+        public bool HasRecentTasks => RecentTasks.Count > 0;
 
         /// <summary>Gets whether the Needs you page is shown.</summary>
         public bool IsInboxVisible => ActiveView == NavView.Inbox;
@@ -153,6 +172,38 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             this.RaisePropertyChanged(nameof(RunningTaskCount));
             this.RaisePropertyChanged(nameof(HasRunningTasks));
+            RefreshTaskGroups();
+        }
+
+        /// <summary>
+        /// Sorts the tasks into the list's groups: waiting for the user, running, and the rest.
+        /// Each group keeps the task list's order.
+        /// </summary>
+        private void RefreshTaskGroups()
+        {
+            SyncGroup(WaitingTasks, AgentChatSessions.Where(session => session.HasPendingApproval));
+            SyncGroup(RunningTasks, AgentChatSessions.Where(session => session.IsRunning && !session.HasPendingApproval));
+            SyncGroup(RecentTasks, AgentChatSessions.Where(session => !session.IsRunning && !session.HasPendingApproval));
+            this.RaisePropertyChanged(nameof(HasWaitingTasks));
+            this.RaisePropertyChanged(nameof(HasRunningTaskGroup));
+            this.RaisePropertyChanged(nameof(HasRecentTasks));
+        }
+
+        private static void SyncGroup(
+            ObservableCollection<AgentChatSessionViewModel> group,
+            IEnumerable<AgentChatSessionViewModel> members)
+        {
+            var wanted = members.ToList();
+            if (wanted.SequenceEqual(group))
+            {
+                return;
+            }
+
+            group.Clear();
+            foreach (var session in wanted)
+            {
+                group.Add(session);
+            }
         }
     }
 }

@@ -104,16 +104,20 @@ public sealed class MainWindowMetadataTests
     {
         var mainWindowText = ReadShellText();
 
-        mainWindowText.Should().Contain("AgentChatSessions");
+        mainWindowText.Should().Contain("ItemsSource=\"{Binding WaitingTasks}\"");
+        mainWindowText.Should().Contain("ItemsSource=\"{Binding RunningTasks}\"");
+        mainWindowText.Should().Contain("ItemsSource=\"{Binding RecentTasks}\"");
+        mainWindowText.Should().Contain("ItemTemplate=\"{StaticResource TaskRowTemplate}\"");
         mainWindowText.Should().Contain("SelectedAgentChatSession.Messages");
-        mainWindowText.Should().Contain("AgentChatSessionCountText");
         mainWindowText.Should().Contain("SelectedAgentChatMessageCountText");
         mainWindowText.Should().Contain("MessageCountText");
         mainWindowText.Should().Contain("NewAgentChatCommand");
         mainWindowText.Should().Contain("SelectAgentChatCommand");
         mainWindowText.Should().Contain("IsChatWorkbenchVisible");
         mainWindowText.Should().Contain("IsPageHostVisible");
-        mainWindowText.Should().Contain("Chats");
+        mainWindowText.Should().Contain("NEEDS YOU");
+        mainWindowText.Should().Contain("RUNNING");
+        mainWindowText.Should().Contain("RECENT");
         mainWindowText.Should().Contain("New task");
         mainWindowText.Should().Contain("Connect a model to start");
         mainWindowText.Should().Contain("Command=\"{Binding SetUpModelCommand}\"");
@@ -129,11 +133,11 @@ public sealed class MainWindowMetadataTests
         var mainWindowText = ReadShellText();
 
         mainWindowText.Should().Contain("x:Name=\"ChatSearchInput\"");
-        mainWindowText.Should().Contain("PlaceholderText=\"Search chats (Ctrl+K)\"");
+        mainWindowText.Should().Contain("PlaceholderText=\"Search tasks (Ctrl+K)\"");
         mainWindowText.Should().Contain("Text=\"{Binding AgentChatSearchText, Mode=TwoWay}\"");
         mainWindowText.Should().Contain("ClearAgentChatSearchCommand");
         mainWindowText.Should().Contain("IsVisible=\"{Binding HasNoAgentChatSearchResults}\"");
-        mainWindowText.Should().Contain("No chats match");
+        mainWindowText.Should().Contain("No tasks match");
         mainWindowText.Should().Contain("IsVisible=\"{Binding IsVisibleInList}\"");
         mainWindowText.Should().Contain("<MenuItem Header=\"Rename\" InputGesture=\"F2\" Click=\"OnRenameChatClick\"/>");
         mainWindowText.Should().Contain("Click=\"OnDeleteChatClick\"");
@@ -375,7 +379,7 @@ public sealed class MainWindowMetadataTests
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "StackPanel"
-                && AttributeValue(element, "Grid.Row") == "2"
+                && AttributeValue(element, "Grid.Row") == "3"
                 && AttributeValue(element, "Classes") == "SidebarFooter");
 
         bottomNavigation

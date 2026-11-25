@@ -1,4 +1,5 @@
 ﻿using Avalonia;
+using Avalonia.Media.Fonts;
 using ReactiveUI.Avalonia;
 using System;
 
@@ -17,7 +18,9 @@ namespace SmartVoiceAgent.Ui
         public static AppBuilder BuildAvaloniaApp()
             => AppBuilder.Configure<App>()
                 .UsePlatformDetect()
-                .WithInterFont()
+                .ConfigureFonts(fonts => fonts.AddFontCollection(new EmbeddedFontCollection(
+                    new Uri("fonts:Geist", UriKind.Absolute),
+                    new Uri("avares://SmartVoiceAgent.Ui/Assets/Fonts", UriKind.Absolute))))
                 .LogToTrace()
                 .UseReactiveUI(builder => builder.WithAvalonia());
     }

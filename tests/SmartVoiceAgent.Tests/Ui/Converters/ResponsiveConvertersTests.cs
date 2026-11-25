@@ -46,8 +46,9 @@ public class ResponsiveConvertersTests
 
     [Theory]
     [InlineData(900, 0)]
-    [InlineData(1280, 360)]
-    [InlineData(1600, 420)]
+    [InlineData(1279, 0)]
+    [InlineData(1280, 290)]
+    [InlineData(1600, 290)]
     public void ActivityPanelWidth_UsesCalmerRailWidthsBesideTheChat(double windowWidth, double expectedWidth)
     {
         SetWindowWidth(windowWidth);
@@ -71,6 +72,68 @@ public class ResponsiveConvertersTests
         viewModel.ToggleActivityPanelCommand.Execute(null);
 
         viewModel.IsActivityPanelShown.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ActivityPanel_OpensOnNarrowWindowsWhenAsked()
+    {
+        SetWindowWidth(1100);
+        var viewModel = new SmartVoiceAgent.Ui.ViewModels.MainWindowViewModel();
+        viewModel.IsActivityPanelShown.Should().BeFalse();
+
+        viewModel.ToggleActivityPanelCommand.Execute(null);
+
+        viewModel.IsActivityPanelShown.Should().BeTrue();
+        viewModel.ActivityPanelWidth.Value.Should().Be(290);
+
+        viewModel.ToggleActivityPanelCommand.Execute(null);
+
+        viewModel.IsActivityPanelShown.Should().BeFalse();
+        viewModel.ActivityPanelWidth.Value.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData(800)]
+    [InlineData(1000)]
+    public void ActivityPanel_StaysClosedWhereTheThreadWouldBeTooNarrow(double width)
+    {
+        SetWindowWidth(width);
+        var viewModel = new SmartVoiceAgent.Ui.ViewModels.MainWindowViewModel();
+
+        viewModel.CanOpenActivityPanel.Should().BeFalse("rail, list and a 290 px pane would leave the thread too little room");
+        viewModel.ToggleActivityPanelCommand.Execute(null);
+
+        viewModel.IsActivityPanelShown.Should().BeFalse();
+        viewModel.ActivityPanelWidth.Value.Should().Be(0);
+    }
+
+    [Fact]
+    public void ActivityPanel_PinFromANarrowWindowEndsWhenTheWindowGrows()
+    {
+        SetWindowWidth(1100);
+        var viewModel = new SmartVoiceAgent.Ui.ViewModels.MainWindowViewModel();
+        viewModel.ToggleActivityPanelCommand.Execute(null);
+        viewModel.IsActivityPanelShown.Should().BeTrue();
+
+        SetWindowWidth(1600);
+        SetWindowWidth(1100);
+
+        viewModel.IsActivityPanelShown.Should().BeFalse();
+        viewModel.CanOpenActivityPanel.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ActivityPanel_StaysOffTheThreadBelow760Px()
+    {
+        SetWindowWidth(1100);
+        var viewModel = new SmartVoiceAgent.Ui.ViewModels.MainWindowViewModel();
+        viewModel.ToggleActivityPanelCommand.Execute(null);
+
+        SetWindowWidth(700);
+
+        viewModel.IsActivityPanelShown.Should().BeFalse();
+        viewModel.CanOpenActivityPanel.Should().BeFalse();
+        SetWindowWidth(1600);
     }
 
     [Theory]

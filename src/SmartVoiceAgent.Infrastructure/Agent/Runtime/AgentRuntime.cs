@@ -222,7 +222,7 @@ public sealed class AgentRuntime : IAgentRuntime
                 {
                     await _sessionStore.SaveAsync(sessionId, history, CancellationToken.None);
                     await events.WriteAsync(
-                        new AgentTurnCompleted(sessionId, response.Text, toolCallCount, usage.InputTokens, usage.OutputTokens),
+                        new AgentTurnCompleted(sessionId, response.Text, toolCallCount, usage.InputTokens, usage.OutputTokens, usage.LastInputTokens),
                         CancellationToken.None);
                     return;
                 }
@@ -647,10 +647,17 @@ public sealed class AgentRuntime : IAgentRuntime
 
         public long OutputTokens { get; private set; }
 
+        /// <summary>Gets the input size of the most recent model request that reported usage.</summary>
+        public long LastInputTokens { get; private set; }
+
         public void Add(UsageDetails? usage)
         {
             InputTokens += usage?.InputTokenCount ?? 0;
             OutputTokens += usage?.OutputTokenCount ?? 0;
+            if (usage?.InputTokenCount is > 0 and var last)
+            {
+                LastInputTokens = last;
+            }
         }
     }
 }

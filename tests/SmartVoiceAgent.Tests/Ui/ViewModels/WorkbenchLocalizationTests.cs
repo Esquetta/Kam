@@ -148,6 +148,18 @@ public sealed partial class WorkbenchLocalizationTests
     }
 
     [Fact]
+    public void DelegateStep_ShowsADangerBadgeAndNoAlwaysAllow()
+    {
+        var step = AgentChatMessageViewModel.ToolStep("c1", "cli_agent_run", "Delegate to Codex CLI", "{}", ToolRisk.Delegate);
+
+        step.RiskTag.Should().Be("delegate");
+        step.IsShellRisk.Should().BeTrue("handing work to another agent is the riskiest tier");
+        step.IsReadRisk.Should().BeFalse();
+        step.IsWriteRisk.Should().BeFalse();
+        step.CanAlwaysAllow.Should().BeFalse();
+    }
+
+    [Fact]
     public void RefreshLocalizedText_KeepsTheChosenHistoryStatusFilter()
     {
         var viewModel = new MainWindowViewModel();

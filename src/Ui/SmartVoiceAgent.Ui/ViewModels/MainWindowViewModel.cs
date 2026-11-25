@@ -143,6 +143,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         private NavView _activeView = NavView.Coordinator;
         private bool _isActivityPanelOpen = true;
+        private bool _isActivityPanelPinned;
         public NavView ActiveView
         {
             get => _activeView;
@@ -172,22 +173,51 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         /// <summary>
         /// Gets whether the Activity panel is on screen: only beside the chat, when the user has it open
-        /// and the window is wide enough. Other pages use the full width.
+        /// and the window is wide enough, or when the user opened it on a narrower window that still has room
+        /// for it beside the thread (1100 px and up). Other pages use the full width.
         /// </summary>
         public bool IsActivityPanelShown =>
-            IsChatWorkbenchVisible && _isActivityPanelOpen && WindowStateManager.Instance.IsLogPanelVisible;
+            IsChatWorkbenchVisible
+            && _isActivityPanelOpen
+            && (WindowStateManager.Instance.IsLogPanelVisible
+                || (_isActivityPanelPinned && WindowStateManager.Instance.CanPinContextPane));
 
-        /// <summary>Gets the Activity panel column width: 0 when hidden, narrower on medium windows.</summary>
+        /// <summary>
+        /// Gets whether the thread header offers to open the Activity panel: it is off screen and the window has room for it.
+        /// </summary>
+        public bool CanOpenActivityPanel =>
+            IsChatWorkbenchVisible && !IsActivityPanelShown && WindowStateManager.Instance.CanPinContextPane;
+
+        /// <summary>Gets the Activity panel column width: the 290 px context pane of Kam Studio, 0 when hidden.</summary>
         public GridLength ActivityPanelWidth => IsActivityPanelShown
-            ? new GridLength(WindowStateManager.Instance.IsMedium ? 360 : 420)
+            ? new GridLength(290)
             : new GridLength(0);
 
         /// <summary>Shows or hides the Activity panel beside the chat.</summary>
         public ICommand ToggleActivityPanelCommand { get; }
 
+        /// <summary>
+        /// Hides the Activity panel when it is on screen; otherwise shows it, also below the
+        /// context pane breakpoint, where it stays until the user closes it.
+        /// </summary>
+        private void ToggleActivityPanel()
+        {
+            if (IsActivityPanelShown)
+            {
+                _isActivityPanelPinned = false;
+                IsActivityPanelOpen = false;
+                return;
+            }
+
+            _isActivityPanelPinned = !WindowStateManager.Instance.IsLogPanelVisible;
+            IsActivityPanelOpen = true;
+            RaiseActivityPanelLayout();
+        }
+
         private void RaiseActivityPanelLayout()
         {
             this.RaisePropertyChanged(nameof(IsActivityPanelShown));
+            this.RaisePropertyChanged(nameof(CanOpenActivityPanel));
             this.RaisePropertyChanged(nameof(ActivityPanelWidth));
         }
 
@@ -472,6 +502,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 this.RaiseAndSetIfChanged(ref _isDarkMode, value);
                 ApplyTheme(value);
+                var theme = value ? "dark" : "light";
+                if (_pageSettingsService.Theme != theme)
+                {
+                    _pageSettingsService.Theme = theme;
+                }
             }
         }
 
@@ -582,6 +617,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
                 this.RaisePropertyChanged(nameof(HasAgentChatMessages));
                 RefreshAgentChatModelOptions();
+                WatchSelectedSessionContext(_selectedAgentChatSession);
             }
         }
 
@@ -870,11 +906,21 @@ namespace SmartVoiceAgent.Ui.ViewModels
             RemoveComposerAttachmentCommand = ReactiveCommand.Create<ComposerAttachmentViewModel?>(RemoveComposerAttachment);
             ClearComposerAttachmentsCommand = ReactiveCommand.Create(ClearComposerAttachments);
             ShowRunsCommand = ReactiveCommand.Create(() => SelectedActivityPanelMode = ActivityPanelMode.Runs);
-            ToggleActivityPanelCommand = ReactiveCommand.Create(() => { IsActivityPanelOpen = !IsActivityPanelOpen; });
+            ToggleActivityPanelCommand = ReactiveCommand.Create(ToggleActivityPanel);
             WindowStateManager.Instance.PropertyChanged += (_, args) =>
             {
-                if (args.PropertyName is nameof(WindowStateManager.IsLogPanelVisible) or nameof(WindowStateManager.IsMedium))
+                if (args.PropertyName is nameof(WindowStateManager.IsLogPanelVisible)
+                    or nameof(WindowStateManager.IsMedium)
+                    or nameof(WindowStateManager.IsRailCompact)
+                    or nameof(WindowStateManager.CanPinContextPane))
                 {
+                    // Once the window is wide enough the pane shows by itself, so a pin from a narrower
+                    // window must not bring it back after the next shrink.
+                    if (WindowStateManager.Instance.IsLogPanelVisible)
+                    {
+                        _isActivityPanelPinned = false;
+                    }
+
                     RaiseActivityPanelLayout();
                 }
             };
@@ -885,6 +931,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
             AlwaysAllowToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: true, alwaysAllow: true));
             DenyToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: false, alwaysAllow: false));
             InitializeInbox();
+            InitializeTaskContext();
+            InitializeAppearance();
             StopAgentTurnCommand = ReactiveCommand.Create(StopAgentTurn);
             ClearQueuedAgentMessagesCommand = ReactiveCommand.Create(ClearQueuedAgentMessages);
             InitializeChatExperience();
@@ -896,11 +944,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             Dispatcher.UIThread.Post(() =>
             {
-                // Initialize theme
-                if (global::Avalonia.Application.Current != null)
-                {
-                    IsDarkMode = global::Avalonia.Application.Current.ActualThemeVariant == ThemeVariant.Dark;
-                }
+                // Theme and accent color as saved in Settings > Appearance
+                ApplySavedAppearance();
 
                 // Initialize View - CoordinatorViewModel will be created by SetVoiceAgentHostControl
                 // when the host control is available. For now, leave CurrentViewModel null

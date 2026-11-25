@@ -342,9 +342,10 @@ The UI implements responsive design with three breakpoints:
 
 | Breakpoint | Width | Behavior |
 |------------|-------|----------|
-| Compact | < 1024px | Single column, log panel hidden |
-| Medium | 1024-1440px | Two columns, 320px log panel |
-| Expanded | > 1440px | Three columns, 450px log panel |
+| Context pane | 1280px and up | Tasks: 270px list, thread, 290px context pane |
+| Medium | < 1280px | Context pane hidden, 240px list |
+| Narrow | < 980px | Top bar keeps the search icon and the mic |
+| Rail compact | < 760px | Icon rail; task list above the thread |
 
 Key files:
 - `WindowStateManager.cs` - Tracks window state
@@ -445,6 +446,14 @@ See `RESPONSIVE_DESIGN.md` for full details.
 - **Design system**: violet accent tokens (`Accent`, `AccentStrong`, `AccentSubtle`, `AccentOn`) in `Themes/Colors.*.axaml`, Lucide-style icon geometries (`Icon*`) and `MonoFontFamily` in `Themes/AppTheme.axaml`, shared control classes in `Themes/Controls.axaml` (`PrimaryAction`, `SecondaryAction`, `Pill`, `Card`, `PageTitle`, `SectionTitle`, `Overline`)
 - **Shell**: icon sidebar that collapses at compact width, per-page title bar, chat workbench with bubbles, suggestion cards and a floating composer
 - **WindowStateManager**: use `{x:Static services:WindowStateManager.Instance}` in XAML; never declare a new instance as a resource
+
+#### Kam Studio look (November 2026)
+- **Reference**: the Kam Studio prototype (owner's artifact). Gap list and follow-ups: the PR that introduced this section
+- **Tokens**: `Colors.*.axaml` hold the Kam Studio palettes; `RaisedBg`, `AccentInfo`/`AccentInfoGlow`, `DiffAddBg`/`DiffDelBg` are new. The violet preset in `AccentPalette` must match the theme files (`AccentPaletteTests`)
+- **Type**: Geist and Geist Mono ship in `Assets/Fonts` (SIL OFL, `OFL.txt`), registered as `fonts:Geist` in `Program`; `ContentControlThemeFontFamily` and `MonoFontFamily` point at them
+- **Primitives** in `Themes/Controls.axaml`: buttons plus `Sm`, `Pill` chips (with `Info` and `Ellipse.ChipDot`), `Pane`/`PaneHead`/`PaneRow`, `Risk` (`Read`, `Write`, `Shell`), `KvKey`/`KvValue`, `Note`, `Explain`, `Code`, `Kbd`, and a 30x17 `ToggleSwitch`
+- **Shell**: 232px rail (Work; the Build ladder Prompts, Agents, Loops, Graphs, Agent Builder; Manage), a spend card and a 48px top bar with search, wake pill and mic. Ladder rows, Runs and the spend card have no page or data yet: they are plain `LadderStep` rows with a `partial` or `planned` badge and a tooltip, never buttons. Do not show sample numbers there
+- **Tasks**: `Grid.Workbench` places `TaskListPane` and `ThreadPane` from styles (`medium`, `stacked`); keep `Grid.*` and `Width` off those panes
 - **XAML metadata tests** in `tests/SmartVoiceAgent.Tests/Ui/` parse `.axaml` text and pin copy and structure, so update them together with markup changes
 - **List pages** (Extensions, Skills): rows share `ListRow`, `KindIcon`, `StatusDot` (`Success`, `Warning`, `Danger`, `Accent`), `GroupTitle`, `RowToggle` and `LinkAction` from `Themes/Controls.axaml`, plus the `Chip` filters and `Segmented`/`DrawerTab` tabs. Hide filtered rows with a page style `ItemsControl.X > ContentPresenter` bound to the row's `IsVisible`, so list spacing collapses with them. `IconResourceConverter` turns an icon key from a view model (`IconFolder`) into its geometry. Pages that reflow set a `narrow` class on their root panel from code-behind and move controls with styles, never local `Grid.Row`/`Width` values
 - **Extensions Discover** lists `ExtensionCatalog` (keyless MCP servers written to `mcp.json` through `UserMcpServerSource.AddServer`, and plugin marketplaces); copy for each entry lives under `Extensions.Catalog.{id}`

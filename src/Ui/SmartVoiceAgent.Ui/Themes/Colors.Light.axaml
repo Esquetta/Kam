@@ -2,50 +2,57 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- Neutral surfaces: layered from the window background up to hovered cards -->
-    <Color x:Key="PanelBg">#ECECF1</Color>
-    <Color x:Key="SurfaceBg">#F6F6F8</Color>
+    <!-- Neutral surfaces (Kam Studio): window/page bg < panels and cards < raised fills < hover -->
+    <Color x:Key="PanelBg">#F5F4F9</Color>
+    <Color x:Key="SurfaceBg">#F5F4F9</Color>
     <Color x:Key="CardBg">#FFFFFF</Color>
     <Color x:Key="SurfaceBgElevated">#FFFFFF</Color>
-    <Color x:Key="CardBgHover">#F1F1F5</Color>
+    <Color x:Key="RaisedBg">#F0EFF6</Color>
+    <Color x:Key="CardBgHover">#E9E7F2</Color>
     <!-- Translucent fills for ghost controls, so hover reads the same on any surface -->
-    <Color x:Key="ControlHover">#1015151B</Color>
-    <Color x:Key="ControlPressed">#1E15151B</Color>
-    <Color x:Key="BorderSubtle">#E1E1E8</Color>
-    <Color x:Key="BorderMuted">#D4D4DC</Color>
-    <Color x:Key="TextPrimary">#15151B</Color>
-    <Color x:Key="TextSecondary">#3B3B46</Color>
-    <Color x:Key="TextMuted">#5E5E6B</Color>
+    <Color x:Key="ControlHover">#12302060</Color>
+    <Color x:Key="ControlPressed">#20302060</Color>
+    <Color x:Key="BorderSubtle">#E2E0EB</Color>
+    <Color x:Key="BorderMuted">#CDCADB</Color>
+    <Color x:Key="TextPrimary">#17161F</Color>
+    <Color x:Key="TextSecondary">#45434F</Color>
+    <Color x:Key="TextMuted">#6B6979</Color>
 
     <!-- Brand accent: Accent is for text and icons, AccentStrong for fills and focus rings -->
-    <Color x:Key="Accent">#5B45E0</Color>
-    <Color x:Key="AccentStrong">#5B45E0</Color>
+    <Color x:Key="Accent">#5B47E0</Color>
+    <Color x:Key="AccentStrong">#5B47E0</Color>
     <Color x:Key="AccentStrongHover">#4A35C9</Color>
-    <Color x:Key="AccentSubtle">#165B45E0</Color>
+    <Color x:Key="AccentSubtle">#1A5B47E0</Color>
     <Color x:Key="AccentOn">#FFFFFF</Color>
 
-    <!-- Status colors -->
+    <!-- Status colors: ok (green), warn (orange), bad (error), info; *Glow is the soft fill behind them -->
     <Color x:Key="AccentGreen">#047857</Color>
     <Color x:Key="AccentGreenDim">#065F46</Color>
-    <Color x:Key="AccentGreenGlow">#16047857</Color>
+    <Color x:Key="AccentGreenGlow">#1A047857</Color>
     <Color x:Key="AccentGreenOn">#FFFFFF</Color>
     <Color x:Key="AccentPurple">#7E22CE</Color>
     <Color x:Key="AccentPurpleDim">#6B21A8</Color>
     <Color x:Key="AccentPurpleGlow">#167E22CE</Color>
     <Color x:Key="AccentOrange">#B45309</Color>
     <Color x:Key="AccentOrangeDim">#92400E</Color>
-    <Color x:Key="AccentOrangeGlow">#16B45309</Color>
-    <Color x:Key="AccentError">#C62828</Color>
-    <Color x:Key="AccentErrorDim">#A61B1B</Color>
-    <Color x:Key="AccentErrorGlow">#16C62828</Color>
+    <Color x:Key="AccentOrangeGlow">#1AB45309</Color>
+    <Color x:Key="AccentError">#DC2626</Color>
+    <Color x:Key="AccentErrorDim">#B91C1C</Color>
+    <Color x:Key="AccentErrorGlow">#17DC2626</Color>
     <Color x:Key="AccentErrorOn">#FFFFFF</Color>
+    <Color x:Key="AccentInfo">#2563EB</Color>
+    <Color x:Key="AccentInfoGlow">#1A2563EB</Color>
+
+    <!-- Diff lines -->
+    <Color x:Key="DiffAddBg">#17047857</Color>
+    <Color x:Key="DiffDelBg">#14DC2626</Color>
 
     <!-- Fluent theme accent overrides so built-in controls follow the brand accent -->
-    <Color x:Key="SystemAccentColor">#5B45E0</Color>
+    <Color x:Key="SystemAccentColor">#5B47E0</Color>
     <Color x:Key="SystemAccentColorLight1">#7B69F6</Color>
     <Color x:Key="SystemAccentColorLight2">#8B7CFF</Color>
     <Color x:Key="SystemAccentColorLight3">#A99EFF</Color>
-    <Color x:Key="SystemAccentColorDark1">#5B45E0</Color>
+    <Color x:Key="SystemAccentColorDark1">#5B47E0</Color>
     <Color x:Key="SystemAccentColorDark2">#4A35C9</Color>
     <Color x:Key="SystemAccentColorDark3">#3A28A8</Color>
 </ResourceDictionary>

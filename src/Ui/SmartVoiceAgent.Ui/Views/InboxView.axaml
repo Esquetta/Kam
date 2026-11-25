@@ -2,102 +2,129 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SmartVoiceAgent.Ui.ViewModels"
              xmlns:local="using:SmartVoiceAgent.Ui.Views"
+             xmlns:services="using:SmartVoiceAgent.Ui.Services"
              x:Class="SmartVoiceAgent.Ui.Views.InboxView"
              x:DataType="vm:MainWindowViewModel">
+    <UserControl.Styles>
+        <!-- Inbox row (.inbox-item): risk badge, what waits and where, then the actions on the right.
+             Below 760 px the actions move under the text. -->
+        <Style Selector="Grid.InboxItem > StackPanel.InboxActions">
+            <Setter Property="Grid.Column" Value="2"/>
+            <Setter Property="Grid.Row" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+        </Style>
+        <Style Selector="StackPanel.WorkbenchPage.narrow Grid.InboxItem > StackPanel.InboxActions">
+            <Setter Property="Grid.Column" Value="1"/>
+            <Setter Property="Grid.Row" Value="1"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+        </Style>
+        <!-- The panel border closes the last row -->
+        <Style Selector="ItemsControl > ContentPresenter:nth-last-child(1) > Border.PaneRow">
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+    </UserControl.Styles>
+
     <!-- Needs you: every tool call waiting for approval, across all tasks, answerable here -->
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel Classes="WorkbenchPage" Margin="32,28,32,40" MaxWidth="900" Spacing="20">
+        <StackPanel Classes="WorkbenchPage"
+                    Classes.narrow="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsRailCompact}"
+                    Margin="18,16,18,24"
+                    MaxWidth="1040"
+                    Spacing="14">
 
-            <!-- Header -->
-            <StackPanel Spacing="6">
-                <TextBlock Text="{DynamicResource Lang.Inbox.Title}" Classes="PageTitle"/>
-                <TextBlock Text="{DynamicResource Lang.Inbox.Subtitle}" Classes="PageSubtitle" TextWrapping="Wrap"/>
+            <!-- Page head (.page-head): eyebrow, title and the explanation strip -->
+            <StackPanel Spacing="10">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock Text="{DynamicResource Lang.Inbox.Eyebrow}" Classes="Overline" VerticalAlignment="Center"/>
+                    <TextBlock Text="{DynamicResource Lang.Inbox.Title}" Classes="PageTitle" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Border Classes="Explain">
+                    <TextBlock Text="{DynamicResource Lang.Inbox.Subtitle}" Classes="PageSubtitle"/>
+                </Border>
             </StackPanel>
 
-            <!-- Empty state -->
-            <Border Classes="WorkbenchSection" IsVisible="{Binding !HasPendingApprovals}">
-                <StackPanel Spacing="6" HorizontalAlignment="Center" Margin="0,12">
-                    <Viewbox Width="22" Height="22" HorizontalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconCheck}" Stroke="{DynamicResource AccentGreenBrush}"/></Viewbox>
-                    <TextBlock Text="{DynamicResource Lang.Inbox.Empty.Title}" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    <TextBlock Text="{DynamicResource Lang.Inbox.Empty.Body}" Classes="Caption" TextAlignment="Center" TextWrapping="Wrap"/>
-                </StackPanel>
-            </Border>
+            <!-- One panel; every waiting tool call is a row in it -->
+            <Border Classes="Pane">
+                <Panel>
+                    <!-- Empty state (.empty) -->
+                    <StackPanel Spacing="6" Margin="22" HorizontalAlignment="Center" IsVisible="{Binding !HasPendingApprovals}">
+                        <Viewbox Width="18" Height="18" HorizontalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconCheck}" Stroke="{DynamicResource AccentGreenBrush}"/></Viewbox>
+                        <TextBlock Text="{DynamicResource Lang.Inbox.Empty.Title}" FontSize="13.5" FontWeight="Medium" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource Lang.Inbox.Empty.Body}" Classes="Caption" TextAlignment="Center" TextWrapping="Wrap"/>
+                    </StackPanel>
 
-            <!-- Waiting tool calls -->
-            <ItemsControl ItemsSource="{Binding PendingApprovals}" IsVisible="{Binding HasPendingApprovals}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Spacing="12"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="vm:PendingApprovalItem">
-                        <Border Classes="ToolStep Approval" Margin="0">
-                            <StackPanel Spacing="10">
-                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                                    <Border Grid.Column="0" Classes="ToolGlyph">
-                                        <Viewbox Width="13" Height="13"><Path Classes="Icon" Data="{StaticResource IconShield}" Stroke="{DynamicResource AccentOrangeBrush}"/></Viewbox>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Step.ToolDisplayName}"
-                                                   FontSize="13"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextPrimaryBrush}"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <TextBlock Text="{Binding Session.Title}"
-                                                       FontSize="11"
-                                                       MaxWidth="360"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       Foreground="{DynamicResource TextMutedBrush}"/>
-                                            <TextBlock Text="·" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
-                                            <TextBlock Text="{Binding Step.RiskText}"
-                                                       FontSize="11"
-                                                       Foreground="{DynamicResource TextMutedBrush}"/>
+                    <!-- Waiting tool calls -->
+                    <ItemsControl ItemsSource="{Binding PendingApprovals}" IsVisible="{Binding HasPendingApprovals}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:PendingApprovalItem">
+                                <Border Classes="PaneRow">
+                                    <Grid Classes="InboxItem" ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+                                        <Border Grid.Column="0"
+                                                Classes="Risk"
+                                                Classes.Read="{Binding Step.IsReadRisk}"
+                                                Classes.Write="{Binding Step.IsWriteRisk}"
+                                                Classes.Shell="{Binding Step.IsShellRisk}"
+                                                VerticalAlignment="Top"
+                                                Margin="0,2,0,0"
+                                                ToolTip.Tip="{Binding Step.RiskText}">
+                                            <TextBlock Text="{Binding Step.RiskTag}"/>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Step.ToolDisplayName}"
+                                                       FontSize="13.5"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <TextBlock Text="{Binding Session.Title}"
+                                                           FontSize="12"
+                                                           MaxWidth="360"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                                <TextBlock Text="·" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                <TextBlock Text="{Binding Step.ToolName}"
+                                                           FontSize="11.5"
+                                                           FontFamily="{StaticResource MonoFontFamily}"
+                                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                            </StackPanel>
+                                            <Border Classes="ToolArguments" IsVisible="{Binding Step.HasArguments}" Margin="0,4,0,0">
+                                                <SelectableTextBlock Text="{Binding Step.ArgumentsPreview}"
+                                                                     FontSize="11.5"
+                                                                     FontFamily="{StaticResource MonoFontFamily}"
+                                                                     Foreground="{DynamicResource TextSecondaryBrush}"
+                                                                     TextWrapping="Wrap"
+                                                                     MaxLines="4"/>
+                                            </Border>
                                         </StackPanel>
-                                    </StackPanel>
-                                    <Border Grid.Column="2" Classes="Pill Warning" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Step.ToolStatusText}"/>
-                                    </Border>
-                                </Grid>
 
-                                <Border Classes="ToolArguments" IsVisible="{Binding Step.HasArguments}">
-                                    <SelectableTextBlock Text="{Binding Step.ArgumentsPreview}"
-                                                         FontSize="12"
-                                                         FontFamily="{StaticResource MonoFontFamily}"
-                                                         Foreground="{DynamicResource TextSecondaryBrush}"
-                                                         TextWrapping="Wrap"/>
+                                        <!-- Actions (.acts) -->
+                                        <StackPanel Classes="InboxActions" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top">
+                                            <Button Classes="SecondaryAction Sm"
+                                                    Content="{DynamicResource Lang.Inbox.OpenTask}"
+                                                    Command="{Binding $parent[local:InboxView].DataContext.OpenTaskCommand}"
+                                                    CommandParameter="{Binding Session}"/>
+                                            <Button Classes="GhostAction Sm"
+                                                    Content="{DynamicResource Lang.Common.Deny}"
+                                                    Command="{Binding $parent[local:InboxView].DataContext.DenyToolCallCommand}"
+                                                    CommandParameter="{Binding Step}"/>
+                                            <Button Classes="SecondaryAction Sm"
+                                                    Content="{DynamicResource Lang.Common.AlwaysAllow}"
+                                                    IsVisible="{Binding Step.CanAlwaysAllow}"
+                                                    ToolTip.Tip="{Binding Step.AlwaysAllowHint}"
+                                                    Command="{Binding $parent[local:InboxView].DataContext.AlwaysAllowToolCallCommand}"
+                                                    CommandParameter="{Binding Step}"/>
+                                            <Button Classes="PrimaryAction Sm"
+                                                    Content="{DynamicResource Lang.Common.Approve}"
+                                                    Command="{Binding $parent[local:InboxView].DataContext.ApproveToolCallCommand}"
+                                                    CommandParameter="{Binding Step}"/>
+                                        </StackPanel>
+                                    </Grid>
                                 </Border>
-
-                                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="8">
-                                    <Button Grid.Column="0"
-                                            Classes="SecondaryAction"
-                                            Content="{DynamicResource Lang.Inbox.OpenTask}"
-                                            Command="{Binding $parent[local:InboxView].DataContext.OpenTaskCommand}"
-                                            CommandParameter="{Binding Session}"/>
-                                    <Button Grid.Column="2"
-                                            Classes="SecondaryAction"
-                                            Content="{DynamicResource Lang.Common.Deny}"
-                                            Command="{Binding $parent[local:InboxView].DataContext.DenyToolCallCommand}"
-                                            CommandParameter="{Binding Step}"/>
-                                    <Button Grid.Column="3"
-                                            Classes="SecondaryAction"
-                                            Content="{DynamicResource Lang.Common.AlwaysAllow}"
-                                            IsVisible="{Binding Step.CanAlwaysAllow}"
-                                            ToolTip.Tip="{Binding Step.AlwaysAllowHint}"
-                                            Command="{Binding $parent[local:InboxView].DataContext.AlwaysAllowToolCallCommand}"
-                                            CommandParameter="{Binding Step}"/>
-                                    <Button Grid.Column="4"
-                                            Classes="PrimaryAction"
-                                            Content="{DynamicResource Lang.Common.Approve}"
-                                            Command="{Binding $parent[local:InboxView].DataContext.ApproveToolCallCommand}"
-                                            CommandParameter="{Binding Step}"/>
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Panel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

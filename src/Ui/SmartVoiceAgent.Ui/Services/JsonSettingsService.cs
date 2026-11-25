@@ -251,6 +251,18 @@ public class JsonSettingsService : ISettingsService, IDisposable
         set => SetProperty(nameof(WakeWordEnabled), value, v => _data.WakeWordEnabled = v);
     }
 
+    public string AccentColor
+    {
+        get => string.IsNullOrWhiteSpace(_data.AccentColor) ? AccentPalette.DefaultId : _data.AccentColor;
+        set => SetProperty(nameof(AccentColor), value, v => _data.AccentColor = v);
+    }
+
+    public string Theme
+    {
+        get => string.Equals(_data.Theme, "light", StringComparison.OrdinalIgnoreCase) ? "light" : "dark";
+        set => SetProperty(nameof(Theme), value, v => _data.Theme = v);
+    }
+
     public string WakeWord
     {
         get => string.IsNullOrWhiteSpace(_data.WakeWord) ? "Hey Kam" : _data.WakeWord;
@@ -444,6 +456,8 @@ public class JsonSettingsService : ISettingsService, IDisposable
             nameof(SpeechApiKey) => (T?)(object?)_data.SpeechApiKey,
             nameof(WakeWordEnabled) => (T?)(object?)_data.WakeWordEnabled,
             nameof(WakeWord) => (T?)(object?)_data.WakeWord,
+            nameof(AccentColor) => (T?)(object?)_data.AccentColor,
+            nameof(Theme) => (T?)(object?)_data.Theme,
             nameof(TalkShortcut) => (T?)(object?)_data.TalkShortcut,
             nameof(SpokenReplies) => (T?)(object?)_data.SpokenReplies,
             nameof(SpeechVoice) => (T?)(object?)_data.SpeechVoice,
@@ -637,6 +651,8 @@ public class JsonSettingsService : ISettingsService, IDisposable
             SpeechApiKey = source.SpeechApiKey,
             WakeWordEnabled = source.WakeWordEnabled,
             WakeWord = source.WakeWord,
+            AccentColor = source.AccentColor,
+            Theme = source.Theme,
             TalkShortcut = source.TalkShortcut,
             SpokenReplies = source.SpokenReplies,
             SpeechVoice = source.SpeechVoice,
@@ -779,6 +795,8 @@ public class JsonSettingsService : ISettingsService, IDisposable
         public string? SpeechApiKey { get; set; }
         public bool WakeWordEnabled { get; set; }
         public string? WakeWord { get; set; }
+        public string? AccentColor { get; set; }
+        public string? Theme { get; set; }
         public string? TalkShortcut { get; set; }
         public string? SpokenReplies { get; set; }
         public string? SpeechVoice { get; set; }

@@ -20,8 +20,11 @@
         <ResourceInclude Source="avares://SmartVoiceAgent.Ui/Themes/Brushes.axaml"/>
     </ResourceDictionary.MergedDictionaries>
 
-    <!-- Typography -->
-    <FontFamily x:Key="MonoFontFamily">Cascadia Code, Consolas, JetBrains Mono, Menlo, monospace</FontFamily>
+    <!-- Typography: Geist and Geist Mono ship in Assets/Fonts (SIL OFL 1.1, see OFL.txt) and register as fonts:Geist in Program -->
+    <FontFamily x:Key="UiFontFamily">fonts:Geist#Geist, $Default</FontFamily>
+    <FontFamily x:Key="MonoFontFamily">fonts:Geist#Geist Mono, Cascadia Code, Consolas, monospace</FontFamily>
+    <!-- Fluent controls read this key for their text -->
+    <FontFamily x:Key="ContentControlThemeFontFamily">fonts:Geist#Geist, $Default</FontFamily>
 
     <!-- Shape scale shared by Fluent controls and Kam surfaces -->
     <CornerRadius x:Key="ControlCornerRadius">8</CornerRadius>
