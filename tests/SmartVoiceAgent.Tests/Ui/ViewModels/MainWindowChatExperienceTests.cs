@@ -274,6 +274,34 @@ public sealed class MainWindowChatExperienceTests : IDisposable
     }
 
     [Fact]
+    public void PendingApprovals_ListWaitingCallsFromEveryTask()
+    {
+        var viewModel = CreateViewModel(new RecordingStore());
+        var first = viewModel.SelectedAgentChatSession!;
+        viewModel.NewAgentChatCommand.Execute(null);
+        viewModel.SelectedAgentChatSession.Should().NotBeSameAs(first);
+
+        var step = AgentChatMessageViewModel.ToolStep("c1", "shell_run", "Run Shell Command", "{}", ToolRisk.Execute);
+        first.AddMessage(step);
+        first.IsRunning = true;
+
+        viewModel.RunningTaskCount.Should().Be(1);
+        viewModel.HasPendingApprovals.Should().BeFalse();
+
+        step.RequestApproval("r1");
+
+        viewModel.PendingApprovals.Should().ContainSingle()
+            .Which.Should().Be(new PendingApprovalItem(first, step), "a task that is not on screen still shows up");
+        viewModel.PendingApprovalCount.Should().Be(1);
+
+        step.ApprovalAnswered(approved: true);
+        first.IsRunning = false;
+
+        viewModel.HasPendingApprovals.Should().BeFalse();
+        viewModel.HasRunningTasks.Should().BeFalse();
+    }
+
+    [Fact]
     public void FormatConversation_WritesMarkdownWithToolCallsOnOneLine()
     {
         var session = AgentChatSessionViewModel.Create("Build fix", "summary", "now");

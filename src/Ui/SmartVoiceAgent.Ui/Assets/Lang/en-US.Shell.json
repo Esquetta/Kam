@@ -1,6 +1,10 @@
 {
   "Shell.Brand.Tagline": "Agent workspace",
-  "Shell.Nav.Workspace": "WORKSPACE",
+  "Shell.Nav.Work": "WORK",
+  "Shell.Nav.Build": "BUILD",
+  "Shell.Nav.Manage": "MANAGE",
+  "Shell.Nav.Inbox": "Needs you",
+  "Shell.Nav.InboxTip": "Approvals waiting across all tasks",
   "Shell.Nav.Workbench": "Tasks",
   "Shell.Nav.Diagnostics": "Diagnostics",
   "Shell.Nav.DiagnosticsTip": "Runtime Diagnostics",

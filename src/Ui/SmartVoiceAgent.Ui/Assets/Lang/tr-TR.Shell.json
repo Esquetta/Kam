@@ -1,6 +1,10 @@
 {
   "Shell.Brand.Tagline": "Ajan çalışma alanı",
-  "Shell.Nav.Workspace": "ÇALIŞMA ALANI",
+  "Shell.Nav.Work": "ÇALIŞMA",
+  "Shell.Nav.Build": "OLUŞTUR",
+  "Shell.Nav.Manage": "YÖNET",
+  "Shell.Nav.Inbox": "Sizi bekleyenler",
+  "Shell.Nav.InboxTip": "Tüm görevlerde onay bekleyenler",
   "Shell.Nav.Workbench": "Görevler",
   "Shell.Nav.Diagnostics": "Tanılama",
   "Shell.Nav.DiagnosticsTip": "Çalışma zamanı tanılaması",

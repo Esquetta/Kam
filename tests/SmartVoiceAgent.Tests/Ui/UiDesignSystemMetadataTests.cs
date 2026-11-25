@@ -85,6 +85,7 @@ public sealed class UiDesignSystemMetadataTests
     [InlineData("PluginsView.axaml")]
     [InlineData("ExtensionsView.axaml")]
     [InlineData("RuntimeDiagnosticsView.axaml")]
+    [InlineData("InboxView.axaml")]
     public void PrimaryPages_OptIntoSharedWorkbenchChrome(string viewFileName)
     {
         var viewText = LocalizedXaml.ReadAllText(FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Views", viewFileName));

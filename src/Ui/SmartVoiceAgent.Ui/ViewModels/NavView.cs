@@ -8,6 +8,7 @@
         Plugins,
         Extensions,
         Integrations,
-        Settings
+        Settings,
+        Inbox
     }
 }
