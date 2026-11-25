@@ -378,6 +378,26 @@ public class SettingsViewModelAiProfileTests : IDisposable
     }
 
     [Fact]
+    public void ChatProfileState_NamesThePlannerModelChatFallsBackTo()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        using var viewModel = CreateViewModel(settingsService);
+        viewModel.ChatProvider = "Anthropic";
+        viewModel.ChatApiKey = string.Empty;
+
+        viewModel.ChatProfileShowsWarning.Should().BeTrue("nothing is usable yet");
+
+        viewModel.AiProvider = "OpenAI";
+        viewModel.AiModelId = "gpt-5.5";
+        viewModel.AiApiKey = "sk-test";
+
+        viewModel.ChatProfileNeedsKey.Should().BeTrue();
+        viewModel.ChatProfileShowsWarning.Should().BeFalse("chat runs on the planner profile, as the title bar says");
+        viewModel.ChatProfileStateText.Should().Be(
+            "No key here yet, so chat uses gpt-5.5 on OpenAI from the planner profile. Add a key to use this model.");
+    }
+
+    [Fact]
     public void ChatProfileState_OllamaNeedsNoKey()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);
