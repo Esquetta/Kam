@@ -50,7 +50,7 @@ public static class AccentPalette
     [
         new("violet",
             new(Hex("#8B7CFF"), Hex("#6E5BF0"), Hex("#5F4BE6"), White),
-            new(Hex("#5B45E0"), Hex("#5B45E0"), Hex("#4A35C9"), White),
+            new(Hex("#5B47E0"), Hex("#5B47E0"), Hex("#4A35C9"), White),
             Hex("#8B7CFF"), Hex("#4F46E5")),
         new("blue",
             new(Hex("#7AAEFF"), Hex("#2563EB"), Hex("#1D4ED8"), White),

@@ -142,6 +142,12 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// </summary>
         public bool IsAgent => Kind == AgentChatItemKind.Message && !IsUser;
 
+        /// <summary>
+        /// Gets whether the message came from Kam itself, such as an error or a compaction notice,
+        /// so the thread can set it apart from the agent's replies.
+        /// </summary>
+        public bool IsSystem => Kind == AgentChatItemKind.Message && RoleId.Equals(SystemRole, StringComparison.OrdinalIgnoreCase);
+
         /// <summary>Gets whether the item is a tool call.</summary>
         public bool IsToolStep => Kind == AgentChatItemKind.ToolStep;
 
@@ -183,6 +189,26 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ToolRisk.External => Loc.Get("Workbench.Tool.Risk.External"),
             _ => Risk.ToString()
         };
+
+        /// <summary>Gets the short risk badge label: read, web, write, shell or external.</summary>
+        public string RiskTag => Risk switch
+        {
+            ToolRisk.Read => Loc.Get("Workbench.Tool.RiskTag.Read"),
+            ToolRisk.Network => Loc.Get("Workbench.Tool.RiskTag.Network"),
+            ToolRisk.Write => Loc.Get("Workbench.Tool.RiskTag.Write"),
+            ToolRisk.Execute => Loc.Get("Workbench.Tool.RiskTag.Execute"),
+            ToolRisk.External => Loc.Get("Workbench.Tool.RiskTag.External"),
+            _ => Risk.ToString()
+        };
+
+        /// <summary>Gets whether the risk badge uses the info color: reads and web lookups.</summary>
+        public bool IsReadRisk => Risk is ToolRisk.Read or ToolRisk.Network;
+
+        /// <summary>Gets whether the risk badge uses the warning color: file writes.</summary>
+        public bool IsWriteRisk => Risk == ToolRisk.Write;
+
+        /// <summary>Gets whether the risk badge uses the danger color: programs and anything sent outside.</summary>
+        public bool IsShellRisk => Risk is ToolRisk.Execute or ToolRisk.External;
 
         public AgentToolStepState ToolState
         {
@@ -462,6 +488,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             }
 
             this.RaisePropertyChanged(nameof(RiskText));
+            this.RaisePropertyChanged(nameof(RiskTag));
             this.RaisePropertyChanged(nameof(ToolStatusText));
             this.RaisePropertyChanged(nameof(AlwaysAllowHint));
         }

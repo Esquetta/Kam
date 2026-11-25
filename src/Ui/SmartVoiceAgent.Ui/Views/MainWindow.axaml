@@ -10,13 +10,13 @@
 		x:DataType="vm:MainWindowViewModel"
 		Background="{DynamicResource PanelBgBrush}"
 		Foreground="{DynamicResource TextPrimaryBrush}"
-		FontSize="13"
+		FontSize="13.5"
 		TransparencyLevelHint="Mica"
 		ExtendClientAreaToDecorationsHint="True"
 		Title="Kam"
 		Icon="/Assets/favicon.ico"
 		Width="1360" Height="860"
-		MinWidth="800" MinHeight="600">
+		MinWidth="640" MinHeight="560">
 
 	<Window.Styles>
 		<!-- The window keeps its name for the taskbar and Alt-Tab, but the drawn title bar would paint it
@@ -33,13 +33,20 @@
 		<!-- SIDEBAR NAVIGATION -->
 		<!-- ========================= -->
 
+		<!-- Rail (Kam Studio): 232 px panel with a hairline on the right; icons only below 760 px -->
 		<Style Selector="Border.Sidebar">
 			<Setter Property="Width" Value="232"/>
-			<Setter Property="Background" Value="{DynamicResource PanelBgBrush}"/>
+			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+			<Setter Property="BorderThickness" Value="0,0,1,0"/>
 		</Style>
 
 		<Style Selector="Border.Sidebar.Compact">
-			<Setter Property="Width" Value="68"/>
+			<Setter Property="Width" Value="60"/>
+		</Style>
+
+		<Style Selector="Border.Sidebar.Compact Border.LadderBadge, Border.Sidebar.Compact Panel.LadderBadge, Border.Sidebar.Compact Border.SpendCard, Border.Sidebar.Compact Border.LadderLine">
+			<Setter Property="IsVisible" Value="False"/>
 		</Style>
 
 		<Style Selector="Border.Sidebar.Compact TextBlock.NavLabel">
@@ -52,15 +59,15 @@
 		</Style>
 
 		<Style Selector="Button.NavBtn">
-			<Setter Property="Height" Value="36"/>
-			<Setter Property="Margin" Value="0,1"/>
+			<Setter Property="Height" Value="32"/>
+			<Setter Property="Margin" Value="0,0,0,1"/>
 			<Setter Property="HorizontalAlignment" Value="Stretch"/>
 			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
 			<Setter Property="VerticalContentAlignment" Value="Center"/>
-			<Setter Property="Padding" Value="10,0"/>
+			<Setter Property="Padding" Value="8,0"/>
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="CornerRadius" Value="7"/>
 			<Setter Property="Cursor" Value="Hand"/>
 		</Style>
 
@@ -89,7 +96,7 @@
 		</Style>
 
 		<Style Selector="Button.NavBtn:pointerover Path.Icon">
-			<Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}"/>
+			<Setter Property="Stroke" Value="{DynamicResource TextSecondaryBrush}"/>
 		</Style>
 
 		<Style Selector="Button.NavBtn.Active Path.Icon">
@@ -97,20 +104,93 @@
 		</Style>
 
 		<Style Selector="Button.NavBtn TextBlock.NavLabel">
-			<Setter Property="FontSize" Value="13"/>
-			<Setter Property="FontWeight" Value="Medium"/>
+			<Setter Property="FontSize" Value="13.5"/>
+			<Setter Property="FontWeight" Value="Normal"/>
 			<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
 			<Setter Property="VerticalAlignment" Value="Center"/>
 		</Style>
 
-		<!-- Title bar search field: looks like an input, opens the task search -->
+		<!-- Build ladder: numbered steps on a vertical line; none has a page yet, so the rows are not buttons -->
+		<Style Selector="Border.LadderLine">
+			<Setter Property="Width" Value="1"/>
+			<Setter Property="Margin" Value="18,16,0,16"/>
+			<Setter Property="HorizontalAlignment" Value="Left"/>
+			<Setter Property="Background" Value="{DynamicResource BorderMutedBrush}"/>
+		</Style>
+		<Style Selector="Border.LadderStep">
+			<Setter Property="MinHeight" Value="32"/>
+			<Setter Property="Padding" Value="8,5"/>
+			<Setter Property="Margin" Value="0,0,0,1"/>
+			<Setter Property="CornerRadius" Value="7"/>
+			<Setter Property="Background" Value="Transparent"/>
+		</Style>
+		<!-- Ladder rows and the spend card are focusable so keyboard and screen reader users reach their explanations -->
+		<Style Selector="Border.LadderStep:focus-visible, Border.SpendCard:focus-visible">
+			<Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+		</Style>
+		<Style Selector="Border.LadderStep TextBlock.NavLabel">
+			<Setter Property="FontSize" Value="13.5"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+		</Style>
+		<Style Selector="Border.LadderLevel">
+			<Setter Property="Width" Value="22"/>
+			<Setter Property="Height" Value="22"/>
+			<Setter Property="CornerRadius" Value="11"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
+		</Style>
+		<Style Selector="Border.LadderLevel TextBlock">
+			<Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}"/>
+			<Setter Property="FontSize" Value="10.5"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+			<Setter Property="HorizontalAlignment" Value="Center"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+		<!-- Status badge: partial (warn) or planned (muted, dashed outline) -->
+		<Style Selector="Panel.LadderBadge">
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+		<Style Selector="Panel.LadderBadge TextBlock">
+			<Setter Property="FontSize" Value="9.5"/>
+			<Setter Property="FontWeight" Value="Medium"/>
+			<Setter Property="Margin" Value="6,1"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+		</Style>
+		<Style Selector="Panel.LadderBadge Rectangle">
+			<Setter Property="RadiusX" Value="8"/>
+			<Setter Property="RadiusY" Value="8"/>
+			<Setter Property="Stroke" Value="{DynamicResource BorderMutedBrush}"/>
+			<Setter Property="StrokeThickness" Value="1"/>
+			<Setter Property="StrokeDashArray" Value="3,2"/>
+		</Style>
+		<Style Selector="Panel.LadderBadge.Partial Rectangle">
+			<Setter Property="Fill" Value="{DynamicResource AccentOrangeGlowBrush}"/>
+			<Setter Property="StrokeThickness" Value="0"/>
+		</Style>
+		<Style Selector="Panel.LadderBadge.Partial TextBlock">
+			<Setter Property="Foreground" Value="{DynamicResource AccentOrangeBrush}"/>
+		</Style>
+
+		<!-- Spend meter in the rail foot: Kam does not track spend yet, so it only says planned -->
+		<Style Selector="Border.SpendCard">
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="10"/>
+			<Setter Property="Padding" Value="10,9"/>
+		</Style>
+
+		<!-- Top bar search: looks like an input, opens the task search -->
 		<Style Selector="Button.TitleSearch">
-			<Setter Property="Width" Value="260"/>
+			<Setter Property="MinWidth" Value="240"/>
 			<Setter Property="Height" Value="30"/>
-			<Setter Property="Padding" Value="10,0,6,0"/>
+			<Setter Property="Padding" Value="10,0,8,0"/>
 			<Setter Property="CornerRadius" Value="8"/>
 			<Setter Property="BorderThickness" Value="1"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
 			<Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
 			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
 			<Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -118,18 +198,40 @@
 		</Style>
 		<Style Selector="Button.TitleSearch:pointerover /template/ ContentPresenter#PART_ContentPresenter">
 			<Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource TextMutedBrush}"/>
 		</Style>
-		<Style Selector="Border.Kbd">
-			<Setter Property="Padding" Value="5,1"/>
-			<Setter Property="CornerRadius" Value="4"/>
+
+		<!-- Mic (.mic): 30 px square with a hairline; accent fill while listening -->
+		<Style Selector="Button.MicButton">
+			<Setter Property="Width" Value="30"/>
+			<Setter Property="Height" Value="30"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="CornerRadius" Value="8"/>
 			<Setter Property="BorderThickness" Value="1"/>
 			<Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
-			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
+			<Setter Property="HorizontalContentAlignment" Value="Center"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+			<Setter Property="Cursor" Value="Hand"/>
 		</Style>
-		<Style Selector="Border.Kbd TextBlock">
-			<Setter Property="FontSize" Value="10"/>
-			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+		<Style Selector="Button.MicButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+		</Style>
+		<Style Selector="Button.MicButton.listening /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource AccentStrongBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource AccentStrongBrush}"/>
+		</Style>
+		<Style Selector="Button.MicButton.listening Path.Icon">
+			<Setter Property="Stroke" Value="{DynamicResource AccentOnBrush}"/>
+		</Style>
+
+		<!-- Below 980 px the top bar keeps only the search icon -->
+		<Style Selector="Grid.TopBar.narrow Button.TitleSearch">
+			<Setter Property="MinWidth" Value="0"/>
+		</Style>
+		<Style Selector="Grid.TopBar.narrow TextBlock.TitleSearchText, Grid.TopBar.narrow Border.Kbd, Grid.TopBar.narrow Panel.WakePill">
+			<Setter Property="IsVisible" Value="False"/>
 		</Style>
 
 		<!-- Context meter in the Activity panel: thin, accent, orange near the budget -->
@@ -146,8 +248,9 @@
 
 		<!-- Count badge on a nav row, e.g. running tasks or approvals waiting -->
 		<Style Selector="Border.NavCount">
-			<Setter Property="Padding" Value="7,1"/>
-			<Setter Property="MinWidth" Value="20"/>
+			<Setter Property="Padding" Value="5,0"/>
+			<Setter Property="MinWidth" Value="18"/>
+			<Setter Property="MinHeight" Value="18"/>
 			<Setter Property="VerticalAlignment" Value="Center"/>
 		</Style>
 		<Style Selector="Border.NavCount TextBlock">
@@ -155,10 +258,12 @@
 			<Setter Property="FontWeight" Value="SemiBold"/>
 			<Setter Property="HorizontalAlignment" Value="Center"/>
 		</Style>
+		<Style Selector="Border.NavCount.Neutral TextBlock">
+			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+		</Style>
 
 		<Style Selector="Button.NavBtn.Active TextBlock.NavLabel">
 			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-			<Setter Property="FontWeight" Value="SemiBold"/>
 		</Style>
 
 		<!-- ========================= -->
@@ -258,13 +363,14 @@
 			<Setter Property="Padding" Value="10,4,4,4"/>
 		</Style>
 
+		<!-- Task rows (.task): full-bleed, a 2 px accent edge when selected -->
 		<Style Selector="Button.ChatSessionItem">
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderBrush" Value="Transparent"/>
 			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="CornerRadius" Value="0"/>
 			<Setter Property="Padding" Value="0"/>
-			<Setter Property="Margin" Value="0,0,0,2"/>
+			<Setter Property="Margin" Value="0"/>
 			<Setter Property="HorizontalAlignment" Value="Stretch"/>
 			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
 			<Setter Property="Cursor" Value="Hand"/>
@@ -275,9 +381,34 @@
 		</Style>
 
 		<Style Selector="Border.ChatSessionChrome">
-			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="CornerRadius" Value="8"/>
-			<Setter Property="Padding" Value="10,9"/>
+			<Setter Property="BorderThickness" Value="2,0,0,0"/>
+			<Setter Property="BorderBrush" Value="Transparent"/>
+			<Setter Property="CornerRadius" Value="0"/>
+			<Setter Property="Padding" Value="10,9,12,9"/>
+		</Style>
+		<Style Selector="Border.ChatSessionChrome.Selected">
+			<Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+		</Style>
+		<Style Selector="Border.TaskDot">
+			<Setter Property="Width" Value="7"/>
+			<Setter Property="Height" Value="7"/>
+			<Setter Property="CornerRadius" Value="4"/>
+			<Setter Property="Margin" Value="0,5,0,0"/>
+			<Setter Property="VerticalAlignment" Value="Top"/>
+			<Setter Property="Background" Value="{DynamicResource TextMutedBrush}"/>
+		</Style>
+		<Style Selector="Border.TaskDot.Working">
+			<Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+			<Style.Animations>
+				<Animation Duration="0:0:1.4" IterationCount="Infinite">
+					<KeyFrame Cue="0%"><Setter Property="Opacity" Value="1"/></KeyFrame>
+					<KeyFrame Cue="50%"><Setter Property="Opacity" Value="0.3"/></KeyFrame>
+					<KeyFrame Cue="100%"><Setter Property="Opacity" Value="1"/></KeyFrame>
+				</Animation>
+			</Style.Animations>
+		</Style>
+		<Style Selector="Border.TaskDot.Waiting">
+			<Setter Property="Background" Value="{DynamicResource AccentOrangeBrush}"/>
 		</Style>
 
 		<!-- Row menu shows on hover, in place of the time -->
@@ -294,9 +425,9 @@
 		</Style>
 
 		<Style Selector="Border.ChatSessionEditor">
-			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
-			<Setter Property="Margin" Value="0,0,0,2"/>
-			<Setter Property="Padding" Value="8"/>
+			<Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
+			<Setter Property="Margin" Value="0"/>
+			<Setter Property="Padding" Value="10,8"/>
 		</Style>
 
 		<Style Selector="TextBox.ChatRenameInput">
@@ -313,10 +444,10 @@
 		</Style>
 
 		<Style Selector="TextBox.ChatSearch">
-			<Setter Property="MinHeight" Value="32"/>
+			<Setter Property="MinHeight" Value="30"/>
 			<Setter Property="FontSize" Value="12"/>
-			<Setter Property="Padding" Value="8,6"/>
-			<Setter Property="CornerRadius" Value="8"/>
+			<Setter Property="Padding" Value="8,5"/>
+			<Setter Property="CornerRadius" Value="7"/>
 			<Setter Property="VerticalContentAlignment" Value="Center"/>
 		</Style>
 
@@ -330,10 +461,10 @@
 		</Style>
 
 		<Style Selector="ComboBox.ModelPicker">
-			<Setter Property="MinHeight" Value="28"/>
+			<Setter Property="MinHeight" Value="24"/>
 			<Setter Property="MaxWidth" Value="360"/>
-			<Setter Property="Padding" Value="10,2,6,2"/>
-			<Setter Property="CornerRadius" Value="14"/>
+			<Setter Property="Padding" Value="8,0,4,0"/>
+			<Setter Property="CornerRadius" Value="6"/>
 			<Setter Property="VerticalAlignment" Value="Center"/>
 		</Style>
 
@@ -341,51 +472,38 @@
 		<Style Selector="Border.ChatMessage">
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="Padding" Value="0"/>
-			<Setter Property="Margin" Value="0,0,0,22"/>
+			<Setter Property="Margin" Value="0,0,0,12"/>
 		</Style>
 
+		<!-- User message (.msg.user): accent fill, white text, a tight bottom-right corner -->
 		<Style Selector="Border.UserBubble">
-			<Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
-			<Setter Property="CornerRadius" Value="14,14,4,14"/>
-			<Setter Property="Padding" Value="14,10"/>
+			<Setter Property="Background" Value="{DynamicResource AccentStrongBrush}"/>
+			<Setter Property="CornerRadius" Value="12,12,4,12"/>
+			<Setter Property="Padding" Value="12,9"/>
 			<Setter Property="HorizontalAlignment" Value="Right"/>
-			<Setter Property="MaxWidth" Value="560"/>
+			<Setter Property="MaxWidth" Value="620"/>
 		</Style>
 
-		<Style Selector="Border.AgentAvatar">
-			<Setter Property="Width" Value="28"/>
-			<Setter Property="Height" Value="28"/>
-			<Setter Property="CornerRadius" Value="8"/>
-			<Setter Property="Background" Value="{DynamicResource BrandGradientBrush}"/>
-			<Setter Property="VerticalAlignment" Value="Top"/>
-		</Style>
-
+		<!-- Tool step (details.tools): a quiet bordered row; open it for arguments and result -->
 		<Style Selector="Border.ToolStep">
 			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
 			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
 			<Setter Property="BorderThickness" Value="1"/>
-			<Setter Property="CornerRadius" Value="10"/>
-			<Setter Property="Padding" Value="12,10"/>
-			<Setter Property="Margin" Value="40,-10,0,0"/>
+			<Setter Property="CornerRadius" Value="9"/>
+			<Setter Property="Padding" Value="10,8"/>
+			<Setter Property="Margin" Value="0"/>
 		</Style>
 
+		<!-- Approval (.card): stronger hairline, warn edge while it waits -->
 		<Style Selector="Border.ToolStep.Approval">
 			<Setter Property="BorderBrush" Value="{DynamicResource AccentOrangeBrush}"/>
-			<Setter Property="BoxShadow" Value="0 6 18 0 #14000000"/>
-		</Style>
-
-		<Style Selector="Border.ToolGlyph">
-			<Setter Property="Width" Value="26"/>
-			<Setter Property="Height" Value="26"/>
-			<Setter Property="CornerRadius" Value="7"/>
-			<Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
-			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="CornerRadius" Value="10"/>
 		</Style>
 
 		<Style Selector="Border.ToolArguments">
 			<Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
 			<Setter Property="CornerRadius" Value="6"/>
-			<Setter Property="Padding" Value="10,7"/>
+			<Setter Property="Padding" Value="9,7"/>
 		</Style>
 
 		<!-- The whole step header is the toggle; it keeps the card's look in every state -->
@@ -412,11 +530,40 @@
 			<Setter Property="RenderTransform" Value="none"/>
 		</Style>
 
+		<!-- Mini select (.mini-select) in the composer bar -->
 		<Style Selector="ComboBox.ApprovalModePicker">
-			<Setter Property="MinHeight" Value="26"/>
-			<Setter Property="Padding" Value="10,2,6,2"/>
-			<Setter Property="CornerRadius" Value="13"/>
+			<Setter Property="MinHeight" Value="24"/>
+			<Setter Property="Padding" Value="6,0,2,0"/>
+			<Setter Property="CornerRadius" Value="6"/>
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
 			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+
+		<!-- Attach (.pill): a small raised button in the composer bar -->
+		<Style Selector="Button.ComposerPill">
+			<Setter Property="MinHeight" Value="22"/>
+			<Setter Property="Height" Value="22"/>
+			<Setter Property="Padding" Value="7,0"/>
+			<Setter Property="CornerRadius" Value="6"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+			<Setter Property="FontSize" Value="11.5"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+			<Setter Property="Cursor" Value="Hand"/>
+		</Style>
+		<Style Selector="Button.ComposerPill:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+		</Style>
+
+		<!-- Context pane section heading (.ctx h3) -->
+		<Style Selector="TextBlock.CtxHeading">
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="FontWeight" Value="Medium"/>
+			<Setter Property="LetterSpacing" Value="0.72"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
 		</Style>
 
 		<Style Selector="Ellipse.WorkingDot">
@@ -447,13 +594,13 @@
 			<Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
 		</Style>
 
+		<!-- Composer (.composer): one bordered panel, the prompt on top and the bar below -->
 		<Style Selector="Border.ComposerSurface">
 			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
 			<Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
 			<Setter Property="BorderThickness" Value="1"/>
-			<Setter Property="CornerRadius" Value="14"/>
-			<Setter Property="Padding" Value="14,12,10,10"/>
-			<Setter Property="BoxShadow" Value="0 8 24 0 #14000000"/>
+			<Setter Property="CornerRadius" Value="12"/>
+			<Setter Property="Padding" Value="12,10,8,6"/>
 		</Style>
 
 		<!-- Composer inputs render without their own chrome; the surrounding surface provides it -->
@@ -478,12 +625,17 @@
 			<Setter Property="Background" Value="Transparent"/>
 		</Style>
 
+		<!-- Send (.btn.primary.sm) -->
 		<Style Selector="Button.SendButton">
-			<Setter Property="Width" Value="32"/>
-			<Setter Property="Height" Value="32"/>
-			<Setter Property="Padding" Value="0"/>
-			<Setter Property="CornerRadius" Value="16"/>
+			<Setter Property="MinHeight" Value="24"/>
+			<Setter Property="Height" Value="24"/>
+			<Setter Property="Padding" Value="8,0"/>
+			<Setter Property="CornerRadius" Value="6"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="FontWeight" Value="Medium"/>
 			<Setter Property="Background" Value="{DynamicResource AccentStrongBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource AccentOnBrush}"/>
 			<Setter Property="HorizontalContentAlignment" Value="Center"/>
 			<Setter Property="VerticalContentAlignment" Value="Center"/>
 			<Setter Property="Cursor" Value="Hand"/>
@@ -491,6 +643,11 @@
 
 		<Style Selector="Button.SendButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
 			<Setter Property="Background" Value="{DynamicResource AccentStrongHoverBrush}"/>
+			<Setter Property="Foreground" Value="{DynamicResource AccentOnBrush}"/>
+		</Style>
+
+		<Style Selector="Button.SendButton TextBlock">
+			<Setter Property="Foreground" Value="{DynamicResource AccentOnBrush}"/>
 		</Style>
 
 		<Style Selector="Button.SendButton Path.Icon">
@@ -499,37 +656,37 @@
 		</Style>
 	</Window.Styles>
 
-	<Grid RowDefinitions="44,*">
+	<Grid RowDefinitions="48,*">
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="Auto"/>
 			<ColumnDefinition Width="*"/>
 		</Grid.ColumnDefinitions>
 
 		<!-- ========================= -->
-		<!-- SIDEBAR -->
+		<!-- RAIL: Work, the Build ladder, Manage, then the spend meter and the theme toggle -->
 		<!-- ========================= -->
 		<Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
 				Classes="Sidebar"
-				Classes.Compact="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsCompact}"
+				Classes.Compact="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsRailCompact}"
 				PointerPressed="OnHeaderPointerPressed">
-			<Grid RowDefinitions="Auto,*,Auto" Margin="12,12,12,14">
+			<Grid RowDefinitions="Auto,*,Auto,Auto" Margin="10,12,10,10">
 
 				<!-- Brand -->
 				<Button Grid.Row="0"
 						Classes="NavBtn"
-						Height="44"
+						Height="40"
 						Padding="4,0"
-						Margin="0,0,0,18"
+						Margin="0,0,0,4"
 						Command="{Binding NavigateToCoordinatorCommand}"
 						ToolTip.Tip="Kam">
 					<StackPanel Orientation="Horizontal" Spacing="10">
-						<Border Width="30" Height="30"
-								CornerRadius="9"
-								Background="{DynamicResource BrandGradientBrush}">
-							<Viewbox Width="18" Height="18">
+						<Border Width="28" Height="28"
+								CornerRadius="8"
+								Background="{DynamicResource AccentStrongBrush}">
+							<Viewbox Width="16" Height="16">
 								<Path Classes="Icon"
 									  Data="{StaticResource IconBrandWave}"
-									  Stroke="White"
+									  Stroke="{DynamicResource AccentOnBrush}"
 									  StrokeThickness="2.6"/>
 							</Viewbox>
 						</Border>
@@ -537,32 +694,33 @@
 							<TextBlock Classes="NavLabel"
 									   Text="Kam"
 									   FontSize="14"
-									   FontWeight="Bold"
+									   FontWeight="SemiBold"
 									   Foreground="{DynamicResource TextPrimaryBrush}"/>
 							<TextBlock Classes="NavLabel"
 									   Text="{DynamicResource Lang.Shell.Brand.Tagline}"
-									   FontSize="11"
+									   FontSize="11.5"
 									   FontWeight="Normal"
 									   Foreground="{DynamicResource TextMutedBrush}"/>
 						</StackPanel>
 					</StackPanel>
 				</Button>
 
-				<!-- Primary navigation: Work (daily use), Build (what agents can use), Manage -->
-				<StackPanel Grid.Row="1" VerticalAlignment="Top">
+				<!-- Navigation: Work (daily use), Build (the five-step ladder), Manage -->
+				<ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+				<StackPanel VerticalAlignment="Top">
 					<TextBlock Classes="NavLabel Overline"
 								   Text="{DynamicResource Lang.Shell.Nav.Work}"
-								   Margin="10,0,0,8"/>
+								   Margin="8,12,0,6"/>
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Coordinator}}"
 							Command="{Binding NavigateToCoordinatorCommand}"
 							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Workbench}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Workbench}">
-						<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconChat}"/></Viewbox>
+						<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconListTodo}"/></Viewbox>
 							<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Workbench}"/>
 							<Panel Grid.Column="2" Classes="NavLabelGroup">
-								<Border Classes="Pill Accent NavCount" IsVisible="{Binding HasRunningTasks}">
+								<Border Classes="Pill NavCount Neutral" IsVisible="{Binding HasRunningTasks}">
 									<TextBlock Text="{Binding RunningTaskCount}"/>
 								</Border>
 							</Panel>
@@ -573,8 +731,8 @@
 							Command="{Binding NavigateToInboxCommand}"
 							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Inbox}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.InboxTip}">
-						<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconInbox}"/></Viewbox>
+						<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconInbox}"/></Viewbox>
 							<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Inbox}"/>
 							<Panel Grid.Column="2" Classes="NavLabelGroup">
 								<Border Classes="Pill Warning NavCount" IsVisible="{Binding HasPendingApprovals}">
@@ -583,16 +741,112 @@
 							</Panel>
 						</Grid>
 					</Button>
+
+					<!-- Build: none of the five steps has a page yet. Each row says what exists today and is not a link. -->
 					<TextBlock Classes="NavLabel Overline"
 								   Text="{DynamicResource Lang.Shell.Nav.Build}"
-								   Margin="10,16,0,8"/>
+								   Margin="8,12,0,6"/>
+					<Panel Classes="Ladder">
+						<Border Classes="LadderLine"/>
+						<StackPanel>
+							<Border Classes="LadderStep"
+									Focusable="True"
+									AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Prompts}"
+									AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.PromptsTip}"
+									ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.PromptsTip}">
+								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
+									<Border Classes="LadderLevel"><TextBlock Text="1"/></Border>
+									<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Prompts}"/>
+									<Panel Grid.Column="2" Classes="LadderBadge Planned">
+										<Rectangle/>
+										<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Planned}"/>
+									</Panel>
+								</Grid>
+							</Border>
+							<Border Classes="LadderStep"
+									Focusable="True"
+									AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Agents}"
+									AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.AgentsTip}"
+									ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.AgentsTip}">
+								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
+									<Border Classes="LadderLevel"><TextBlock Text="2"/></Border>
+									<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Agents}"/>
+									<Panel Grid.Column="2" Classes="LadderBadge Partial">
+										<Rectangle/>
+										<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Partial}"/>
+									</Panel>
+								</Grid>
+							</Border>
+							<Border Classes="LadderStep"
+									Focusable="True"
+									AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Loops}"
+									AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.LoopsTip}"
+									ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.LoopsTip}">
+								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
+									<Border Classes="LadderLevel"><TextBlock Text="3"/></Border>
+									<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Loops}"/>
+									<Panel Grid.Column="2" Classes="LadderBadge Partial">
+										<Rectangle/>
+										<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Partial}"/>
+									</Panel>
+								</Grid>
+							</Border>
+							<Border Classes="LadderStep"
+									Focusable="True"
+									AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Graphs}"
+									AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.GraphsTip}"
+									ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.GraphsTip}">
+								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
+									<Border Classes="LadderLevel"><TextBlock Text="4"/></Border>
+									<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Graphs}"/>
+									<Panel Grid.Column="2" Classes="LadderBadge Planned">
+										<Rectangle/>
+										<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Planned}"/>
+									</Panel>
+								</Grid>
+							</Border>
+							<Border Classes="LadderStep"
+									Focusable="True"
+									AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Builder}"
+									AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.BuilderTip}"
+									ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.BuilderTip}">
+								<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
+									<Border Classes="LadderLevel"><TextBlock Text="5"/></Border>
+									<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Builder}"/>
+									<Panel Grid.Column="2" Classes="LadderBadge Planned">
+										<Rectangle/>
+										<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Planned}"/>
+									</Panel>
+								</Grid>
+							</Border>
+						</StackPanel>
+					</Panel>
+
+					<!-- Manage: what agents can use and how Kam is set up -->
+					<TextBlock Classes="NavLabel Overline"
+								   Text="{DynamicResource Lang.Shell.Nav.Manage}"
+								   Margin="8,12,0,6"/>
+					<Border Classes="LadderStep"
+							Focusable="True"
+							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Runs}"
+							AutomationProperties.HelpText="{DynamicResource Lang.Shell.Nav.RunsTip}"
+							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.RunsTip}">
+						<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconActivity}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
+							<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Runs}"/>
+							<Panel Grid.Column="2" Classes="LadderBadge Planned">
+								<Rectangle/>
+								<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Planned}"/>
+							</Panel>
+						</Grid>
+					</Border>
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Plugins}}"
 							Command="{Binding NavigateToPluginsCommand}"
 							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Skills}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Skills}">
-						<StackPanel Orientation="Horizontal" Spacing="12">
-							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconBlocks}"/></Viewbox>
+						<StackPanel Orientation="Horizontal" Spacing="10">
+							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconBlocks}"/></Viewbox>
 							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Skills}"/>
 						</StackPanel>
 					</Button>
@@ -601,21 +855,18 @@
 							Command="{Binding NavigateToExtensionsCommand}"
 							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Extensions}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Extensions}">
-						<StackPanel Orientation="Horizontal" Spacing="12">
-							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconPuzzle}"/></Viewbox>
+						<StackPanel Orientation="Horizontal" Spacing="10">
+							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconPuzzle}"/></Viewbox>
 							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Extensions}"/>
 						</StackPanel>
 					</Button>
-					<TextBlock Classes="NavLabel Overline"
-								   Text="{DynamicResource Lang.Shell.Nav.Manage}"
-								   Margin="10,16,0,8"/>
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Integrations}}"
 							Command="{Binding NavigateToIntegrationsCommand}"
 							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Integrations}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Integrations}">
-						<StackPanel Orientation="Horizontal" Spacing="12">
-							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconPlug}"/></Viewbox>
+						<StackPanel Orientation="Horizontal" Spacing="10">
+							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconPlug}"/></Viewbox>
 							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Integrations}"/>
 						</StackPanel>
 					</Button>
@@ -624,8 +875,8 @@
 							Command="{Binding NavigateToDiagnosticsCommand}"
 							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Diagnostics}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.DiagnosticsTip}">
-						<StackPanel Orientation="Horizontal" Spacing="12">
-							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconActivity}"/></Viewbox>
+						<StackPanel Orientation="Horizontal" Spacing="10">
+							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconCpu}"/></Viewbox>
 							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Diagnostics}"/>
 						</StackPanel>
 					</Button>
@@ -634,21 +885,39 @@
 							Command="{Binding NavigateToSettingsCommand}"
 							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Settings}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Settings}">
-						<StackPanel Orientation="Horizontal" Spacing="12">
-							<Viewbox Width="18" Height="18"><Path Classes="Icon" Data="{StaticResource IconSliders}"/></Viewbox>
+						<StackPanel Orientation="Horizontal" Spacing="10">
+							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconSliders}"/></Viewbox>
 							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Settings}"/>
 						</StackPanel>
 					</Button>
 				</StackPanel>
+				</ScrollViewer>
+
+				<!-- Spend meter: Kam does not record model spend yet, so the card says so instead of showing a number -->
+				<Border Grid.Row="2"
+						Classes="SpendCard"
+						Margin="0,12,0,6"
+						AutomationProperties.Name="{DynamicResource Lang.Shell.Spend.Title}"
+						AutomationProperties.HelpText="{DynamicResource Lang.Shell.Spend.Tip}"
+						Focusable="True"
+						ToolTip.Tip="{DynamicResource Lang.Shell.Spend.Tip}">
+					<Grid ColumnDefinitions="*,Auto">
+						<TextBlock Text="{DynamicResource Lang.Shell.Spend.Title}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+						<Panel Grid.Column="1" Classes="LadderBadge Planned">
+							<Rectangle/>
+							<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Planned}"/>
+						</Panel>
+					</Grid>
+				</Border>
 
 				<!-- Bottom navigation: theme toggle -->
-				<StackPanel Grid.Row="2" Classes="SidebarFooter" Spacing="4">
+				<StackPanel Grid.Row="3" Classes="SidebarFooter" Spacing="4">
 					<Button Classes="NavBtn"
 							Command="{Binding ToggleThemeCommand}"
 							AutomationProperties.Name="{DynamicResource Lang.Shell.ToggleTheme}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.ToggleTheme}">
-						<StackPanel Orientation="Horizontal" Spacing="12">
-							<Panel Width="18" Height="18">
+						<StackPanel Orientation="Horizontal" Spacing="10">
+							<Panel Width="15" Height="15">
 								<Viewbox IsVisible="{Binding IsDarkMode}"><Path Classes="Icon" Data="{StaticResource IconSun}"/></Viewbox>
 								<Viewbox IsVisible="{Binding !IsDarkMode}"><Path Classes="Icon" Data="{StaticResource IconMoon}"/></Viewbox>
 							</Panel>
@@ -664,17 +933,21 @@
 		</Border>
 
 		<!-- ========================= -->
-		<!-- TITLE BAR (draggable) -->
+		<!-- TOP BAR (48 px, draggable): page name, status, search, wake phrase, push to talk -->
 		<!-- ========================= -->
 		<Border Grid.Row="0" Grid.Column="1"
 				Background="Transparent"
+				BorderBrush="{DynamicResource BorderSubtleBrush}"
+				BorderThickness="0,0,0,1"
 				PointerPressed="OnHeaderPointerPressed">
-			<Grid ColumnDefinitions="Auto,Auto,*"
-				  ColumnSpacing="12"
-				  Margin="20,0,210,0">
+			<Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto"
+				  Classes="TopBar"
+				  Classes.narrow="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsNarrow}"
+				  ColumnSpacing="10"
+				  Margin="14,0,210,0">
 				<TextBlock Grid.Column="0"
 						   Text="{Binding ActivePageTitle}"
-						   FontSize="13"
+						   FontSize="13.5"
 						   FontWeight="SemiBold"
 						   Foreground="{DynamicResource TextPrimaryBrush}"
 						   VerticalAlignment="Center"/>
@@ -693,36 +966,44 @@
 						</StackPanel>
 					</Border>
 				</Button>
-				<!-- Right side: the wake phrase state and a search field for tasks -->
-				<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" VerticalAlignment="Center">
-					<Border Classes="Pill" IsVisible="{Binding IsWakeWordEnabled}" ToolTip.Tip="{DynamicResource Lang.Shell.WakeOnTip}" VerticalAlignment="Center">
-						<StackPanel Orientation="Horizontal" Spacing="6">
-							<Border Classes="StatusDot Success" VerticalAlignment="Center"/>
-							<TextBlock Text="{DynamicResource Lang.Shell.WakeOn}" Foreground="{DynamicResource TextSecondaryBrush}"/>
-						</StackPanel>
-					</Border>
-					<Button Classes="TitleSearch"
-							Click="OnTitleSearchClick"
-							AutomationProperties.Name="{DynamicResource Lang.Shell.SearchTasksTip}"
-							ToolTip.Tip="{DynamicResource Lang.Shell.SearchTasksTip}">
-						<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-							<Viewbox Width="13" Height="13" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconSearch}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
-							<TextBlock Grid.Column="1" Text="{DynamicResource Lang.Shell.SearchTasks}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
-							<Border Grid.Column="2" Classes="Kbd"><TextBlock Text="Ctrl K"/></Border>
-						</Grid>
-					</Button>
-				</StackPanel>
+				<!-- Search: looks like an input, opens the task search -->
+				<Button Grid.Column="3"
+						Classes="TitleSearch"
+						Click="OnTitleSearchClick"
+						AutomationProperties.Name="{DynamicResource Lang.Shell.SearchTasksTip}"
+						ToolTip.Tip="{DynamicResource Lang.Shell.SearchTasksTip}">
+					<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+						<Viewbox Width="14" Height="14" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconSearch}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
+						<TextBlock Grid.Column="1" Classes="TitleSearchText" Text="{DynamicResource Lang.Shell.SearchTasks}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+						<Border Grid.Column="2" Classes="Kbd"><TextBlock Text="Ctrl K"/></Border>
+					</Grid>
+				</Button>
+				<!-- The wake phrase listens locally -->
+				<Panel Grid.Column="4" Classes="WakePill" VerticalAlignment="Center">
+					<StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsWakeWordEnabled}" ToolTip.Tip="{DynamicResource Lang.Shell.WakeOnTip}">
+						<Border Classes="StatusDot Success" VerticalAlignment="Center"/>
+						<TextBlock Text="{DynamicResource Lang.Shell.WakeOn}" FontSize="11.5" Foreground="{DynamicResource TextMutedBrush}"/>
+					</StackPanel>
+				</Panel>
+				<!-- Push to talk -->
+				<Button Grid.Column="5"
+						x:Name="TopBarTalkButton"
+						Classes="MicButton"
+						Classes.listening="{Binding IsVoiceListening}"
+						AutomationProperties.Name="{Binding TalkToolTip}"
+						ToolTip.Tip="{Binding TalkToolTip}"
+						IsEnabled="{Binding IsVoiceAvailable}"
+						Command="{Binding TalkCommand}">
+					<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconMic}"/></Viewbox>
+				</Button>
 			</Grid>
 		</Border>
 
 		<!-- ========================= -->
-		<!-- CONTENT + ACTIVITY (inset surface) -->
+		<!-- CONTENT + CONTEXT PANE -->
 		<!-- ========================= -->
 		<Border Grid.Row="1" Grid.Column="1"
 				Background="{DynamicResource SurfaceBgBrush}"
-				BorderBrush="{DynamicResource BorderSubtleBrush}"
-				BorderThickness="1,1,0,0"
-				CornerRadius="12,0,0,0"
 				ClipToBounds="True">
 			<Grid>
 				<Grid.ColumnDefinitions>
@@ -769,8 +1050,9 @@
 				<!-- ========================= -->
 				<!-- ACTIVITY PANEL -->
 				<!-- ========================= -->
+				<!-- The 290 px context pane (.ctx) beside the thread, from 1280 px up -->
 				<Border Grid.Column="1"
-						Background="{DynamicResource PanelBgBrush}"
+						Background="{DynamicResource CardBgBrush}"
 						BorderBrush="{DynamicResource BorderSubtleBrush}"
 						BorderThickness="1,0,0,0"
 						IsVisible="{Binding IsActivityPanelShown}">
@@ -781,11 +1063,11 @@
 								BorderBrush="{DynamicResource BorderSubtleBrush}"
 								BorderThickness="0,0,0,1">
 							<Grid RowDefinitions="Auto,Auto"
-								  RowSpacing="12"
-								  Margin="16,14,16,12">
+								  RowSpacing="10"
+								  Margin="14,12,14,12">
 								<Grid Grid.Row="0" ColumnDefinitions="*, Auto">
 									<StackPanel Grid.Column="0" Spacing="1" VerticalAlignment="Center">
-										<TextBlock Text="{DynamicResource Lang.Activity.Title}" Classes="SectionTitle"/>
+										<TextBlock Text="{DynamicResource Lang.Activity.Title}" Classes="SectionTitle" FontSize="13.5"/>
 										<TextBlock Text="{DynamicResource Lang.Activity.Subtitle}" Classes="Caption"/>
 									</StackPanel>
 									<Button Grid.Column="1"
@@ -799,8 +1081,8 @@
 										<Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconX}"/></Viewbox>
 									</Button>
 								</Grid>
-								<Border Grid.Row="1" Classes="Segmented">
-									<Grid ColumnDefinitions="*,*,*" ColumnSpacing="2">
+								<Border Grid.Row="1" Classes="Segmented" HorizontalAlignment="Left">
+									<Grid ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="2" HorizontalAlignment="Left">
 										<Button Grid.Column="0"
 												Classes="DrawerTab"
 												Classes.Selected="{Binding IsActivityRunsPanelVisible}"
