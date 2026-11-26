@@ -821,6 +821,32 @@ public sealed class MainWindowAgentRuntimeTests
         timeline[1].IsToolSucceeded.Should().BeTrue();
     }
 
+    [Fact]
+    public void ReopenedThread_ShowsNoMadeUpDurationsAndLinksSubagentCardsToTheirRuns()
+    {
+        var started = new DateTimeOffset(2026, 11, 26, 12, 0, 0, TimeSpan.Zero);
+        var history = new List<ChatMessage>
+        {
+            new(ChatRole.User, "find settings"),
+            new(ChatRole.Assistant, [new FunctionCallContent("t1", "task", new Dictionary<string, object?> { ["subagent_type"] = "explorer", ["description"] = "Find settings", ["prompt"] = "p" })]),
+            new(ChatRole.Tool, [new FunctionResultContent("t1", "Settings are read in a.cs.")]),
+            new(ChatRole.Assistant, "Done.")
+        };
+        var run = new SubagentRun("run-a", "s1", "t1", "explorer", "Find settings", "p", SubagentRunStatus.Completed, started, started.AddSeconds(25),
+            Steps: [new SubagentStep("c1", "files_read", "Read File", "{\"path\":\"a.cs\"}", ToolRisk.Read, SubagentStepStatus.Succeeded, started.AddSeconds(1), started.AddSeconds(2), "ok")]);
+
+        var timeline = MainWindowViewModel.BuildTimeline(history);
+        var card = timeline.Single(item => item.IsSubagentTask);
+        card.ToolDurationText.Should().BeEmpty("a saved thread does not know how long the call took");
+
+        MainWindowViewModel.AttachSavedSubagentRuns(timeline, [run]);
+
+        card.SubagentRunId.Should().Be("run-a");
+        card.ToolDurationText.Should().Be("25 s");
+        card.Children.Should().ContainSingle(step => step.ToolName == "files_read" && step.IsToolSucceeded && step.ToolDurationText == "1.0 s");
+        card.SubagentProgressText.Should().Be("1 steps");
+    }
+
     private sealed class ScriptedRuntime : IAgentRuntime
     {
         private readonly Channel<AgentEvent> _events = Channel.CreateUnbounded<AgentEvent>();

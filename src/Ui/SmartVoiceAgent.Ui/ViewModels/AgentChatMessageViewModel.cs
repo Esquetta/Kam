@@ -618,7 +618,12 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// </summary>
         /// <param name="success">Whether the call succeeded.</param>
         /// <param name="summary">The first line of the result.</param>
-        public void CompleteTool(bool success, string summary)
+        /// <param name="duration">
+        /// How long the call took when it is known from elsewhere, such as a saved subagent run. A step rebuilt
+        /// from a saved thread passes <paramref name="measured"/> false and no duration, so it shows none.
+        /// </param>
+        /// <param name="measured">Whether the call ran in this session, so its time since it started is its duration.</param>
+        public void CompleteTool(bool success, string summary, TimeSpan? duration = null, bool measured = true)
         {
             _approvalRequestId = null;
             var declined = !success && summary == DeclinedSummary;
@@ -627,7 +632,16 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ToolState = success
                 ? AgentToolStepState.Succeeded
                 : declined ? AgentToolStepState.Declined : AgentToolStepState.Failed;
-            ToolDurationText = AgentTurnTraceViewModel.FormatDuration(RunTime());
+            ToolDurationText = duration is { } known
+                ? AgentTurnTraceViewModel.FormatDuration(known)
+                : measured ? AgentTurnTraceViewModel.FormatDuration(RunTime()) : string.Empty;
+        }
+
+        /// <summary>Shows a duration known from elsewhere, such as a saved subagent run.</summary>
+        /// <param name="duration">How long it took.</param>
+        public void ShowDuration(TimeSpan duration)
+        {
+            ToolDurationText = AgentTurnTraceViewModel.FormatDuration(duration);
         }
 
         /// <summary>

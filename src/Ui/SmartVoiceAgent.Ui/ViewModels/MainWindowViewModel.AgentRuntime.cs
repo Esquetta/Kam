@@ -601,11 +601,51 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 var history = await _agentSessionStore.LoadAsync(session.SessionId);
                 session.LoadHistory(BuildTimeline(history));
+                if (_subagentRuns is not null)
+                {
+                    AttachSavedSubagentRuns(session.Messages, _subagentRuns.List(session.SessionId));
+                }
+
                 RaiseAgentChatStateChanged();
             }
             catch (Exception ex)
             {
                 AddLog($"AGENT_THREAD_LOAD_FAILED: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Ties the subagent cards of a reopened thread to their saved runs: each card gets its run (so "View in graph"
+        /// works), the run's tool calls as its steps, and the run's real duration. A card whose run is no longer kept
+        /// stays as the thread saved it.
+        /// </summary>
+        /// <param name="items">The thread's top-level items.</param>
+        /// <param name="runs">The saved subagent runs of the thread.</param>
+        public static void AttachSavedSubagentRuns(IEnumerable<AgentChatMessageViewModel> items, IReadOnlyList<SubagentRun> runs)
+        {
+            foreach (var card in items.Where(item => item.IsSubagentTask && item.SubagentRunId is null))
+            {
+                var run = runs.FirstOrDefault(candidate => candidate.ParentCallId == card.CallId);
+                if (run is null)
+                {
+                    continue;
+                }
+
+                card.AttachSubagentRun(run.RunId);
+                foreach (var saved in run.StepList)
+                {
+                    var step = AgentChatMessageViewModel.ToolStep(saved.CallId, saved.ToolName, saved.DisplayName, saved.ArgumentsJson, saved.Risk);
+                    step.MarkSubagentStep(run.AgentType);
+                    var took = saved.CompletedAt is { } completed ? completed - saved.StartedAt : (TimeSpan?)null;
+                    step.CompleteTool(saved.Status == SubagentStepStatus.Succeeded, saved.Summary, took, measured: false);
+                    card.Children.Add(step);
+                }
+
+                card.ShowSubagentProgress(run.StepList.Count, null);
+                if (run.CompletedAt is { } ended)
+                {
+                    card.ShowDuration(ended - run.StartedAt);
+                }
             }
         }
 
@@ -679,7 +719,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                         if (resultText.StartsWith("The user declined", StringComparison.Ordinal))
                         {
                             // It asked for approval, so it stands on its own line as it did live.
-                            step.CompleteTool(false, "Declined");
+                            step.CompleteTool(false, "Declined", measured: false);
                             ToolStepGrouping.Release(items, step);
                         }
                         else
@@ -687,7 +727,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
                             var firstLine = resultText.ReplaceLineEndings("\n").Split('\n', 2)[0].Trim();
                             step.CompleteTool(
                                 !resultText.StartsWith("Error", StringComparison.OrdinalIgnoreCase),
-                                firstLine.Length <= 160 ? firstLine : firstLine[..160] + "...");
+                                firstLine.Length <= 160 ? firstLine : firstLine[..160] + "...",
+                                measured: false);
                         }
                     }
                 }
