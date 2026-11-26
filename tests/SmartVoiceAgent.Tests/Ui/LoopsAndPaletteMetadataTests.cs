@@ -12,13 +12,38 @@ public sealed class LoopsAndPaletteMetadataTests
         var root = XDocument.Load(FindViewPath("LoopsView.axaml")).Root!;
 
         var boxes = root.Descendants()
-            .Where(element => element.Name.LocalName == "TextBox" && (string?)element.Attribute("Classes") == "LimitBox")
+            .Where(element => element.Name.LocalName == "TextBox" && (string?)element.Attribute("Classes") == "WithUnit")
             .ToArray();
 
         boxes.Should().HaveCount(3);
         boxes.Should().OnlyContain(box =>
             ((string?)box.Attribute("Text"))!.Contains("UpdateSourceTrigger=LostFocus", StringComparison.Ordinal)
             && (string?)box.Attribute("KeyDown") == "OnLimitKeyDown");
+    }
+
+    [Fact]
+    public void LoopsView_IsOnePaneOfSettingRowsWithTheUnitInsideTheInput()
+    {
+        var root = XDocument.Parse(LocalizedXaml.ReadAllText(FindViewPath("LoopsView.axaml"))).Root!;
+
+        // A section title with a ghost reset button, then one Pane of setting rows.
+        var title = root.Descendants().Single(element => (string?)element.Attribute("Classes") == "SectionTitle");
+        ((string?)title.Attribute("Text")).Should().Be("Limits");
+        var reset = root.Descendants().Single(element => (string?)element.Attribute("Command") == "{Binding ResetCommand}");
+        ((string?)reset.Attribute("Classes")).Should().Be("GhostAction Sm");
+        ((string?)reset.Attribute("Content")).Should().Be("Reset to defaults");
+        root.Descendants().Where(element => (string?)element.Attribute("Classes") == "Pane").Should().ContainSingle();
+
+        var rows = root.Descendants().Where(element => (string?)element.Attribute("Classes") == "SettingRow").ToArray();
+        rows.Should().HaveCount(3);
+        rows.Select(row => row.Descendants().Single(element => (string?)element.Attribute("Classes") == "Secondary"))
+            .Select(help => (string?)help.Attribute("Text"))
+            .Should().Equal("1–200 · default 24", "1,000–200,000 · default 16,000", "0 = off · 8,000–1,000,000 · default 64,000");
+        rows.Select(row => row.Descendants().Single(element => (string?)element.Attribute("Classes") == "UnitSuffix"))
+            .Select(unit => (string?)unit.Attribute("Text"))
+            .Should().Equal("steps", "chars", "tokens");
+        rows.Should().OnlyContain(row => row.Descendants().Single(element => (string?)element.Attribute("Classes") == "UnitSuffix")
+            .Parent!.Name.LocalName == "TextBox.InnerRightContent");
     }
 
     [Fact]

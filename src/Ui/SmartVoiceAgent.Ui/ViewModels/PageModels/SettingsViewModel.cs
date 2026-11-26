@@ -36,6 +36,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public ReactiveCommand<Unit, Unit> RefreshChatModelsCommand { get; }
         public ReactiveCommand<Unit, Unit> OpenDeepSeekKeyPageCommand { get; }
 
+        /// <summary>Shows one section of the page; the sub-navigation passes the section.</summary>
+        public ReactiveCommand<SettingsSection, Unit> SelectSectionCommand { get; }
+
         public SettingsViewModel() : this(new JsonSettingsService(), null, null, null, null)
         {
         }
@@ -100,6 +103,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
             // Initialize commands
             OpenDeepSeekKeyPageCommand = ReactiveCommand.Create(OpenDeepSeekKeyPage);
+            SelectSectionCommand = ReactiveCommand.Create<SettingsSection>(section => SelectedSection = section);
             StartMicTestCommand = ReactiveCommand.Create(StartMicTest);
             StopMicTestCommand = ReactiveCommand.Create(StopMicTest);
             PlayTestRecordingCommand = ReactiveCommand.Create(PlayTestRecording);
@@ -137,6 +141,42 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             // Initialize voice settings
             InitializeVoiceSettings();
         }
+
+        #region Sections
+
+        private SettingsSection _selectedSection = SettingsSection.Model;
+
+        /// <summary>Gets or sets the section the page shows; the model comes first, because nothing works without it.</summary>
+        public SettingsSection SelectedSection
+        {
+            get => _selectedSection;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _selectedSection, value);
+                this.RaisePropertyChanged(nameof(IsModelSectionSelected));
+                this.RaisePropertyChanged(nameof(IsAppearanceSectionSelected));
+                this.RaisePropertyChanged(nameof(IsVoiceSectionSelected));
+                this.RaisePropertyChanged(nameof(IsStartupSectionSelected));
+                this.RaisePropertyChanged(nameof(IsAdvancedSectionSelected));
+            }
+        }
+
+        /// <summary>Gets whether the Model section is shown.</summary>
+        public bool IsModelSectionSelected => SelectedSection == SettingsSection.Model;
+
+        /// <summary>Gets whether the Appearance section is shown.</summary>
+        public bool IsAppearanceSectionSelected => SelectedSection == SettingsSection.Appearance;
+
+        /// <summary>Gets whether the Voice section is shown.</summary>
+        public bool IsVoiceSectionSelected => SelectedSection == SettingsSection.Voice;
+
+        /// <summary>Gets whether the Startup section is shown.</summary>
+        public bool IsStartupSectionSelected => SelectedSection == SettingsSection.Startup;
+
+        /// <summary>Gets whether the Advanced section is shown.</summary>
+        public bool IsAdvancedSectionSelected => SelectedSection == SettingsSection.Advanced;
+
+        #endregion
 
         #region Appearance
 

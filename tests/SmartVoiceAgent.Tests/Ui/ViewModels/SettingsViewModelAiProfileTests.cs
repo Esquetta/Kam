@@ -15,6 +15,29 @@ public class SettingsViewModelAiProfileTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
+    public void Sections_StartOnModelAndShowOneAtATime()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        using var viewModel = new SettingsViewModel(settingsService);
+        var changed = new List<string?>();
+        viewModel.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        viewModel.SelectedSection.Should().Be(SettingsSection.Model);
+        viewModel.IsModelSectionSelected.Should().BeTrue();
+
+        viewModel.SelectSectionCommand.Execute(SettingsSection.Voice).Subscribe();
+
+        viewModel.SelectedSection.Should().Be(SettingsSection.Voice);
+        viewModel.IsVoiceSectionSelected.Should().BeTrue();
+        new[]
+        {
+            viewModel.IsModelSectionSelected, viewModel.IsAppearanceSectionSelected,
+            viewModel.IsStartupSectionSelected, viewModel.IsAdvancedSectionSelected
+        }.Should().OnlyContain(selected => !selected);
+        changed.Should().Contain([nameof(SettingsViewModel.IsModelSectionSelected), nameof(SettingsViewModel.IsVoiceSectionSelected)]);
+    }
+
+    [Fact]
     public void DefaultAiSettings_AreOpenRouterCompatible()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);
@@ -223,7 +246,7 @@ public class SettingsViewModelAiProfileTests : IDisposable
         viewModel.AiModelId = "gpt-5.2";
 
         viewModel.AiProfileStatus.Should().Be("Profile not tested.");
-        viewModel.AiConnectionTestButtonText.Should().Be("Test Connection");
+        viewModel.AiConnectionTestButtonText.Should().Be("Test");
 
         var execution = viewModel.TestAiConnectionCommand.Execute().ToTask();
         await connectionTestService.RequestReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -241,7 +264,7 @@ public class SettingsViewModelAiProfileTests : IDisposable
 
         viewModel.IsAiProfileValid.Should().BeTrue();
         viewModel.IsTestingAiConnection.Should().BeFalse();
-        viewModel.AiConnectionTestButtonText.Should().Be("Test Connection");
+        viewModel.AiConnectionTestButtonText.Should().Be("Test");
         viewModel.AiProfileStatus.Should().Contain("validated");
         viewModel.AiProfileStatus.Should().Contain("OpenAI");
         viewModel.AiProfileStatus.Should().Contain("gpt-5.2");
@@ -284,7 +307,7 @@ public class SettingsViewModelAiProfileTests : IDisposable
         await viewModel.TestAiConnectionCommand.Execute().FirstAsync();
 
         viewModel.IsAiProfileValid.Should().BeFalse();
-        viewModel.AiConnectionTestButtonText.Should().Be("Test Connection");
+        viewModel.AiConnectionTestButtonText.Should().Be("Test");
         viewModel.AiProfileStatus.Should().Contain("Authentication");
         viewModel.AiProfileStatus.Should().Contain("OpenAI");
         viewModel.AiProfileStatus.Should().Contain("gpt-5.2");

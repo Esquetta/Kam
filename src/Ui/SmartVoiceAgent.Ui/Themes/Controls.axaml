@@ -1239,6 +1239,91 @@
     </Style>
 
     <!-- ========================= -->
+    <!-- FORMS (Settings, Integrations, Loops) -->
+    <!-- ========================= -->
+
+    <!-- Setting row: label and help in column 0, the control in column 1. Put it in a Border.PaneRow, whose
+         16,12 padding and hairline make the row at least 56 px tall. -->
+    <Style Selector="Grid.SettingRow">
+        <Setter Property="ColumnSpacing" Value="16" />
+        <Setter Property="MinHeight" Value="32" />
+    </Style>
+    <Style Selector="Grid.SettingRow > StackPanel.SettingText">
+        <Setter Property="Spacing" Value="2" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Grid.SettingRow > StackPanel.SettingText > TextBlock.Secondary">
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="TextTrimming" Value="None" />
+    </Style>
+
+    <!-- Rows of a Pane: the Pane border closes the last row, so it drops its hairline -->
+    <Style Selector="StackPanel.SettingRows > Border.PaneRow:nth-last-child(1)">
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <!-- Form field: a Label 6 px above its input -->
+    <Style Selector="StackPanel.Field">
+        <Setter Property="Spacing" Value="6" />
+    </Style>
+
+    <!-- Number input with its unit inside as a muted suffix (InnerRightContent holds a TextBlock.UnitSuffix) -->
+    <Style Selector="TextBox.WithUnit">
+        <Setter Property="Width" Value="128" />
+        <Setter Property="TextAlignment" Value="Right" />
+        <Setter Property="HorizontalAlignment" Value="Right" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBlock.UnitSuffix">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="0,0,10,0" />
+    </Style>
+
+    <!-- Disclosure: a ghost row that shows or hides an advanced group; the chevron turns when open -->
+    <Style Selector="ToggleButton.Disclosure">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="8,0" />
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="ToggleButton.Disclosure:pointerover /template/ ContentPresenter#PART_ContentPresenter, ToggleButton.Disclosure:checked /template/ ContentPresenter#PART_ContentPresenter, ToggleButton.Disclosure:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="ToggleButton.Disclosure:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ControlHoverBrush}" />
+    </Style>
+    <Style Selector="ToggleButton.Disclosure Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}" />
+    </Style>
+    <Style Selector="ToggleButton.Disclosure Viewbox.Chevron">
+        <Setter Property="RenderTransform" Value="rotate(-90deg)" />
+    </Style>
+    <Style Selector="ToggleButton.Disclosure:checked Viewbox.Chevron">
+        <Setter Property="RenderTransform" Value="rotate(0deg)" />
+    </Style>
+
+    <!-- Status in a Pane head: a 6 px dot and plain text, never a filled pill -->
+    <Style Selector="StackPanel.PaneStatus">
+        <Setter Property="Orientation" Value="Horizontal" />
+        <Setter Property="Spacing" Value="6" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="StackPanel.PaneStatus > Border.StatusDot">
+        <Setter Property="Width" Value="6" />
+        <Setter Property="Height" Value="6" />
+        <Setter Property="CornerRadius" Value="3" />
+    </Style>
+
+    <!-- ========================= -->
     <!-- LIST PAGES: list items, tables, status text, search (redesign step 3) -->
     <!-- ========================= -->
 

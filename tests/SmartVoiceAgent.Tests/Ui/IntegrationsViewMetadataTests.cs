@@ -41,7 +41,7 @@ public sealed class IntegrationsViewMetadataTests
         var xaml = LocalizedXaml.ReadAllText(Path.GetFullPath(ViewPath));
 
         xaml.Should().Contain("Text=\"Web search\"");
-        xaml.Should().Contain("No key needed · Google optional");
+        xaml.Should().Contain("Lets the agent search the web. No key needed · Google optional");
         xaml.Should().Contain("Text=\"{Binding WebSearchApiKey, Mode=TwoWay}\"");
         xaml.Should().Contain("Text=\"{Binding WebSearchEngineId, Mode=TwoWay}\"");
         xaml.Should().Contain("SaveWebSearchCommand");
@@ -98,13 +98,11 @@ public sealed class IntegrationsViewMetadataTests
         var xaml = LocalizedXaml.ReadAllText(Path.GetFullPath(ViewPath));
         var view = XDocument.Parse(xaml).Root!;
 
-        xaml.Should().Contain("SETUP_CHECKLIST");
+        xaml.Should().Contain("Setup checklist");
         xaml.Should().Contain("GitHubAppSetupSteps");
         xaml.Should().Contain("HasGitHubAppSetupSteps");
 
-        var githubCard = FindIntegrationCard(view, "GitHub");
-        AttributeValue(githubCard.Elements().Single(e => e.Name.LocalName == "Grid"), "RowDefinitions")
-            .Should().Be("Auto,Auto,Auto");
+        var githubCard = FindIntegrationPane(view, "GitHub");
 
         githubCard.Descendants()
             .Single(e => e.Name.LocalName == "StackPanel"
@@ -116,7 +114,7 @@ public sealed class IntegrationsViewMetadataTests
                 && AttributeValue(e, "IsVisible") == "{Binding HasGitHubAppSetupSteps}");
 
         checklistHost.Descendants()
-            .Single(e => e.Name.LocalName == "TextBlock" && AttributeValue(e, "Text") == "SETUP_CHECKLIST")
+            .Single(e => e.Name.LocalName == "TextBlock" && AttributeValue(e, "Text") == "Setup checklist")
             .Should().NotBeNull();
 
         var checklist = checklistHost.Descendants()
@@ -144,11 +142,58 @@ public sealed class IntegrationsViewMetadataTests
             .Should().NotBeNull();
     }
 
-    private static XElement FindIntegrationCard(XElement root, string title)
+    [Fact]
+    public void IntegrationsView_IsOnePanePerIntegrationWithAStatusDotAndNoIconTiles()
+    {
+        var view = XDocument.Parse(LocalizedXaml.ReadAllText(Path.GetFullPath(ViewPath))).Root!;
+
+        var panes = view.Descendants()
+            .Where(e => e.Name.LocalName == "Border" && AttributeValue(e, "Classes") == "Pane")
+            .ToArray();
+        panes.Select(pane => AttributeValue(pane.Descendants().First(e => AttributeValue(e, "Classes") == "SectionTitle"), "Text"))
+            .Should().Equal("Todoist", "Web search", "Coding agent CLIs", "GitHub", "Email (SMTP)", "SMS (Twilio)");
+
+        // The head holds the name, one sentence and an info tooltip; status is a dot and text, never a pill.
+        panes.Should().OnlyContain(pane => pane.Descendants().Any(e => AttributeValue(e, "Classes") == "PaneHead"));
+        panes.Should().OnlyContain(pane => pane.Descendants().Any(e => AttributeValue(e, "Classes") == "InfoTip"));
+        view.Descendants().Should().NotContain(e => AttributeValue(e, "Classes") == "IconBadge" || AttributeValue(e, "Classes") == "Pill");
+        view.Descendants().Where(e => AttributeValue(e, "Classes") == "PaneStatus").Should().HaveCount(6);
+
+        // Inputs take the shared 32 px height and every field has a label above it.
+        view.Descendants().Where(e => e.Name.LocalName == "TextBox")
+            .Should().OnlyContain(box => AttributeValue(box, "Height") == string.Empty)
+            .And.OnlyContain(box => AttributeValue(box.Parent!, "Classes") == "Field");
+    }
+
+    [Theory]
+    [InlineData("SaveTodoistCommand", "IsTodoistDirty", "ClearTodoistCommand", "HasSavedTodoist")]
+    [InlineData("SaveWebSearchCommand", "IsWebSearchDirty", "ClearWebSearchCommand", "IsWebSearchConfigured")]
+    [InlineData("SaveGitHubAppCommand", "IsGitHubAppDirty", "ClearGitHubAppCommand", "HasSavedGitHubApp")]
+    [InlineData("SaveEmailCommand", "IsEmailDirty", "ClearEmailCommand", "HasSavedEmail")]
+    [InlineData("SaveSmsCommand", "IsSmsDirty", "ClearSmsCommand", "HasSavedSms")]
+    public void IntegrationsView_SaveIsPrimaryOnlyWhileDirtyAndClearShowsOnlyWhenSaved(
+        string saveCommand, string dirty, string clearCommand, string saved)
+    {
+        var view = XDocument.Parse(LocalizedXaml.ReadAllText(Path.GetFullPath(ViewPath))).Root!;
+
+        var save = view.Descendants().Single(e => AttributeValue(e, "Command") == $"{{Binding {saveCommand}}}");
+        AttributeValue(save, "Classes.PrimaryAction").Should().Be($"{{Binding {dirty}}}");
+        AttributeValue(save, "Classes.SecondaryAction").Should().Be($"{{Binding !{dirty}}}");
+        AttributeValue(save, "Content").Should().Be("Save");
+        save.Elements().Should().BeEmpty("Save and Clear carry no icons");
+
+        var clear = view.Descendants().Single(e => AttributeValue(e, "Command") == $"{{Binding {clearCommand}}}");
+        AttributeValue(clear, "Classes").Should().Be("GhostAction Sm");
+        AttributeValue(clear, "IsVisible").Should().Be($"{{Binding {saved}}}");
+        AttributeValue(clear, "Content").Should().Be("Clear");
+        clear.ElementsAfterSelf().Should().Contain(save, "Clear sits left of Save");
+    }
+
+    private static XElement FindIntegrationPane(XElement root, string title)
     {
         return root.Descendants()
-            .Where(e => e.Name.LocalName == "Border" && AttributeValue(e, "Classes") == "IntegrationCard")
-            .Single(card => card.Descendants().Any(e =>
+            .Where(e => e.Name.LocalName == "Border" && AttributeValue(e, "Classes") == "Pane")
+            .Single(pane => pane.Descendants().Any(e =>
                 e.Name.LocalName == "TextBlock" && AttributeValue(e, "Text") == title));
     }
 

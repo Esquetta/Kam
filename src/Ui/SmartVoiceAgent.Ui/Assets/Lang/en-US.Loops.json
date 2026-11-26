@@ -4,12 +4,15 @@
   "Loops.Limits.Title": "Limits",
   "Loops.Reset": "Reset to defaults",
   "Loops.Steps.Label": "Step limit per turn",
-  "Loops.Steps.Help": "The most model round trips one message may take before the agent stops and asks. 1 to 200, default 24.",
+  "Loops.Steps.Help": "1–200 · default 24",
+  "Loops.Steps.Tip": "The most model round trips one message may take before the agent stops and asks.",
   "Loops.Steps.Unit": "steps",
   "Loops.Result.Label": "Longest tool result sent back",
-  "Loops.Result.Help": "Longer tool output is cut to this length before the model reads it. 1,000 to 200,000, default 16,000.",
-  "Loops.Result.Unit": "characters",
+  "Loops.Result.Help": "1,000–200,000 · default 16,000",
+  "Loops.Result.Tip": "Longer tool output is cut to this length before the model reads it.",
+  "Loops.Result.Unit": "chars",
   "Loops.Context.Label": "Context budget before compaction",
-  "Loops.Context.Help": "When a request would pass this size, old tool results are shortened and earlier turns are summarized. 0 turns it off; otherwise 8,000 to 1,000,000, default 64,000.",
-  "Loops.Context.Unit": "tokens, 0 = off"
+  "Loops.Context.Help": "0 = off · 8,000–1,000,000 · default 64,000",
+  "Loops.Context.Tip": "When a request would pass this size, old tool results are shortened and earlier turns are summarized.",
+  "Loops.Context.Unit": "tokens"
 }

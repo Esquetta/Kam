@@ -55,9 +55,10 @@ public sealed class SettingsViewVoiceMetadataTests
         PanelVisibility(endpoint).Should().Be("{Binding IsApiSpeechEngine}");
         Element(section, "TextBox", "Text", "{Binding SpeechApiModel, Mode=TwoWay}")
             .Attribute("PlaceholderText")!.Value.Should().Be("whisper-1");
-        Element(section, "TextBox", "Text", "{Binding SpeechApiKey, Mode=TwoWay}")
-            .Attribute("PasswordChar")!.Value.Should().Be("*");
-        Element(section, "TextBlock", "Text", "{Binding MaskedSpeechApiKey}");
+        var key = Element(section, "TextBox", "Text", "{Binding SpeechApiKey, Mode=TwoWay}");
+        key.Attribute("PasswordChar")!.Value.Should().Be("*");
+        key.Attribute("Classes")!.Value.Should().Be("revealPasswordButton", "the key has a show/hide toggle instead of a masked copy");
+        section.Descendants().Should().NotContain(element => element.Attributes().Any(attribute => attribute.Value.Contains("MaskedSpeechApiKey")));
     }
 
     [Fact]
@@ -91,19 +92,21 @@ public sealed class SettingsViewVoiceMetadataTests
     }
 
     [Fact]
-    public void VoiceSection_ShowsItsCardsInOrder()
+    public void VoiceSection_ShowsItsPanesInOrder()
     {
         var section = LoadVoiceSection(localized: true);
 
+        section.Attribute("IsVisible")!.Value.Should().Be("{Binding IsVoiceSectionSelected}");
         var titles = section
-            .Elements()
-            .Where(element => element.Name.LocalName == "Border" && element.Attribute("Classes")?.Value == "SettingsItem")
-            .Select(card => card.Descendants().First(element => element.Name.LocalName == "TextBlock").Attribute("Text")!.Value)
+            .Descendants()
+            .Where(element => element.Attribute("Classes")?.Value == "SectionTitle")
+            .Select(title => title.Attribute("Text")!.Value)
             .ToList();
 
         titles.Should().Equal("Speech recognition", "Microphone", "Hands-free", "Spoken replies");
-        section.Descendants().First(element => element.Name.LocalName == "TextBlock")
-            .Attribute("Text")!.Value.Should().Be("VOICE");
+        section.Descendants().Where(element => element.Attribute("Classes")?.Value == "Pane").Should().HaveCount(4);
+        section.Descendants().Should().NotContain(element => element.Attribute("Classes") != null
+            && (element.Attribute("Classes")!.Value.Contains("IconBadge") || element.Attribute("Classes")!.Value.Contains("Overline")));
     }
 
     [Fact]

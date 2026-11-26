@@ -9,8 +9,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 {
     /// <summary>
     /// The Loops page: the limits every agent turn runs under. Values are saved as settings and apply to the
-    /// next message without a restart. Typed text is clamped to the allowed range; text that is not a number
-    /// goes back to the saved value.
+    /// next message without a restart. Values show with thousands separators. Typed text is clamped to the
+    /// allowed range; text that is not a number goes back to the saved value.
     /// </summary>
     public sealed class LoopsViewModel : ViewModelBase
     {
@@ -103,7 +103,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             ref string field,
             string propertyName)
         {
-            if (int.TryParse(input?.Trim(), NumberStyles.Integer, CultureInfo.CurrentCulture, out var number))
+            if (int.TryParse(input?.Trim(), NumberStyles.Integer | NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out var number))
             {
                 save(clamp(number));
             }
@@ -113,6 +113,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             this.RaisePropertyChanged(propertyName);
         }
 
-        private static string Format(int value) => value.ToString(CultureInfo.CurrentCulture);
+        // Thousands separators make 16000 and 160000 easy to tell apart; typed text may use them too.
+        private static string Format(int value) => value.ToString("N0", CultureInfo.CurrentCulture);
     }
 }
