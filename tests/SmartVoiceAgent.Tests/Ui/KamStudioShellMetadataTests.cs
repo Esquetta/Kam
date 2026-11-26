@@ -299,18 +299,34 @@ public sealed class KamStudioShellMetadataTests
     }
 
     [Fact]
-    public void NeedsYou_ListsApprovalsAsRowsInOnePanel()
+    public void NeedsYou_ShowsEachApprovalAsAPane()
     {
         var inbox = LoadXaml("InboxView.axaml");
 
-        var row = inbox.Descendants().Single(element => AttributeValue(element, "Classes") == "PaneRow"
-            && element.Descendants().Any(child => AttributeValue(child, "Classes") == "Risk"));
-        row.Ancestors().Should().Contain(element => AttributeValue(element, "Classes") == "Pane");
-        row.Descendants().Should().Contain(element => AttributeValue(element, "Classes") == "Risk");
-        row.Descendants()
-            .Where(element => element.Name.LocalName == "Button")
-            .Select(element => AttributeValue(element, "Classes"))
-            .Should().Equal("SecondaryAction Sm", "GhostAction Sm", "SecondaryAction Sm", "PrimaryAction Sm");
+        // One Pane per waiting call: the head links to the task and shows the time, the body has the tool and its risk.
+        var template = inbox.Descendants().Single(element => element.Name.LocalName == "DataTemplate"
+            && AttributeValue(element, "DataType") == "vm:PendingApprovalItem");
+        var pane = template.Elements().Single();
+        AttributeValue(pane, "Classes").Should().Be("Pane");
+        var head = pane.Descendants().Single(element => AttributeValue(element, "Classes") == "PaneHead");
+        head.Descendants().Should().Contain(element => element.Name.LocalName == "Button"
+            && AttributeValue(element, "Command") == "{Binding $parent[local:InboxView].DataContext.OpenTaskCommand}"
+            && element.Descendants().Any(text => AttributeValue(text, "Classes") == "RowTitle"));
+        head.Descendants().Should().Contain(element => AttributeValue(element, "Text") == "{Binding Step.TimeText}");
+        pane.Descendants().Should().Contain(element => AttributeValue(element, "Classes") == "Risk");
+        pane.Descendants().Should().Contain(element => AttributeValue(element, "Text") == "{Binding Step.ToolName}"
+            && AttributeValue(element, "Classes") == "Mono");
+
+        // Arguments clamp to four lines with a Show all toggle.
+        pane.Descendants().Should().Contain(element => AttributeValue(element, "MaxLines") == "{Binding Step.ArgumentsMaxLines}");
+        pane.Descendants().Should().Contain(element => element.Name.LocalName == "ToggleButton"
+            && AttributeValue(element, "IsVisible") == "{Binding Step.HasMoreArguments}");
+
+        // Footer, right-aligned: Deny, Always allow (not for a hand-off), Allow.
+        var actions = pane.Descendants().Where(element => element.Name.LocalName == "Button" && AttributeValue(element, "Classes") != "TaskLink").ToArray();
+        actions.Select(element => AttributeValue(element, "Classes"))
+            .Should().Equal("GhostAction Sm", "SecondaryAction Sm", "PrimaryAction Sm");
+        AttributeValue(actions[1], "IsVisible").Should().Be("{Binding Step.CanAlwaysAllow}");
 
         // Command mode's skill previews wait here too, now that the Activity panel is gone.
         inbox.Descendants().Should().Contain(element =>

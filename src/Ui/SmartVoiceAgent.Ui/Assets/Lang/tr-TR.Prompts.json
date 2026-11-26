@@ -11,8 +11,6 @@
   "Prompts.Unavailable.Body": "Kam komut kataloğunu yükleyemedi, bu yüzden istemler listelenemiyor. Uygulamayı yeniden başlatıp tekrar deneyin.",
   "Prompts.Detail.Source": "Kaynak",
   "Prompts.Detail.Arguments": "Argümanlar",
-  "Prompts.Detail.File": "Dosya",
-  "Prompts.Detail.Preview": "İstem metni",
   "Prompts.Detail.NoDescription": "Açıklama yok",
   "Prompts.Detail.Select": "Metnini görmek için bir istem seçin.",
   "Prompts.Preview.Empty": "Bu dosyada henüz istem metni yok.",

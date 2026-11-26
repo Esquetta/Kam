@@ -11,8 +11,6 @@
   "Prompts.Unavailable.Body": "Kam could not load the command catalog, so prompts cannot be listed. Restart the app and try again.",
   "Prompts.Detail.Source": "Source",
   "Prompts.Detail.Arguments": "Arguments",
-  "Prompts.Detail.File": "File",
-  "Prompts.Detail.Preview": "Prompt text",
   "Prompts.Detail.NoDescription": "No description",
   "Prompts.Detail.Select": "Select a prompt to see its text.",
   "Prompts.Preview.Empty": "This file has no prompt text yet.",

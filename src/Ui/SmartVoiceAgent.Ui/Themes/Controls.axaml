@@ -63,13 +63,6 @@
         <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}" />
     </Style>
 
-    <Style Selector="Border.Surface">
-        <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="{DynamicResource RadiusLarge}" />
-    </Style>
-
     <Style Selector="Border.Divider">
         <Setter Property="Height" Value="1" />
         <Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}" />
@@ -180,14 +173,6 @@
     <Style Selector="StackPanel.EmptyState > Button">
         <Setter Property="HorizontalAlignment" Value="Center" />
         <Setter Property="Margin" Value="0,10,0,0" />
-    </Style>
-
-    <Style Selector="Border.WorkbenchSection">
-        <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="{DynamicResource RadiusLarge}" />
-        <Setter Property="Padding" Value="14" />
     </Style>
 
     <Style Selector="TextBlock.PageTitle">
@@ -1124,35 +1109,53 @@
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
 
-    <!-- List pages (Extensions, Skills): rows, group headers, status dots and row toggles -->
+    <!-- List pages (Extensions, Skills, Agents): rows, group headers, status dots and row toggles.
+         A ListRow is a row inside a Pane: no box of its own, a hairline below it, and a hover fill. -->
     <Style Selector="Border.ListRow">
-        <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
+        <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="12"/>
-        <Setter Property="Padding" Value="12,10"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="Padding" Value="16,10"/>
+        <Setter Property="MinHeight" Value="52"/>
         <Setter Property="Transitions">
             <Transitions>
-                <BrushTransition Property="BorderBrush" Duration="0:0:0.12"/>
+                <BrushTransition Property="Background" Duration="0:0:0.1"/>
             </Transitions>
         </Setter>
     </Style>
 
     <Style Selector="Border.ListRow:pointerover">
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
     </Style>
 
+    <!-- The Pane's border closes the last row -->
+    <Style Selector="ItemsControl > ContentPresenter:nth-last-child(1) > Border.ListRow">
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+
+    <!-- A row's kind: a 28 px neutral tile with a 14 px glyph, no accent tint -->
     <Style Selector="Border.KindIcon">
-        <Setter Property="Width" Value="32"/>
-        <Setter Property="Height" Value="32"/>
-        <Setter Property="CornerRadius" Value="8"/>
-        <Setter Property="Padding" Value="8"/>
+        <Setter Property="Width" Value="28"/>
+        <Setter Property="Height" Value="28"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Padding" Value="7"/>
         <Setter Property="VerticalAlignment" Value="Top"/>
-        <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
     </Style>
 
     <Style Selector="Border.KindIcon Path.Icon">
-        <Setter Property="Stroke" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="Stroke" Value="{DynamicResource TextSecondaryBrush}"/>
+    </Style>
+
+    <!-- A monogram in a KindIcon, such as CX for Codex -->
+    <Style Selector="Border.KindIcon TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
 
     <Style Selector="Border.StatusDot">
@@ -1233,6 +1236,115 @@
         <Setter Property="OffContent" Value=""/>
         <Setter Property="MinWidth" Value="0"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- ========================= -->
+    <!-- LIST PAGES: list items, tables, status text, search (redesign step 3) -->
+    <!-- ========================= -->
+
+    <!-- List item (the Prompts list; later the Settings sub-nav and the task rows): no box, radius 8,
+         ControlHover on hover, RaisedBg with TextPrimary when selected. 36 px for one line, 52 for two. -->
+    <Style Selector="Button.ListItem">
+        <Setter Property="MinHeight" Value="36"/>
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.ListItem /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.ListItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
+    </Style>
+    <Style Selector="Button.ListItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ControlPressedBrush}"/>
+    </Style>
+    <Style Selector="Button.ListItem.Selected">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="Button.ListItem.Selected /template/ ContentPresenter#PART_ContentPresenter, Button.ListItem.Selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
+    </Style>
+
+    <!-- Tables in a Pane: a 32 px header of Captions over 40 px rows with hairlines between them.
+         Each Grid sets the columns; the header and the rows share them. -->
+    <Style Selector="Grid.TableHeader">
+        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="ColumnSpacing" Value="12"/>
+        <Setter Property="Margin" Value="16,0"/>
+    </Style>
+    <Style Selector="Grid.TableHeader > TextBlock">
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="LineHeight" Value="16"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Border.TableRow">
+        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="Padding" Value="16,0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+        <Setter Property="BorderThickness" Value="0,1,0,0"/>
+    </Style>
+    <Style Selector="Border.TableRow:pointerover">
+        <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+    </Style>
+    <Style Selector="Border.TableRow > Grid">
+        <Setter Property="ColumnSpacing" Value="12"/>
+    </Style>
+
+    <!-- Status as text beside a StatusDot: plain when normal, colored only where a state needs it
+         (tables color only Failed) -->
+    <Style Selector="TextBlock.StatusText">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="TextBlock.StatusText.Success">
+        <Setter Property="Foreground" Value="{DynamicResource AccentGreenBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.StatusText.Warning">
+        <Setter Property="Foreground" Value="{DynamicResource AccentOrangeBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.StatusText.Danger">
+        <Setter Property="Foreground" Value="{DynamicResource AccentErrorBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.StatusText.Accent">
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+    </Style>
+
+    <!-- Search field: RaisedBg, no border, a 14 px Viewbox.SearchIcon in InnerLeftContent; focus as other inputs -->
+    <Style Selector="TextBox.Search">
+        <Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="TextBox.Search /template/ Border#PART_BorderElement, TextBox.Search:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="TextBox.Search:focus /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentStrongBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="TextBox.Search Viewbox.SearchIcon">
+        <Setter Property="Width" Value="14"/>
+        <Setter Property="Height" Value="14"/>
+        <Setter Property="Margin" Value="10,0,0,0"/>
+    </Style>
+
+    <!-- A code block inside a Pane is a fill, not a second box -->
+    <Style Selector="Border.Pane Border.Code">
+        <Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
     </Style>
 
 </Styles>

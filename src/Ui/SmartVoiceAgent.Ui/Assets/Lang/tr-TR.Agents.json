@@ -4,7 +4,9 @@
   "Agents.SubtitleTip": "Bir ajan; talimatlar, bir model, araçlar ve bir izin modundan oluşur. Kam bir görev için rol ajanlarını kendisi oluşturur ve kodlama işini Codex'e devredebilir. Kendi yapılandırdığınız kayıtlı ajanlar sırada.",
   "Agents.Group.Coding": "Kodlama ajanları",
   "Agents.Group.Roles": "Son rol ajanları",
-  "Agents.SetUp": "Entegrasyonlar'da kur",
+  "Agents.Configure": "Yapılandır",
+  "Agents.Column.Steps": "Adım",
+  "Agents.Column.When": "Ne zaman",
   "Agents.Empty.Body": "Henüz rol ajanı yok. Bir görev işi gözden geçirici gibi bir rol ajanına devrettiğinde burada görünür.",
   "Agents.Status.Running": "Çalışıyor",
   "Agents.Status.Succeeded": "Tamamlandı",
@@ -36,6 +38,5 @@
   "Agents.Cli.Chip.NotChecked": "Denetleniyor",
   "Agents.Cli.Chip.NotInstalled": "Kurulu değil",
   "Agents.Cli.Chip.SignedOut": "Oturum kapalı",
-  "Agents.Cli.Chip.Ready": "Hazır",
-  "Agents.Cli.Detail.Note": "Devretmeyi açıp kapatmayı ve oturum durumunu Entegrasyonlar'dan yönetebilirsiniz."
+  "Agents.Cli.Chip.Ready": "Hazır"
 }

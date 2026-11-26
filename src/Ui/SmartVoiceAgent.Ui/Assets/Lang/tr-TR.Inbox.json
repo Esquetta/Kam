@@ -3,5 +3,8 @@
   "Inbox.Subtitle": "Tüm görevlerde onayınızı bekleyen araç çağrıları.",
   "Inbox.Empty.Title": "Bekleyen bir şey yok",
   "Inbox.Empty.Body": "Herhangi bir görevin onay istekleri burada görünür.",
-  "Inbox.OpenTask": "Görevi aç"
+  "Inbox.OpenTask": "Görevi aç",
+  "Inbox.ShowAll": "Tümünü göster",
+  "Inbox.ShowLess": "Daha az göster",
+  "Inbox.Allow": "İzin ver"
 }

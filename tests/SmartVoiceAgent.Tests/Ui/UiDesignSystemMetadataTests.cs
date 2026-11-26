@@ -17,7 +17,8 @@ public sealed class UiDesignSystemMetadataTests
 
         selectors.Should().Contain("Grid.WorkbenchPage");
         selectors.Should().Contain("StackPanel.WorkbenchPage");
-        selectors.Should().Contain("Border.WorkbenchSection");
+        selectors.Should().NotContain("Border.WorkbenchSection", "sections are Panes now");
+        selectors.Should().NotContain("Border.Surface");
         selectors.Should().Contain("TextBlock.PageTitle");
         selectors.Should().Contain("TextBlock.PageSubtitle");
         selectors.Should().Contain("Button.PrimaryAction");

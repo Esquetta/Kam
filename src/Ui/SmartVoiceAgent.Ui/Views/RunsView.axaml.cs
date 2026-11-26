@@ -1,5 +1,7 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.VisualTree;
 using SmartVoiceAgent.Ui.ViewModels.PageModels;
 using System;
 
@@ -24,6 +26,12 @@ namespace SmartVoiceAgent.Ui.Views
 
         private void OnRowTapped(object? sender, TappedEventArgs e)
         {
+            // The chevron that folds a task's subagent runs is a button of its own; a tap on it does not open the task.
+            if (e.Source is Visual source && source.FindAncestorOfType<Button>(includeSelf: true) is not null)
+            {
+                return;
+            }
+
             if (sender is Control { DataContext: RunRowViewModel row } && DataContext is RunsViewModel viewModel)
             {
                 viewModel.ActivateRow(row);

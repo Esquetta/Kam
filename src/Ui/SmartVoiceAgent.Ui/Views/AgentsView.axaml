@@ -5,70 +5,27 @@
              x:DataType="pagevm:AgentsViewModel">
 
     <UserControl.Styles>
-        <!-- Two columns (.a-cols): the list on the left, the detail on the right. The code-behind sets "narrow"
-             on the page, and the panes then stack. -->
-        <Style Selector="StackPanel.AgentsListPane">
-            <Setter Property="Grid.Column" Value="0"/>
-        </Style>
-        <Style Selector="Border.AgentsDetailPane">
-            <Setter Property="Grid.Column" Value="2"/>
-        </Style>
-        <Style Selector="StackPanel.narrow StackPanel.AgentsListPane">
-            <Setter Property="Grid.ColumnSpan" Value="3"/>
-        </Style>
-        <Style Selector="StackPanel.narrow Border.AgentsDetailPane">
-            <Setter Property="Grid.Row" Value="1"/>
-            <Setter Property="Grid.Column" Value="0"/>
-            <Setter Property="Grid.ColumnSpan" Value="3"/>
-            <Setter Property="Margin" Value="0,14,0,0"/>
-        </Style>
-
-        <!-- A list row is a flat button around a ListRow card -->
+        <!-- A role-agent row is a flat button around a TableRow; it opens the run's detail under it -->
         <Style Selector="Button.AgentRowButton">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="CornerRadius" Value="0"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
-        <Style Selector="Button.AgentRowButton /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Padding" Value="0"/>
-        </Style>
-        <Style Selector="Button.AgentRowButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Style Selector="Button.AgentRowButton /template/ ContentPresenter#PART_ContentPresenter, Button.AgentRowButton:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.AgentRowButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
             <Setter Property="Background" Value="Transparent"/>
         </Style>
-        <Style Selector="Border.ListRow.Selected">
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-        </Style>
-
-        <Style Selector="Border.AgentAvatar">
-            <Setter Property="Width" Value="32"/>
-            <Setter Property="Height" Value="32"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
-        <Style Selector="Border.AgentAvatar TextBlock">
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}"/>
-            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
-
-        <Style Selector="TextBlock.AgentValue">
-            <Setter Property="TextAlignment" Value="Left"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="TextTrimming" Value="None"/>
+        <Style Selector="Border.TableRow.Selected">
+            <Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
         </Style>
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel x:Name="Page" Classes="WorkbenchPage PageColumn List">
+        <StackPanel Classes="WorkbenchPage PageColumn List">
 
             <Grid Classes="PageHeader" ColumnDefinitions="*,Auto">
                 <StackPanel Classes="PageHeaderText">
@@ -85,243 +42,169 @@
                 </StackPanel>
             </Grid>
 
-            <Grid ColumnDefinitions="340,16,*" RowDefinitions="Auto,Auto">
-
-                <!-- List -->
-                <StackPanel Classes="AgentsListPane" Spacing="14">
-
-                    <!-- Coding agents -->
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="{DynamicResource Lang.Agents.Group.Coding}" Classes="GroupTitle"/>
-                        <ItemsControl ItemsSource="{Binding CodingAgents}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate><StackPanel Spacing="6"/></ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="pagevm:AgentsCodingAgentItem">
-                                    <Button Classes="AgentRowButton" Command="{Binding SelectCommand}">
-                                        <Border Classes="ListRow" Classes.Selected="{Binding IsSelected}">
-                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                                                <Border Classes="AgentAvatar">
-                                                    <TextBlock Text="{Binding Initials}"/>
-                                                </Border>
-                                                <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
-                                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <TextBlock Text="{Binding Name}" Classes="RowTitle"/>
-                                                        <TextBlock Text="{Binding VersionText}" Classes="Caption Mono" VerticalAlignment="Center"/>
-                                                    </StackPanel>
-                                                    <TextBlock Text="{Binding SignInText}" Classes="Caption" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
-                                                    <Button Classes="LinkAction"
-                                                            HorizontalAlignment="Left"
-                                                            Content="{DynamicResource Lang.Agents.SetUp}"
-                                                            Command="{Binding OpenIntegrationsCommand}"/>
-                                                </StackPanel>
-                                                <Border Grid.Column="2"
-                                                        Classes="Pill"
-                                                        Classes.Success="{Binding IsReady}"
-                                                        Classes.Warning="{Binding IsSignedOut}"
-                                                        VerticalAlignment="Top">
-                                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                                        <Ellipse Classes="ChipDot"/>
-                                                        <TextBlock Text="{Binding StatusText}"/>
-                                                    </StackPanel>
-                                                </Border>
-                                            </Grid>
+            <!-- Coding agents: one row per CLI; Configure opens Integrations -->
+            <StackPanel Spacing="12">
+                <TextBlock Text="{DynamicResource Lang.Agents.Group.Coding}" Classes="SectionTitle"/>
+                <Border Classes="Pane">
+                    <ItemsControl ItemsSource="{Binding CodingAgents}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="pagevm:AgentsCodingAgentItem">
+                                <Border Classes="ListRow">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
+                                        <Border Classes="KindIcon" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Initials}"/>
                                         </Border>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center" ToolTip.Tip="{Binding Description}">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="{Binding Name}" Classes="RowTitle"/>
+                                                <TextBlock Text="{Binding VersionText}" Classes="Caption Mono" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding SignInText}" Classes="Secondary" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <Border Classes="StatusDot"
+                                                    Classes.Success="{Binding IsReady}"
+                                                    Classes.Warning="{Binding IsSignedOut}"/>
+                                            <TextBlock Text="{Binding StatusText}" Classes="StatusText"/>
+                                        </StackPanel>
+                                        <Button Grid.Column="3"
+                                                Classes="LinkAction"
+                                                Content="{DynamicResource Lang.Agents.Configure}"
+                                                Command="{Binding OpenIntegrationsCommand}"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+            </StackPanel>
 
-                    <!-- Recent role agents -->
-                    <StackPanel Spacing="8">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="{DynamicResource Lang.Agents.Group.Roles}" Classes="GroupTitle"/>
-                            <TextBlock Text="{Binding RoleAgents.Count}" Classes="GroupCount" IsVisible="{Binding HasRoleAgents}"/>
-                        </StackPanel>
-
-                        <!-- Empty: one line in the section, no slab -->
-                        <TextBlock Text="{DynamicResource Lang.Agents.Empty.Body}"
-                                   Classes="Secondary"
-                                   TextWrapping="Wrap"
-                                   IsVisible="{Binding HasNoRoleAgents}"/>
-
-                        <ItemsControl ItemsSource="{Binding RoleAgents}" IsVisible="{Binding HasRoleAgents}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate><StackPanel Spacing="6"/></ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="pagevm:AgentsRoleRunItem">
-                                    <Button Classes="AgentRowButton" Command="{Binding SelectCommand}">
-                                        <Border Classes="ListRow" Classes.Selected="{Binding IsSelected}">
-                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                                                <Border Classes="AgentAvatar">
-                                                    <TextBlock Text="{Binding Initials}"/>
-                                                </Border>
-                                                <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding AgentName}" Classes="RowTitle" TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text="{Binding Role}" Classes="Caption" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="2" Spacing="4" HorizontalAlignment="Right">
-                                                    <Border Classes="Pill"
-                                                            Classes.Accent="{Binding IsRunning}"
-                                                            Classes.Success="{Binding IsSucceeded}"
-                                                            Classes.Danger="{Binding IsFailed}"
-                                                            HorizontalAlignment="Right">
-                                                        <StackPanel Orientation="Horizontal" Spacing="5">
-                                                            <Ellipse Classes="ChipDot"/>
-                                                            <TextBlock Text="{Binding StatusText}"/>
-                                                        </StackPanel>
-                                                    </Border>
-                                                    <TextBlock Text="{Binding RelativeTimeText}" Classes="Caption" HorizontalAlignment="Right"/>
-                                                </StackPanel>
-                                            </Grid>
-                                        </Border>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
+            <!-- Recent role agents: a table; a row opens the run's detail under it -->
+            <StackPanel Spacing="12">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="{DynamicResource Lang.Agents.Group.Roles}" Classes="SectionTitle"/>
+                    <TextBlock Text="{Binding RoleAgents.Count}" Classes="Caption" VerticalAlignment="Center" IsVisible="{Binding HasRoleAgents}"/>
                 </StackPanel>
 
-                <!-- Detail -->
-                <Border Classes="Pane AgentsDetailPane" VerticalAlignment="Top">
-                    <Panel>
+                <!-- Empty: one line in the section, no slab -->
+                <TextBlock Text="{DynamicResource Lang.Agents.Empty.Body}"
+                           Classes="Secondary"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding HasNoRoleAgents}"/>
 
-                        <!-- A role-agent run -->
-                        <ContentControl Content="{Binding SelectedRole}" IsVisible="{Binding SelectedRole, Converter={x:Static ObjectConverters.IsNotNull}}">
-                            <ContentControl.ContentTemplate>
-                                <DataTemplate DataType="pagevm:AgentsRoleRunItem">
-                                    <StackPanel>
-                                        <Border Classes="PaneHead">
-                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                                                <Border Classes="AgentAvatar">
-                                                    <TextBlock Text="{Binding Initials}"/>
+                <!-- The table scrolls sideways when the page is narrower than 600 px -->
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" IsVisible="{Binding HasRoleAgents}">
+                    <Border Classes="Pane" MinWidth="600">
+                        <StackPanel>
+                            <Grid Classes="TableHeader" ColumnDefinitions="160,*,120,56,88">
+                                <TextBlock Grid.Column="0" Text="{DynamicResource Lang.Agents.Detail.Role}"/>
+                                <TextBlock Grid.Column="1" Text="{DynamicResource Lang.Agents.Detail.Task}"/>
+                                <TextBlock Grid.Column="2" Text="{DynamicResource Lang.Agents.Detail.Status}"/>
+                                <TextBlock Grid.Column="3" Text="{DynamicResource Lang.Agents.Column.Steps}" TextAlignment="Right"/>
+                                <TextBlock Grid.Column="4" Text="{DynamicResource Lang.Agents.Column.When}" TextAlignment="Right"/>
+                            </Grid>
+
+                            <ItemsControl ItemsSource="{Binding RoleAgents}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="pagevm:AgentsRoleRunItem">
+                                        <StackPanel>
+                                            <Button Classes="AgentRowButton" Command="{Binding SelectCommand}">
+                                                <Border Classes="TableRow" Classes.Selected="{Binding IsSelected}">
+                                                    <Grid ColumnDefinitions="160,*,120,56,88">
+                                                        <TextBlock Text="{Binding AgentName}"
+                                                                   Classes="RowTitle"
+                                                                   FontWeight="Normal"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   VerticalAlignment="Center"
+                                                                   ToolTip.Tip="{Binding Role}"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Task}"
+                                                                   Classes="Secondary"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   TextWrapping="NoWrap"
+                                                                   VerticalAlignment="Center"/>
+                                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                            <Border Classes="StatusDot"
+                                                                    Classes.Accent="{Binding IsRunning}"
+                                                                    Classes.Success="{Binding IsSucceeded}"
+                                                                    Classes.Danger="{Binding IsFailed}"/>
+                                                            <TextBlock Text="{Binding StatusText}" Classes="StatusText" Classes.Danger="{Binding IsFailed}"/>
+                                                        </StackPanel>
+                                                        <TextBlock Grid.Column="3" Text="{Binding Observations.Count}"
+                                                                   Classes="Secondary"
+                                                                   TextAlignment="Right"
+                                                                   VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="4" Text="{Binding RelativeTimeText}"
+                                                                   Classes="Secondary"
+                                                                   TextAlignment="Right"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   VerticalAlignment="Center"
+                                                                   ToolTip.Tip="{Binding StartedText}"/>
+                                                    </Grid>
                                                 </Border>
-                                                <TextBlock Grid.Column="1" Text="{Binding AgentName}" Classes="SectionTitle" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                                <Border Grid.Column="2"
-                                                        Classes="Pill"
-                                                        Classes.Accent="{Binding IsRunning}"
-                                                        Classes.Success="{Binding IsSucceeded}"
-                                                        Classes.Danger="{Binding IsFailed}">
-                                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                                        <Ellipse Classes="ChipDot"/>
-                                                        <TextBlock Text="{Binding StatusText}"/>
+                                            </Button>
+
+                                            <!-- The selected run: facts, task, tool results, then the answer -->
+                                            <Border Padding="16,8,16,16" IsVisible="{Binding IsSelected}">
+                                                <StackPanel Spacing="12">
+                                                    <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6">
+                                                        <TextBlock Grid.Row="0" Text="{DynamicResource Lang.Agents.Detail.Model}" Classes="KvKey"/>
+                                                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ModelId}" Classes="KvValue Mono" TextAlignment="Left"/>
+                                                        <TextBlock Grid.Row="1" Text="{DynamicResource Lang.Agents.Detail.Started}" Classes="KvKey"/>
+                                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding StartedText}" Classes="KvValue" TextAlignment="Left"/>
+                                                        <TextBlock Grid.Row="2" Text="{DynamicResource Lang.Agents.Detail.Finished}" Classes="KvKey"/>
+                                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding FinishedText}" Classes="KvValue" TextAlignment="Left"/>
+                                                        <TextBlock Grid.Row="3" Text="{DynamicResource Lang.Agents.Detail.Duration}" Classes="KvKey"/>
+                                                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding DurationText}" Classes="KvValue" TextAlignment="Left"/>
+                                                    </Grid>
+
+                                                    <StackPanel Spacing="4">
+                                                        <TextBlock Text="{DynamicResource Lang.Agents.Detail.Task}" Classes="Caption"/>
+                                                        <SelectableTextBlock Text="{Binding Task}" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                                     </StackPanel>
-                                                </Border>
-                                            </Grid>
-                                        </Border>
 
-                                        <Border Classes="PaneRow">
-                                            <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="7">
-                                                <TextBlock Grid.Row="0" Text="{DynamicResource Lang.Agents.Detail.Role}" Classes="KvKey"/>
-                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Role}" Classes="KvValue AgentValue"/>
-                                                <TextBlock Grid.Row="1" Text="{DynamicResource Lang.Agents.Detail.Model}" Classes="KvKey"/>
-                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ModelId}" Classes="KvValue AgentValue Mono"/>
-                                                <TextBlock Grid.Row="2" Text="{DynamicResource Lang.Agents.Detail.Started}" Classes="KvKey"/>
-                                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding StartedText}" Classes="KvValue AgentValue"/>
-                                                <TextBlock Grid.Row="3" Text="{DynamicResource Lang.Agents.Detail.Finished}" Classes="KvKey"/>
-                                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding FinishedText}" Classes="KvValue AgentValue"/>
-                                                <TextBlock Grid.Row="4" Text="{DynamicResource Lang.Agents.Detail.Duration}" Classes="KvKey"/>
-                                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding DurationText}" Classes="KvValue AgentValue"/>
-                                            </Grid>
-                                        </Border>
-
-                                        <Border Classes="PaneRow">
-                                            <StackPanel Spacing="6">
-                                                <TextBlock Text="{DynamicResource Lang.Agents.Detail.Task}" Classes="Overline"/>
-                                                <SelectableTextBlock Text="{Binding Task}" FontSize="13" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            </StackPanel>
-                                        </Border>
-
-                                        <Border Classes="PaneRow" IsVisible="{Binding HasObservations}">
-                                            <StackPanel Spacing="8">
-                                                <TextBlock Text="{DynamicResource Lang.Agents.Detail.Tools}" Classes="Overline"/>
-                                                <ItemsControl ItemsSource="{Binding Observations}">
-                                                    <ItemsControl.ItemsPanel>
-                                                        <ItemsPanelTemplate><StackPanel Spacing="6"/></ItemsPanelTemplate>
-                                                    </ItemsControl.ItemsPanel>
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate DataType="pagevm:AgentsToolObservationItem">
-                                                            <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
-                                                                <Border Classes="StatusDot"
-                                                                        Classes.Success="{Binding Success}"
-                                                                        Classes.Danger="{Binding Failed}"/>
-                                                                <TextBlock Grid.Column="1" Text="{Binding ToolName}" Classes="Caption Mono" TextWrapping="NoWrap"/>
-                                                                <TextBlock Grid.Column="2" Text="{Binding Summary}" Classes="Secondary" TextWrapping="Wrap" TextTrimming="None"/>
-                                                            </Grid>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </StackPanel>
-                                        </Border>
-
-                                        <Border Classes="PaneRow" BorderThickness="0">
-                                            <StackPanel Spacing="6">
-                                                <StackPanel Spacing="6" IsVisible="{Binding HasResponse}">
-                                                    <TextBlock Text="{DynamicResource Lang.Agents.Detail.Response}" Classes="Overline"/>
-                                                    <SelectableTextBlock Text="{Binding Response}" FontSize="13" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                                </StackPanel>
-                                                <StackPanel Spacing="6" IsVisible="{Binding HasError}">
-                                                    <TextBlock Text="{DynamicResource Lang.Agents.Detail.Error}" Classes="Overline"/>
-                                                    <SelectableTextBlock Text="{Binding ErrorMessage}" FontSize="13" TextWrapping="Wrap" Foreground="{DynamicResource AccentErrorBrush}"/>
-                                                </StackPanel>
-                                                <StackPanel Spacing="6" IsVisible="{Binding HasLastMessageOnly}">
-                                                    <TextBlock Text="{DynamicResource Lang.Agents.Detail.Progress}" Classes="Overline"/>
-                                                    <TextBlock Text="{Binding LastMessage}" Classes="Secondary" TextWrapping="Wrap" TextTrimming="None"/>
-                                                </StackPanel>
-                                                <TextBlock Text="{DynamicResource Lang.Agents.Detail.NoOutput}" Classes="EmptyText" IsVisible="{Binding HasNoOutput}"/>
-                                            </StackPanel>
-                                        </Border>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ContentControl.ContentTemplate>
-                        </ContentControl>
-
-                        <!-- A coding agent -->
-                        <ContentControl Content="{Binding SelectedCoding}" IsVisible="{Binding SelectedCoding, Converter={x:Static ObjectConverters.IsNotNull}}">
-                            <ContentControl.ContentTemplate>
-                                <DataTemplate DataType="pagevm:AgentsCodingAgentItem">
-                                    <StackPanel>
-                                        <Border Classes="PaneHead">
-                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                                                <Border Classes="AgentAvatar">
-                                                    <TextBlock Text="{Binding Initials}"/>
-                                                </Border>
-                                                <TextBlock Grid.Column="1" Text="{Binding Name}" Classes="SectionTitle" VerticalAlignment="Center"/>
-                                                <Border Grid.Column="2"
-                                                        Classes="Pill"
-                                                        Classes.Success="{Binding IsReady}"
-                                                        Classes.Warning="{Binding IsSignedOut}">
-                                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                                        <Ellipse Classes="ChipDot"/>
-                                                        <TextBlock Text="{Binding StatusText}"/>
+                                                    <StackPanel Spacing="6" IsVisible="{Binding HasObservations}">
+                                                        <TextBlock Text="{DynamicResource Lang.Agents.Detail.Tools}" Classes="Caption"/>
+                                                        <ItemsControl ItemsSource="{Binding Observations}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate><StackPanel Spacing="6"/></ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate DataType="pagevm:AgentsToolObservationItem">
+                                                                    <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
+                                                                        <Border Classes="StatusDot"
+                                                                                Classes.Success="{Binding Success}"
+                                                                                Classes.Danger="{Binding Failed}"/>
+                                                                        <TextBlock Grid.Column="1" Text="{Binding ToolName}" Classes="Secondary Mono" TextWrapping="NoWrap"/>
+                                                                        <TextBlock Grid.Column="2" Text="{Binding Summary}" Classes="Secondary" TextWrapping="Wrap"/>
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
                                                     </StackPanel>
-                                                </Border>
-                                            </Grid>
-                                        </Border>
 
-                                        <Border Classes="PaneRow">
-                                            <TextBlock Text="{Binding Description}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                        </Border>
-
-                                        <Border Classes="PaneRow" BorderThickness="0">
-                                            <StackPanel Spacing="8">
-                                                <TextBlock Text="{DynamicResource Lang.Agents.Cli.Detail.Note}" Classes="Caption"/>
-                                                <Button Classes="SecondaryAction Sm"
-                                                        HorizontalAlignment="Left"
-                                                        Content="{DynamicResource Lang.Agents.SetUp}"
-                                                        Command="{Binding OpenIntegrationsCommand}"/>
-                                            </StackPanel>
-                                        </Border>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ContentControl.ContentTemplate>
-                        </ContentControl>
-                    </Panel>
-                </Border>
-            </Grid>
+                                                    <StackPanel Spacing="4" IsVisible="{Binding HasResponse}">
+                                                        <TextBlock Text="{DynamicResource Lang.Agents.Detail.Response}" Classes="Caption"/>
+                                                        <SelectableTextBlock Text="{Binding Response}" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                    </StackPanel>
+                                                    <StackPanel Spacing="4" IsVisible="{Binding HasError}">
+                                                        <TextBlock Text="{DynamicResource Lang.Agents.Detail.Error}" Classes="Caption"/>
+                                                        <SelectableTextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="{DynamicResource AccentErrorBrush}"/>
+                                                    </StackPanel>
+                                                    <StackPanel Spacing="4" IsVisible="{Binding HasLastMessageOnly}">
+                                                        <TextBlock Text="{DynamicResource Lang.Agents.Detail.Progress}" Classes="Caption"/>
+                                                        <TextBlock Text="{Binding LastMessage}" Classes="Secondary" TextWrapping="Wrap"/>
+                                                    </StackPanel>
+                                                    <TextBlock Text="{DynamicResource Lang.Agents.Detail.NoOutput}" Classes="EmptyText" IsVisible="{Binding HasNoOutput}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </ScrollViewer>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

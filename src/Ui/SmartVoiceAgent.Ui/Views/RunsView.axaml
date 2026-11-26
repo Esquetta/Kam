@@ -4,28 +4,11 @@
              x:Class="SmartVoiceAgent.Ui.Views.RunsView"
              x:DataType="vm:RunsViewModel">
     <UserControl.Styles>
-        <!-- The table (table.runs): Kind, Name, Model, Workspace or role, Steps, Status, When.
-             The header and every row share these columns; below 760 px the table scrolls sideways. -->
-        <Style Selector="Grid.RunsColumns">
-            <Setter Property="ColumnSpacing" Value="12"/>
-        </Style>
-        <Style Selector="TextBlock.RunsHeadCell">
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
-        </Style>
-        <Style Selector="TextBlock.RunsCell">
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-        </Style>
-        <Style Selector="Border.RunsRow:pointerover">
-            <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
-        </Style>
+        <!-- The table: Name, Model, Status, Steps, When. The header and every row share these columns;
+             below 640 px the table scrolls sideways. A task's subagent runs sit under it, indented on a tree line. -->
         <Style Selector="TextBox.RunsSearch">
             <Setter Property="Grid.Column" Value="1"/>
-            <Setter Property="Width" Value="280"/>
+            <Setter Property="Width" Value="240"/>
             <Setter Property="HorizontalAlignment" Value="Right"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
@@ -35,11 +18,34 @@
             <Setter Property="Grid.ColumnSpan" Value="2"/>
             <Setter Property="Width" Value="NaN"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="Margin" Value="0,10,0,0"/>
+            <Setter Property="Margin" Value="0,8,0,0"/>
         </Style>
-        <!-- The panel border closes the last row -->
-        <Style Selector="ItemsControl.RunsList > ContentPresenter:nth-last-child(1) Border.PaneRow">
+
+        <!-- Nested rows drop the hairline above them, so the tree line runs on from the task row -->
+        <Style Selector="Border.TableRow.Nested">
             <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="Border.TreeLine">
+            <Setter Property="Width" Value="1"/>
+            <Setter Property="Margin" Value="9,0,14,0"/>
+            <Setter Property="Background" Value="{DynamicResource BorderMutedBrush}"/>
+        </Style>
+
+        <!-- The chevron points right when folded and down when open -->
+        <Style Selector="Viewbox.RowChevron">
+            <Setter Property="Width" Value="12"/>
+            <Setter Property="Height" Value="12"/>
+            <Setter Property="RenderTransform" Value="rotate(-90deg)"/>
+        </Style>
+        <Style Selector="Viewbox.RowChevron.open">
+            <Setter Property="RenderTransform" Value="rotate(0deg)"/>
+        </Style>
+        <Style Selector="Button.ChildrenToggle">
+            <Setter Property="Width" Value="20"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="MinWidth" Value="20"/>
+            <Setter Property="MinHeight" Value="20"/>
+            <Setter Property="CornerRadius" Value="4"/>
         </Style>
     </UserControl.Styles>
 
@@ -61,7 +67,7 @@
                 </StackPanel>
             </Grid>
 
-            <!-- Filter and search -->
+            <!-- Toolbar: filter on the left, search on the right -->
             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="16">
                 <Border Classes="Segmented" VerticalAlignment="Center" HorizontalAlignment="Left">
                     <StackPanel Orientation="Horizontal" Spacing="2">
@@ -76,11 +82,11 @@
                                 Command="{Binding SetFilterCommand}" CommandParameter="AgentRuns"/>
                     </StackPanel>
                 </Border>
-                <TextBox Classes="RunsSearch"
+                <TextBox Classes="Search RunsSearch"
                          Text="{Binding SearchText}"
                          PlaceholderText="{DynamicResource Lang.Runs.Search.Placeholder}">
                     <TextBox.InnerLeftContent>
-                        <Viewbox Width="14" Height="14" Margin="10,0,0,0">
+                        <Viewbox Classes="SearchIcon">
                             <Path Classes="Icon Muted" Data="{StaticResource IconSearch}"/>
                         </Viewbox>
                     </TextBox.InnerLeftContent>
@@ -94,89 +100,100 @@
                 <TextBlock Text="{Binding EmptyBody}" Classes="EmptyBody"/>
             </StackPanel>
 
-            <!-- The table scrolls sideways when the page is narrower than 760 px -->
+            <!-- The table scrolls sideways when the page is narrower than 640 px -->
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" IsVisible="{Binding !IsEmpty}">
-                <Border Classes="Pane" MinWidth="760">
+                <Border Classes="Pane" MinWidth="640">
                     <StackPanel>
-                        <Border Classes="PaneHead" MinHeight="0" Padding="14,9">
-                            <Grid Classes="RunsColumns" ColumnDefinitions="78,*,170,140,56,116,72">
-                                <TextBlock Grid.Column="0" Classes="RunsHeadCell" Text="{DynamicResource Lang.Runs.Column.Kind}"/>
-                                <TextBlock Grid.Column="1" Classes="RunsHeadCell" Text="{DynamicResource Lang.Runs.Column.Name}"/>
-                                <TextBlock Grid.Column="2" Classes="RunsHeadCell" Text="{DynamicResource Lang.Runs.Column.Model}"/>
-                                <TextBlock Grid.Column="3" Classes="RunsHeadCell" Text="{DynamicResource Lang.Runs.Column.Context}"/>
-                                <TextBlock Grid.Column="4" Classes="RunsHeadCell" Text="{DynamicResource Lang.Runs.Column.Count}" TextAlignment="Right"/>
-                                <TextBlock Grid.Column="5" Classes="RunsHeadCell" Text="{DynamicResource Lang.Runs.Column.Status}"/>
-                                <TextBlock Grid.Column="6" Classes="RunsHeadCell" Text="{DynamicResource Lang.Runs.Column.When}" TextAlignment="Right"/>
-                            </Grid>
-                        </Border>
+                        <Grid Classes="TableHeader" ColumnDefinitions="*,160,120,56,88">
+                            <TextBlock Grid.Column="0" Text="{DynamicResource Lang.Runs.Column.Name}"/>
+                            <TextBlock Grid.Column="1" Text="{DynamicResource Lang.Runs.Column.Model}"/>
+                            <TextBlock Grid.Column="2" Text="{DynamicResource Lang.Runs.Column.Status}"/>
+                            <TextBlock Grid.Column="3" Text="{DynamicResource Lang.Runs.Column.Count}" TextAlignment="Right"/>
+                            <TextBlock Grid.Column="4" Text="{DynamicResource Lang.Runs.Column.When}" TextAlignment="Right"/>
+                        </Grid>
 
-                        <ItemsControl Classes="RunsList" ItemsSource="{Binding Rows}">
+                        <ItemsControl ItemsSource="{Binding Rows}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="vm:RunRowViewModel">
                                     <StackPanel>
-                                        <Border Classes="PaneRow RunsRow"
-                                                Padding="14,10"
-                                                Background="Transparent"
+                                        <Border Classes="TableRow"
+                                                Classes.Nested="{Binding IsNested}"
                                                 Cursor="Hand"
                                                 Tapped="OnRowTapped">
-                                            <Grid Classes="RunsColumns" ColumnDefinitions="78,*,170,140,56,116,72">
-                                                <Border Grid.Column="0" Classes="Pill" Classes.Info="{Binding !IsTask}" HorizontalAlignment="Left">
-                                                    <TextBlock Text="{Binding KindText}"/>
-                                                </Border>
-                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Name}"
-                                                               FontSize="13"
-                                                               FontWeight="Medium"
-                                                               Foreground="{DynamicResource TextPrimaryBrush}"
-                                                               TextTrimming="CharacterEllipsis"
-                                                               VerticalAlignment="Center"/>
-                                                    <Viewbox Width="12" Height="12" IsVisible="{Binding CanExpand}" VerticalAlignment="Center">
+                                            <Grid ColumnDefinitions="*,160,120,56,88">
+                                                <!-- Name: tree line for a subagent run, chevron for a task with runs or a run with detail -->
+                                                <Grid ColumnDefinitions="Auto,20,*" ColumnSpacing="6">
+                                                    <Border Classes="TreeLine" IsVisible="{Binding IsNested}"/>
+                                                    <Button Grid.Column="1"
+                                                            Classes="IconButton ChildrenToggle"
+                                                            VerticalAlignment="Center"
+                                                            IsVisible="{Binding HasChildren}"
+                                                            AutomationProperties.Name="{DynamicResource Lang.Runs.ToggleSubagents}"
+                                                            ToolTip.Tip="{DynamicResource Lang.Runs.ToggleSubagents}"
+                                                            Command="{Binding $parent[UserControl].((vm:RunsViewModel)DataContext).ToggleChildrenCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <Viewbox Classes="RowChevron" Classes.open="{Binding IsChildrenExpanded}">
+                                                            <Path Classes="Icon" Data="{StaticResource IconChevronDown}"/>
+                                                        </Viewbox>
+                                                    </Button>
+                                                    <Viewbox Grid.Column="1"
+                                                             Classes="RowChevron"
+                                                             Classes.open="{Binding IsExpanded}"
+                                                             VerticalAlignment="Center"
+                                                             IsVisible="{Binding CanExpand}">
                                                         <Path Classes="Icon Muted" Data="{StaticResource IconChevronDown}"/>
                                                     </Viewbox>
-                                                </StackPanel>
-                                                <TextBlock Grid.Column="2" Classes="RunsCell" Text="{Binding ModelText}"
-                                                           FontSize="12"
-                                                           FontFamily="{StaticResource MonoFontFamily}"
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding Name}"
+                                                               Classes="RowTitle"
+                                                               FontWeight="Normal"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               VerticalAlignment="Center"
+                                                               ToolTip.Tip="{Binding ContextTooltip}"/>
+                                                </Grid>
+                                                <TextBlock Grid.Column="1" Text="{Binding ModelText}"
+                                                           Classes="Secondary Mono"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           VerticalAlignment="Center"
                                                            ToolTip.Tip="{Binding ModelText}"/>
-                                                <TextBlock Grid.Column="3" Classes="RunsCell" Text="{Binding ContextText}"
-                                                           ToolTip.Tip="{Binding ContextTooltip}"/>
-                                                <TextBlock Grid.Column="4" Classes="RunsCell" Text="{Binding Count}" TextAlignment="Right"
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                    <Border Classes="StatusDot"
+                                                            Classes.Accent="{Binding IsRunning}"
+                                                            Classes.Warning="{Binding IsNeedsYou}"
+                                                            Classes.Success="{Binding IsDone}"
+                                                            Classes.Danger="{Binding IsFailed}"/>
+                                                    <TextBlock Text="{Binding StatusText}" Classes="StatusText" Classes.Danger="{Binding IsFailed}"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="3" Text="{Binding Count}"
+                                                           Classes="Secondary"
+                                                           TextAlignment="Right"
+                                                           VerticalAlignment="Center"
                                                            ToolTip.Tip="{Binding CountTooltip}"/>
-                                                <Border Grid.Column="5" Classes="Pill"
-                                                        Classes.Accent="{Binding IsRunning}"
-                                                        Classes.Warning="{Binding IsNeedsYou}"
-                                                        Classes.Success="{Binding IsDone}"
-                                                        Classes.Danger="{Binding IsFailed}"
-                                                        HorizontalAlignment="Left">
-                                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <Ellipse Classes="ChipDot"/>
-                                                        <TextBlock Text="{Binding StatusText}"/>
-                                                    </StackPanel>
-                                                </Border>
-                                                <TextBlock Grid.Column="6" Classes="RunsCell" Text="{Binding WhenText}" TextAlignment="Right"
+                                                <TextBlock Grid.Column="4" Text="{Binding WhenText}"
+                                                           Classes="Secondary"
+                                                           TextAlignment="Right"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           VerticalAlignment="Center"
                                                            ToolTip.Tip="{Binding WhenTooltip}"/>
                                             </Grid>
                                         </Border>
 
                                         <!-- Agent run detail: task, tool calls, then the response or the error -->
-                                        <Border Classes="PaneRow" Background="{DynamicResource SurfaceBgBrush}" Padding="14,12"
-                                                IsVisible="{Binding IsExpanded}">
-                                            <StackPanel Spacing="10">
+                                        <Border Padding="42,4,16,16" IsVisible="{Binding IsExpanded}">
+                                            <StackPanel Spacing="12">
                                                 <StackPanel Spacing="4">
-                                                    <TextBlock Text="{DynamicResource Lang.Runs.Detail.Task}" Classes="Overline"/>
-                                                    <SelectableTextBlock Text="{Binding TaskText}" FontSize="13" TextWrapping="Wrap"
+                                                    <TextBlock Text="{DynamicResource Lang.Runs.Detail.Task}" Classes="Caption"/>
+                                                    <SelectableTextBlock Text="{Binding TaskText}" TextWrapping="Wrap"
                                                                          Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                 </StackPanel>
                                                 <StackPanel Spacing="4" IsVisible="{Binding HasObservations}">
-                                                    <TextBlock Text="{DynamicResource Lang.Runs.Detail.ToolCalls}" Classes="Overline"/>
+                                                    <TextBlock Text="{DynamicResource Lang.Runs.Detail.ToolCalls}" Classes="Caption"/>
                                                     <ItemsControl ItemsSource="{Binding Observations}">
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate DataType="vm:RunObservationItem">
                                                                 <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2">
                                                                     <Border Classes="StatusDot" Classes.Success="{Binding Success}" Classes.Danger="{Binding !Success}"/>
-                                                                    <TextBlock Text="{Binding Skill}" FontSize="12"
-                                                                               FontFamily="{StaticResource MonoFontFamily}"
-                                                                               Foreground="{DynamicResource TextMutedBrush}"/>
+                                                                    <TextBlock Text="{Binding Skill}" Classes="Secondary Mono"/>
                                                                     <TextBlock Text="{Binding Summary}" FontSize="12"
                                                                                Foreground="{DynamicResource TextSecondaryBrush}"
                                                                                TextWrapping="Wrap" MaxWidth="560"/>
@@ -186,13 +203,13 @@
                                                     </ItemsControl>
                                                 </StackPanel>
                                                 <StackPanel Spacing="4" IsVisible="{Binding HasResponse}">
-                                                    <TextBlock Text="{DynamicResource Lang.Runs.Detail.Response}" Classes="Overline"/>
-                                                    <SelectableTextBlock Text="{Binding ResponseText}" FontSize="13" TextWrapping="Wrap"
+                                                    <TextBlock Text="{DynamicResource Lang.Runs.Detail.Response}" Classes="Caption"/>
+                                                    <SelectableTextBlock Text="{Binding ResponseText}" TextWrapping="Wrap"
                                                                          Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                 </StackPanel>
                                                 <StackPanel Spacing="4" IsVisible="{Binding HasError}">
-                                                    <TextBlock Text="{DynamicResource Lang.Runs.Detail.Error}" Classes="Overline"/>
-                                                    <SelectableTextBlock Text="{Binding ErrorText}" FontSize="13" TextWrapping="Wrap"
+                                                    <TextBlock Text="{DynamicResource Lang.Runs.Detail.Error}" Classes="Caption"/>
+                                                    <SelectableTextBlock Text="{Binding ErrorText}" TextWrapping="Wrap"
                                                                          Foreground="{DynamicResource AccentErrorBrush}"/>
                                                 </StackPanel>
                                                 <Button Classes="LinkAction" HorizontalAlignment="Left"
