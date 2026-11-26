@@ -10,7 +10,7 @@
 		x:DataType="vm:MainWindowViewModel"
 		Background="{DynamicResource PanelBgBrush}"
 		Foreground="{DynamicResource TextPrimaryBrush}"
-		FontSize="13.5"
+		FontSize="13"
 		TransparencyLevelHint="Mica"
 		ExtendClientAreaToDecorationsHint="True"
 		ExtendClientAreaTitleBarHeightHint="48"
@@ -65,7 +65,7 @@
 			<Setter Property="Padding" Value="8,0"/>
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="CornerRadius" Value="7"/>
+			<Setter Property="CornerRadius" Value="6"/>
 			<Setter Property="Cursor" Value="Hand"/>
 			<!-- Tips open beside the rail, so they never cover the next row -->
 			<Setter Property="ToolTip.Placement" Value="Right"/>
@@ -89,7 +89,7 @@
 		</Style>
 
 		<Style Selector="Button.NavBtn.Active /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+			<Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
 		</Style>
 
 		<Style Selector="Button.NavBtn Path.Icon">
@@ -101,11 +101,11 @@
 		</Style>
 
 		<Style Selector="Button.NavBtn.Active Path.Icon">
-			<Setter Property="Stroke" Value="{DynamicResource AccentBrush}"/>
+			<Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}"/>
 		</Style>
 
 		<Style Selector="Button.NavBtn TextBlock.NavLabel">
-			<Setter Property="FontSize" Value="13.5"/>
+			<Setter Property="FontSize" Value="13"/>
 			<Setter Property="FontWeight" Value="Normal"/>
 			<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
 			<Setter Property="VerticalAlignment" Value="Center"/>
@@ -192,6 +192,7 @@
 
 		<Style Selector="Button.NavBtn.Active TextBlock.NavLabel">
 			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+			<Setter Property="FontWeight" Value="Medium"/>
 		</Style>
 
 		<!-- ========================= -->
@@ -432,7 +433,7 @@
 			<Setter Property="VerticalAlignment" Value="Center"/>
 		</Style>
 		<Style Selector="TextBlock.ToolLineName">
-			<Setter Property="FontSize" Value="12.5"/>
+			<Setter Property="FontSize" Value="13"/>
 			<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
 			<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
 			<Setter Property="VerticalAlignment" Value="Center"/>
@@ -441,7 +442,7 @@
 			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
 		</Style>
 		<Style Selector="TextBlock.ToolLineTarget">
-			<Setter Property="FontSize" Value="11.5"/>
+			<Setter Property="FontSize" Value="12"/>
 			<Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}"/>
 			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
 			<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
@@ -455,7 +456,7 @@
 		</Style>
 		<!-- A failed step's one-line error, in a muted red -->
 		<Style Selector="TextBlock.ToolLineError">
-			<Setter Property="FontSize" Value="11.5"/>
+			<Setter Property="FontSize" Value="12"/>
 			<Setter Property="Foreground" Value="{DynamicResource AccentErrorBrush}"/>
 			<Setter Property="Opacity" Value="0.8"/>
 			<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
@@ -478,7 +479,7 @@
 
 		<!-- Risk tag on a step's line, only for writes (warn) and programs, external sends and hand-offs (danger) -->
 		<Style Selector="TextBlock.RiskTag">
-			<Setter Property="FontSize" Value="10.5"/>
+			<Setter Property="FontSize" Value="11"/>
 			<Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}"/>
 			<Setter Property="VerticalAlignment" Value="Center"/>
 		</Style>
@@ -532,7 +533,7 @@
 			<Setter Property="BorderThickness" Value="0"/>
 			<Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
 			<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-			<Setter Property="FontSize" Value="11.5"/>
+			<Setter Property="FontSize" Value="12"/>
 			<Setter Property="VerticalContentAlignment" Value="Center"/>
 			<Setter Property="Cursor" Value="Hand"/>
 		</Style>
@@ -684,7 +685,7 @@
 									   Foreground="{DynamicResource TextPrimaryBrush}"/>
 							<TextBlock Classes="NavLabel"
 									   Text="{DynamicResource Lang.Shell.Brand.Tagline}"
-									   FontSize="11.5"
+									   FontSize="12"
 									   FontWeight="Normal"
 									   Foreground="{DynamicResource TextMutedBrush}"/>
 						</StackPanel>
@@ -862,7 +863,7 @@
 				  Margin="14,0,210,0">
 				<TextBlock Grid.Column="0"
 						   Text="{Binding ActivePageTitle}"
-						   FontSize="13.5"
+						   FontSize="14"
 						   FontWeight="SemiBold"
 						   Foreground="{DynamicResource TextPrimaryBrush}"
 						   VerticalAlignment="Center"/>
@@ -900,7 +901,7 @@
 								IsVisible="{Binding VoiceState, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static services:VoiceState.WakeListening}}"
 								ToolTip.Tip="{DynamicResource Lang.Shell.WakeOnTip}">
 						<Border Classes="StatusDot Success" VerticalAlignment="Center"/>
-						<TextBlock Text="{DynamicResource Lang.Shell.WakeOn}" FontSize="11.5" Foreground="{DynamicResource TextMutedBrush}"/>
+						<TextBlock Text="{DynamicResource Lang.Shell.WakeOn}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
 					</StackPanel>
 				</Panel>
 				<!-- Push to talk -->

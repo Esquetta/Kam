@@ -54,7 +54,7 @@
                             </MultiBinding>
                         </StackPanel.IsVisible>
                         <Viewbox Width="18" Height="18" HorizontalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconCheck}" Stroke="{DynamicResource AccentGreenBrush}"/></Viewbox>
-                        <TextBlock Text="{DynamicResource Lang.Inbox.Empty.Title}" FontSize="13.5" FontWeight="Medium" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource Lang.Inbox.Empty.Title}" FontSize="14" FontWeight="Medium" HorizontalAlignment="Center"/>
                         <TextBlock Text="{DynamicResource Lang.Inbox.Empty.Body}" Classes="Caption" TextAlignment="Center" TextWrapping="Wrap"/>
                     </StackPanel>
 
@@ -76,7 +76,7 @@
                                         </Border>
                                         <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Step.ToolDisplayName}"
-                                                       FontSize="13.5"
+                                                       FontSize="13"
                                                        FontWeight="SemiBold"
                                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                                        TextTrimming="CharacterEllipsis"/>
@@ -88,7 +88,7 @@
                                                            Foreground="{DynamicResource TextMutedBrush}"/>
                                                 <TextBlock Text="·" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                                                 <TextBlock Text="{Binding Step.ToolName}"
-                                                           FontSize="11.5"
+                                                           FontSize="12"
                                                            FontFamily="{StaticResource MonoFontFamily}"
                                                            Foreground="{DynamicResource TextMutedBrush}"/>
                                             </StackPanel>
@@ -96,7 +96,7 @@
                                                 <!-- Four lines for most tools; a hand-off to another agent shows its whole brief, scrolling -->
                                                 <ScrollViewer MaxHeight="240" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                                                     <SelectableTextBlock Text="{Binding Step.ArgumentsPreview}"
-                                                                         FontSize="11.5"
+                                                                         FontSize="12"
                                                                          FontFamily="{StaticResource MonoFontFamily}"
                                                                          Foreground="{DynamicResource TextSecondaryBrush}"
                                                                          TextWrapping="Wrap"

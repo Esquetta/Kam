@@ -52,7 +52,7 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
         <Style Selector="Border.AgentAvatar TextBlock">
-            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}"/>
             <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
@@ -232,7 +232,7 @@
                                         <Border Classes="PaneRow">
                                             <StackPanel Spacing="6">
                                                 <TextBlock Text="{DynamicResource Lang.Agents.Detail.Task}" Classes="Overline"/>
-                                                <SelectableTextBlock Text="{Binding Task}" FontSize="12.5" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                <SelectableTextBlock Text="{Binding Task}" FontSize="13" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                             </StackPanel>
                                         </Border>
 
@@ -250,7 +250,7 @@
                                                                         Classes.Success="{Binding Success}"
                                                                         Classes.Danger="{Binding Failed}"/>
                                                                 <TextBlock Grid.Column="1" Text="{Binding ToolName}" Classes="Caption Mono" TextWrapping="NoWrap"/>
-                                                                <TextBlock Grid.Column="2" Text="{Binding Summary}" Classes="RowText" TextWrapping="Wrap" TextTrimming="None"/>
+                                                                <TextBlock Grid.Column="2" Text="{Binding Summary}" Classes="Secondary" TextWrapping="Wrap" TextTrimming="None"/>
                                                             </Grid>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
@@ -262,15 +262,15 @@
                                             <StackPanel Spacing="6">
                                                 <StackPanel Spacing="6" IsVisible="{Binding HasResponse}">
                                                     <TextBlock Text="{DynamicResource Lang.Agents.Detail.Response}" Classes="Overline"/>
-                                                    <SelectableTextBlock Text="{Binding Response}" FontSize="12.5" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                    <SelectableTextBlock Text="{Binding Response}" FontSize="13" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                                 </StackPanel>
                                                 <StackPanel Spacing="6" IsVisible="{Binding HasError}">
                                                     <TextBlock Text="{DynamicResource Lang.Agents.Detail.Error}" Classes="Overline"/>
-                                                    <SelectableTextBlock Text="{Binding ErrorMessage}" FontSize="12.5" TextWrapping="Wrap" Foreground="{DynamicResource AccentErrorBrush}"/>
+                                                    <SelectableTextBlock Text="{Binding ErrorMessage}" FontSize="13" TextWrapping="Wrap" Foreground="{DynamicResource AccentErrorBrush}"/>
                                                 </StackPanel>
                                                 <StackPanel Spacing="6" IsVisible="{Binding HasLastMessageOnly}">
                                                     <TextBlock Text="{DynamicResource Lang.Agents.Detail.Progress}" Classes="Overline"/>
-                                                    <TextBlock Text="{Binding LastMessage}" Classes="RowText" TextWrapping="Wrap" TextTrimming="None"/>
+                                                    <TextBlock Text="{Binding LastMessage}" Classes="Secondary" TextWrapping="Wrap" TextTrimming="None"/>
                                                 </StackPanel>
                                                 <TextBlock Text="{DynamicResource Lang.Agents.Detail.NoOutput}" Classes="EmptyText" IsVisible="{Binding HasNoOutput}"/>
                                             </StackPanel>
@@ -304,7 +304,7 @@
                                         </Border>
 
                                         <Border Classes="PaneRow">
-                                            <TextBlock Text="{Binding Description}" FontSize="12.5" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding Description}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                         </Border>
 
                                         <Border Classes="PaneRow" BorderThickness="0">

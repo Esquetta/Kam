@@ -16,6 +16,8 @@
     <!-- Border brushes -->
     <SolidColorBrush x:Key="BorderSubtleBrush" Color="{DynamicResource BorderSubtle}" />
     <SolidColorBrush x:Key="BorderMutedBrush" Color="{DynamicResource BorderMuted}" />
+    <!-- Hovered input: TextMuted at 40% -->
+    <SolidColorBrush x:Key="InputHoverBorderBrush" Color="{DynamicResource TextMuted}" Opacity="0.4" />
 
     <!-- Text brushes -->
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="{DynamicResource TextPrimary}" />

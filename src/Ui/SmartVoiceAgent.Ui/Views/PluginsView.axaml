@@ -82,7 +82,7 @@
         <Style Selector="Border.ListRow.Selected">
             <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
         </Style>
-        <Style Selector="Border.ListRow.Selected TextBlock.RowText">
+        <Style Selector="Border.ListRow.Selected TextBlock.Secondary">
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
         <Style Selector="Viewbox.Chevron">
@@ -312,7 +312,7 @@
                                                                     <TextBlock Text="{Binding Name}" Classes="RowTitle" TextTrimming="CharacterEllipsis"/>
                                                                     <TextBlock Grid.Column="1" Text="{Binding SkillId}" Classes="SkillId"/>
                                                                 </Grid>
-                                                                <TextBlock Text="{Binding Summary}" Classes="RowText"/>
+                                                                <TextBlock Text="{Binding Summary}" Classes="Secondary"/>
                                                             </StackPanel>
                                                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                                                 <Border Classes="StatusDot"
