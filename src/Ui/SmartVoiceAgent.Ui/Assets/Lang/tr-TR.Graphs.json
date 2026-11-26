@@ -23,5 +23,12 @@
   "Graphs.Detail.Steps": "Araç çağrıları",
   "Graphs.Detail.NoSteps": "Henüz araç çağrısı yok.",
   "Graphs.Detail.Report": "Rapor",
-  "Graphs.Detail.Error": "Neden durdu"
+  "Graphs.Detail.Error": "Neden durdu",
+  "Graphs.Zoom.Percent": "%{0}",
+  "Graphs.Zoom.Out": "Uzaklaştır",
+  "Graphs.Zoom.In": "Yakınlaştır",
+  "Graphs.Zoom.Fit": "Sığdır",
+  "Graphs.Zoom.FitTip": "Tüm düğümleri görünüme sığdırır",
+  "Graphs.Layout.Reset": "Yerleşimi sıfırla",
+  "Graphs.Layout.ResetTip": "Sürüklediğiniz düğümleri eski yerlerine taşır"
 }

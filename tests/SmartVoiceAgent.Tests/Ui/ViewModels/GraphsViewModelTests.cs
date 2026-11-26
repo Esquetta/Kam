@@ -1,3 +1,4 @@
+using Avalonia;
 using FluentAssertions;
 using Moq;
 using SmartVoiceAgent.Core.Interfaces;
@@ -129,6 +130,154 @@ public sealed class GraphsViewModelTests
         row.IsSubagent.Should().BeTrue();
         viewModel.OpenGraphCommand.Execute(row).Subscribe();
         opened.Should().Equal(("s1", "b"));
+    }
+
+    [Fact]
+    public void MoveNode_MovesTheNodeAndTheEdgesThatTouchIt()
+    {
+        var tracker = Tracker(Run("a", "s1", Now.AddMinutes(-9), Now.AddMinutes(-8)), Run("b", "s1", Now.AddMinutes(-9), Now.AddMinutes(-7)));
+        var viewModel = Create(tracker);
+        var a = viewModel.Nodes.Single(node => node.Id == "a");
+
+        viewModel.MoveNode("a", new Point(a.X + 120, a.Y + 300));
+
+        a.X.Should().Be(a.LayoutX + 120);
+        a.Y.Should().Be(a.LayoutY + 300);
+        viewModel.Edges.Single(edge => edge.ToId == "a").To.Should().Be(new Point(a.X, a.Y + (a.Height / 2)));
+        viewModel.Edges.Single(edge => edge.FromId == "a").From.Should().Be(new Point(a.X + a.Width, a.Y + (a.Height / 2)));
+        viewModel.CanvasHeight.Should().BeGreaterThanOrEqualTo(a.Y + a.Height + AgentGraphLayout.Padding, "the canvas grows so a dragged node is never clipped");
+
+        viewModel.MoveNode("a", new Point(-50, -50));
+        (a.X, a.Y).Should().Be((0d, 0d), "nodes stay inside the canvas");
+    }
+
+    [Fact]
+    public void DragNode_ScalesThePointerMovementByTheZoom()
+    {
+        var viewModel = Create(Tracker(Run("a", "s1", Now.AddMinutes(-9), null)));
+        var a = viewModel.Nodes.Single(node => node.Id == "a");
+        var origin = new Point(a.X, a.Y);
+
+        viewModel.SetZoom(2);
+        viewModel.DragNode("a", origin, new Vector(40, 20));
+
+        (a.X, a.Y).Should().Be((origin.X + 20, origin.Y + 10));
+    }
+
+    [Fact]
+    public void DraggedOffsets_SurviveRefreshesAndNewRunsPerTask()
+    {
+        var tracker = Tracker(Run("a", "s1", Now.AddMinutes(-9), Now.AddMinutes(-8)), Run("x", "s2", Now.AddMinutes(-30), Now.AddMinutes(-29)));
+        var viewModel = Create(tracker);
+        viewModel.Focus("s1", null);
+        viewModel.MoveNode("a", new Point(viewModel.Nodes.Single(node => node.Id == "a").LayoutX + 40, 200));
+        viewModel.MoveNode("root", new Point(5, 5));
+
+        viewModel.Refresh();
+        tracker.Add(Run("d", "s1", Now.AddMinutes(-1), null));
+
+        var a = viewModel.Nodes.Single(node => node.Id == "a");
+        (a.X - a.LayoutX).Should().Be(40, "the offset from the layout is kept");
+        a.Y.Should().Be(200);
+        var root = viewModel.Nodes.Single(node => node.Id == "root");
+        (root.X, root.Y).Should().Be((5d, 5d));
+        var d = viewModel.Nodes.Single(node => node.Id == "d");
+        (d.X, d.Y).Should().Be((d.LayoutX, d.LayoutY), "a new node appears at its layout place");
+        viewModel.Edges.Single(edge => edge.ToId == "a").From.Should().Be(new Point(root.X + root.Width, root.Y + (root.Height / 2)));
+
+        viewModel.Focus("s2", null);
+        viewModel.Nodes.Should().OnlyContain(node => node.X == node.LayoutX && node.Y == node.LayoutY, "offsets belong to their task");
+
+        viewModel.Focus("s1", null);
+        viewModel.Nodes.Single(node => node.Id == "a").Y.Should().Be(200);
+    }
+
+    [Fact]
+    public void ResetLayout_PutsTheTasksNodesBackAtTheirLayoutPlaces()
+    {
+        var viewModel = Create(Tracker(Run("a", "s1", Now.AddMinutes(-9), Now.AddMinutes(-8))));
+        var layoutEdges = viewModel.Edges.ToList();
+        viewModel.MoveNode("a", new Point(600, 400));
+
+        viewModel.ResetLayoutCommand.Execute().Subscribe();
+
+        viewModel.Nodes.Should().OnlyContain(node => node.X == node.LayoutX && node.Y == node.LayoutY);
+        viewModel.Edges.Should().Equal(layoutEdges);
+        viewModel.Refresh();
+        viewModel.Nodes.Single(node => node.Id == "a").X.Should().Be(viewModel.Nodes.Single(node => node.Id == "a").LayoutX);
+    }
+
+    [Fact]
+    public void Zoom_StaysWithinItsLimitsAndFitUsesTheViewport()
+    {
+        var viewModel = Create(Tracker(Run("a", "s1", Now.AddMinutes(-9), Now.AddMinutes(-8))));
+        viewModel.Zoom.Should().Be(1);
+        viewModel.ZoomText.Should().Be("100%");
+
+        for (var step = 0; step < 20; step++)
+        {
+            viewModel.ZoomInCommand.Execute().Subscribe();
+        }
+
+        viewModel.Zoom.Should().Be(GraphsViewModel.MaxZoom);
+        viewModel.ZoomText.Should().Be("200%");
+
+        for (var step = 0; step < 30; step++)
+        {
+            viewModel.ZoomOutCommand.Execute().Subscribe();
+        }
+
+        viewModel.Zoom.Should().Be(GraphsViewModel.MinZoom);
+
+        viewModel.SetViewport(new Size(100, 100));
+        viewModel.FitCommand.Execute().Subscribe();
+        viewModel.Zoom.Should().Be(GraphsViewModel.MinZoom, "fit never zooms out past the limit");
+
+        viewModel.SetViewport(new Size(5000, 5000));
+        viewModel.FitCommand.Execute().Subscribe();
+        viewModel.Zoom.Should().Be(GraphsViewModel.MaxZoom, "fit never zooms in past the limit");
+        viewModel.CanvasWidth.Should().BeApproximately((5000 - 2) / GraphsViewModel.MaxZoom, 0.001, "the canvas fills the viewport");
+
+        var contentWidth = viewModel.Nodes.Max(node => node.X + node.Width) + AgentGraphLayout.Padding;
+        var contentHeight = viewModel.Nodes.Max(node => node.Y + node.Height) + AgentGraphLayout.Padding;
+        viewModel.SetViewport(new Size(contentWidth * 0.8, 2000));
+        viewModel.FitCommand.Execute().Subscribe();
+        viewModel.Zoom.Should().BeLessThan(0.8).And.BeGreaterThan(0.75);
+        (contentWidth * viewModel.Zoom).Should().BeLessThanOrEqualTo(contentWidth * 0.8);
+        (contentHeight * viewModel.Zoom).Should().BeLessThanOrEqualTo(2000);
+    }
+
+    [Fact]
+    public void ZoomedOffset_KeepsThePointUnderThePointer()
+    {
+        var offset = GraphsViewModel.ZoomedOffset(new Vector(100, 50), new Point(200, 100), 1, 2);
+
+        offset.Should().Be(new Vector(400, 200), "canvas point (300, 150) stays under the pointer at (200, 100)");
+        GraphsViewModel.ZoomedOffset(new Vector(0, 0), new Point(200, 100), 1, 0.5).Should().Be(new Vector(0, 0), "offsets never go negative");
+    }
+
+    [Fact]
+    public void PointerGesture_IsAClickUntilThePointerMovesPastTheThreshold()
+    {
+        var viewModel = Create(Tracker(Run("b", "s1", Now.AddMinutes(-3), null)));
+        var b = viewModel.Nodes.Single(node => node.Id == "b");
+        var origin = new Point(b.X, b.Y);
+        var gesture = new GraphPointerGesture(new Point(10, 10));
+
+        gesture.Move(new Point(12, 11)).Should().BeFalse();
+        gesture.IsClick.Should().BeTrue("a press that moved under 4 px still selects the node");
+        if (gesture.IsClick)
+        {
+            viewModel.SelectNodeCommand.Execute(b).Subscribe();
+        }
+
+        viewModel.HasSelectedRun.Should().BeTrue();
+        (b.X, b.Y).Should().Be((origin.X, origin.Y), "a click does not move the node");
+
+        gesture.Move(new Point(30, 10)).Should().BeTrue();
+        gesture.IsClick.Should().BeFalse();
+        gesture.Delta.Should().Be(new Vector(20, 0));
+        gesture.Move(new Point(11, 10)).Should().BeTrue("once dragging, the gesture stays a drag");
     }
 
     private static GraphsViewModel Create(ISubagentRunTracker tracker)

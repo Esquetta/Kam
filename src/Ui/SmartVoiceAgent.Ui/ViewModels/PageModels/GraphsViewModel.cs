@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Threading;
 using ReactiveUI;
 using SmartVoiceAgent.Core.Interfaces;
@@ -102,6 +103,15 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /// <summary>Gets the height.</summary>
         public double Height { get; private set; }
 
+        /// <summary>Gets the left edge the layout gives the node, before it was dragged.</summary>
+        public double LayoutX { get; private set; }
+
+        /// <summary>Gets the top edge the layout gives the node, before it was dragged.</summary>
+        public double LayoutY { get; private set; }
+
+        /// <summary>Gets where the node is drawn.</summary>
+        public Rect Bounds => new(X, Y, Width, Height);
+
         /// <summary>Gets the first line: "Kam" or the subagent type.</summary>
         public string Title { get => _title; private set => this.RaiseAndSetIfChanged(ref _title, value); }
 
@@ -166,19 +176,27 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /// <summary>Gets or sets whether the node's detail is shown.</summary>
         public bool IsSelected { get => _isSelected; set => this.RaiseAndSetIfChanged(ref _isSelected, value); }
 
-        /// <summary>Moves the node and sets its text.</summary>
-        internal void Apply(GraphNodePlacement placement, string title, string subtitle, string statusKey, string metaText, string currentText)
+        /// <summary>Moves the node to its layout place plus the user's offset and sets its text.</summary>
+        internal void Apply(GraphNodePlacement placement, Vector offset, string title, string subtitle, string statusKey, string metaText, string currentText)
         {
-            X = placement.Bounds.X;
-            Y = placement.Bounds.Y;
+            LayoutX = placement.Bounds.X;
+            LayoutY = placement.Bounds.Y;
             Width = placement.Bounds.Width;
             Height = placement.Bounds.Height;
+            MoveTo(new Point(LayoutX + offset.X, LayoutY + offset.Y));
             Title = title;
             Subtitle = subtitle;
             StatusKey = statusKey;
             StatusText = GraphsViewModel.StatusLabel(statusKey);
             MetaText = metaText;
             CurrentText = currentText;
+        }
+
+        /// <summary>Moves the node, keeping it inside the canvas.</summary>
+        internal void MoveTo(Point position)
+        {
+            X = Math.Max(0, position.X);
+            Y = Math.Max(0, position.Y);
         }
     }
 
@@ -212,6 +230,18 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
     /// </summary>
     public sealed class GraphsViewModel : ViewModelBase, IDisposable
     {
+        /// <summary>The smallest zoom.</summary>
+        public const double MinZoom = 0.5;
+
+        /// <summary>The largest zoom.</summary>
+        public const double MaxZoom = 2;
+
+        /// <summary>How much the zoom buttons change the zoom.</summary>
+        public const double ZoomStep = 0.1;
+
+        // Keeps the canvas just inside the viewport, so filling it never adds a scroll bar.
+        private const double ViewportSlack = 2;
+
         private readonly ISubagentRunTracker? _tracker;
         private readonly IAgentSessionStore? _sessions;
         private readonly Action<string> _openTask;
@@ -219,7 +249,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private readonly Action<Action> _post;
         private readonly Func<DateTimeOffset> _clock;
         private readonly Dictionary<string, string> _titles = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, Dictionary<string, Vector>> _offsets = new(StringComparer.Ordinal);
+        private IReadOnlyList<GraphEdge> _links = [];
         private IReadOnlyList<GraphEdge> _edges = [];
+        private Size _contentSize;
+        private Size _viewport;
+        private double _zoom = 1;
         private double _canvasWidth;
         private double _canvasHeight;
         private string? _selectedSessionId;
@@ -274,6 +309,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 }
             });
             ClearSelectionCommand = ReactiveCommand.Create(() => SelectNode(null));
+            ZoomInCommand = ReactiveCommand.Create(() => SetZoom((Math.Round(Zoom / ZoomStep) + 1) * ZoomStep));
+            ZoomOutCommand = ReactiveCommand.Create(() => SetZoom((Math.Round(Zoom / ZoomStep) - 1) * ZoomStep));
+            FitCommand = ReactiveCommand.Create(Fit);
+            ResetLayoutCommand = ReactiveCommand.Create(ResetLayout);
 
             if (_tracker is not null)
             {
@@ -291,18 +330,44 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /// <summary>Gets the nodes of the selected task's graph.</summary>
         public ObservableCollection<GraphNodeViewModel> Nodes { get; } = new();
 
-        /// <summary>Gets the edges of the selected task's graph.</summary>
+        /// <summary>Gets the edges of the selected task's graph, from the nodes' current places.</summary>
         public IReadOnlyList<GraphEdge> Edges
         {
             get => _edges;
             private set => this.RaiseAndSetIfChanged(ref _edges, value);
         }
 
-        /// <summary>Gets the width the graph needs.</summary>
+        /// <summary>Gets the canvas width: the nodes plus padding, and at least the viewport.</summary>
         public double CanvasWidth { get => _canvasWidth; private set => this.RaiseAndSetIfChanged(ref _canvasWidth, value); }
 
-        /// <summary>Gets the height the graph needs.</summary>
+        /// <summary>Gets the canvas height: the nodes plus padding, and at least the viewport.</summary>
         public double CanvasHeight { get => _canvasHeight; private set => this.RaiseAndSetIfChanged(ref _canvasHeight, value); }
+
+        /// <summary>Gets the graph's zoom, from <see cref="MinZoom"/> to <see cref="MaxZoom"/>.</summary>
+        public double Zoom
+        {
+            get => _zoom;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _zoom, value);
+                this.RaisePropertyChanged(nameof(ZoomText));
+            }
+        }
+
+        /// <summary>Gets the zoom as a percentage, such as "100%".</summary>
+        public string ZoomText => Loc.Format("Graphs.Zoom.Percent", Math.Round(Zoom * 100));
+
+        /// <summary>Gets the command that zooms in one step.</summary>
+        public ReactiveCommand<Unit, Unit> ZoomInCommand { get; }
+
+        /// <summary>Gets the command that zooms out one step.</summary>
+        public ReactiveCommand<Unit, Unit> ZoomOutCommand { get; }
+
+        /// <summary>Gets the command that zooms so every node fits the viewport.</summary>
+        public ReactiveCommand<Unit, Unit> FitCommand { get; }
+
+        /// <summary>Gets the command that puts the selected task's dragged nodes back at their layout places.</summary>
+        public ReactiveCommand<Unit, Unit> ResetLayoutCommand { get; }
 
         /// <summary>Gets the command that shows a task's graph.</summary>
         public ReactiveCommand<GraphTaskItem, Unit> SelectTaskCommand { get; }
@@ -462,6 +527,80 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _ => Loc.Get("Runs.Status.Done")
         };
 
+        /// <summary>Sets the zoom, kept between <see cref="MinZoom"/> and <see cref="MaxZoom"/>.</summary>
+        /// <param name="zoom">The zoom; 1 is 100%.</param>
+        public void SetZoom(double zoom)
+        {
+            Zoom = Math.Clamp(zoom, MinZoom, MaxZoom);
+            UpdateCanvasSize();
+        }
+
+        /// <summary>Sets the size of the area that shows the canvas, in screen units.</summary>
+        /// <param name="viewport">The viewport size.</param>
+        public void SetViewport(Size viewport)
+        {
+            _viewport = viewport;
+            UpdateCanvasSize();
+        }
+
+        /// <summary>Zooms so every node fits the viewport, within the zoom limits.</summary>
+        public void Fit()
+        {
+            if (_contentSize.Width <= 0 || _contentSize.Height <= 0 || _viewport.Width <= 0 || _viewport.Height <= 0)
+            {
+                return;
+            }
+
+            var zoom = Math.Min(
+                (_viewport.Width - ViewportSlack) / _contentSize.Width,
+                (_viewport.Height - ViewportSlack) / _contentSize.Height);
+            SetZoom(Math.Floor(zoom * 100) / 100);
+        }
+
+        /// <summary>
+        /// Moves a node of the selected task and keeps its offset from the layout, so refreshes and new runs keep it there.
+        /// </summary>
+        /// <param name="nodeId">The node id.</param>
+        /// <param name="position">The node's new top left corner on the canvas.</param>
+        public void MoveNode(string nodeId, Point position)
+        {
+            var node = Nodes.FirstOrDefault(item => item.Id == nodeId);
+            if (node is null || _selectedSessionId is null)
+            {
+                return;
+            }
+
+            node.MoveTo(position);
+            if (!_offsets.TryGetValue(_selectedSessionId, out var offsets))
+            {
+                offsets = new Dictionary<string, Vector>(StringComparer.Ordinal);
+                _offsets[_selectedSessionId] = offsets;
+            }
+
+            offsets[nodeId] = new Vector(node.X - node.LayoutX, node.Y - node.LayoutY);
+            UpdateGeometry();
+        }
+
+        /// <summary>Moves a node by a pointer movement measured on screen, which the zoom scales.</summary>
+        /// <param name="nodeId">The node id.</param>
+        /// <param name="origin">Where the node was when the drag started.</param>
+        /// <param name="pointerDelta">How far the pointer moved since then, in screen units.</param>
+        public void DragNode(string nodeId, Point origin, Vector pointerDelta) => MoveNode(nodeId, origin + (pointerDelta / Zoom));
+
+        /// <summary>
+        /// Gets the scroll offset that keeps the canvas point under the pointer in place when the zoom changes.
+        /// </summary>
+        /// <param name="offset">The scroll offset before.</param>
+        /// <param name="pointer">The pointer, relative to the viewport.</param>
+        /// <param name="oldZoom">The zoom before.</param>
+        /// <param name="newZoom">The zoom after.</param>
+        public static Vector ZoomedOffset(Vector offset, Point pointer, double oldZoom, double newZoom)
+        {
+            var anchor = (offset + pointer) / oldZoom;
+            var result = (anchor * newZoom) - pointer;
+            return new Vector(Math.Max(0, result.X), Math.Max(0, result.Y));
+        }
+
         /// <summary>Re-reads the runs and rebuilds the task list, the graph and the detail.</summary>
         public void Refresh()
         {
@@ -511,6 +650,14 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
 
             Refresh();
+        }
+
+        private void ResetLayout()
+        {
+            if (_selectedSessionId is not null && _offsets.Remove(_selectedSessionId))
+            {
+                Refresh();
+            }
         }
 
         private void SelectNode(GraphNodeViewModel? node)
@@ -564,9 +711,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             if (runs.Count == 0)
             {
                 Nodes.Clear();
-                Edges = [];
-                CanvasWidth = 0;
-                CanvasHeight = 0;
+                _links = [];
+                UpdateGeometry();
                 return;
             }
 
@@ -582,19 +728,22 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
 
             var rootStatus = RootStatus(runs);
+            var offsets = _selectedSessionId is not null && _offsets.TryGetValue(_selectedSessionId, out var saved) ? saved : null;
             for (var index = 0; index < graph.Nodes.Count; index++)
             {
                 var placement = graph.Nodes[index];
+                var offset = offsets is not null && offsets.TryGetValue(placement.Id, out var moved) ? moved : default;
                 switch (placement.Kind)
                 {
                     case GraphNodeKind.Root:
-                        Nodes[index].Apply(placement, Loc.Get("Graphs.Node.Main"), SelectedTaskTitle, rootStatus, Loc.Format("Graphs.Node.MainMeta", runs.Count), string.Empty);
+                        Nodes[index].Apply(placement, offset, Loc.Get("Graphs.Node.Main"), SelectedTaskTitle, rootStatus, Loc.Format("Graphs.Node.MainMeta", runs.Count), string.Empty);
                         break;
                     case GraphNodeKind.Agent:
                         var run = placement.Run!;
                         var running = run.StepList.LastOrDefault(step => step.Status is SubagentStepStatus.Running or SubagentStepStatus.AwaitingApproval);
                         Nodes[index].Apply(
                             placement,
+                            offset,
                             AgentChatMessageViewModel.SubagentTypeLabel(run.AgentType),
                             run.Description,
                             AgentGraphLayout.StatusKey(run),
@@ -602,14 +751,47 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                             running?.DisplayName ?? string.Empty);
                         break;
                     default:
-                        Nodes[index].Apply(placement, string.Empty, string.Empty, "done", string.Empty, string.Empty);
+                        Nodes[index].Apply(placement, offset, string.Empty, string.Empty, "done", string.Empty, string.Empty);
                         break;
                 }
             }
 
-            Edges = graph.Edges;
-            CanvasWidth = graph.Size.Width;
-            CanvasHeight = graph.Size.Height;
+            _links = graph.Edges;
+            UpdateGeometry();
+        }
+
+        private void UpdateGeometry()
+        {
+            var nodes = Nodes.ToDictionary(node => node.Id, StringComparer.Ordinal);
+            Edges = _links
+                .Where(link => nodes.ContainsKey(link.FromId) && nodes.ContainsKey(link.ToId))
+                .Select(link => link with
+                {
+                    From = AgentGraphLayout.RightMiddle(nodes[link.FromId].Bounds),
+                    To = AgentGraphLayout.LeftMiddle(nodes[link.ToId].Bounds)
+                })
+                .ToList();
+
+            _contentSize = Nodes.Count == 0
+                ? default
+                : new Size(
+                    Nodes.Max(node => node.X + node.Width) + AgentGraphLayout.Padding,
+                    Nodes.Max(node => node.Y + node.Height) + AgentGraphLayout.Padding);
+            UpdateCanvasSize();
+        }
+
+        private void UpdateCanvasSize()
+        {
+            if (Nodes.Count == 0)
+            {
+                CanvasWidth = 0;
+                CanvasHeight = 0;
+                return;
+            }
+
+            // The canvas fills the viewport, so empty space anywhere can be dragged to pan.
+            CanvasWidth = Math.Max(_contentSize.Width, (_viewport.Width - ViewportSlack) / Zoom);
+            CanvasHeight = Math.Max(_contentSize.Height, (_viewport.Height - ViewportSlack) / Zoom);
         }
 
         private string RootStatus(IReadOnlyList<SubagentRun> runs)
@@ -761,6 +943,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private void OnLanguageChanged(object? sender, EventArgs e)
         {
             Title = Loc.Get("Graphs.Title");
+            this.RaisePropertyChanged(nameof(ZoomText));
             Refresh();
         }
     }
