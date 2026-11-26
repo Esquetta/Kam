@@ -27,6 +27,12 @@ public sealed partial class AgentRuntime
         - A subagent does not see this conversation: give it the folder, what to look for and what to report.
         """;
 
+    /// <summary>The most tool rounds a subagent gets, however many the main agent may take.</summary>
+    public const int MaxSubagentRounds = 16;
+
+    private const string FinalReportRequest =
+        "You have used all your tool rounds. Do not call tools. Write your report now from what you found so far, and say clearly what you did not get to.";
+
     private const string SubagentStoppedResult =
         "Error: the user stopped this subagent before it finished. Continue without its report, or ask the user how to proceed.";
 
@@ -91,21 +97,26 @@ public sealed partial class AgentRuntime
 
         try
         {
+            var rounds = SubagentRounds(turn.Limits);
             var systemPrompt = AgentSystemPrompt.Build(
                 _clock(),
                 tools.Count,
                 _workspaceRoot(),
-                [.. turn.PromptSections, BuildSubagentSection(definition)]);
-            var final = await RunSubagentLoopAsync(runId, prompt, tools, systemPrompt, turn, childEvents.Writer, usage, cancellation.Token);
-            if (final is null)
+                [.. turn.PromptSections, BuildSubagentSection(definition, rounds)]);
+            var (final, reachedLimit) = await RunSubagentLoopAsync(runId, prompt, tools, systemPrompt, turn, rounds, childEvents.Writer, usage, cancellation.Token);
+            if (string.IsNullOrWhiteSpace(final))
             {
-                error = $"Stopped after {turn.Limits.MaxIterations} steps without a report.";
-                report = $"Error: the subagent stopped after {turn.Limits.MaxIterations} steps without a report.";
+                error = reachedLimit ? $"Used all {rounds} tool rounds and wrote no report." : null;
+                report = reachedLimit
+                    ? $"Error: the subagent used all {rounds} tool rounds and wrote no report."
+                    : "The subagent finished without a report.";
+                status = reachedLimit ? SubagentRunStatus.Failed : SubagentRunStatus.Completed;
             }
             else
             {
                 status = SubagentRunStatus.Completed;
-                report = string.IsNullOrWhiteSpace(final) ? "The subagent finished without a report." : final;
+                error = reachedLimit ? $"Used all {rounds} tool rounds; the report covers what it found." : null;
+                report = final;
             }
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
@@ -163,15 +174,19 @@ public sealed partial class AgentRuntime
     }
 
     /// <summary>
-    /// Runs the subagent's own loop on a history that starts with its brief. Returns its final text, or null
-    /// when it reached the step limit. Old tool results are shortened to fit the context budget; nothing is summarized.
+    /// Runs the subagent's own loop on a history that starts with its brief, for at most <paramref name="rounds"/>
+    /// model rounds with tools. When it is still calling tools after the last round, one more request without tools
+    /// asks for its report, so what it found is not lost. Older tool results are shortened once the context passes
+    /// half of the main agent's budget, because every round sends the whole history again; nothing is summarized.
     /// </summary>
-    private async Task<string?> RunSubagentLoopAsync(
+    /// <returns>The report, and whether the subagent used all its rounds.</returns>
+    private async Task<(string? Report, bool ReachedLimit)> RunSubagentLoopAsync(
         string runId,
         string prompt,
         IReadOnlyList<AgentToolDescriptor> tools,
         string systemPrompt,
         SubagentTurn turn,
+        int rounds,
         ChannelWriter<AgentEvent> events,
         TurnUsage usage,
         CancellationToken cancellationToken)
@@ -186,19 +201,12 @@ public sealed partial class AgentRuntime
             AllowMultipleToolCalls = true
         };
 
-        for (var iteration = 0; iteration < turn.Limits.MaxIterations; iteration++)
+        for (var round = 0; round < rounds; round++)
         {
-            var messages = AgentContextWindow.BuildModelMessages(systemPrompt, history, shortenOldToolResults: false);
-            var budget = turn.Limits.ContextTokenBudget;
-            if (budget > 0 && toolTokens + AgentContextWindow.EstimateTokens(messages) > budget)
-            {
-                messages = AgentContextWindow.BuildModelMessages(systemPrompt, history, shortenOldToolResults: true);
-            }
-
-            var response = await GetModelResponseAsync(runId, turn.ChatClient, messages, chatOptions, events, cancellationToken);
-            usage.Add(response.Usage);
+            var response = await GetModelResponseAsync(
+                runId, turn.ChatClient, SubagentMessages(systemPrompt, history, toolTokens, turn.Limits), chatOptions, events, cancellationToken);
+            Record(runId, usage, response);
             history.AddRange(response.Messages);
-            _subagents.Update(runId, run => run with { InputTokens = usage.InputTokens, OutputTokens = usage.OutputTokens });
 
             var calls = response.Messages
                 .SelectMany(message => message.Contents)
@@ -206,14 +214,36 @@ public sealed partial class AgentRuntime
                 .ToList();
             if (calls.Count == 0)
             {
-                return response.Text;
+                return (response.Text, false);
             }
 
             var results = await RunToolCallsAsync(runId, calls, toolsByName, events, turn.Limits, cancellationToken);
             history.Add(new ChatMessage(ChatRole.Tool, [.. results]));
         }
 
-        return null;
+        history.Add(new ChatMessage(ChatRole.User, FinalReportRequest));
+        var report = await GetModelResponseAsync(
+            runId, turn.ChatClient, SubagentMessages(systemPrompt, history, toolTokens, turn.Limits), new ChatOptions(), events, cancellationToken);
+        Record(runId, usage, report);
+        return (report.Text, true);
+    }
+
+    /// <summary>Gets how many tool rounds a subagent gets: the main agent's limit, at most <see cref="MaxSubagentRounds"/>.</summary>
+    private static int SubagentRounds(TurnLimits limits) => Math.Min(limits.MaxIterations, MaxSubagentRounds);
+
+    private static List<ChatMessage> SubagentMessages(string systemPrompt, List<ChatMessage> history, int toolTokens, TurnLimits limits)
+    {
+        var messages = AgentContextWindow.BuildModelMessages(systemPrompt, history, shortenOldToolResults: false);
+        var budget = limits.ContextTokenBudget / 2;
+        return budget > 0 && toolTokens + AgentContextWindow.EstimateTokens(messages) > budget
+            ? AgentContextWindow.BuildModelMessages(systemPrompt, history, shortenOldToolResults: true)
+            : messages;
+    }
+
+    private void Record(string runId, TurnUsage usage, ChatResponse response)
+    {
+        usage.Add(response.Usage);
+        _subagents.Update(runId, run => run with { InputTokens = usage.InputTokens, OutputTokens = usage.OutputTokens });
     }
 
     /// <summary>
@@ -292,12 +322,13 @@ public sealed partial class AgentRuntime
             return run with { Steps = steps };
         });
 
-    private static string BuildSubagentSection(SubagentDefinition definition) =>
+    private static string BuildSubagentSection(SubagentDefinition definition, int rounds) =>
         $"""
         ## You are a subagent
         Kam's main agent started you as a {definition.Name} subagent for one job, described in the first message.
         You cannot talk to the user and nobody answers questions; decide for yourself and finish the job.
         {definition.Instructions.Trim()}
+        You have at most {rounds} rounds of tool calls, and every round resends everything so far, so be economical: put independent reads and searches in the same round, read the parts of files you need instead of whole files, and stop as soon as you can answer. Aim to finish in about half of your rounds.
         Your final message is your report: the main agent reads it, the user does not. Make it complete but short; do not paste large outputs.
         """;
 }

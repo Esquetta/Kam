@@ -302,6 +302,40 @@ public sealed class AgentRuntimeSubagentTests : IDisposable
     }
 
     [Fact]
+    public async Task Task_SubagentOutOfRoundsStillWritesItsReport()
+    {
+        var tracker = new SubagentRunTracker(path: null);
+        var reads = 0;
+        var read = Tool(AIFunctionFactory.Create((string path) => { reads++; return "contents"; }, "files_read"), ToolRisk.Read);
+        var chat = new RoutingChatClient(request =>
+        {
+            if (!IsSubagent(request))
+            {
+                return ToolResults(request).Count == 0
+                    ? [Call("t1", "task", ("subagent_type", "explorer"), ("description", "Dig"), ("prompt", "Read everything."))]
+                    : [new TextContent("Main agent done.")];
+            }
+
+            // The subagent keeps reading until it is told to write its report.
+            return request[^1].Text.StartsWith("You have used all your tool rounds", StringComparison.Ordinal)
+                ? [new TextContent("Found settings in a.cs; did not get to b.cs.")]
+                : [Call("c" + request.Count, "files_read", ("path", "a.cs"))];
+        });
+
+        var events = await CollectAsync(CreateRuntime(chat, [read], tracker), "s1", "dig");
+
+        reads.Should().Be(AgentRuntime.MaxSubagentRounds);
+        var lastSubagentRequest = chat.Requests.Last(IsSubagent);
+        chat.ToolNames(lastSubagentRequest).Should().BeEmpty("the report request offers no tools");
+        lastSubagentRequest[0].Text.Should().Contain($"at most {AgentRuntime.MaxSubagentRounds} rounds of tool calls");
+        events.OfType<AgentToolCallCompleted>().Single(e => e.ToolName == "task")
+            .Should().Match<AgentToolCallCompleted>(e => e.Success && e.Summary == "Found settings in a.cs; did not get to b.cs.");
+        var run = tracker.List("s1").Single();
+        run.Status.Should().Be(SubagentRunStatus.Completed);
+        run.Error.Should().Contain("Used all 16 tool rounds");
+    }
+
+    [Fact]
     public async Task Task_UnknownTypeReturnsAnErrorWithoutStartingARun()
     {
         var tracker = new SubagentRunTracker(path: null);
