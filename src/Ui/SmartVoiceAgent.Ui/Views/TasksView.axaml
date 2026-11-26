@@ -36,7 +36,7 @@
 									Classes.Waiting="{Binding HasPendingApproval}"/>
 							<TextBlock Grid.Row="0" Grid.Column="1"
 									   Text="{Binding Title}"
-									   FontSize="13.5"
+									   FontSize="14"
 									   FontWeight="Medium"
 									   Foreground="{DynamicResource TextPrimaryBrush}"
 									   TextTrimming="CharacterEllipsis"/>
@@ -49,7 +49,7 @@
 							<TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
 									   Text="{Binding Summary}"
 									   IsVisible="{Binding !HasStatus}"
-									   FontSize="11.5"
+									   FontSize="12"
 									   Foreground="{DynamicResource TextMutedBrush}"
 									   TextTrimming="CharacterEllipsis"/>
 							<StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
@@ -57,12 +57,12 @@
 										Spacing="5"
 										IsVisible="{Binding HasStatus}">
 								<TextBlock Text="{Binding StatusText}"
-										   FontSize="11.5"
+										   FontSize="12"
 										   FontWeight="Medium"
 										   Foreground="{Binding HasPendingApproval, Converter={StaticResource BoolToStatusBrushConverter}, ConverterParameter='AccentOrangeBrush|AccentBrush'}"/>
-								<TextBlock Text="·" FontSize="11.5" Foreground="{DynamicResource TextMutedBrush}"/>
+								<TextBlock Text="·" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
 								<TextBlock Text="{Binding MessageCountText}"
-										   FontSize="11.5"
+										   FontSize="12"
 										   Foreground="{DynamicResource TextMutedBrush}"/>
 							</StackPanel>
 						</Grid>
@@ -453,7 +453,7 @@
 						<StackPanel Spacing="22" IsVisible="{Binding !NeedsModelSetup}">
 							<StackPanel Spacing="6" HorizontalAlignment="Center">
 								<TextBlock Text="{DynamicResource Lang.Chat.Empty.Title}"
-										   FontSize="22"
+										   FontSize="20"
 										   FontWeight="SemiBold"
 										   LetterSpacing="-0.3"
 										   HorizontalAlignment="Center"
@@ -502,7 +502,7 @@
 						<StackPanel Spacing="22" IsVisible="{Binding NeedsModelSetup}">
 							<StackPanel Spacing="6" HorizontalAlignment="Center">
 								<TextBlock Text="{DynamicResource Lang.Chat.Setup.Title}"
-										   FontSize="22"
+										   FontSize="20"
 										   FontWeight="SemiBold"
 										   LetterSpacing="-0.3"
 										   HorizontalAlignment="Center"
@@ -946,7 +946,7 @@
 								 x:Name="WorkbenchPromptInput"
 								 Classes="BareInput"
 								 PlaceholderText="{DynamicResource Lang.Chat.Composer.Placeholder}"
-								 FontSize="13.5"
+								 FontSize="14"
 								 MinHeight="40"
 								 Foreground="{DynamicResource TextPrimaryBrush}"
 								 AcceptsReturn="True"

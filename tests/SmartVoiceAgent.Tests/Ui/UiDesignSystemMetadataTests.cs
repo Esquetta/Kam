@@ -121,11 +121,7 @@ public sealed class UiDesignSystemMetadataTests
         var scale = new[] { "11", "12", "13", "14", "16", "20" };
         var viewsDirectory = Path.GetDirectoryName(FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Views", "MainWindow.axaml"))!;
 
-        // TasksView and GraphsView follow once their rework lands.
-        var excluded = new[] { "TasksView.axaml", "GraphsView.axaml" };
-
         var offScale = Directory.GetFiles(viewsDirectory, "*.axaml")
-            .Where(path => !excluded.Contains(Path.GetFileName(path)))
             .SelectMany(path => XDocument.Load(path).Root!
                 .DescendantsAndSelf()
                 .SelectMany(element => FontSizeValues(element))

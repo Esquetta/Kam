@@ -132,7 +132,7 @@
         <!-- Empty state: no task has started a subagent yet -->
         <Border DockPanel.Dock="Top" Classes="Pane" Padding="22" IsVisible="{Binding IsEmpty}">
             <StackPanel Spacing="8" HorizontalAlignment="Center" MaxWidth="520">
-                <TextBlock Text="{DynamicResource Lang.Graphs.Empty.Title}" FontSize="13.5" FontWeight="Medium" HorizontalAlignment="Center"/>
+                <TextBlock Text="{DynamicResource Lang.Graphs.Empty.Title}" FontSize="14" FontWeight="Medium" HorizontalAlignment="Center"/>
                 <TextBlock Text="{DynamicResource Lang.Graphs.Empty.Body}" Classes="Caption" TextAlignment="Center" TextWrapping="Wrap"/>
             </StackPanel>
         </Border>
@@ -160,7 +160,7 @@
                                                 Classes.Danger="{Binding IsFailed}"
                                                 VerticalAlignment="Top" Margin="0,5,0,0"/>
                                         <StackPanel Grid.Column="1" Spacing="2">
-                                            <TextBlock Text="{Binding Title}" FontSize="12.5" FontWeight="Medium"
+                                            <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="Medium"
                                                        Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
                                             <TextBlock Text="{Binding MetaText}" Classes="Caption" TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
@@ -263,12 +263,12 @@
                                                         Classes.Success="{Binding IsDone}"
                                                         Classes.Danger="{Binding IsFailed}"/>
                                                 <StackPanel Grid.Column="1" Spacing="2">
-                                                    <TextBlock Text="{Binding DisplayName}" FontSize="12.5" FontWeight="Medium"
+                                                    <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="Medium"
                                                                Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text="{Binding Target}" FontSize="11.5" FontFamily="{StaticResource MonoFontFamily}"
+                                                    <TextBlock Text="{Binding Target}" FontSize="12" FontFamily="{StaticResource MonoFontFamily}"
                                                                Foreground="{DynamicResource TextMutedBrush}" TextTrimming="CharacterEllipsis"
                                                                ToolTip.Tip="{Binding Target}"/>
-                                                    <TextBlock Text="{Binding Summary}" FontSize="11.5" IsVisible="{Binding HasSummary}"
+                                                    <TextBlock Text="{Binding Summary}" FontSize="12" IsVisible="{Binding HasSummary}"
                                                                Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" MaxLines="2"
                                                                TextTrimming="CharacterEllipsis"/>
                                                 </StackPanel>
@@ -287,7 +287,7 @@
 
                         <StackPanel Spacing="4" IsVisible="{Binding HasSelectedRunError}">
                             <TextBlock Text="{DynamicResource Lang.Graphs.Detail.Error}" Classes="Overline"/>
-                            <SelectableTextBlock Text="{Binding SelectedRunError}" FontSize="12.5" TextWrapping="Wrap"
+                            <SelectableTextBlock Text="{Binding SelectedRunError}" FontSize="13" TextWrapping="Wrap"
                                                  Foreground="{DynamicResource AccentErrorBrush}"/>
                         </StackPanel>
                     </StackPanel>
@@ -328,7 +328,7 @@
                                                         <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
                                                                    Foreground="{DynamicResource TextPrimaryBrush}"/>
                                                     </StackPanel>
-                                                    <TextBlock Text="{Binding Subtitle}" FontSize="11.5" TextTrimming="CharacterEllipsis"
+                                                    <TextBlock Text="{Binding Subtitle}" FontSize="12" TextTrimming="CharacterEllipsis"
                                                                Foreground="{DynamicResource TextSecondaryBrush}" ToolTip.Tip="{Binding Subtitle}"/>
                                                     <TextBlock Text="{Binding MetaText}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                                                 </StackPanel>
@@ -355,7 +355,7 @@
                                                             <TextBlock Text="{Binding StatusText}"/>
                                                         </Border>
                                                     </Grid>
-                                                    <TextBlock Text="{Binding Subtitle}" FontSize="12.5" FontWeight="Medium"
+                                                    <TextBlock Text="{Binding Subtitle}" FontSize="13" FontWeight="Medium"
                                                                Foreground="{DynamicResource TextPrimaryBrush}"
                                                                TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Subtitle}"/>
                                                     <TextBlock Text="{Binding MetaText}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"
