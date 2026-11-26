@@ -1,4 +1,3 @@
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -11,14 +10,13 @@ using System.Linq;
 namespace SmartVoiceAgent.Ui.Views
 {
     /// <summary>
-    /// The Tasks screen: task list, the selected task's conversation and the composer.
+    /// The Tasks screen: the selected task's conversation and the composer; the task list is in the window's rail.
     /// Its DataContext is the window's <see cref="MainWindowViewModel"/>.
     /// </summary>
     public partial class TasksView : UserControl
     {
         private readonly ScrollViewer? _chatScrollViewer;
         private readonly TextBox? _promptInput;
-        private readonly TextBox? _searchInput;
         private bool _chatFollowsLatest = true;
 
         public TasksView()
@@ -32,7 +30,6 @@ namespace SmartVoiceAgent.Ui.Views
             }
 
             _promptInput = this.FindControl<TextBox>("WorkbenchPromptInput");
-            _searchInput = this.FindControl<TextBox>("ChatSearchInput");
 
             // Tunnel, so Enter sends before a multi-line TextBox turns it into a new line.
             _promptInput?.AddHandler(KeyDownEvent, OnPromptKeyDown, RoutingStrategies.Tunnel);
@@ -42,9 +39,6 @@ namespace SmartVoiceAgent.Ui.Views
 
         /// <summary>Puts the caret at the end of the composer once the layout shows it.</summary>
         public void FocusPrompt() => FocusAfterLayout(_promptInput, selectAll: false);
-
-        /// <summary>Selects the task search text once the layout shows it.</summary>
-        public void FocusSearch() => FocusAfterLayout(_searchInput, selectAll: true);
 
         /// <summary>
         /// Keeps the chat pinned to the newest message while the agent streams, unless the user scrolled up to read.
@@ -133,67 +127,6 @@ namespace SmartVoiceAgent.Ui.Views
             }
         }
 
-        private void OnChatSearchKeyDown(object? sender, KeyEventArgs e)
-        {
-            if (e.Key != Key.Escape || ViewModel is not { } vm)
-            {
-                return;
-            }
-
-            // The first Esc clears the search; the next one goes back to the composer.
-            if (vm.IsAgentChatSearchActive)
-            {
-                vm.AgentChatSearchText = string.Empty;
-            }
-            else
-            {
-                FocusPrompt();
-            }
-
-            e.Handled = true;
-        }
-
-        private void OnRenameChatClick(object? sender, RoutedEventArgs e)
-        {
-            // Row menus pass their thread; with none the command acts on the selected thread.
-            ViewModel?.RenameAgentChatCommand.Execute(ChatFrom(sender));
-        }
-
-        private void OnDeleteChatClick(object? sender, RoutedEventArgs e)
-        {
-            ViewModel?.DeleteAgentChatCommand.Execute(ChatFrom(sender));
-        }
-
-        private void OnRenameEditorPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
-        {
-            if (e.Property == IsVisibleProperty
-                && e.NewValue is true
-                && sender is Border { Child: TextBox input })
-            {
-                FocusAfterLayout(input, selectAll: true);
-            }
-        }
-
-        private void OnRenameKeyDown(object? sender, KeyEventArgs e)
-        {
-            var chat = ChatFrom(sender);
-            if (e.Key == Key.Enter)
-            {
-                ViewModel?.CommitAgentChatRename(chat);
-                e.Handled = true;
-            }
-            else if (e.Key == Key.Escape)
-            {
-                ViewModel?.CancelAgentChatRename(chat);
-                e.Handled = true;
-            }
-        }
-
-        private void OnRenameLostFocus(object? sender, RoutedEventArgs e)
-        {
-            ViewModel?.CommitAgentChatRename(ChatFrom(sender));
-        }
-
         private async void OnAttachFilesClick(object? sender, RoutedEventArgs e)
         {
             if (ViewModel is not { } vm || TopLevel.GetTopLevel(this) is not { } topLevel)
@@ -212,15 +145,10 @@ namespace SmartVoiceAgent.Ui.Views
                 .Where(path => !string.IsNullOrWhiteSpace(path)));
         }
 
-        private static AgentChatSessionViewModel? ChatFrom(object? sender)
-        {
-            return (sender as StyledElement)?.DataContext as AgentChatSessionViewModel;
-        }
-
         /// <summary>
         /// Focuses an input once the layout shows it, for example right after a page switch.
         /// </summary>
-        private static void FocusAfterLayout(TextBox? input, bool selectAll)
+        internal static void FocusAfterLayout(TextBox? input, bool selectAll)
         {
             if (input is null)
             {

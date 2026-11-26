@@ -1,10 +1,10 @@
 {
-  "Shell.Brand.Tagline": "Ajan çalışma alanı",
-  "Shell.Nav.Work": "ÇALIŞMA",
   "Shell.Nav.Build": "OLUŞTUR",
   "Shell.Nav.Manage": "YÖNET",
+  "Shell.Nav.GroupTip": "Bu grubu göster veya gizle",
   "Shell.Nav.Inbox": "Sizi bekleyenler",
   "Shell.Nav.InboxTip": "Tüm görevlerde onay bekleyenler",
+  "Shell.Nav.Search": "Ara",
   "Shell.Nav.Workbench": "Görevler",
   "Shell.Nav.Diagnostics": "Tanılama",
   "Shell.Nav.DiagnosticsTip": "Çalışma zamanı tanılaması",
@@ -23,8 +23,6 @@
   "Shell.Ladder.Graphs": "Graflar",
   "Shell.Ladder.GraphsTip": "Her görevin başlattığı alt ajanların canlı grafı: neler paralel çalışıyor, her biri ne yapıyor ve nerede onay gerekiyor.",
 
-  "Shell.ToggleTheme": "Temayı değiştir",
-  "Shell.SearchTasks": "Görevlerde ara",
   "Shell.ResizeTip": "Boyutu değiştirmek için sürükleyin. Varsayılan genişliğe dönmek için çift tıklayın.",
   "Shell.SearchTasksTip": "Görev, sayfa ve komutlarda ara (Ctrl+K)",
   "Shell.WakeOn": "“Hey Kam” açık",

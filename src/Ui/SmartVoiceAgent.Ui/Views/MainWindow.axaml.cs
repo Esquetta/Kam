@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.ViewModels;
 using System;
@@ -22,6 +23,15 @@ namespace SmartVoiceAgent.Ui.Views
 
             this.Closing += MainWindow_Closed;
             this.DataContextChanged += OnDataContextChanged;
+
+            // A short window starts the rail's Build and Manage groups collapsed until the user opens them.
+            WindowStateManager.Instance.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(WindowStateManager.IsShort) && _viewModel is not null)
+                {
+                    _viewModel.IsWindowShort = WindowStateManager.Instance.IsShort;
+                }
+            };
         }
 
         protected override void OnOpened(EventArgs e)
@@ -97,9 +107,7 @@ namespace SmartVoiceAgent.Ui.Views
                 switch (e.Key)
                 {
                     case Key.N:
-                        ShowChat(vm);
-                        vm.NewAgentChatCommand.Execute(null);
-                        _tasksView?.FocusPrompt();
+                        StartNewTask(vm);
                         e.Handled = true;
                         break;
                     case Key.K:
@@ -156,6 +164,7 @@ namespace SmartVoiceAgent.Ui.Views
             {
                 _viewModel.TalkShortcutChanged += OnTalkShortcutChanged;
                 _viewModel.ComposerFocusRequested += OnComposerFocusRequested;
+                _viewModel.IsWindowShort = WindowStateManager.Instance.IsShort;
             }
 
             RegisterTalkShortcut();
@@ -169,12 +178,87 @@ namespace SmartVoiceAgent.Ui.Views
             }
         }
 
-        private void OnTitleSearchClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        private void OnTitleSearchClick(object? sender, RoutedEventArgs e)
         {
             if (DataContext is MainWindowViewModel vm)
             {
                 vm.OpenCommandPalette();
             }
+        }
+
+        private void OnNewTaskClick(object? sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel vm)
+            {
+                StartNewTask(vm);
+            }
+        }
+
+        private void OnChatSearchKeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Escape || DataContext is not MainWindowViewModel vm)
+            {
+                return;
+            }
+
+            // The first Esc clears the search; the next one goes back to the composer.
+            if (vm.IsAgentChatSearchActive)
+            {
+                vm.AgentChatSearchText = string.Empty;
+            }
+            else
+            {
+                ShowChat(vm);
+                _tasksView?.FocusPrompt();
+            }
+
+            e.Handled = true;
+        }
+
+        private void OnRenameChatClick(object? sender, RoutedEventArgs e)
+        {
+            // Row menus pass their thread; with none the command acts on the selected thread.
+            _viewModel?.RenameAgentChatCommand.Execute(ChatFrom(sender));
+        }
+
+        private void OnDeleteChatClick(object? sender, RoutedEventArgs e)
+        {
+            _viewModel?.DeleteAgentChatCommand.Execute(ChatFrom(sender));
+        }
+
+        private void OnRenameEditorPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+        {
+            if (e.Property == IsVisibleProperty
+                && e.NewValue is true
+                && sender is Border { Child: TextBox input })
+            {
+                TasksView.FocusAfterLayout(input, selectAll: true);
+            }
+        }
+
+        private void OnRenameKeyDown(object? sender, KeyEventArgs e)
+        {
+            var chat = ChatFrom(sender);
+            if (e.Key == Key.Enter)
+            {
+                _viewModel?.CommitAgentChatRename(chat);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape)
+            {
+                _viewModel?.CancelAgentChatRename(chat);
+                e.Handled = true;
+            }
+        }
+
+        private void OnRenameLostFocus(object? sender, RoutedEventArgs e)
+        {
+            _viewModel?.CommitAgentChatRename(ChatFrom(sender));
+        }
+
+        private static AgentChatSessionViewModel? ChatFrom(object? sender)
+        {
+            return (sender as StyledElement)?.DataContext as AgentChatSessionViewModel;
         }
 
         private void OnComposerFocusRequested(object? sender, EventArgs e)
@@ -186,6 +270,14 @@ namespace SmartVoiceAgent.Ui.Views
         {
             e.Cancel = true;
             this.Hide();
+        }
+
+        /// <summary>Opens a new task on the Tasks page and focuses its composer, for Ctrl+N and the rail's New task.</summary>
+        private void StartNewTask(MainWindowViewModel vm)
+        {
+            ShowChat(vm);
+            vm.NewAgentChatCommand.Execute(null);
+            _tasksView?.FocusPrompt();
         }
 
         private static void ShowChat(MainWindowViewModel vm)

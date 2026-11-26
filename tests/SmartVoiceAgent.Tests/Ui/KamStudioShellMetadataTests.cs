@@ -6,8 +6,8 @@ using System.Xml.Linq;
 namespace SmartVoiceAgent.Tests.Ui;
 
 /// <summary>
-/// Pins the Kam Studio shell: tokens, fonts, shared primitives, the rail with the Build ladder,
-/// the top bar, the Tasks workbench and the Needs you rows.
+/// Pins the Kam Studio shell: tokens, fonts, shared primitives, the rail with its groups and recent tasks,
+/// the top bar, the Tasks thread and composer, and the Needs you rows.
 /// </summary>
 public sealed class KamStudioShellMetadataTests
 {
@@ -160,6 +160,66 @@ public sealed class KamStudioShellMetadataTests
         mainWindow.Descendants().Should().Contain(element =>
             AttributeValue(element, "Classes") == "Sidebar"
             && AttributeValue(element, "Classes.Compact") == "{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsRailCompact}");
+
+        // Build and Manage are collapsible groups; Extensions and Integrations sit with Manage.
+        var groups = mainWindow.Descendants()
+            .Where(element => AttributeValue(element, "Classes") == "RailGroupItems")
+            .ToDictionary(element => AttributeValue(element, "Classes.Collapsed")!);
+        groups.Keys.Should().Equal("{Binding IsBuildGroupCollapsed}", "{Binding IsManageGroupCollapsed}");
+        groups["{Binding IsBuildGroupCollapsed}"].Elements().Should().Equal(build);
+        groups["{Binding IsManageGroupCollapsed}"].Elements()
+            .Select(element => AttributeValue(element, "Command"))
+            .Should().Equal("{Binding NavigateToExtensionsCommand}", "{Binding NavigateToIntegrationsCommand}");
+
+        var headers = mainWindow.Descendants().Where(element => AttributeValue(element, "Classes") == "RailGroupHeader").ToArray();
+        headers.Select(header => (AttributeValue(header, "Command"), AttributeValue(header, "CommandParameter"), AttributeValue(header, "Classes.Collapsed")))
+            .Should().Equal(
+                ("{Binding ToggleRailGroupCommand}", "Build", "{Binding IsBuildGroupCollapsed}"),
+                ("{Binding ToggleRailGroupCommand}", "Manage", "{Binding IsManageGroupCollapsed}"));
+        mainWindowText.Should().Contain("<Style Selector=\"Border.Sidebar.Compact StackPanel.RailGroupItems.Collapsed\">");
+    }
+
+    [Fact]
+    public void Rail_OrdersNewTaskSearchNeedsYouGroupsRecentTasksAndSettings()
+    {
+        var mainWindow = LoadXaml("MainWindow.axaml");
+        var rail = mainWindow.Descendants().Single(element => AttributeValue(element, "Classes") == "Sidebar").Elements().Single();
+
+        AttributeValue(rail, "RowDefinitions").Should().Be("48,Auto,*,Auto", "the brand row is level with the 48 px top bar");
+        rail.Descendants().Should().NotContain(element => AttributeValue(element, "Text") == "Agent workspace");
+
+        var navigation = rail.Elements().Single(element => AttributeValue(element, "Grid.Row") == "1");
+        navigation.Elements()
+            .Select(element => AttributeValue(element, "Click") ?? AttributeValue(element, "Command") ?? AttributeValue(element, "Classes"))
+            .Should().Equal(
+                "OnNewTaskClick", "OnTitleSearchClick", "{Binding NavigateToInboxCommand}",
+                "{Binding ToggleRailGroupCommand}", "RailGroupItems",
+                "{Binding ToggleRailGroupCommand}", "RailGroupItems");
+        navigation.Elements().Take(2).Should().OnlyContain(row =>
+            row.Descendants().Any(element => AttributeValue(element, "Classes") == "Kbd HoverKbd"));
+
+        // Recent tasks fill the rest; rows open their task from any page.
+        var tasks = rail.Elements().Single(element => AttributeValue(element, "Grid.Row") == "2");
+        AttributeValue(tasks, "Classes").Should().Be("RailTasks");
+        tasks.Descendants()
+            .Where(element => element.Name.LocalName == "ItemsControl")
+            .Select(element => AttributeValue(element, "ItemsSource"))
+            .Should().Equal("{Binding WaitingTasks}", "{Binding RunningTasks}", "{Binding RecentTasks}");
+
+        var row = mainWindow.Descendants().Single(element =>
+            element.Name.LocalName == "DataTemplate" && AttributeValue(element, "Key") == "TaskRowTemplate");
+        var rowButton = row.Descendants().First(element => element.Name.LocalName == "Button");
+        AttributeValue(rowButton, "Classes").Should().Be("ListItem TaskRow");
+        AttributeValue(rowButton, "Classes.Selected").Should().Be("{Binding IsSelected}");
+        AttributeValue(rowButton, "Command").Should().Be("{Binding $parent[local:MainWindow].DataContext.OpenTaskCommand}");
+        row.Descendants().Should().NotContain(element => AttributeValue(element, "Text") == "{Binding Summary}",
+            "rows are one line: the title and the time");
+        row.Descendants().Should().Contain(element => AttributeValue(element, "Classes") == "TaskDot"
+            && AttributeValue(element, "IsVisible") == "{Binding HasStatus}");
+
+        // Compact, the rail drops the recent tasks; Search still lists them.
+        LocalizedXaml.ReadAllText(FindView("MainWindow.axaml")).Should().Contain(
+            "<Style Selector=\"Border.Sidebar.Compact Button.RailGroupHeader, Border.Sidebar.Compact Grid.RailTasks\">");
     }
 
     [Fact]
@@ -177,7 +237,8 @@ public sealed class KamStudioShellMetadataTests
             element.Name.LocalName == "Button"
             && AttributeValue(element, "Classes") == "MicButton"
             && AttributeValue(element, "Command") == "{Binding TalkCommand}");
-        mainWindowText.Should().Contain("<Style Selector=\"Grid.TopBar.narrow TextBlock.TitleSearchText, Grid.TopBar.narrow Border.Kbd, Grid.TopBar.narrow Panel.WakePill\">");
+        mainWindowText.Should().Contain("<Style Selector=\"Grid.TopBar.narrow Panel.WakePill\">");
+        mainWindowText.Should().NotContain("Classes=\"TitleSearch\"", "search lives in the rail, not the top bar");
 
         // On Tasks the bar carries the thread title, the model picker and the chat menu; the thread has no header row.
         var thread = mainWindow.Descendants().Single(element => AttributeValue(element, "IsVisible") == "{Binding IsChatWorkbenchVisible}"
@@ -193,43 +254,59 @@ public sealed class KamStudioShellMetadataTests
     }
 
     [Fact]
-    public void Tasks_IsAThreePaneWorkbenchThatReflowsWithStyles()
+    public void Tasks_IsTheThreadAndComposerWithoutATaskListColumn()
     {
         var tasksText = LocalizedXaml.ReadAllText(FindView("TasksView.axaml"));
         var tasks = XDocument.Parse(tasksText).Root!;
 
-        var workbench = tasks.Descendants().Single(element => AttributeValue(element, "Classes") == "Workbench");
-        AttributeValue(workbench, "Classes.medium").Should().Contain("Path=!IsLogPanelVisible");
-        AttributeValue(workbench, "Classes.stacked").Should().Contain("Path=IsRailCompact");
+        // The task list moved into the rail; the thread fills the page.
+        AttributeValue(tasks.Elements().Last(), "Classes").Should().Be("ThreadPane");
+        tasksText.Should().NotContainAny("Workbench\"", "TaskListPane", "TaskRowTemplate", "ChatSearchInput");
 
-        // The panes take their place from styles only, so the breakpoints can move them.
-        var panes = workbench.Elements().Where(element => AttributeValue(element, "Classes") is "TaskListPane" or "ThreadPane").ToArray();
-        panes.Should().HaveCount(2);
-        panes.Should().OnlyContain(pane => pane.Attributes().All(attribute =>
-            !attribute.Name.LocalName.StartsWith("Grid.", StringComparison.Ordinal) && attribute.Name.LocalName != "Width"));
-        tasksText.Should().Contain("<Setter Property=\"Width\" Value=\"270\"/>");
-        tasksText.Should().Contain("<Setter Property=\"Width\" Value=\"240\"/>");
-
-        // Tool steps carry a risk tag when the risk matters; the composer bar has the context meter and ends with a Send button, without key hints.
+        // Tool steps carry a risk tag when the risk matters.
         tasks.Descendants().Should().Contain(element =>
             AttributeValue(element, "Classes") == "RiskTag"
             && AttributeValue(element, "Classes.Shell") == "{Binding IsShellRisk}"
             && AttributeValue(element, "IsVisible") == "{Binding ShowsRiskTag}");
-        File.ReadAllText(FindView("TasksView.axaml")).Should().Contain("{DynamicResource Lang.Chat.Composer.SendLabel}");
         tasks.Descendants().Should().NotContain(element => AttributeValue(element, "Classes") == "Kbd");
+
+        // The bar: attach, permission mode and the meter, then spoken replies, mic and send.
+        var surface = tasks.Descendants().Single(element => AttributeValue(element, "Classes") == "ComposerSurface");
+        var bar = surface.Elements().Single().Elements().Single(element => AttributeValue(element, "Grid.Row") == "2");
+        bar.Elements()
+            .Select(element => AttributeValue(element, "Classes"))
+            .Should().Equal("IconButton", "ApprovalModePicker", "ComposerPill", "IconButton SpokenRepliesButton",
+                "IconButton TalkButton", "SendButton", "SendButton");
+        AttributeValue(bar.Elements().First(), "ToolTip.Tip").Should().Be("Attach");
+
+        // The meter shows only past half the budget and still offers to compact.
         var meter = tasks.Descendants().Single(element => AttributeValue(element, "Classes") == "ContextMeter");
         AttributeValue(meter, "Classes.Warning").Should().Be("{Binding IsSelectedContextNearBudget}");
         AttributeValue(meter, "Value").Should().Be("{Binding SelectedContextPercent}");
         var meterButton = meter.Ancestors().First(element => element.Name.LocalName == "Button");
-        AttributeValue(meterButton, "IsVisible").Should().Be("{Binding HasSelectedContextTokens}");
+        AttributeValue(meterButton, "IsVisible").Should().Be("{Binding ShowsContextMeter}");
         meterButton.Descendants().Should().Contain(element =>
             element.Name.LocalName == "Button"
             && AttributeValue(element, "Command") == "{Binding CompactAgentChatCommand}"
             && AttributeValue(element, "IsEnabled") == "{Binding CanCompactSelectedTask}");
         meterButton.Descendants().Should().Contain(element => AttributeValue(element, "Text") == "{Binding SelectedCompactionText}");
 
+        // Send is a round arrow, muted while empty; Stop takes its place while a turn runs.
+        var send = bar.Elements().Where(element => AttributeValue(element, "Classes") == "SendButton").ToArray();
+        AttributeValue(send[0], "AutomationProperties.Name").Should().Be("Send");
+        AttributeValue(send[0], "Classes.Empty").Should().Be("{Binding !HasComposerText}");
+        send[0].Descendants().Should().Contain(element => AttributeValue(element, "Data") == "{StaticResource IconArrowUp}");
+        AttributeValue(send[1], "AutomationProperties.Name").Should().Be("Stop");
+        AttributeValue(send[1], "IsVisible").Should().Be("{Binding IsAgentTurnRunning}");
+
+        // Strips attach above the composer, not inside it.
+        static bool IsStrip(XElement element) => (AttributeValue(element, "Classes") ?? string.Empty).EndsWith("Strip", StringComparison.Ordinal);
+        surface.Parent!.Elements().Where(IsStrip).Should().HaveCount(3);
+        surface.Descendants().Where(IsStrip).Should().BeEmpty();
+
         var mainWindowText = LocalizedXaml.ReadAllText(FindView("MainWindow.axaml"));
         mainWindowText.Should().NotContain("Border.AgentAvatar");
+        mainWindowText.Should().Contain("<Style Selector=\"Border.ComposerSurface:focus-within\">");
     }
 
     [Fact]
@@ -352,6 +429,21 @@ public sealed class KamStudioShellMetadataTests
         manager.IsLogPanelVisible.Should().Be(contextPane);
         manager.IsNarrow.Should().Be(narrow);
         manager.IsRailCompact.Should().Be(railCompact);
+    }
+
+    [Theory]
+    [InlineData(860, false)]
+    [InlineData(760, false)]
+    [InlineData(759, true)]
+    public void ShortWindow_StartsTheRailGroupsCollapsed(double height, bool isShort)
+    {
+        var manager = (WindowStateManager)Activator.CreateInstance(typeof(WindowStateManager), nonPublic: true)!;
+        typeof(WindowStateManager)
+            .GetProperty("WindowHeight", BindingFlags.Instance | BindingFlags.Public)!
+            .GetSetMethod(nonPublic: true)!
+            .Invoke(manager, [height]);
+
+        manager.IsShort.Should().Be(isShort);
     }
 
     private static Dictionary<string, string> ReadColors(string fileName)

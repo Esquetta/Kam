@@ -21,9 +21,10 @@ public class WindowStateManager : ReactiveObject
     private bool _isLogPanelVisible = true;
     private bool _isNarrow;
     private bool _isRailCompact;
+    private bool _isShort;
     private bool _reducedMotion;
 
-    /// <summary>Kam Studio breakpoint: below this width the Tasks list narrows to 240 px.</summary>
+    /// <summary>Kam Studio breakpoint: below this width <see cref="IsLogPanelVisible"/> turns off.</summary>
     public const double ContextPaneBreakpoint = 1280;
 
     /// <summary>Kam Studio breakpoint: below this width grids stack and the top bar trims.</summary>
@@ -31,6 +32,9 @@ public class WindowStateManager : ReactiveObject
 
     /// <summary>Kam Studio breakpoint: below this width the rail shows icons only.</summary>
     public const double RailBreakpoint = 760;
+
+    /// <summary>Below this height the rail's Build and Manage groups start collapsed.</summary>
+    public const double ShortBreakpoint = 760;
 
     private static readonly WindowStateManager _instance = new();
 
@@ -64,7 +68,20 @@ public class WindowStateManager : ReactiveObject
     public double WindowHeight
     {
         get => _windowHeight;
-        private set => this.RaiseAndSetIfChanged(ref _windowHeight, value);
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref _windowHeight, value);
+            IsShort = value < ShortBreakpoint;
+        }
+    }
+
+    /// <summary>
+    /// Below 760 px tall: the rail's Build and Manage groups start collapsed until the user opens them.
+    /// </summary>
+    public bool IsShort
+    {
+        get => _isShort;
+        private set => this.RaiseAndSetIfChanged(ref _isShort, value);
     }
 
     /// <summary>
@@ -113,7 +130,7 @@ public class WindowStateManager : ReactiveObject
     }
 
     /// <summary>
-    /// Below 760 px (Kam Studio): the rail shows icons only and the task list sits above the thread.
+    /// Below 760 px (Kam Studio): the rail shows icons only and hides its recent tasks.
     /// </summary>
     public bool IsRailCompact
     {
@@ -122,7 +139,7 @@ public class WindowStateManager : ReactiveObject
     }
 
     /// <summary>
-    /// Whether the window is at least <see cref="ContextPaneBreakpoint"/> wide; below it the Tasks list narrows.
+    /// Whether the window is at least <see cref="ContextPaneBreakpoint"/> wide.
     /// </summary>
     public bool IsLogPanelVisible
     {
@@ -164,7 +181,7 @@ public class WindowStateManager : ReactiveObject
     private void UpdateBreakpoints()
     {
         // Grid columns: Compact < 1024px (1), Medium 1024px - 1440px (2-3), Expanded > 1440px (3).
-        // Kam Studio shell: full task list from 1280px, narrow top bar below 980px, icon rail below 760px.
+        // Kam Studio shell: narrow top bar below 980px, icon rail below 760px.
 
         IsCompact = WindowWidth < 1024;
         IsMedium = WindowWidth >= 1024 && WindowWidth < 1440;

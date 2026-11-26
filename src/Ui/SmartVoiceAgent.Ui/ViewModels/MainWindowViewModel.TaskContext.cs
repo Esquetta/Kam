@@ -48,6 +48,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public string SelectedContextPercentText =>
             Loc.Format("Activity.Task.ContextPercent", Math.Round(SelectedContextPercent).ToString("0", LocalizationService.Instance.Culture));
 
+        /// <summary>Gets whether the composer bar shows the meter: only once the context passes half the budget.</summary>
+        public bool ShowsContextMeter => HasSelectedContextTokens && SelectedContextPercent > 50;
+
         /// <summary>Gets whether the context is close to the budget, so the meter warns.</summary>
         public bool IsSelectedContextNearBudget => SelectedContextPercent >= 80;
 
@@ -139,6 +142,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             this.RaisePropertyChanged(nameof(SelectedContextText));
             this.RaisePropertyChanged(nameof(SelectedContextPercent));
             this.RaisePropertyChanged(nameof(SelectedContextPercentText));
+            this.RaisePropertyChanged(nameof(ShowsContextMeter));
             this.RaisePropertyChanged(nameof(IsSelectedContextNearBudget));
             this.RaisePropertyChanged(nameof(SelectedCompactionText));
             this.RaisePropertyChanged(nameof(CanCompactSelectedTask));
