@@ -21,17 +21,10 @@ public class WindowStateManager : ReactiveObject
     private bool _isLogPanelVisible = true;
     private bool _isNarrow;
     private bool _isRailCompact;
-    private bool _canPinContextPane = true;
     private bool _reducedMotion;
 
-    /// <summary>Kam Studio breakpoint: below this width the Tasks context pane hides.</summary>
+    /// <summary>Kam Studio breakpoint: below this width the Tasks list narrows to 240 px.</summary>
     public const double ContextPaneBreakpoint = 1280;
-
-    /// <summary>
-    /// Narrowest window where the user can still open the context pane: rail (232) + task list (240)
-    /// + pane (290) leave the thread about 340 px here, the least its header and composer need.
-    /// </summary>
-    public const double PinnedContextPaneBreakpoint = 1100;
 
     /// <summary>Kam Studio breakpoint: below this width grids stack and the top bar trims.</summary>
     public const double NarrowBreakpoint = 980;
@@ -129,17 +122,7 @@ public class WindowStateManager : ReactiveObject
     }
 
     /// <summary>
-    /// Whether the user can open the context pane below <see cref="ContextPaneBreakpoint"/>:
-    /// from 1100 px, so the thread keeps enough width beside the rail, the task list and the pane.
-    /// </summary>
-    public bool CanPinContextPane
-    {
-        get => _canPinContextPane;
-        private set => this.RaiseAndSetIfChanged(ref _canPinContextPane, value);
-    }
-
-    /// <summary>
-    /// Whether the Tasks context pane (the Activity panel) fits: 1280 px and wider, as in Kam Studio.
+    /// Whether the window is at least <see cref="ContextPaneBreakpoint"/> wide; below it the Tasks list narrows.
     /// </summary>
     public bool IsLogPanelVisible
     {
@@ -181,14 +164,13 @@ public class WindowStateManager : ReactiveObject
     private void UpdateBreakpoints()
     {
         // Grid columns: Compact < 1024px (1), Medium 1024px - 1440px (2-3), Expanded > 1440px (3).
-        // Kam Studio shell: context pane from 1280px, narrow top bar below 980px, icon rail below 760px.
+        // Kam Studio shell: full task list from 1280px, narrow top bar below 980px, icon rail below 760px.
 
         IsCompact = WindowWidth < 1024;
         IsMedium = WindowWidth >= 1024 && WindowWidth < 1440;
         IsExpanded = WindowWidth >= 1440;
         IsNarrow = WindowWidth < NarrowBreakpoint;
         IsRailCompact = WindowWidth < RailBreakpoint;
-        CanPinContextPane = WindowWidth >= PinnedContextPaneBreakpoint;
 
         // Update grid columns based on breakpoint
         if (IsCompact)

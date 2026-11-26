@@ -1,6 +1,6 @@
 {
   "Prompts.Title": "Prompts",
-  "Prompts.Eyebrow": "BUILD · STEP 1",
+  "Prompts.Eyebrow": "BUILD",
   "Prompts.Subtitle": "Prompts are reusable instructions saved as Markdown slash commands. Write one once, then run it with /name in any task.",
   "Prompts.Search.Placeholder": "Search prompts",
   "Prompts.Source.User": "Yours",

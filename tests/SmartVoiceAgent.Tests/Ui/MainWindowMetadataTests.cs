@@ -19,7 +19,7 @@ public sealed class MainWindowMetadataTests
     }
 
     [Fact]
-    public void MainWindow_LogPanelUsesCalmerActivityCopy()
+    public void MainWindow_KeepsTechnicalLabelsOutOfTheShell()
     {
         var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root;
 
@@ -30,10 +30,6 @@ public sealed class MainWindowMetadataTests
             .Select(attribute => attribute.Value)
             .ToArray();
 
-        visibleText.Should().Contain("Activity");
-        visibleText.Should().Contain("This chat");
-        visibleText.Should().Contain("Steps");
-        visibleText.Should().Contain("Event stream");
         visibleText.Should().NotContain(value =>
             value.Contains("ACTIVITY_LOG", StringComparison.Ordinal)
             || value.Contains("KERNEL_LOG", StringComparison.Ordinal)
@@ -64,23 +60,6 @@ public sealed class MainWindowMetadataTests
     }
 
     [Fact]
-    public void MainWindow_UsesAgentWorkbenchDrawerTabs()
-    {
-        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
-
-        mainWindowText.Should().Contain("SelectedActivityPanelMode");
-        mainWindowText.Should().Contain("ShowRunsCommand");
-        mainWindowText.Should().Contain("ShowContextCommand");
-        mainWindowText.Should().Contain("ShowEventsCommand");
-        mainWindowText.Should().Contain("ActivityPanelMode.Runs");
-        mainWindowText.Should().Contain("ActivityPanelMode.Context");
-        mainWindowText.Should().Contain("ActivityPanelMode.Events");
-        mainWindowText.Should().Contain("Agent runs");
-        mainWindowText.Should().Contain("Context");
-        mainWindowText.Should().Contain("Event stream");
-    }
-
-    [Fact]
     public void MainWindow_ComposerExposesFileAttachmentChips()
     {
         var mainWindowText = ReadShellText();
@@ -89,7 +68,8 @@ public sealed class MainWindowMetadataTests
         mainWindowText.Should().Contain("OnAttachFilesClick");
         mainWindowText.Should().Contain("ComposerAttachments");
         mainWindowText.Should().Contain("HasComposerAttachments");
-        mainWindowText.Should().Contain("ActiveComposerContextText");
+        mainWindowText.Should().NotContain("ActiveComposerContextText");
+        mainWindowText.Should().Contain("SelectedContextPercentText");
         mainWindowText.Should().Contain("WorkbenchPromptInput");
         mainWindowText.Should().Contain("Ask Kam to inspect, edit, test, or plan");
         mainWindowText.Should().Contain("RemoveComposerAttachmentCommand");
@@ -109,7 +89,7 @@ public sealed class MainWindowMetadataTests
         mainWindowText.Should().Contain("ItemsSource=\"{Binding RecentTasks}\"");
         mainWindowText.Should().Contain("ItemTemplate=\"{StaticResource TaskRowTemplate}\"");
         mainWindowText.Should().Contain("SelectedAgentChatSession.Messages");
-        mainWindowText.Should().Contain("SelectedAgentChatMessageCountText");
+        mainWindowText.Should().NotContain("SelectedAgentChatMessageCountText");
         mainWindowText.Should().Contain("MessageCountText");
         mainWindowText.Should().Contain("NewAgentChatCommand");
         mainWindowText.Should().Contain("SelectAgentChatCommand");
@@ -178,7 +158,8 @@ public sealed class MainWindowMetadataTests
 
         AttributeValue(prompt, "AcceptsReturn").Should().Be("True");
         AttributeValue(prompt, "KeyDown").Should().BeNull("TasksView handles prompt keys before the TextBox adds a line");
-        mainWindowText.Should().Contain("Enter to send  ·  Shift+Enter for a new line  ·  Type / for commands");
+        mainWindowText.Should().Contain("PlaceholderText=\"Ask Kam to inspect, edit, test, or plan. Type / for commands\"");
+        mainWindowText.Should().NotContain("Classes=\"ComposerHint\"");
         mainWindowText.Should().Contain("ToolTip.Tip=\"Stop (Esc)\"");
     }
 
@@ -217,46 +198,45 @@ public sealed class MainWindowMetadataTests
     }
 
     [Fact]
-    public void MainWindow_ActivityPanelUsesStructuredFeedBindings()
+    public void MainWindow_HasNoActivityPanel()
     {
-        var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
+        var mainWindowText = ReadShellText();
 
-        mainWindowText.Should().Contain("ItemsSource=\"{Binding ActivityLogEntries}\"");
-        mainWindowText.Should().Contain("ItemsSource=\"{Binding RuntimeAgentActivities}\"");
-        mainWindowText.Should().Contain("IsVisible=\"{Binding HasRuntimeAgentActivities}\"");
-        mainWindowText.Should().Contain("ItemsSource=\"{Binding SelectedAgentChatSession.LastTurn.Steps}\"");
-        mainWindowText.Should().Contain("Text=\"{Binding ToolDurationText}\"");
-        mainWindowText.Should().Contain("Text=\"{Binding SelectedAgentChatSession.LastTurn.SummaryText}\"");
-        mainWindowText.Should().Contain("<ColumnDefinition Width=\"{Binding ActivityPanelWidth}\"/>");
-        mainWindowText.Should().Contain("IsVisible=\"{Binding IsActivityPanelShown}\"");
-        mainWindowText.Should().Contain("Classes=\"ActivityLogItem\"");
-        mainWindowText.Should().Contain("ConverterParameter={x:Static vm:ActivityPanelMode.Events}");
-        mainWindowText.Should().Contain("Text=\"{Binding CategoryText}\"");
-        mainWindowText.Should().Contain("Text=\"{Binding SourceText}\"");
-        mainWindowText.Should().Contain("Text=\"{Binding MessageText}\"");
-        mainWindowText.Should().Contain("Text=\"{Binding TimeText}\"");
-        mainWindowText.Should().Contain("Text=\"{Binding DisplayName}\"");
-        mainWindowText.Should().Contain("Text=\"{Binding StatusText}\"");
-        mainWindowText.Should().Contain("Text=\"{Binding LastMessage}\"");
-        mainWindowText.Should().Contain("ShowRuntimeAgentRunDetailCommand");
-        mainWindowText.Should().Contain("CommandParameter=\"{Binding}\"");
-        mainWindowText.Should().Contain("IsVisible=\"{Binding HasSelectedRuntimeAgentRun}\"");
-        mainWindowText.Should().Contain("SelectedRuntimeAgentRun.ModelIdText");
-        mainWindowText.Should().Contain("SelectedRuntimeAgentRun.Observations");
-        mainWindowText.Should().Contain("Text=\"{Binding SummaryText}\"");
-        mainWindowText.Should().Contain("Run detail");
-        mainWindowText.Should().Contain("Context");
+        mainWindowText.Should().NotContainAny(
+            "ActivityPanelWidth", "IsActivityPanelShown", "ToggleActivityPanelCommand", "CanOpenActivityPanel",
+            "SelectedActivityPanelMode", "ShowRunsCommand", "ShowContextCommand", "ShowEventsCommand",
+            "ActivityLogEntries", "RuntimeAgentActivities", "SkillExecutionHistory", "SkillPlannerTraces",
+            "LastTurn", "LogScrollViewer", "ActivityLogItem");
+
+        // The content area is one column: pages, the inbox and the tasks fill it.
+        var pageHost = LoadShell().Descendants().Single(element =>
+            element.Name.LocalName == "ContentControl" && AttributeValue(element, "Content") == "{Binding CurrentViewModel}");
+        pageHost.Parent!.Elements().Should().NotContain(element => element.Name.LocalName == "Grid.ColumnDefinitions");
     }
 
     [Fact]
-    public void MainWindow_ExposesRuntimeDiagnosticsNavigation()
+    public void SkillsAndDiagnostics_OpenFromTheirPagesAndThePalette()
     {
         var mainWindowText = LocalizedXaml.ReadAllText(FindMainWindowXamlPath());
+        var extensionsText = LocalizedXaml.ReadAllText(FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Views", "ExtensionsView.axaml"));
+        var settingsText = LocalizedXaml.ReadAllText(FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Views", "SettingsView.axaml"));
 
-        mainWindowText.Should().Contain("NavigateToDiagnosticsCommand");
         mainWindowText.Should().Contain("RuntimeDiagnosticsViewModel");
         mainWindowText.Should().Contain("RuntimeDiagnosticsView");
-        mainWindowText.Should().Contain("ToolTip.Tip=\"Runtime Diagnostics\"");
+        mainWindowText.Should().Contain("<DataTemplate DataType=\"pagevm:PluginsViewModel\">");
+        extensionsText.Should().Contain("Content=\"Skill tests and policies\"");
+        extensionsText.Should().Contain("((shell:MainWindowViewModel)DataContext).NavigateToPluginsCommand}");
+        settingsText.Should().Contain("ToolTip.Tip=\"Runtime Diagnostics\"");
+        settingsText.Should().Contain("((shell:MainWindowViewModel)DataContext).NavigateToDiagnosticsCommand}");
+
+        var viewModel = new SmartVoiceAgent.Ui.ViewModels.MainWindowViewModel();
+        viewModel.OpenCommandPalette();
+        var pages = viewModel.CommandPalette.Results
+            .Where(row => row.Item?.Group == "Pages")
+            .Select(row => row.Item!.Title)
+            .ToArray();
+        pages.Should().Contain(["Skills", "Diagnostics"]);
+        pages.Should().NotContain("Agent Builder");
     }
 
     [Fact]
@@ -379,7 +359,7 @@ public sealed class MainWindowMetadataTests
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "StackPanel"
-                && AttributeValue(element, "Grid.Row") == "3"
+                && AttributeValue(element, "Grid.Row") == "2"
                 && AttributeValue(element, "Classes") == "SidebarFooter");
 
         bottomNavigation
@@ -515,12 +495,9 @@ public sealed class MainWindowMetadataTests
             "{Binding NavigateToPageCommand}{x:Static vm:NavView.Agents}",
             "{Binding NavigateToPageCommand}{x:Static vm:NavView.Loops}",
             "{Binding NavigateToPageCommand}{x:Static vm:NavView.Graphs}",
-            "{Binding NavigateToPageCommand}{x:Static vm:NavView.Builder}",
             "{Binding NavigateToPageCommand}{x:Static vm:NavView.Runs}",
-            "{Binding NavigateToPluginsCommand}",
             "{Binding NavigateToExtensionsCommand}",
             "{Binding NavigateToIntegrationsCommand}",
-            "{Binding NavigateToDiagnosticsCommand}",
             "{Binding NavigateToSettingsCommand}");
 
         var groupLabels = mainWindow.Descendants()

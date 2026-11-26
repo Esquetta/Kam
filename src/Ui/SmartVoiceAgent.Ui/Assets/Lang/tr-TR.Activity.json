@@ -1,25 +1,15 @@
 {
-  "Activity.Title": "Etkinlik",
-  "Activity.Subtitle": "Bu sohbet",
-  "Activity.Tab.Runs": "Adımlar",
-  "Activity.Tab.Events": "Olay akışı",
-  "Activity.Context": "Bağlam",
-  "Activity.Task.Title": "Bu görev",
   "Activity.Task.Context": "Bağlam penceresi",
   "Activity.Task.ContextUsage": "{0} / {1} token",
   "Activity.Task.ContextUsageNoBudget": "{0} token, sıkıştırma kapalı",
+  "Activity.Task.ContextPercent": "%{0}",
   "Activity.Task.ContextUnknown": "Bir sonraki turdan sonra ölçülür",
-  "Activity.Task.ContextHint": "Bağlam bütçeye ulaştığında Kam eski mesajları özetler, böylece görev devam edebilir.",
   "Activity.Task.NotCompacted": "Henüz sıkıştırılmadı",
   "Activity.Task.CompactedOnce": "Kam açıldığından beri bir kez sıkıştırıldı",
   "Activity.Task.CompactedMany": "Kam açıldığından beri {0} kez sıkıştırıldı",
   "Activity.Task.CompactNow": "Şimdi sıkıştır",
   "Activity.Task.CompactNowTip": "Eski mesajları şimdi özetle; /compact ile aynı",
 
-  "Activity.Show": "Etkinliği göster",
-  "Activity.Hide": "Etkinliği gizle",
-  "Activity.Trace.Empty": "Adımlarını burada görmek için bu sohbette bir görev çalıştırın: her araç çağrısı, nasıl bittiği ve ne kadar sürdüğü, ardından kullanılan token sayısı.",
-  "Activity.Trace.NoTools": "Araç kullanmadan cevap verdi.",
   "Activity.Trace.Outcome.Running": "Çalışıyor",
   "Activity.Trace.Outcome.Done": "Tamamlandı",
   "Activity.Trace.Outcome.Failed": "Başarısız",
@@ -31,23 +21,5 @@
   "Activity.Duration.Minutes": "{0} dk {1} sn",
 
   "Activity.ApprovalNeeded": "Onay gerekiyor",
-  "Activity.Reject": "Reddet",
-
-  "Activity.Runs.Title": "Ajan çalıştırmaları",
-  "Activity.RunDetail.Title": "Çalıştırma ayrıntısı",
-  "Activity.RunDetail.Model": "Model",
-  "Activity.RunDetail.Duration": "Süre",
-
-  "Activity.PlanTrace.Title": "Plan izi",
-  "Activity.PlanTrace.Clear": "Plan izini temizle",
-
-  "Activity.SkillResults.Title": "Yetenek sonuçları",
-  "Activity.SkillResults.Clear": "Sonuç geçmişini temizle",
-  "Activity.SkillResults.Filter": "Sonuç geçmişini filtreleyin...",
-  "Activity.SkillResults.ClearFilters": "Filtreleri temizle",
-  "Activity.SkillResults.NoMatches": "Eşleşen çalıştırma yok",
-  "Activity.SkillResults.CopyResult": "Sonucu kopyala",
-  "Activity.SkillResults.CopyStdOut": "stdout'u kopyala",
-  "Activity.SkillResults.CopyStdErr": "stderr'i kopyala",
-  "Activity.SkillResults.Rerun": "Yeteneği yeniden çalıştır"
+  "Activity.Reject": "Reddet"
 }

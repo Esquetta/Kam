@@ -10,7 +10,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
 {
     public partial class MainWindowViewModel
     {
-        /// <summary>Opens the page given as the command parameter; the Build ladder, Runs and the spend card use it.</summary>
+        /// <summary>Opens the page given as the command parameter; the Build group and Runs in the rail use it.</summary>
         public ReactiveCommand<NavView, Unit> NavigateToPageCommand { get; private set; } = null!;
 
         /// <summary>Opens the Graphs page on the subagent a chat step started.</summary>
@@ -130,7 +130,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 (NavView.Agents, Loc.Get("Shell.Ladder.Agents"), "IconBot", null),
                 (NavView.Loops, Loc.Get("Shell.Ladder.Loops"), "IconRefresh", null),
                 (NavView.Graphs, Loc.Get("Shell.Ladder.Graphs"), "IconNetwork", null),
-                (NavView.Builder, Loc.Get("Shell.Ladder.Builder"), "IconWrench", null),
                 (NavView.Runs, Loc.Get("Shell.Nav.Runs"), "IconActivity", null),
                 (NavView.Plugins, Loc.Get("Shell.Nav.Skills"), "IconBlocks", null),
                 (NavView.Extensions, Loc.Get("Shell.Nav.Extensions"), "IconPuzzle", null),

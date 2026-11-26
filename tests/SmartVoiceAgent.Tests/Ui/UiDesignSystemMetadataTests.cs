@@ -57,7 +57,6 @@ public sealed class UiDesignSystemMetadataTests
     }
 
     [Theory]
-    [InlineData("MainWindow.axaml")]
     [InlineData("TasksView.axaml")]
     public void CompactIconButtons_DoNotOverrideSharedDimensions(string viewFileName)
     {

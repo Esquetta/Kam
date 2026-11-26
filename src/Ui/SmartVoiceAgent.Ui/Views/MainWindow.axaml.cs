@@ -11,7 +11,6 @@ namespace SmartVoiceAgent.Ui.Views
     public partial class MainWindow : Window
     {
         private MainWindowViewModel? _viewModel;
-        private ScrollViewer? _logScrollViewer;
         private TasksView? _tasksView;
         private GlobalTalkShortcut? _talkShortcut;
 
@@ -19,8 +18,6 @@ namespace SmartVoiceAgent.Ui.Views
         {
             InitializeComponent();
 
-            // Get reference to ScrollViewer after initialization
-            _logScrollViewer = this.FindControl<ScrollViewer>("LogScrollViewer");
             _tasksView = this.FindControl<TasksView>("TasksPanel");
 
             this.Closing += MainWindow_Closed;
@@ -149,7 +146,6 @@ namespace SmartVoiceAgent.Ui.Views
             // Unsubscribe from old view model
             if (_viewModel != null)
             {
-                _viewModel.LogUpdated -= OnLogUpdated;
                 _viewModel.TalkShortcutChanged -= OnTalkShortcutChanged;
                 _viewModel.ComposerFocusRequested -= OnComposerFocusRequested;
             }
@@ -158,24 +154,11 @@ namespace SmartVoiceAgent.Ui.Views
             _viewModel = DataContext as MainWindowViewModel;
             if (_viewModel != null)
             {
-                _viewModel.LogUpdated += OnLogUpdated;
                 _viewModel.TalkShortcutChanged += OnTalkShortcutChanged;
                 _viewModel.ComposerFocusRequested += OnComposerFocusRequested;
             }
 
             RegisterTalkShortcut();
-        }
-
-        private void OnLogUpdated(object? sender, EventArgs e)
-        {
-            // Auto-scroll to bottom when new log is added
-            if (_logScrollViewer != null)
-            {
-                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-                {
-                    _logScrollViewer.ScrollToEnd();
-                });
-            }
         }
 
         private void OnHeaderPointerPressed(object? sender, PointerPressedEventArgs e)

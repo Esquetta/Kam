@@ -47,20 +47,6 @@ public sealed class RunsViewModelTests
     }
 
     [Fact]
-    public async Task LoadAsync_ComputesMetersFromTheData()
-    {
-        var viewModel = await CreateAsync();
-
-        if (_now.TimeOfDay >= TimeSpan.FromHours(1))
-        {
-            viewModel.TasksToday.Should().Be(2);
-            viewModel.AgentRunsToday.Should().Be(2);
-        }
-
-        viewModel.FailedAgentRuns.Should().Be(1);
-    }
-
-    [Fact]
     public async Task Rows_MapKindModelContextCountAndStatus()
     {
         var viewModel = await CreateAsync(id => id switch { "s1" => "running", "s3" => "needs-you", _ => null });
@@ -143,7 +129,6 @@ public sealed class RunsViewModelTests
         viewModel.IsEmpty.Should().BeTrue();
         viewModel.HasNoHistory.Should().BeTrue();
         viewModel.EmptyTitle.Should().Be("No runs yet");
-        viewModel.TasksToday.Should().Be(0);
     }
 
     [Fact]

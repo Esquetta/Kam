@@ -1,7 +1,6 @@
 using System.Text.RegularExpressions;
 using FluentAssertions;
 using SmartVoiceAgent.Core.Models.Agents;
-using SmartVoiceAgent.Core.Models.Skills;
 using SmartVoiceAgent.Core.Models.SlashCommands;
 using SmartVoiceAgent.Infrastructure.Services;
 using SmartVoiceAgent.Ui.Services;
@@ -35,19 +34,6 @@ public sealed partial class WorkbenchLocalizationTests
 
         MainWindowViewModel.FormatRelativeTime(Now.AddMinutes(-5), Now, english).Should().Be("5m");
         MainWindowViewModel.FormatRelativeTime(Now.AddDays(-3), Now, english).Should().Be("Oct 2");
-    }
-
-    [Fact]
-    public void FormatStatusText_ReadsTheGivenLanguage()
-    {
-        var turkish = new LocalizationService();
-        turkish.SetLanguage("tr-TR");
-
-        SkillExecutionHistoryItemViewModel.FormatStatusText(SkillExecutionStatus.TimedOut, turkish).Should().Be("Zaman aşımı");
-        SkillExecutionHistoryItemViewModel.FormatStatusText(SkillExecutionStatus.TimedOut).Should().Be("Timed Out");
-        Enum.GetValues<SkillExecutionStatus>()
-            .Select(status => SkillExecutionHistoryItemViewModel.FormatStatusText(status, turkish))
-            .Should().NotContain(text => text.StartsWith("Workbench.", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -124,9 +110,7 @@ public sealed partial class WorkbenchLocalizationTests
             "vm.StatusText",
             "vm.ActivePageTitle",
             "vm.AgentChatSessionCountText",
-            "vm.SelectedAgentChatMessageCountText",
             "vm.AgentChatModelOptions",
-            "vm.SkillExecutionHistoryStatusFilters",
             "workspace.Title",
             "workspace.RelativeTimeText",
             "workspace.StatusText",
@@ -144,7 +128,6 @@ public sealed partial class WorkbenchLocalizationTests
         step.RiskText.Should().Be("Runs programs");
         step.AlwaysAllowHint.Should().Be("Stop asking for shell_run(git status:*)");
         viewModel.StatusText.Should().Be("Starting");
-        viewModel.SkillExecutionHistoryStatusFilter.Should().Be("All");
     }
 
     [Fact]
@@ -172,19 +155,6 @@ public sealed partial class WorkbenchLocalizationTests
         step.ArgumentsMaxLines.Should().Be(0);
         shell.ArgumentsPreview.Should().EndWith("...", "other tools keep the short preview");
         shell.ArgumentsMaxLines.Should().Be(4);
-    }
-
-    [Fact]
-    public void RefreshLocalizedText_KeepsTheChosenHistoryStatusFilter()
-    {
-        var viewModel = new MainWindowViewModel();
-        viewModel.SkillExecutionHistoryStatusFilter = "Timed Out";
-
-        viewModel.RefreshLocalizedText();
-
-        viewModel.SkillExecutionHistoryStatusFilter.Should().Be("Timed Out");
-        viewModel.SkillExecutionHistoryStatusFilters.Should().Contain("Timed Out");
-        viewModel.HasSkillExecutionHistoryFilter.Should().BeTrue();
     }
 
     [Fact]

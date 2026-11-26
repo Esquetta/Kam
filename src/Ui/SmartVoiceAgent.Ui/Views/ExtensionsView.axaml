@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:SmartVoiceAgent.Ui.ViewModels.PageModels"
+             xmlns:shell="using:SmartVoiceAgent.Ui.ViewModels"
              xmlns:converters="clr-namespace:SmartVoiceAgent.Ui.Converters"
              x:Class="SmartVoiceAgent.Ui.Views.ExtensionsView"
              x:DataType="vm:ExtensionsViewModel">
@@ -86,6 +87,11 @@
                 <StackPanel Spacing="6">
                     <TextBlock Text="{DynamicResource Lang.Extensions.Title}" Classes="PageTitle"/>
                     <TextBlock Text="{DynamicResource Lang.Extensions.Subtitle}" Classes="PageSubtitle"/>
+                    <!-- The Skills page left the rail; built-in skill tests and policies open from here -->
+                    <Button Classes="LinkAction"
+                            HorizontalAlignment="Left"
+                            Content="{DynamicResource Lang.Extensions.SkillsLink}"
+                            Command="{Binding $parent[Window].((shell:MainWindowViewModel)DataContext).NavigateToPluginsCommand}"/>
                 </StackPanel>
                 <Button Grid.Column="1"
                         Classes="IconAction"

@@ -159,9 +159,6 @@ namespace SmartVoiceAgent.Ui
                 var skillPlannerTraceStore = services.GetRequiredService<ISkillPlannerTraceStore>();
                 _mainViewModel.SetSkillPlannerTraceStore(skillPlannerTraceStore);
 
-                var skillExecutionPipeline = services.GetRequiredService<ISkillExecutionPipeline>();
-                _mainViewModel.SetSkillExecutionPipeline(skillExecutionPipeline);
-
                 // Chat runs through the tool-calling agent unless AgentRuntime:Enabled is false,
                 // which keeps the legacy single-skill planner for one release.
                 var agentRuntimeOptions = services.GetRequiredService<IOptions<AgentRuntimeOptions>>().Value;

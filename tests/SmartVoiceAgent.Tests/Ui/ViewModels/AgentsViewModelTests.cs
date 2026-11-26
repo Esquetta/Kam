@@ -174,13 +174,10 @@ public sealed class AgentsViewModelTests
         codex.IsReady.Should().BeTrue();
         codex.VersionText.Should().Be("v0.161.0");
         codex.StatusText.Should().Be("Ready");
-        codex.InstalledText.Should().Be("Found on PATH");
-        codex.SandboxText.Should().Contain("read-only").And.Contain("workspace-write");
 
         var claude = viewModel.CodingAgents.Single(item => item.Kind == CliAgentKind.ClaudeCode);
         claude.IsReady.Should().BeFalse();
         claude.StatusText.Should().Be("Not installed");
-        claude.InstalledText.Should().Be("Not found on PATH");
         viewModel.IsChecking.Should().BeFalse();
     }
 

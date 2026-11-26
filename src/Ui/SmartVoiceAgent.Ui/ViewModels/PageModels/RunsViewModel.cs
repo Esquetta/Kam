@@ -137,8 +137,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
     }
 
     /// <summary>
-    /// The Runs page: a history of tasks and role-agent runs from the stores, with counts for today and the
-    /// failures of the last week. Kam records no cost or tokens per run, so none are shown.
+    /// The Runs page: a history of tasks and role-agent runs from the stores.
+    /// Kam records no cost or tokens per run, so none are shown.
     /// </summary>
     public sealed class RunsViewModel : ViewModelBase, IDisposable
     {
@@ -154,9 +154,6 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private int _loadVersion;
         private RunsFilter _filter;
         private string _searchText = string.Empty;
-        private int _tasksToday;
-        private int _agentRunsToday;
-        private int _failedAgentRuns;
         private bool _hasLoaded;
 
         /// <summary>
@@ -221,27 +218,6 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         /// <summary>Gets the command that shows a subagent run on the Graphs page.</summary>
         public ReactiveCommand<RunRowViewModel, Unit> OpenGraphCommand { get; }
-
-        /// <summary>Gets the number of tasks last active today.</summary>
-        public int TasksToday
-        {
-            get => _tasksToday;
-            private set => this.RaiseAndSetIfChanged(ref _tasksToday, value);
-        }
-
-        /// <summary>Gets the number of subagent and role-agent runs started today.</summary>
-        public int AgentRunsToday
-        {
-            get => _agentRunsToday;
-            private set => this.RaiseAndSetIfChanged(ref _agentRunsToday, value);
-        }
-
-        /// <summary>Gets the number of subagent and role-agent runs that failed in the last 7 days.</summary>
-        public int FailedAgentRuns
-        {
-            get => _failedAgentRuns;
-            private set => this.RaiseAndSetIfChanged(ref _failedAgentRuns, value);
-        }
 
         /// <summary>Gets or sets which kind of run is listed.</summary>
         public RunsFilter Filter
@@ -401,8 +377,6 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private void Rebuild()
         {
             var now = DateTimeOffset.Now;
-            var today = now.ToLocalTime().Date;
-            var weekAgo = now.AddDays(-7);
 
             var expanded = _allRows.Where(row => row.IsExpanded).Select(row => row.Id).ToHashSet();
             _allRows.Clear();
@@ -414,12 +388,6 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 row.IsExpanded = true;
             }
-
-            TasksToday = _sessionData.Count(session => session.UpdatedAt.ToLocalTime().Date == today);
-            AgentRunsToday = _runData.Count(run => run.StartedAt.ToLocalTime().Date == today)
-                + _subagentData.Count(run => run.StartedAt.ToLocalTime().Date == today);
-            FailedAgentRuns = _runData.Count(run => run.Status == RuntimeAgentRunStatus.Failed && run.StartedAt >= weekAgo)
-                + _subagentData.Count(run => run.Status == SubagentRunStatus.Failed && run.StartedAt >= weekAgo);
 
             this.RaisePropertyChanged(nameof(HasNoHistory));
             ApplyFilter();

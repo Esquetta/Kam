@@ -58,7 +58,6 @@ public class UiLogService : IUiLogService
     {
         if (entry.IsAgentUpdate && !string.IsNullOrEmpty(entry.AgentName))
         {
-            _mainViewModel?.TrackRuntimeAgentUpdate(entry.AgentName, entry.Message, entry.IsComplete, entry.RunId);
             return $"[{entry.AgentName}] {entry.Message}";
         }
 

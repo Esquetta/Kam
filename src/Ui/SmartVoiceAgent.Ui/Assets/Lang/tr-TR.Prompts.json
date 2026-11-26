@@ -1,6 +1,6 @@
 {
   "Prompts.Title": "İstemler",
-  "Prompts.Eyebrow": "OLUŞTUR · ADIM 1",
+  "Prompts.Eyebrow": "OLUŞTUR",
   "Prompts.Subtitle": "İstemler, Markdown eğik çizgi komutları olarak kaydedilen yeniden kullanılabilir talimatlardır. Bir kez yazın, sonra herhangi bir görevde /ad ile çalıştırın.",
   "Prompts.Search.Placeholder": "İstemlerde ara",
   "Prompts.Source.User": "Sizin",

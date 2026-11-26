@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SmartVoiceAgent.Ui.ViewModels.PageModels"
+             xmlns:shell="using:SmartVoiceAgent.Ui.ViewModels"
              xmlns:services="clr-namespace:SmartVoiceAgent.Ui.Services"
              x:Class="SmartVoiceAgent.Ui.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
@@ -1088,7 +1089,7 @@
                            Margin="4,0,0,4"/>
 
                 <Border Classes="SettingsItem">
-                    <Grid ColumnDefinitions="Auto, *">
+                    <Grid ColumnDefinitions="Auto, *, Auto">
                         <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
                             <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconCpu}"/></Viewbox>
                         </Border>
@@ -1103,6 +1104,13 @@
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        Margin="0,2,0,0"/>
                         </StackPanel>
+                        <!-- Diagnostics left the rail; it opens from here and from the command palette -->
+                        <Button Grid.Column="2"
+                                Classes="SecondaryAction Sm"
+                                VerticalAlignment="Center"
+                                Content="{DynamicResource Lang.Shell.Nav.Diagnostics}"
+                                ToolTip.Tip="{DynamicResource Lang.Shell.Nav.DiagnosticsTip}"
+                                Command="{Binding $parent[Window].((shell:MainWindowViewModel)DataContext).NavigateToDiagnosticsCommand}"/>
                     </Grid>
                 </Border>
             </StackPanel>
