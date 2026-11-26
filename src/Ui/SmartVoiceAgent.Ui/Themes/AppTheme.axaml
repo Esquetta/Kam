@@ -98,6 +98,9 @@
     <StreamGeometry x:Key="IconCode">M16 18l6-6-6-6 M8 6l-6 6 6 6</StreamGeometry>
     <StreamGeometry x:Key="IconExternalLink">M15 3h6v6 M10 14L21 3 M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6</StreamGeometry>
     <StreamGeometry x:Key="IconCompass">M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20z M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36z</StreamGeometry>
+    <StreamGeometry x:Key="IconMinus">M5 12h14</StreamGeometry>
+    <StreamGeometry x:Key="IconMaximize">M8 3H5a2 2 0 0 0-2 2v3 M21 8V5a2 2 0 0 0-2-2h-3 M3 16v3a2 2 0 0 0 2 2h3 M16 21h3a2 2 0 0 0 2-2v-3</StreamGeometry>
+    <StreamGeometry x:Key="IconUndo">M3 12a9 9 0 1 0 9-9a9.75 9.75 0 0 0-6.74 2.74L3 8 M3 3v5h5</StreamGeometry>
 
     <!-- SunIcon - Simplified for Avalonia -->
     <StreamGeometry x:Key="SunIconGeometry">
