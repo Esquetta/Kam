@@ -80,26 +80,33 @@
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel x:Name="Page" Classes="WorkbenchPage" Margin="18,16,18,24" Spacing="20">
+        <StackPanel x:Name="Page" Classes="WorkbenchPage PageColumn List">
 
-            <!-- Header -->
-            <Grid ColumnDefinitions="*,Auto">
-                <StackPanel Spacing="6">
+            <Grid Classes="PageHeader" ColumnDefinitions="*,Auto">
+                <StackPanel Classes="PageHeaderText">
                     <TextBlock Text="{DynamicResource Lang.Extensions.Title}" Classes="PageTitle"/>
                     <TextBlock Text="{DynamicResource Lang.Extensions.Subtitle}" Classes="PageSubtitle"/>
-                    <!-- The Skills page left the rail; built-in skill tests and policies open from here -->
-                    <Button Classes="LinkAction"
-                            HorizontalAlignment="Left"
-                            Content="{DynamicResource Lang.Extensions.SkillsLink}"
-                            Command="{Binding $parent[Window].((shell:MainWindowViewModel)DataContext).NavigateToPluginsCommand}"/>
                 </StackPanel>
-                <Button Grid.Column="1"
-                        Classes="IconAction"
-                        VerticalAlignment="Top"
-                        ToolTip.Tip="{DynamicResource Lang.Common.Refresh}"
-                        Command="{Binding RefreshCommand}">
-                    <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
-                </Button>
+                <StackPanel Grid.Column="1" Classes="PageHeaderActions">
+                    <Button Classes="IconAction"
+                            AutomationProperties.Name="{DynamicResource Lang.Common.Refresh}"
+                            ToolTip.Tip="{DynamicResource Lang.Common.Refresh}"
+                            Command="{Binding RefreshCommand}">
+                        <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
+                    </Button>
+                    <!-- The Skills page left the rail; built-in skill tests and policies open from here -->
+                    <Button Classes="IconAction"
+                            AutomationProperties.Name="{DynamicResource Lang.Extensions.More}"
+                            ToolTip.Tip="{DynamicResource Lang.Extensions.More}">
+                        <Button.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                <MenuItem Header="{DynamicResource Lang.Extensions.SkillsLink}"
+                                          Command="{Binding $parent[Window].((shell:MainWindowViewModel)DataContext).NavigateToPluginsCommand}"/>
+                            </MenuFlyout>
+                        </Button.Flyout>
+                        <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconMore}"/></Viewbox>
+                    </Button>
+                </StackPanel>
             </Grid>
 
             <!-- Tabs and search -->
@@ -182,27 +189,18 @@
                 </WrapPanel>
 
                 <!-- Nothing to list -->
-                <Border Classes="WorkbenchSection" Padding="32,28" IsVisible="{Binding HasNoInstalledMatches}">
-                    <StackPanel Spacing="12" HorizontalAlignment="Center" MaxWidth="380">
-                        <Border Classes="IconBadge" HorizontalAlignment="Center">
-                            <Viewbox><Path Classes="Icon" Data="{StaticResource IconPuzzle}"/></Viewbox>
-                        </Border>
-                        <StackPanel Spacing="4" IsVisible="{Binding IsNothingInstalled}">
-                            <TextBlock Text="{DynamicResource Lang.Extensions.Empty.Title}" Classes="SectionTitle" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{DynamicResource Lang.Extensions.Empty.Body}" Classes="Caption" TextAlignment="Center" TextWrapping="Wrap"/>
-                        </StackPanel>
-                        <StackPanel Spacing="4" IsVisible="{Binding IsSearchWithoutMatches}">
-                            <TextBlock Text="{DynamicResource Lang.Extensions.NoMatches.Title}" Classes="SectionTitle" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{Binding NoMatchesText}" Classes="Caption" TextAlignment="Center" TextWrapping="Wrap"/>
-                        </StackPanel>
-                        <Button Classes="PrimaryAction" HorizontalAlignment="Center" Command="{Binding ShowDiscoverCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconCompass}"/></Viewbox>
-                                <TextBlock Text="{DynamicResource Lang.Extensions.Empty.Browse}"/>
-                            </StackPanel>
-                        </Button>
+                <StackPanel Classes="EmptyState" IsVisible="{Binding HasNoInstalledMatches}">
+                    <Viewbox><Path Classes="Icon" Data="{StaticResource IconPuzzle}"/></Viewbox>
+                    <StackPanel Spacing="6" IsVisible="{Binding IsNothingInstalled}">
+                        <TextBlock Text="{DynamicResource Lang.Extensions.Empty.Title}" Classes="EmptyTitle"/>
+                        <TextBlock Text="{DynamicResource Lang.Extensions.Empty.Body}" Classes="EmptyBody"/>
                     </StackPanel>
-                </Border>
+                    <StackPanel Spacing="6" IsVisible="{Binding IsSearchWithoutMatches}">
+                        <TextBlock Text="{DynamicResource Lang.Extensions.NoMatches.Title}" Classes="EmptyTitle"/>
+                        <TextBlock Text="{Binding NoMatchesText}" Classes="EmptyBody"/>
+                    </StackPanel>
+                    <Button Classes="SecondaryAction" Content="{DynamicResource Lang.Extensions.Empty.Browse}" Command="{Binding ShowDiscoverCommand}"/>
+                </StackPanel>
 
                 <!-- MCP servers -->
                 <StackPanel Spacing="10" IsVisible="{Binding ShowMcpSection}">

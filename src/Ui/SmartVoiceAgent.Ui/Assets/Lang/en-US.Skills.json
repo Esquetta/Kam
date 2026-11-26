@@ -1,6 +1,6 @@
 {
   "Skills.Title": "Skills",
-  "Skills.Subtitle": "Built-in abilities the agent calls as tools. Turn them on or off, grant permissions and test them.",
+  "Skills.Subtitle": "Built-in tools the agent can call. Turn them on or off, set permissions and test them.",
 
   "Skills.Search.Placeholder": "Search skills",
 

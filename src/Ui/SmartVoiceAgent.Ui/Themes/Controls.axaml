@@ -14,7 +14,9 @@
         Selection:  neutral (RaisedBg with TextPrimary); accent is for the primary action, focus, toggles and links
         Kam Studio primitives: buttons (PrimaryAction, SecondaryAction, GhostAction, plus Sm), chips (Pill with
         Accent, Success, Warning, Danger, Info), Pane and PaneHead (panel), Segmented and DrawerTab (seg),
-        ToggleSwitch (toggle), Risk (Read, Write, Shell), KvKey and KvValue (kv), Note, Explain, Code, Kbd
+        ToggleSwitch (toggle), Risk (Read, Write, Shell), KvKey and KvValue (kv), Note, Code, Kbd
+        Page chrome: PageColumn (Form, List, Wide) holds a PageHeader (title, one-line subtitle, actions)
+        and the page; EmptyState replaces boxed empty panels
     -->
 
     <!-- ========================= -->
@@ -78,13 +80,106 @@
     <!-- ========================= -->
 
     <Style Selector="Grid.WorkbenchPage">
-        <Setter Property="Margin" Value="0" />
-        <Setter Property="RowSpacing" Value="20" />
+        <Setter Property="RowSpacing" Value="24" />
     </Style>
 
     <Style Selector="StackPanel.WorkbenchPage">
-        <Setter Property="Margin" Value="0" />
-        <Setter Property="Spacing" Value="20" />
+        <Setter Property="Spacing" Value="24" />
+    </Style>
+
+    <!-- Content column, set on a page's root panel: centered (Stretch with a MaxWidth centers), 24 top,
+         32 sides, 40 bottom; the max width is the content width. Form 720 (Settings, Integrations, Loops),
+         List 1040 (most pages), Wide 1280 (Prompts). Graphs bleeds and sets only the margin. -->
+    <Style Selector=":is(Control).PageColumn">
+        <Setter Property="Margin" Value="32,24,32,40" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector=":is(Control).PageColumn.Form">
+        <Setter Property="MaxWidth" Value="720" />
+    </Style>
+    <Style Selector=":is(Control).PageColumn.List">
+        <Setter Property="MaxWidth" Value="1040" />
+    </Style>
+    <Style Selector=":is(Control).PageColumn.Wide">
+        <Setter Property="MaxWidth" Value="1280" />
+    </Style>
+
+    <!-- Page header: title and a one-line subtitle on the left (column 0), actions on the right (column 1).
+         No eyebrow and no explanation box; a detail that does not fit goes in an info icon's tooltip. -->
+    <Style Selector="Grid.PageHeader">
+        <Setter Property="ColumnSpacing" Value="16" />
+    </Style>
+    <Style Selector="StackPanel.PageHeaderText">
+        <Setter Property="Spacing" Value="4" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="StackPanel.PageHeaderText TextBlock.PageSubtitle">
+        <Setter Property="TextWrapping" Value="NoWrap" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="StackPanel.PageHeaderActions">
+        <Setter Property="Orientation" Value="Horizontal" />
+        <Setter Property="Spacing" Value="8" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <!-- The small info icon after a subtitle; its tooltip holds the detail -->
+    <Style Selector="Button.InfoTip">
+        <Setter Property="Width" Value="20" />
+        <Setter Property="Height" Value="20" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="ToolTip.ShowDelay" Value="200" />
+    </Style>
+    <Style Selector="Button.InfoTip /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.InfoTip Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}" />
+    </Style>
+    <Style Selector="Button.InfoTip:pointerover Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextSecondaryBrush}" />
+    </Style>
+
+    <!-- Empty state: no box, centered, 64 px below the top of the content. A 20 px muted icon, a title,
+         one muted line and at most one Secondary button. -->
+    <Style Selector="StackPanel.EmptyState">
+        <Setter Property="Spacing" Value="6" />
+        <Setter Property="Margin" Value="0,64,0,0" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="MaxWidth" Value="440" />
+    </Style>
+    <Style Selector="StackPanel.EmptyState > Viewbox">
+        <Setter Property="Width" Value="20" />
+        <Setter Property="Height" Value="20" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="0,0,0,6" />
+    </Style>
+    <Style Selector="StackPanel.EmptyState > Viewbox > Path.Icon">
+        <Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}" />
+    </Style>
+    <Style Selector="StackPanel.EmptyState TextBlock.EmptyTitle">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="LineHeight" Value="20" />
+        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="TextAlignment" Value="Center" />
+    </Style>
+    <Style Selector="StackPanel.EmptyState TextBlock.EmptyBody">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="LineHeight" Value="20" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="StackPanel.EmptyState > Button">
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="0,10,0,0" />
     </Style>
 
     <Style Selector="Border.WorkbenchSection">
@@ -488,32 +583,6 @@
     <!-- PILLS / BADGES -->
     <!-- ========================= -->
 
-    <!-- A pill that acts as a button, such as the title bar status. -->
-    <Style Selector="Button.PillButton">
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="Padding" Value="0" />
-        <Setter Property="MinHeight" Value="0" />
-        <Setter Property="VerticalAlignment" Value="Center" />
-        <Setter Property="Cursor" Value="Hand" />
-    </Style>
-
-    <Style Selector="Button.PillButton /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="Transparent" />
-    </Style>
-
-    <Style Selector="Button.PillButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="Transparent" />
-    </Style>
-
-    <Style Selector="Button.PillButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="Transparent" />
-    </Style>
-
-    <Style Selector="Button.PillButton:pointerover Border.Pill">
-        <Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}" />
-    </Style>
-
     <!-- Segmented control: the activity drawer tabs and the Extensions tabs -->
     <Style Selector="Border.Segmented">
         <Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
@@ -748,20 +817,6 @@
     </Style>
     <Style Selector="Border.Note TextBlock">
         <Setter Property="FontSize" Value="12" />
-        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
-        <Setter Property="TextWrapping" Value="Wrap" />
-    </Style>
-
-    <!-- Explain (.explain): an accent-tinted strip under a page head -->
-    <Style Selector="Border.Explain">
-        <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}" />
-        <Setter Property="CornerRadius" Value="8" />
-        <Setter Property="Padding" Value="12,10" />
-        <Setter Property="HorizontalAlignment" Value="Left" />
-        <Setter Property="MaxWidth" Value="720" />
-    </Style>
-    <Style Selector="Border.Explain TextBlock">
-        <Setter Property="FontSize" Value="13" />
         <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>

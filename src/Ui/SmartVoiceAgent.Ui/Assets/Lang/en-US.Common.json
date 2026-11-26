@@ -38,5 +38,6 @@
   "Common.Reset": "Reset",
   "Common.Default": "Default",
   "Common.None": "None",
-  "Common.Error": "Error"
+  "Common.Error": "Error",
+  "Common.MoreInfo": "More info"
 }

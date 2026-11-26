@@ -108,7 +108,6 @@ public sealed partial class WorkbenchLocalizationTests
 
         raised.Should().Contain([
             "vm.StatusText",
-            "vm.ActivePageTitle",
             "vm.AgentChatSessionCountText",
             "vm.AgentChatModelOptions",
             "workspace.Title",

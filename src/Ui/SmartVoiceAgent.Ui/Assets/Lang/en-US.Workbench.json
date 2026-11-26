@@ -1,12 +1,5 @@
 {
   "Workbench.Page.Workbench": "Tasks",
-  "Workbench.Page.Inbox": "Needs you",
-  "Workbench.Page.Diagnostics": "Diagnostics",
-  "Workbench.Page.Network": "Network",
-  "Workbench.Page.Skills": "Skills",
-  "Workbench.Page.Extensions": "Extensions",
-  "Workbench.Page.Integrations": "Integrations",
-  "Workbench.Page.Settings": "Settings",
 
   "Workbench.Status.Starting": "Starting",
   "Workbench.Status.AgentReady": "Ready",

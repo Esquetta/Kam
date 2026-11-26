@@ -44,18 +44,22 @@
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel x:Name="Page" Margin="16,18,16,24" Spacing="14">
+        <StackPanel x:Name="Page" Classes="WorkbenchPage PageColumn List">
 
-            <!-- Page head: eyebrow, title and the explanation strip -->
-            <StackPanel Spacing="10">
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                    <TextBlock Text="{DynamicResource Lang.Runs.Eyebrow}" Classes="Overline" VerticalAlignment="Center"/>
-                    <TextBlock Text="{DynamicResource Lang.Runs.Title}" Classes="PageTitle" VerticalAlignment="Center"/>
+            <Grid Classes="PageHeader" ColumnDefinitions="*,Auto">
+                <StackPanel Classes="PageHeaderText">
+                    <TextBlock Text="{DynamicResource Lang.Runs.Title}" Classes="PageTitle"/>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" HorizontalAlignment="Left">
+                        <TextBlock Text="{DynamicResource Lang.Runs.Subtitle}" Classes="PageSubtitle"/>
+                        <Button Grid.Column="1"
+                                Classes="InfoTip"
+                                AutomationProperties.Name="{DynamicResource Lang.Common.MoreInfo}"
+                                ToolTip.Tip="{DynamicResource Lang.Runs.SubtitleTip}">
+                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconInfo}"/></Viewbox>
+                        </Button>
+                    </Grid>
                 </StackPanel>
-                <Border Classes="Explain">
-                    <TextBlock Text="{DynamicResource Lang.Runs.Subtitle}" Classes="PageSubtitle"/>
-                </Border>
-            </StackPanel>
+            </Grid>
 
             <!-- Filter and search -->
             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="16">
@@ -83,8 +87,15 @@
                 </TextBox>
             </Grid>
 
+            <!-- Empty state: no history yet, or nothing matches the filter -->
+            <StackPanel Classes="EmptyState" IsVisible="{Binding IsEmpty}">
+                <Viewbox><Path Classes="Icon" Data="{StaticResource IconHistory}"/></Viewbox>
+                <TextBlock Text="{Binding EmptyTitle}" Classes="EmptyTitle"/>
+                <TextBlock Text="{Binding EmptyBody}" Classes="EmptyBody"/>
+            </StackPanel>
+
             <!-- The table scrolls sideways when the page is narrower than 760 px -->
-            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" IsVisible="{Binding !IsEmpty}">
                 <Border Classes="Pane" MinWidth="760">
                     <StackPanel>
                         <Border Classes="PaneHead" MinHeight="0" Padding="14,9">
@@ -98,12 +109,6 @@
                                 <TextBlock Grid.Column="6" Classes="RunsHeadCell" Text="{DynamicResource Lang.Runs.Column.When}" TextAlignment="Right"/>
                             </Grid>
                         </Border>
-
-                        <!-- Empty state -->
-                        <StackPanel Spacing="6" Margin="22" HorizontalAlignment="Center" IsVisible="{Binding IsEmpty}">
-                            <TextBlock Text="{Binding EmptyTitle}" FontSize="14" FontWeight="Medium" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{Binding EmptyBody}" Classes="Caption" TextAlignment="Center" TextWrapping="Wrap"/>
-                        </StackPanel>
 
                         <ItemsControl Classes="RunsList" ItemsSource="{Binding Rows}">
                             <ItemsControl.ItemTemplate>

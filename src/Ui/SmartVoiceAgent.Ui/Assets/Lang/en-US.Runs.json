@@ -1,7 +1,7 @@
 {
   "Runs.Title": "Runs",
-  "Runs.Eyebrow": "MANAGE",
-  "Runs.Subtitle": "Everything Kam ran: your tasks, the subagents they started and the runs of role agents. Open a task to continue it, or expand an agent run to see what it did.",
+  "Runs.Subtitle": "Your tasks, the subagents they started and role-agent runs.",
+  "Runs.SubtitleTip": "Open a task to continue it, or expand an agent run to see what it did.",
   "Runs.Filter.All": "All",
   "Runs.Filter.Tasks": "Tasks",
   "Runs.Filter.AgentRuns": "Agent runs",

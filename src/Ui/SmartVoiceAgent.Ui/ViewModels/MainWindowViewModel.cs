@@ -122,30 +122,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 this.RaisePropertyChanged(nameof(IsChatWorkbenchVisible));
                 this.RaisePropertyChanged(nameof(IsPageHostVisible));
                 this.RaisePropertyChanged(nameof(IsInboxVisible));
-                this.RaisePropertyChanged(nameof(ActivePageTitle));
             }
         }
-
-        /// <summary>
-        /// Gets the display name of the active page, shown in the window title bar.
-        /// </summary>
-        public string ActivePageTitle => ActiveView switch
-        {
-            NavView.Coordinator => Loc.Get("Workbench.Page.Workbench"),
-            NavView.Diagnostics => Loc.Get("Workbench.Page.Diagnostics"),
-            NavView.Network => Loc.Get("Workbench.Page.Network"),
-            NavView.Plugins => Loc.Get("Workbench.Page.Skills"),
-            NavView.Extensions => Loc.Get("Workbench.Page.Extensions"),
-            NavView.Integrations => Loc.Get("Workbench.Page.Integrations"),
-            NavView.Settings => Loc.Get("Workbench.Page.Settings"),
-            NavView.Inbox => Loc.Get("Workbench.Page.Inbox"),
-            NavView.Prompts => Loc.Get("Shell.Ladder.Prompts"),
-            NavView.Agents => Loc.Get("Shell.Ladder.Agents"),
-            NavView.Loops => Loc.Get("Shell.Ladder.Loops"),
-            NavView.Graphs => Loc.Get("Shell.Ladder.Graphs"),
-            NavView.Runs => Loc.Get("Shell.Nav.Runs"),
-            _ => string.Empty
-        };
 
         public bool IsChatWorkbenchVisible => ActiveView == NavView.Coordinator;
 
@@ -194,6 +172,16 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public HeaderStatus CurrentHeaderStatus => _headerStatus;
 
         /// <summary>
+        /// Gets whether the title bar shows a status. It shows nothing while the agent is ready.
+        /// </summary>
+        public bool ShowsHeaderStatus => _headerStatus != HeaderStatus.AgentReady;
+
+        /// <summary>
+        /// Gets whether the title bar status asks the user to act (no model yet), so it shows in the warning color.
+        /// </summary>
+        public bool IsHeaderStatusWarning => _headerStatus == HeaderStatus.NeedsModel;
+
+        /// <summary>
         /// Gets the title bar status tooltip, which says what the state means and what a click does.
         /// </summary>
         public string? StatusToolTip => _headerStatus switch
@@ -220,6 +208,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// </summary>
         public bool NeedsModelSetup => _headerStatus == HeaderStatus.NeedsModel;
 
+        /// <summary>Gets whether an agent turn is running, so the top bar's status dot uses the accent color.</summary>
+        public bool IsHeaderStatusWorking => _headerStatus == HeaderStatus.AgentWorking;
+
         /// <summary>
         /// Opens Settings with the chat model's provider set to the one picked on the setup card
         /// ("OpenRouter", "OpenAI", "Anthropic" or "Ollama").
@@ -243,6 +234,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
             this.RaisePropertyChanged(nameof(StatusColor));
             this.RaisePropertyChanged(nameof(StatusToolTip));
             this.RaisePropertyChanged(nameof(CurrentHeaderStatus));
+            this.RaisePropertyChanged(nameof(ShowsHeaderStatus));
+            this.RaisePropertyChanged(nameof(IsHeaderStatusWarning));
+            this.RaisePropertyChanged(nameof(IsHeaderStatusWorking));
             this.RaisePropertyChanged(nameof(NeedsModelSetup));
             StatusChanged?.Invoke(this, EventArgs.Empty);
         }
@@ -1561,7 +1555,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             UpdateStatusProperties();
             RaiseVoiceStateChanged();
-            this.RaisePropertyChanged(nameof(ActivePageTitle));
             this.RaisePropertyChanged(nameof(QueuedAgentMessagesText));
             RaiseAgentChatStateChanged();
             RaiseSelectedContext();

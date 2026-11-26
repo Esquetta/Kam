@@ -1,7 +1,6 @@
 {
-  "Loops.Eyebrow": "BUILD",
   "Loops.Title": "Loops",
-  "Loops.Explain": "A loop is the agent repeating think → call a tool → read the result until the task is done or a limit stops it. Every task runs under the limits below, and changes apply to the next message without a restart.",
+  "Loops.Subtitle": "Limits for the agent's think → tool → read loop. Changes apply to the next message.",
   "Loops.Limits.Title": "Limits",
   "Loops.Reset": "Reset to defaults",
   "Loops.Steps.Label": "Step limit per turn",

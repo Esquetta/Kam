@@ -56,35 +56,22 @@
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel Classes="WorkbenchPage"
-                    Margin="18,16,18,24"
-                    HorizontalAlignment="Stretch">
+        <StackPanel Classes="WorkbenchPage PageColumn List">
 
-            <Grid ColumnDefinitions="*, Auto" ColumnSpacing="16">
-                <StackPanel Spacing="6">
-                    <TextBlock Text="{DynamicResource Lang.Diagnostics.Title}"
-                               Classes="PageTitle"/>
-                    <TextBlock Text="{DynamicResource Lang.Diagnostics.Subtitle}"
-                               Classes="PageSubtitle"/>
+            <Grid Classes="PageHeader" ColumnDefinitions="*,Auto">
+                <StackPanel Classes="PageHeaderText">
+                    <TextBlock Text="{DynamicResource Lang.Diagnostics.Title}" Classes="PageTitle"/>
+                    <TextBlock Text="{DynamicResource Lang.Diagnostics.Subtitle}" Classes="PageSubtitle"/>
                 </StackPanel>
 
-                <Button Grid.Column="1"
-                        Command="{Binding RefreshCommand}"
-                        Classes="SecondaryAction"
-                        MinWidth="112"
-                        Height="36"
-                        Padding="14,0"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Top">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Viewbox Width="14" Height="14" VerticalAlignment="Center"><Path Classes="Icon Accent" Data="{StaticResource IconRefresh}"/></Viewbox>
-                        <TextBlock Text="{DynamicResource Lang.Common.Refresh}"
-                                   Foreground="{DynamicResource TextPrimaryBrush}"
-                                   FontSize="12"
-                                   FontWeight="SemiBold"
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                <StackPanel Grid.Column="1" Classes="PageHeaderActions">
+                    <Button Command="{Binding RefreshCommand}" Classes="SecondaryAction">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Viewbox Width="16" Height="16" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
+                            <TextBlock Text="{DynamicResource Lang.Common.Refresh}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
             </Grid>
 
             <ItemsControl ItemsSource="{Binding StatusCards}" Margin="0,0,-12,0">
