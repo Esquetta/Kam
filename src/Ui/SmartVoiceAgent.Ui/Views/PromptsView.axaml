@@ -49,18 +49,30 @@
 
     <!-- Prompts: the Markdown slash commands as a library -->
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel x:Name="Page" Classes="WorkbenchPage" Margin="16,18" Spacing="14">
+        <StackPanel x:Name="Page" Classes="WorkbenchPage PageColumn Wide">
 
-            <!-- Page head (.page-head): eyebrow, title and the explanation strip -->
-            <StackPanel Spacing="10">
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                    <TextBlock Text="{DynamicResource Lang.Prompts.Eyebrow}" Classes="Overline" VerticalAlignment="Center"/>
-                    <TextBlock Text="{DynamicResource Lang.Prompts.Title}" Classes="PageTitle" VerticalAlignment="Center"/>
+            <!-- Header: make a prompt or open the folder -->
+            <Grid Classes="PageHeader" ColumnDefinitions="*,Auto">
+                <StackPanel Classes="PageHeaderText">
+                    <TextBlock Text="{DynamicResource Lang.Prompts.Title}" Classes="PageTitle"/>
+                    <TextBlock Text="{DynamicResource Lang.Prompts.Subtitle}" Classes="PageSubtitle"/>
                 </StackPanel>
-                <Border Classes="Explain">
-                    <TextBlock Text="{DynamicResource Lang.Prompts.Subtitle}"/>
-                </Border>
-            </StackPanel>
+                <StackPanel Grid.Column="1" Classes="PageHeaderActions" IsVisible="{Binding !IsUnavailable}">
+                    <Button Classes="SecondaryAction" Command="{Binding NewPromptCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Viewbox Width="16" Height="16" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconPlus}"/></Viewbox>
+                            <TextBlock Text="{DynamicResource Lang.Prompts.Action.New}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="IconButton"
+                            Width="32" Height="32"
+                            AutomationProperties.Name="{DynamicResource Lang.Prompts.Action.OpenFolder}"
+                            ToolTip.Tip="{DynamicResource Lang.Prompts.Action.OpenFolder}"
+                            Command="{Binding OpenFolderCommand}">
+                        <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconFolder}"/></Viewbox>
+                    </Button>
+                </StackPanel>
+            </Grid>
 
             <!-- Action result, shown only when something failed -->
             <Border Classes="Note" IsVisible="{Binding HasMessage}">
@@ -68,33 +80,25 @@
             </Border>
 
             <!-- No catalog behind the page -->
-            <Border Classes="Pane" IsVisible="{Binding IsUnavailable}">
-                <StackPanel Spacing="6" Margin="22" HorizontalAlignment="Center">
-                    <Viewbox Width="18" Height="18" HorizontalAlignment="Center"><Path Classes="Icon Muted" Data="{StaticResource IconAlertCircle}"/></Viewbox>
-                    <TextBlock Text="{DynamicResource Lang.Prompts.Unavailable.Title}" FontSize="14" FontWeight="Medium" HorizontalAlignment="Center"/>
-                    <TextBlock Text="{DynamicResource Lang.Prompts.Unavailable.Body}" Classes="Caption" TextAlignment="Center" TextWrapping="Wrap"/>
-                </StackPanel>
-            </Border>
+            <StackPanel Classes="EmptyState" IsVisible="{Binding IsUnavailable}">
+                <Viewbox><Path Classes="Icon" Data="{StaticResource IconAlertCircle}"/></Viewbox>
+                <TextBlock Text="{DynamicResource Lang.Prompts.Unavailable.Title}" Classes="EmptyTitle"/>
+                <TextBlock Text="{DynamicResource Lang.Prompts.Unavailable.Body}" Classes="EmptyBody"/>
+            </StackPanel>
 
-            <!-- Empty library: where the files go, and a way to start -->
-            <Border Classes="Pane" IsVisible="{Binding IsEmpty}">
-                <StackPanel Spacing="8" Margin="22" HorizontalAlignment="Center" MaxWidth="520">
-                    <Viewbox Width="18" Height="18" HorizontalAlignment="Center"><Path Classes="Icon Muted" Data="{StaticResource IconBookOpen}"/></Viewbox>
-                    <TextBlock Text="{DynamicResource Lang.Prompts.Empty.Title}" FontSize="14" FontWeight="Medium" HorizontalAlignment="Center"/>
-                    <TextBlock Text="{DynamicResource Lang.Prompts.Empty.Body}" Classes="Caption" TextAlignment="Center" TextWrapping="Wrap"/>
-                    <Border Classes="Code">
-                        <SelectableTextBlock Text="{Binding UserDirectory}" TextWrapping="Wrap"/>
-                    </Border>
-                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" Margin="0,4,0,0">
-                        <Button Classes="PrimaryAction Sm"
-                                Content="{DynamicResource Lang.Prompts.Action.New}"
-                                Command="{Binding NewPromptCommand}"/>
-                        <Button Classes="SecondaryAction Sm"
-                                Content="{DynamicResource Lang.Prompts.Action.OpenFolder}"
-                                Command="{Binding OpenFolderCommand}"/>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
+            <!-- Empty library: where the files go; the header makes one or opens the folder -->
+            <StackPanel Classes="EmptyState" IsVisible="{Binding IsEmpty}">
+                <Viewbox><Path Classes="Icon" Data="{StaticResource IconBookOpen}"/></Viewbox>
+                <TextBlock Text="{DynamicResource Lang.Prompts.Empty.Title}" Classes="EmptyTitle"/>
+                <TextBlock Text="{DynamicResource Lang.Prompts.Empty.Body}" Classes="EmptyBody"/>
+                <SelectableTextBlock Text="{Binding UserDirectory}"
+                                     FontFamily="{StaticResource MonoFontFamily}"
+                                     FontSize="12"
+                                     Foreground="{DynamicResource TextMutedBrush}"
+                                     HorizontalAlignment="Center"
+                                     TextAlignment="Center"
+                                     TextWrapping="Wrap"/>
+            </StackPanel>
 
             <!-- The two panes -->
             <Grid ColumnDefinitions="240,*" RowDefinitions="Auto,Auto" ColumnSpacing="14" RowSpacing="14" IsVisible="{Binding HasPrompts}">
@@ -116,7 +120,7 @@
                         <TextBlock Text="{DynamicResource Lang.Prompts.NoMatches}" Classes="Caption" Margin="14,12"
                                    TextWrapping="Wrap" IsVisible="{Binding HasNoMatches}"/>
 
-                        <ItemsControl ItemsSource="{Binding Groups}">
+                        <ItemsControl ItemsSource="{Binding Groups}" Margin="0,0,0,6">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="pagevm:PromptGroupViewModel">
                                     <StackPanel>
@@ -146,18 +150,6 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-
-                        <!-- Footer: make a prompt or open the folder -->
-                        <Border Classes="PaneHead" BorderThickness="0,1,0,0" Margin="0,8,0,0">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Button Classes="SecondaryAction Sm"
-                                        Content="{DynamicResource Lang.Prompts.Action.New}"
-                                        Command="{Binding NewPromptCommand}"/>
-                                <Button Classes="GhostAction Sm"
-                                        Content="{DynamicResource Lang.Prompts.Action.OpenFolder}"
-                                        Command="{Binding OpenFolderCommand}"/>
-                            </StackPanel>
-                        </Border>
                     </StackPanel>
                 </Border>
 

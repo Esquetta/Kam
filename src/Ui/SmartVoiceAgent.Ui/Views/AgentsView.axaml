@@ -68,21 +68,22 @@
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel x:Name="Page"
-                    Classes="WorkbenchPage"
-                    Margin="16,18"
-                    Spacing="14">
+        <StackPanel x:Name="Page" Classes="WorkbenchPage PageColumn List">
 
-            <!-- Page head: eyebrow, title and the explanation strip -->
-            <StackPanel Spacing="10">
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                    <TextBlock Text="{DynamicResource Lang.Agents.Eyebrow}" Classes="Overline" VerticalAlignment="Center"/>
-                    <TextBlock Text="{DynamicResource Lang.Agents.Title}" Classes="PageTitle" VerticalAlignment="Center"/>
+            <Grid Classes="PageHeader" ColumnDefinitions="*,Auto">
+                <StackPanel Classes="PageHeaderText">
+                    <TextBlock Text="{DynamicResource Lang.Agents.Title}" Classes="PageTitle"/>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" HorizontalAlignment="Left">
+                        <TextBlock Text="{DynamicResource Lang.Agents.Subtitle}" Classes="PageSubtitle"/>
+                        <Button Grid.Column="1"
+                                Classes="InfoTip"
+                                AutomationProperties.Name="{DynamicResource Lang.Common.MoreInfo}"
+                                ToolTip.Tip="{DynamicResource Lang.Agents.SubtitleTip}">
+                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconInfo}"/></Viewbox>
+                        </Button>
+                    </Grid>
                 </StackPanel>
-                <Border Classes="Explain">
-                    <TextBlock Text="{DynamicResource Lang.Agents.Explain}"/>
-                </Border>
-            </StackPanel>
+            </Grid>
 
             <Grid ColumnDefinitions="340,16,*" RowDefinitions="Auto,Auto">
 
@@ -140,13 +141,11 @@
                             <TextBlock Text="{Binding RoleAgents.Count}" Classes="GroupCount" IsVisible="{Binding HasRoleAgents}"/>
                         </StackPanel>
 
-                        <!-- Empty state -->
-                        <Border Classes="Note" IsVisible="{Binding HasNoRoleAgents}">
-                            <StackPanel Spacing="4">
-                                <TextBlock Text="{DynamicResource Lang.Agents.Empty.Title}" FontWeight="Medium" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <TextBlock Text="{DynamicResource Lang.Agents.Empty.Body}"/>
-                            </StackPanel>
-                        </Border>
+                        <!-- Empty: one line in the section, no slab -->
+                        <TextBlock Text="{DynamicResource Lang.Agents.Empty.Body}"
+                                   Classes="Secondary"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding HasNoRoleAgents}"/>
 
                         <ItemsControl ItemsSource="{Binding RoleAgents}" IsVisible="{Binding HasRoleAgents}">
                             <ItemsControl.ItemsPanel>

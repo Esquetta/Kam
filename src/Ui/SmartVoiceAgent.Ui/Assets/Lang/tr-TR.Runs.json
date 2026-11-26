@@ -1,7 +1,7 @@
 {
   "Runs.Title": "Çalıştırmalar",
-  "Runs.Eyebrow": "YÖNET",
-  "Runs.Subtitle": "Kam'ın çalıştırdığı her şey: görevlerin, başlattıkları alt ajanlar ve rol ajanlarının çalıştırmaları. Devam etmek için bir görevi aç, ne yaptığını görmek için bir ajan çalıştırmasını genişlet.",
+  "Runs.Subtitle": "Görevleriniz, başlattıkları alt ajanlar ve rol ajanı çalıştırmaları.",
+  "Runs.SubtitleTip": "Devam etmek için bir görevi açın, ne yaptığını görmek için bir ajan çalıştırmasını genişletin.",
   "Runs.Filter.All": "Tümü",
   "Runs.Filter.Tasks": "Görevler",
   "Runs.Filter.AgentRuns": "Ajan çalıştırmaları",

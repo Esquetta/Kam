@@ -47,7 +47,7 @@ public sealed class MainWindowMetadataTests
         mainWindowText.Should().Contain("Agent workspace");
         mainWindowText.Should().Contain("Border.Sidebar");
         mainWindowText.Should().Contain("Button.NavBtn");
-        mainWindowText.Should().Contain("ActivePageTitle");
+        mainWindowText.Should().NotContain("ActivePageTitle", "each page owns its title; the top bar shows only the thread title on Tasks");
         mainWindowText.Should().Contain("BrandGradientBrush");
         mainWindowText.Should().Contain("Classes=\"ModelPicker\"");
         mainWindowText.Should().Contain("ComposerSurface");
@@ -224,7 +224,7 @@ public sealed class MainWindowMetadataTests
         mainWindowText.Should().Contain("RuntimeDiagnosticsViewModel");
         mainWindowText.Should().Contain("RuntimeDiagnosticsView");
         mainWindowText.Should().Contain("<DataTemplate DataType=\"pagevm:PluginsViewModel\">");
-        extensionsText.Should().Contain("Content=\"Skill tests and policies\"");
+        extensionsText.Should().Contain("<MenuItem Header=\"Skill tests and policies\"");
         extensionsText.Should().Contain("((shell:MainWindowViewModel)DataContext).NavigateToPluginsCommand}");
         settingsText.Should().Contain("ToolTip.Tip=\"Runtime Diagnostics\"");
         settingsText.Should().Contain("((shell:MainWindowViewModel)DataContext).NavigateToDiagnosticsCommand}");
@@ -471,11 +471,15 @@ public sealed class MainWindowMetadataTests
         var status = mainWindow.Descendants().Single(element => AttributeValue(element, "Name") == "HeaderStatusButton");
 
         status.Name.LocalName.Should().Be("Button");
-        AttributeValue(status, "Classes").Should().Be("PillButton");
+        AttributeValue(status, "Classes").Should().Be("HeaderStatus");
         AttributeValue(status, "Command").Should().Be("{Binding HeaderStatusCommand}");
         AttributeValue(status, "ToolTip.Tip").Should().Be("{Binding StatusToolTip}");
+        AttributeValue(status, "IsVisible").Should().Be("{Binding ShowsHeaderStatus}", "nothing shows while the agent is ready");
+        status.Descendants().Should().NotContain(element => AttributeValue(element, "Classes") == "Pill", "the status is a dot and text");
         status.Descendants().Should().Contain(element =>
-            element.Name.LocalName == "TextBlock" && AttributeValue(element, "Text") == "{Binding StatusText, Mode=OneWay}");
+            element.Name.LocalName == "TextBlock"
+            && AttributeValue(element, "Text") == "{Binding StatusText, Mode=OneWay}"
+            && AttributeValue(element, "Classes.Warning") == "{Binding IsHeaderStatusWarning}");
     }
 
     [Fact]

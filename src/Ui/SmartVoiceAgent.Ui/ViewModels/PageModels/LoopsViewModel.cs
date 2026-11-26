@@ -32,7 +32,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         }
 
         /// <summary>Gets what a loop is, in one sentence.</summary>
-        public string Explanation => Loc.Get("Loops.Explain");
+        public string Explanation => Loc.Get("Loops.Subtitle");
 
         /// <summary>Gets or sets the step limit per turn (1-200).</summary>
         public string MaxIterationsText

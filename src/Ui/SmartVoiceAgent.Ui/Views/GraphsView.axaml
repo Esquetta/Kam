@@ -117,25 +117,29 @@
         </Style>
     </UserControl.Styles>
 
-    <DockPanel x:Name="Page" Margin="16,18,16,16">
-        <!-- Page head -->
-        <StackPanel DockPanel.Dock="Top" Spacing="10" Margin="0,0,0,14">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-                <TextBlock Text="{DynamicResource Lang.Graphs.Overline}" Classes="Overline" VerticalAlignment="Center"/>
-                <TextBlock Text="{DynamicResource Lang.Graphs.Title}" Classes="PageTitle" VerticalAlignment="Center"/>
+    <!-- The canvas bleeds: the page column sets only the margins -->
+    <DockPanel x:Name="Page" Classes="PageColumn">
+        <Grid DockPanel.Dock="Top" Classes="PageHeader" ColumnDefinitions="*,Auto" Margin="0,0,0,24">
+            <StackPanel Classes="PageHeaderText">
+                <TextBlock Text="{DynamicResource Lang.Graphs.Title}" Classes="PageTitle"/>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" HorizontalAlignment="Left">
+                    <TextBlock Text="{DynamicResource Lang.Graphs.Subtitle}" Classes="PageSubtitle"/>
+                    <Button Grid.Column="1"
+                            Classes="InfoTip"
+                            AutomationProperties.Name="{DynamicResource Lang.Common.MoreInfo}"
+                            ToolTip.Tip="{DynamicResource Lang.Graphs.SubtitleTip}">
+                        <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconInfo}"/></Viewbox>
+                    </Button>
+                </Grid>
             </StackPanel>
-            <Border Classes="Explain">
-                <TextBlock Text="{DynamicResource Lang.Graphs.Explain}" Classes="PageSubtitle"/>
-            </Border>
-        </StackPanel>
+        </Grid>
 
         <!-- Empty state: no task has started a subagent yet -->
-        <Border DockPanel.Dock="Top" Classes="Pane" Padding="22" IsVisible="{Binding IsEmpty}">
-            <StackPanel Spacing="8" HorizontalAlignment="Center" MaxWidth="520">
-                <TextBlock Text="{DynamicResource Lang.Graphs.Empty.Title}" FontSize="14" FontWeight="Medium" HorizontalAlignment="Center"/>
-                <TextBlock Text="{DynamicResource Lang.Graphs.Empty.Body}" Classes="Caption" TextAlignment="Center" TextWrapping="Wrap"/>
-            </StackPanel>
-        </Border>
+        <StackPanel DockPanel.Dock="Top" Classes="EmptyState" IsVisible="{Binding IsEmpty}">
+            <Viewbox><Path Classes="Icon" Data="{StaticResource IconNetwork}"/></Viewbox>
+            <TextBlock Text="{DynamicResource Lang.Graphs.Empty.Title}" Classes="EmptyTitle"/>
+            <TextBlock Text="{DynamicResource Lang.Graphs.Empty.Body}" Classes="EmptyBody"/>
+        </StackPanel>
 
         <!-- Tasks that started subagents -->
         <Border Classes="Pane GraphTasks" IsVisible="{Binding HasGraph}">

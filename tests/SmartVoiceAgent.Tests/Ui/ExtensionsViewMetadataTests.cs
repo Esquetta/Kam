@@ -41,7 +41,7 @@ public sealed class ExtensionsViewMetadataTests
 
         text.Should().Contain("CommandParameter=\"All\"");
         text.Should().Contain("IsVisible=\"{Binding HasNoInstalledMatches}\"");
-        text.Should().Contain("Text=\"Browse Discover\"");
+        text.Should().Contain("Content=\"Browse Discover\"");
     }
 
     [Fact]

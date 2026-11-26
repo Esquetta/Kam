@@ -89,7 +89,8 @@ public sealed class UiDesignSystemMetadataTests
     {
         var viewText = LocalizedXaml.ReadAllText(FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Views", viewFileName));
 
-        viewText.Should().Contain("Classes=\"WorkbenchPage\"");
+        viewText.Should().MatchRegex("Classes=\"WorkbenchPage PageColumn (Form|List|Wide)\"");
+        viewText.Should().Contain("Classes=\"PageHeader\"");
         viewText.Should().Contain("Classes=\"PageTitle\"");
         viewText.Should().Contain("Classes=\"PageSubtitle\"");
     }

@@ -26,21 +26,15 @@
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel Classes="WorkbenchPage"
-                    Classes.narrow="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsRailCompact}"
-                    Margin="16,18"
-                    Spacing="14">
+        <StackPanel Classes="WorkbenchPage PageColumn Form"
+                    Classes.narrow="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsRailCompact}">
 
-            <!-- Page head: overline, title and the explanation strip -->
-            <StackPanel Spacing="10">
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                    <TextBlock Text="{DynamicResource Lang.Loops.Eyebrow}" Classes="Overline" VerticalAlignment="Center"/>
-                    <TextBlock Text="{DynamicResource Lang.Loops.Title}" Classes="PageTitle" VerticalAlignment="Center"/>
+            <Grid Classes="PageHeader" ColumnDefinitions="*,Auto">
+                <StackPanel Classes="PageHeaderText">
+                    <TextBlock Text="{DynamicResource Lang.Loops.Title}" Classes="PageTitle"/>
+                    <TextBlock Text="{DynamicResource Lang.Loops.Subtitle}" Classes="PageSubtitle"/>
                 </StackPanel>
-                <Border Classes="Explain">
-                    <TextBlock Text="{DynamicResource Lang.Loops.Explain}" Classes="PageSubtitle"/>
-                </Border>
-            </StackPanel>
+            </Grid>
 
             <!-- Limits: saved on commit and used by the next message -->
             <Border Classes="Pane">

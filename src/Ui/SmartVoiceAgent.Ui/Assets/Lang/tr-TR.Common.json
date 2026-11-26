@@ -38,5 +38,6 @@
   "Common.Reset": "Sıfırla",
   "Common.Default": "Varsayılan",
   "Common.None": "Yok",
-  "Common.Error": "Hata"
+  "Common.Error": "Hata",
+  "Common.MoreInfo": "Daha fazla bilgi"
 }

@@ -11,15 +11,14 @@
     </UserControl.Resources>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <Grid Classes="WorkbenchPage" RowDefinitions="Auto,*" Margin="18,16,18,24" MaxWidth="860" HorizontalAlignment="Left">
+        <Grid Classes="WorkbenchPage PageColumn Form" RowDefinitions="Auto,*">
 
-            <!-- Header Section -->
-            <StackPanel Grid.Row="0" Spacing="6" Margin="0,0,0,24">
-                <TextBlock Text="{DynamicResource Lang.Integrations.Title}"
-                           Classes="PageTitle"/>
-                <TextBlock Text="{DynamicResource Lang.Integrations.Subtitle}"
-                           Classes="PageSubtitle"/>
-            </StackPanel>
+            <Grid Grid.Row="0" Classes="PageHeader" ColumnDefinitions="*,Auto">
+                <StackPanel Classes="PageHeaderText">
+                    <TextBlock Text="{DynamicResource Lang.Integrations.Title}" Classes="PageTitle"/>
+                    <TextBlock Text="{DynamicResource Lang.Integrations.Subtitle}" Classes="PageSubtitle"/>
+                </StackPanel>
+            </Grid>
 
             <!-- Integrations Grid -->
             <StackPanel Grid.Row="1" Spacing="16">

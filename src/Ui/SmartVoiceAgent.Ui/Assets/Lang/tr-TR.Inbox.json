@@ -1,8 +1,7 @@
 {
   "Inbox.Title": "Sizi bekleyenler",
-  "Inbox.Eyebrow": "GELEN KUTUSU",
-  "Inbox.Subtitle": "Tüm görevlerden onayınızı bekleyen araç çağrıları. Buradan yanıtlayın ya da görevi açın.",
-  "Inbox.Empty.Title": "Sizi bekleyen bir şey yok",
-  "Inbox.Empty.Body": "Bir görev onayınızı beklediğinde burada ve görevin içinde görünür.",
+  "Inbox.Subtitle": "Tüm görevlerde onayınızı bekleyen araç çağrıları.",
+  "Inbox.Empty.Title": "Bekleyen bir şey yok",
+  "Inbox.Empty.Body": "Herhangi bir görevin onay istekleri burada görünür.",
   "Inbox.OpenTask": "Görevi aç"
 }

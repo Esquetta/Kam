@@ -73,15 +73,14 @@
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel Classes="WorkbenchPage" Margin="18,16,18,24" MaxWidth="760" HorizontalAlignment="Left">
+        <StackPanel Classes="WorkbenchPage PageColumn Form">
 
-            <!-- Title Section -->
-            <StackPanel Spacing="6" Margin="0,0,0,8">
-                <TextBlock Text="{DynamicResource Lang.Settings.Title}"
-                           Classes="PageTitle"/>
-                <TextBlock Text="{DynamicResource Lang.Settings.Subtitle}"
-                           Classes="PageSubtitle"/>
-            </StackPanel>
+            <Grid Classes="PageHeader" ColumnDefinitions="*,Auto">
+                <StackPanel Classes="PageHeaderText">
+                    <TextBlock Text="{DynamicResource Lang.Settings.Title}" Classes="PageTitle"/>
+                    <TextBlock Text="{DynamicResource Lang.Settings.Subtitle}" Classes="PageSubtitle"/>
+                </StackPanel>
+            </Grid>
 
             <!-- AI Runtime Section: the model comes first, because nothing works without it -->
             <StackPanel Spacing="8" Margin="0,8,0,8">

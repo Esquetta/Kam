@@ -148,13 +148,14 @@
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel x:Name="Page" Classes="WorkbenchPage" Margin="18,16,18,24" Spacing="20">
+        <StackPanel x:Name="Page" Classes="WorkbenchPage PageColumn List">
 
-            <!-- Header -->
-            <StackPanel Spacing="6">
-                <TextBlock Text="{DynamicResource Lang.Skills.Title}" Classes="PageTitle"/>
-                <TextBlock Text="{DynamicResource Lang.Skills.Subtitle}" Classes="PageSubtitle"/>
-            </StackPanel>
+            <Grid Classes="PageHeader" ColumnDefinitions="*,Auto">
+                <StackPanel Classes="PageHeaderText">
+                    <TextBlock Text="{DynamicResource Lang.Skills.Title}" Classes="PageTitle"/>
+                    <TextBlock Text="{DynamicResource Lang.Skills.Subtitle}" Classes="PageSubtitle"/>
+                </StackPanel>
+            </Grid>
 
             <!-- Evals and the result of the last action -->
             <Border Classes="Surface" Padding="14,10" IsVisible="{Binding ShowSkillEvalCard}">
@@ -266,17 +267,11 @@
             </Grid>
 
             <!-- Nothing matches -->
-            <Border Classes="WorkbenchSection" Padding="32,28" IsVisible="{Binding HasNoMatches}">
-                <StackPanel Spacing="12" HorizontalAlignment="Center" MaxWidth="380">
-                    <Border Classes="IconBadge" HorizontalAlignment="Center">
-                        <Viewbox><Path Classes="Icon" Data="{StaticResource IconSearch}"/></Viewbox>
-                    </Border>
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="{DynamicResource Lang.Skills.NoMatches.Title}" Classes="SectionTitle" HorizontalAlignment="Center"/>
-                        <TextBlock Text="{Binding NoMatchesText}" Classes="Caption" TextAlignment="Center"/>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
+            <StackPanel Classes="EmptyState" IsVisible="{Binding HasNoMatches}">
+                <Viewbox><Path Classes="Icon" Data="{StaticResource IconSearch}"/></Viewbox>
+                <TextBlock Text="{DynamicResource Lang.Skills.NoMatches.Title}" Classes="EmptyTitle"/>
+                <TextBlock Text="{Binding NoMatchesText}" Classes="EmptyBody"/>
+            </StackPanel>
 
             <!-- Skills by group -->
             <ItemsControl Classes="SkillGroups" ItemsSource="{Binding Groups}" IsVisible="{Binding !HasNoMatches}">

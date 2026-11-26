@@ -80,12 +80,58 @@ public sealed class KamStudioShellMetadataTests
             "TextBlock.KvKey",
             "TextBlock.KvValue",
             "Border.Note",
-            "Border.Explain",
             "Border.Code",
             "Border.Kbd",
-            "ToggleSwitch:checked /template/ Grid#PART_MovingKnobs"
+            "ToggleSwitch:checked /template/ Grid#PART_MovingKnobs",
+            ":is(Control).PageColumn.Form",
+            ":is(Control).PageColumn.List",
+            ":is(Control).PageColumn.Wide",
+            "Grid.PageHeader",
+            "StackPanel.PageHeaderText",
+            "StackPanel.EmptyState",
+            "StackPanel.EmptyState TextBlock.EmptyTitle"
         });
+        selectors.Should().NotContain(selector => selector!.Contains("Explain", StringComparison.Ordinal));
     }
+
+    [Theory]
+    [InlineData("InboxView.axaml")]
+    [InlineData("PromptsView.axaml")]
+    [InlineData("AgentsView.axaml")]
+    [InlineData("LoopsView.axaml")]
+    [InlineData("RunsView.axaml")]
+    [InlineData("GraphsView.axaml")]
+    [InlineData("ExtensionsView.axaml")]
+    [InlineData("PluginsView.axaml")]
+    [InlineData("IntegrationsView.axaml")]
+    [InlineData("SettingsView.axaml")]
+    [InlineData("RuntimeDiagnosticsView.axaml")]
+    public void Pages_HaveOnePageHeaderInAPageColumnAndNoExplanationBox(string viewFileName)
+    {
+        var view = LoadXaml(viewFileName);
+
+        // One header: the title and a one-line subtitle, no eyebrow above them.
+        var header = view.Descendants().Single(element => AttributeValue(element, "Classes") == "PageHeader");
+        var text = header.Descendants().Single(element => AttributeValue(element, "Classes") == "PageHeaderText");
+        text.Elements().First().Should().Match<XElement>(element => AttributeValue(element, "Classes") == "PageTitle");
+        text.Descendants().Should().ContainSingle(element => AttributeValue(element, "Classes") == "PageSubtitle");
+        view.Descendants().Should().NotContain(element => AttributeValue(element, "Text") != null
+            && (AttributeValue(element, "Text")!.Contains("Eyebrow", StringComparison.Ordinal)
+                || AttributeValue(element, "Text")!.Contains(".Overline}", StringComparison.Ordinal)));
+
+        // The page root takes the shared column, so content starts and centers the same way on every page.
+        header.Ancestors().Should().Contain(element => HasClass(element, "PageColumn"));
+
+        // No explanation strips; empty states have no box.
+        view.Descendants().Should().NotContain(element => HasClass(element, "Explain"));
+        view.Descendants()
+            .Where(element => AttributeValue(element, "Classes") == "EmptyState")
+            .Should().OnlyContain(empty => !empty.Ancestors().Any(ancestor =>
+                HasClass(ancestor, "Pane") || HasClass(ancestor, "WorkbenchSection") || HasClass(ancestor, "Note")));
+    }
+
+    private static bool HasClass(XElement element, string className) =>
+        (AttributeValue(element, "Classes") ?? string.Empty).Split(' ').Contains(className);
 
     [Fact]
     public void Rail_BuildGroupIsPlainNavigationWithoutBadges()
@@ -132,6 +178,18 @@ public sealed class KamStudioShellMetadataTests
             && AttributeValue(element, "Classes") == "MicButton"
             && AttributeValue(element, "Command") == "{Binding TalkCommand}");
         mainWindowText.Should().Contain("<Style Selector=\"Grid.TopBar.narrow TextBlock.TitleSearchText, Grid.TopBar.narrow Border.Kbd, Grid.TopBar.narrow Panel.WakePill\">");
+
+        // On Tasks the bar carries the thread title, the model picker and the chat menu; the thread has no header row.
+        var thread = mainWindow.Descendants().Single(element => AttributeValue(element, "IsVisible") == "{Binding IsChatWorkbenchVisible}"
+            && element.Ancestors().Any(ancestor => AttributeValue(ancestor, "Classes") == "TopBar"));
+        thread.Descendants().Should().Contain(element =>
+            AttributeValue(element, "Classes") == "ThreadTitle" && AttributeValue(element, "Text") == "{Binding SelectedAgentChatSession.Title}");
+        thread.Descendants().Should().Contain(element => AttributeValue(element, "Classes") == "ModelPicker");
+        thread.Descendants().Should().Contain(element =>
+            element.Name.LocalName == "MenuItem" && AttributeValue(element, "Command") == "{Binding DeleteAgentChatCommand}");
+        var tasks = LoadXaml("TasksView.axaml");
+        tasks.Descendants().Should().NotContain(element =>
+            AttributeValue(element, "Classes") == "PageTitle" || AttributeValue(element, "Classes") == "ModelPicker");
     }
 
     [Fact]
@@ -204,7 +262,7 @@ public sealed class KamStudioShellMetadataTests
         var scroll = tasks.Descendants().Single(element => AttributeValue(element, "Name") == "ChatScrollViewer");
         AttributeValue(scroll.Elements().First(), "MaxWidth").Should().Be("760");
         tasks.Descendants().Should().Contain(element =>
-            element.Name.LocalName == "StackPanel" && AttributeValue(element, "Grid.Row") == "2" && AttributeValue(element, "MaxWidth") == "760");
+            element.Name.LocalName == "StackPanel" && AttributeValue(element, "Grid.Row") == "1" && AttributeValue(element, "MaxWidth") == "760");
 
         // One line template serves top-level steps, read groups and subagent cards.
         var line = tasks.Descendants().Single(element =>

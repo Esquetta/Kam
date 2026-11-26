@@ -1,12 +1,5 @@
 {
   "Workbench.Page.Workbench": "Görevler",
-  "Workbench.Page.Inbox": "Sizi bekleyenler",
-  "Workbench.Page.Diagnostics": "Tanılama",
-  "Workbench.Page.Network": "Ağ",
-  "Workbench.Page.Skills": "Yetenekler",
-  "Workbench.Page.Extensions": "Uzantılar",
-  "Workbench.Page.Integrations": "Entegrasyonlar",
-  "Workbench.Page.Settings": "Ayarlar",
 
   "Workbench.Status.Starting": "Başlatılıyor",
   "Workbench.Status.AgentReady": "Hazır",

@@ -343,97 +343,9 @@
 		</Border>
 
 		<!-- Conversation (.thread) -->
-		<Grid Classes="ThreadPane" RowDefinitions="Auto,*,Auto">
-			<Border Grid.Row="0"
-					BorderBrush="{DynamicResource BorderSubtleBrush}"
-					BorderThickness="0,0,0,1"
-					MinHeight="52"
-					Padding="16,10">
-				<Grid ColumnSpacing="8">
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="*" MinWidth="96"/>
-						<ColumnDefinition Width="Auto"/>
-						<ColumnDefinition Width="Auto"/>
-					</Grid.ColumnDefinitions>
-					<!-- Title (h1) trims; the status chip keeps its place at the end of the column -->
-					<Grid Grid.Column="0" ColumnDefinitions="*,Auto" ColumnSpacing="10" VerticalAlignment="Center">
-						<TextBlock Text="{Binding SelectedAgentChatSession.Title}"
-								   Classes="PageTitle"
-								   VerticalAlignment="Center"
-								   TextTrimming="CharacterEllipsis"/>
-						<!-- Status chip while the task runs or waits for an approval -->
-						<Border Grid.Column="1"
-								Classes="Pill"
-								Classes.Accent="{Binding SelectedAgentChatSession.IsWorking}"
-								Classes.Warning="{Binding SelectedAgentChatSession.HasPendingApproval}"
-								IsVisible="{Binding SelectedAgentChatSession.HasStatus}"
-								VerticalAlignment="Center">
-							<StackPanel Orientation="Horizontal" Spacing="5">
-								<Ellipse Classes="ChipDot"/>
-								<TextBlock Text="{Binding SelectedAgentChatSession.StatusText}"/>
-							</StackPanel>
-						</Border>
-					</Grid>
-					<!-- Model for this chat; "Settings default" follows the model chosen in Settings -->
-					<ComboBox Grid.Column="1"
-							  Classes="ModelPicker"
-							  ItemsSource="{Binding AgentChatModelOptions}"
-							  SelectedItem="{Binding SelectedAgentChatModel, Mode=TwoWay}"
-							  IsVisible="{Binding IsAgentRuntimeEnabled}"
-							  ToolTip.Tip="{Binding AgentChatModelTip}">
-						<!-- The closed picker shows only the model, so a long id can't push the header off screen -->
-						<ComboBox.SelectionBoxItemTemplate>
-							<DataTemplate DataType="vm:AgentChatModelOption">
-								<StackPanel Orientation="Horizontal" Spacing="6">
-									<Viewbox Width="12" Height="12" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconCpu}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
-									<TextBlock Text="{Binding Label}"
-											   FontSize="12"
-											   MaxWidth="160"
-											   TextTrimming="CharacterEllipsis"
-											   VerticalAlignment="Center"/>
-								</StackPanel>
-							</DataTemplate>
-						</ComboBox.SelectionBoxItemTemplate>
-						<ComboBox.ItemTemplate>
-							<DataTemplate DataType="vm:AgentChatModelOption">
-								<StackPanel Orientation="Horizontal" Spacing="6">
-									<Viewbox Width="12" Height="12" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconCpu}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
-									<TextBlock Text="{Binding Label}"
-											   FontSize="12"
-											   MaxWidth="220"
-											   TextTrimming="CharacterEllipsis"
-											   VerticalAlignment="Center"/>
-									<TextBlock Text="{Binding Caption}"
-											   FontSize="11"
-											   Foreground="{DynamicResource TextMutedBrush}"
-											   VerticalAlignment="Center"/>
-								</StackPanel>
-							</DataTemplate>
-						</ComboBox.ItemTemplate>
-					</ComboBox>
-
-					<Button Grid.Column="2"
-							Classes="IconButton"
-							Width="28" Height="28"
-							CornerRadius="7"
-							Background="Transparent"
-							BorderThickness="0"
-							VerticalAlignment="Center"
-							ToolTip.Tip="{DynamicResource Lang.Chat.Options}">
-						<Button.Flyout>
-							<MenuFlyout Placement="BottomEdgeAlignedRight">
-								<MenuItem Header="{DynamicResource Lang.Common.Rename}" InputGesture="F2" Click="OnRenameChatClick"/>
-								<MenuItem Header="{DynamicResource Lang.Chat.CopyConversation}" Command="{Binding CopyAgentChatCommand}"/>
-								<Separator/>
-								<MenuItem Header="{DynamicResource Lang.Common.Delete}" Click="OnDeleteChatClick"/>
-							</MenuFlyout>
-						</Button.Flyout>
-						<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconMore}" StrokeThickness="3" Stretch="None"/></Viewbox>
-					</Button>
-				</Grid>
-			</Border>
-
-			<ScrollViewer Grid.Row="1"
+		<!-- The thread title, model and menu sit in the window's top bar -->
+		<Grid Classes="ThreadPane" RowDefinitions="*,Auto">
+			<ScrollViewer Grid.Row="0"
 						  x:Name="ChatScrollViewer"
 						  VerticalScrollBarVisibility="Auto"
 						  HorizontalScrollBarVisibility="Disabled">
@@ -739,7 +651,7 @@
 			</ScrollViewer>
 
 			<!-- Composer -->
-			<StackPanel Grid.Row="2"
+			<StackPanel Grid.Row="1"
 						MaxWidth="760"
 						Margin="16,10,16,14"
 						Spacing="6">

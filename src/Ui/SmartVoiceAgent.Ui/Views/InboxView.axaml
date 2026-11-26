@@ -26,40 +26,33 @@
 
     <!-- Needs you: every tool call waiting for approval, across all tasks, answerable here -->
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel Classes="WorkbenchPage"
-                    Classes.narrow="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsRailCompact}"
-                    Margin="18,16,18,24"
-                    Spacing="14">
+        <StackPanel Classes="WorkbenchPage PageColumn List"
+                    Classes.narrow="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsRailCompact}">
 
-            <!-- Page head (.page-head): eyebrow, title and the explanation strip -->
-            <StackPanel Spacing="10">
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                    <TextBlock Text="{DynamicResource Lang.Inbox.Eyebrow}" Classes="Overline" VerticalAlignment="Center"/>
-                    <TextBlock Text="{DynamicResource Lang.Inbox.Title}" Classes="PageTitle" VerticalAlignment="Center"/>
-                </StackPanel>
-                <Border Classes="Explain">
+            <Grid Classes="PageHeader" ColumnDefinitions="*,Auto">
+                <StackPanel Classes="PageHeaderText">
+                    <TextBlock Text="{DynamicResource Lang.Inbox.Title}" Classes="PageTitle"/>
                     <TextBlock Text="{DynamicResource Lang.Inbox.Subtitle}" Classes="PageSubtitle"/>
-                </Border>
+                </StackPanel>
+            </Grid>
+
+            <!-- Empty state -->
+            <StackPanel Classes="EmptyState">
+                <StackPanel.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                        <Binding Path="!HasPendingApprovals"/>
+                        <Binding Path="!HasPendingSkillConfirmations"/>
+                    </MultiBinding>
+                </StackPanel.IsVisible>
+                <Viewbox><Path Classes="Icon" Data="{StaticResource IconCheck}"/></Viewbox>
+                <TextBlock Text="{DynamicResource Lang.Inbox.Empty.Title}" Classes="EmptyTitle"/>
+                <TextBlock Text="{DynamicResource Lang.Inbox.Empty.Body}" Classes="EmptyBody"/>
             </StackPanel>
 
             <!-- One panel; every waiting tool call is a row in it -->
-            <Border Classes="Pane">
+            <Border Classes="Pane" IsVisible="{Binding HasPendingApprovals}">
                 <Panel>
-                    <!-- Empty state (.empty) -->
-                    <StackPanel Spacing="6" Margin="22" HorizontalAlignment="Center">
-                        <StackPanel.IsVisible>
-                            <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                <Binding Path="!HasPendingApprovals"/>
-                                <Binding Path="!HasPendingSkillConfirmations"/>
-                            </MultiBinding>
-                        </StackPanel.IsVisible>
-                        <Viewbox Width="18" Height="18" HorizontalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconCheck}" Stroke="{DynamicResource AccentGreenBrush}"/></Viewbox>
-                        <TextBlock Text="{DynamicResource Lang.Inbox.Empty.Title}" FontSize="14" FontWeight="Medium" HorizontalAlignment="Center"/>
-                        <TextBlock Text="{DynamicResource Lang.Inbox.Empty.Body}" Classes="Caption" TextAlignment="Center" TextWrapping="Wrap"/>
-                    </StackPanel>
-
-                    <!-- Waiting tool calls -->
-                    <ItemsControl ItemsSource="{Binding PendingApprovals}" IsVisible="{Binding HasPendingApprovals}">
+                    <ItemsControl ItemsSource="{Binding PendingApprovals}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="vm:PendingApprovalItem">
                                 <Border Classes="PaneRow">

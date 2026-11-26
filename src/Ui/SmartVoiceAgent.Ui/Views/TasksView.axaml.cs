@@ -155,7 +155,7 @@ namespace SmartVoiceAgent.Ui.Views
 
         private void OnRenameChatClick(object? sender, RoutedEventArgs e)
         {
-            // Row menus pass their thread; the header menu passes none, which means the selected thread.
+            // Row menus pass their thread; with none the command acts on the selected thread.
             ViewModel?.RenameAgentChatCommand.Execute(ChatFrom(sender));
         }
 
