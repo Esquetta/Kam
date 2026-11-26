@@ -56,8 +56,10 @@ public sealed class AgentRuntimeSubagentTests : IDisposable
         string.Concat(events.OfType<AgentTextDelta>().Select(e => e.Text))
             .Should().Be("The explorer says notes.txt holds the plan.", "the subagent's own text stays out of the chat");
 
+        chat.Requests[0][0].Text.Should().Contain("## Subagents", "the main agent is told when to delegate");
         var childRequest = chat.Requests.First(IsSubagent);
         childRequest[0].Text.Should().Contain("explorer subagent");
+        childRequest[0].Text.Should().NotContain("## Subagents\n", "subagents cannot delegate");
         childRequest[1].Text.Should().Be("Read notes.txt and report.");
         chat.ToolNames(childRequest).Should().Equal("files_read");
         chat.ToolNames(chat.Requests[0]).Should().Contain(["files_read", "files_write", "task"]);

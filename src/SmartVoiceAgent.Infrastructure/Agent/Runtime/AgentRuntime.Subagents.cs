@@ -13,6 +13,20 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Runtime;
 /// </summary>
 public sealed partial class AgentRuntime
 {
+    /// <summary>
+    /// Tells the main agent when to delegate. Models rarely start subagents from the tool description alone,
+    /// so the main agent's prompt says it plainly; subagents do not get this section.
+    /// </summary>
+    internal const string SubagentGuidance =
+        """
+        ## Subagents
+        You can start subagents with the `task` tool. Each works with its own context and sends you a report.
+        - Delegate when a request needs a broad search or reading many files, such as "find every place that does X in this project", a review of a folder, or research from several sources. Split it into independent parts and start one explorer (local files) or researcher (web) subagent per part in the same response, so they run at the same time. Then combine their reports into your answer.
+        - Use a general subagent for a self-contained change you can describe fully, when you want to keep your own context small.
+        - Do it yourself when one or two tool calls will answer it, or when the parts depend on each other.
+        - A subagent does not see this conversation: give it the folder, what to look for and what to report.
+        """;
+
     private const string SubagentStoppedResult =
         "Error: the user stopped this subagent before it finished. Continue without its report, or ask the user how to proceed.";
 

@@ -178,7 +178,7 @@ public sealed partial class AgentRuntime : IAgentRuntime
                 _clock(),
                 tools.Count,
                 _workspaceRoot(),
-                promptSections);
+                [SubagentGuidance, .. promptSections]);
             var toolTokens = AgentContextWindow.EstimateTokens(tools);
             var usage = new TurnUsage();
 
