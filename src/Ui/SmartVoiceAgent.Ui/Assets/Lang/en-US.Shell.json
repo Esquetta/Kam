@@ -21,7 +21,7 @@
   "Shell.Ladder.Loops": "Loops",
   "Shell.Ladder.LoopsTip": "Partial: set the step limit and context budget of the tool loop. Model errors are retried. Budgets, plan first and a verify step are planned.",
   "Shell.Ladder.Graphs": "Graphs",
-  "Shell.Ladder.GraphsTip": "Planned: split work across agents, run read-only ones in parallel and stop for your approval.",
+  "Shell.Ladder.GraphsTip": "Live graphs of the subagents each task starts: what runs in parallel, what each does, and where approval is needed. A graph editor is still to come.",
   "Shell.Ladder.Builder": "Agent Builder",
   "Shell.Ladder.BuilderTip": "Planned: describe a job; Kam writes the agent and its tests, and turns it on only after the tests pass and you approve.",
   "Shell.Ladder.Partial": "partial",

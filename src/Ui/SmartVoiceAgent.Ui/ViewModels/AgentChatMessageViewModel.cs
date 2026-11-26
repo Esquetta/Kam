@@ -70,6 +70,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private string? _alwaysAllowRule;
         private bool _isCopied;
         private bool _isExpanded;
+        private string _subagentProgressText = string.Empty;
 
         /// <summary>
         /// Creates a message.
@@ -101,9 +102,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
             _toolStartedTimestamp = Stopwatch.GetTimestamp();
             CallId = callId;
             ToolName = toolName;
-            ToolDisplayName = toolDisplayName;
-            ArgumentsPreview = FormatArguments(argumentsJson, full: risk == ToolRisk.Delegate);
-            ToolTarget = SummarizeTarget(argumentsJson);
+            ToolDisplayName = risk == ToolRisk.Agent
+                ? Loc.Format("Workbench.Subagent.StepTitle", SubagentTypeLabel(ReadArgument(argumentsJson, "subagent_type")))
+                : toolDisplayName;
+            ArgumentsPreview = FormatArguments(argumentsJson, full: risk is ToolRisk.Delegate or ToolRisk.Agent);
+            ToolTarget = risk == ToolRisk.Agent
+                ? Shorten(ReadArgument(argumentsJson, "description").ReplaceLineEndings(" ").Trim(), 120)
+                : SummarizeTarget(argumentsJson);
             Risk = risk;
             _toolState = AgentToolStepState.Running;
         }
@@ -180,7 +185,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public string ArgumentsPreview { get; } = string.Empty;
 
         /// <summary>Gets how many argument lines a compact card shows; 0 shows them all (a hand-off to another agent).</summary>
-        public int ArgumentsMaxLines => Risk == ToolRisk.Delegate ? 0 : 4;
+        public int ArgumentsMaxLines => Risk is ToolRisk.Delegate or ToolRisk.Agent ? 0 : 4;
 
         public bool HasArguments => ArgumentsPreview.Length > 0;
 
@@ -201,6 +206,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ToolRisk.Execute => Loc.Get("Workbench.Tool.Risk.Execute"),
             ToolRisk.External => Loc.Get("Workbench.Tool.Risk.External"),
             ToolRisk.Delegate => Loc.Get("Workbench.Tool.Risk.Delegate"),
+            ToolRisk.Agent => Loc.Get("Workbench.Tool.Risk.Agent"),
             _ => Risk.ToString()
         };
 
@@ -219,11 +225,78 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ToolRisk.Execute => Loc.Get("Workbench.Tool.RiskTag.Execute"),
             ToolRisk.External => Loc.Get("Workbench.Tool.RiskTag.External"),
             ToolRisk.Delegate => Loc.Get("Workbench.Tool.RiskTag.Delegate"),
+            ToolRisk.Agent => Loc.Get("Workbench.Tool.RiskTag.Agent"),
             _ => Risk.ToString()
         };
 
-        /// <summary>Gets whether the risk badge uses the info color: reads and web lookups.</summary>
-        public bool IsReadRisk => Risk is ToolRisk.Read or ToolRisk.Network;
+        /// <summary>Gets whether the risk badge uses the info color: reads, web lookups and subagents, whose own calls are gated.</summary>
+        public bool IsReadRisk => Risk is ToolRisk.Read or ToolRisk.Network or ToolRisk.Agent;
+
+        /// <summary>Gets whether the step started a subagent; its own steps follow it, indented.</summary>
+        public bool IsSubagentTask => IsToolStep && Risk == ToolRisk.Agent;
+
+        /// <summary>Gets the run id of the subagent this step started, once it started.</summary>
+        public string? SubagentRunId { get; private set; }
+
+        /// <summary>Gets the subagent type name a subagent's own step belongs to, or null for the main agent's steps.</summary>
+        public string? SubagentType { get; private set; }
+
+        /// <summary>Gets whether the step is one a subagent made.</summary>
+        public bool IsSubagentStep => SubagentType is not null;
+
+        /// <summary>Gets the subagent's label on its own steps, such as "Explorer".</summary>
+        public string SubagentLabel => SubagentTypeLabel(SubagentType);
+
+        /// <summary>Gets what the subagent started by this step is doing, such as "3 steps · Read file".</summary>
+        public string SubagentProgressText
+        {
+            get => _subagentProgressText;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _subagentProgressText, value);
+                this.RaisePropertyChanged(nameof(HasSubagentProgress));
+            }
+        }
+
+        /// <summary>Gets whether <see cref="SubagentProgressText"/> has anything to show.</summary>
+        public bool HasSubagentProgress => SubagentProgressText.Length > 0;
+
+        /// <summary>Ties the step to the subagent run it started.</summary>
+        /// <param name="runId">The run id.</param>
+        public void AttachSubagentRun(string runId)
+        {
+            SubagentRunId = runId;
+            this.RaisePropertyChanged(nameof(SubagentRunId));
+        }
+
+        /// <summary>Marks the step as one a subagent of <paramref name="agentType"/> made.</summary>
+        /// <param name="agentType">The subagent type, such as "explorer".</param>
+        public void MarkSubagentStep(string agentType)
+        {
+            SubagentType = agentType;
+            this.RaisePropertyChanged(nameof(IsSubagentStep));
+            this.RaisePropertyChanged(nameof(SubagentLabel));
+        }
+
+        /// <summary>Shows how far the subagent got: its step count and what it is doing now.</summary>
+        /// <param name="stepCount">The subagent's tool calls so far.</param>
+        /// <param name="current">The tool it runs now, or null.</param>
+        public void ShowSubagentProgress(int stepCount, string? current)
+        {
+            var steps = Loc.Format("Workbench.Subagent.Steps", stepCount);
+            SubagentProgressText = string.IsNullOrWhiteSpace(current) ? steps : $"{steps} · {current}";
+        }
+
+        /// <summary>Gets the label of a subagent type, such as "Explorer" for "explorer".</summary>
+        /// <param name="agentType">The type name.</param>
+        public static string SubagentTypeLabel(string? agentType) => agentType?.Trim().ToLowerInvariant() switch
+        {
+            null or "" => Loc.Get("Workbench.Subagent.Type.Unknown"),
+            "explorer" => Loc.Get("Workbench.Subagent.Type.Explorer"),
+            "researcher" => Loc.Get("Workbench.Subagent.Type.Researcher"),
+            "general" => Loc.Get("Workbench.Subagent.Type.General"),
+            var other => other
+        };
 
         /// <summary>Gets whether the risk badge uses the warning color: file writes.</summary>
         public bool IsWriteRisk => Risk == ToolRisk.Write;
@@ -512,6 +585,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             this.RaisePropertyChanged(nameof(RiskTag));
             this.RaisePropertyChanged(nameof(ToolStatusText));
             this.RaisePropertyChanged(nameof(AlwaysAllowHint));
+            this.RaisePropertyChanged(nameof(SubagentLabel));
         }
 
         private static string FormatArguments(string argumentsJson, bool full)
@@ -588,6 +662,23 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 }
 
                 return first is null ? string.Empty : Shorten(first.ReplaceLineEndings(" ").Trim(), 120);
+            }
+            catch (JsonException)
+            {
+                return string.Empty;
+            }
+        }
+
+        private static string ReadArgument(string argumentsJson, string name)
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(argumentsJson);
+                return document.RootElement.ValueKind == JsonValueKind.Object
+                    && document.RootElement.TryGetProperty(name, out var value)
+                    && value.ValueKind == JsonValueKind.String
+                        ? value.GetString() ?? string.Empty
+                        : string.Empty;
             }
             catch (JsonException)
             {

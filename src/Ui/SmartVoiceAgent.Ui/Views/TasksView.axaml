@@ -591,6 +591,7 @@
 										     It stays open while it waits for approval and after it failed. -->
 										<Border Classes="ToolStep"
 												Classes.Approval="{Binding IsAwaitingApproval}"
+												Classes.Subagent="{Binding IsSubagentStep}"
 												IsVisible="{Binding IsToolStep}">
 											<StackPanel Spacing="8">
 												<ToggleButton Classes="ToolStepHeader"
@@ -607,6 +608,10 @@
 															<TextBlock Text="{Binding RiskTag}"/>
 														</Border>
 														<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" ClipToBounds="True">
+															<!-- Which subagent made this step -->
+															<Border Classes="Pill Info" IsVisible="{Binding IsSubagentStep}" MinHeight="18" Padding="6,0">
+																<TextBlock Text="{Binding SubagentLabel}" FontSize="10.5"/>
+															</Border>
 															<TextBlock Text="{Binding ToolDisplayName}"
 																	   FontSize="12.5"
 																	   FontWeight="Medium"
@@ -639,6 +644,21 @@
 														</Viewbox>
 													</Grid>
 												</ToggleButton>
+
+												<!-- A subagent's progress and a link to its graph -->
+												<StackPanel Orientation="Horizontal" Spacing="10" Margin="2,0,0,0" IsVisible="{Binding IsSubagentTask}">
+													<TextBlock Text="{Binding SubagentProgressText}"
+															   IsVisible="{Binding HasSubagentProgress}"
+															   FontSize="11.5"
+															   Foreground="{DynamicResource TextMutedBrush}"
+															   TextTrimming="CharacterEllipsis"
+															   VerticalAlignment="Center"/>
+													<Button Classes="LinkAction"
+															IsVisible="{Binding SubagentRunId, Converter={x:Static ObjectConverters.IsNotNull}}"
+															Content="{DynamicResource Lang.Workbench.Subagent.ViewGraph}"
+															Command="{Binding $parent[local:TasksView].DataContext.OpenSubagentGraphCommand}"
+															CommandParameter="{Binding}"/>
+												</StackPanel>
 
 												<StackPanel Spacing="8" IsVisible="{Binding ShowsToolDetails}">
 													<Border Classes="ToolArguments" IsVisible="{Binding HasArguments}">

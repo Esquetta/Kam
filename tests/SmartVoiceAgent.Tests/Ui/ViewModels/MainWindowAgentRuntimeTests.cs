@@ -565,6 +565,89 @@ public sealed class MainWindowAgentRuntimeTests
         throw new TimeoutException("Condition was not met.");
     }
 
+    [Fact]
+    public async Task SubagentEvents_GroupEachSubagentsStepsUnderTheStepThatStartedIt()
+    {
+        var runtime = new ScriptedRuntime();
+        var viewModel = CreateViewModel(runtime);
+        var session = viewModel.SelectedAgentChatSession!;
+        var sid = session.SessionId;
+        const string ExplorerArgs = "{\"subagent_type\":\"explorer\",\"description\":\"Find settings\",\"prompt\":\"Search for settings reads.\"}";
+        const string GeneralArgs = "{\"subagent_type\":\"general\",\"description\":\"Fix config\",\"prompt\":\"Fix it.\"}";
+        runtime.Script(
+            new AgentToolCallStarted(sid, "t1", "task", "Subagent", ExplorerArgs, ToolRisk.Agent),
+            new AgentToolCallStarted(sid, "t2", "task", "Subagent", GeneralArgs, ToolRisk.Agent),
+            new AgentSubagentStarted(sid, "t1", "run-a", "explorer", "Find settings"),
+            new AgentSubagentStarted(sid, "t2", "run-b", "general", "Fix config"),
+            new AgentSubagentActivity(sid, "t1", "run-a", "explorer", new AgentToolCallStarted("run-a", "c1", "files_search", "Search Files", "{\"pattern\":\"settings\"}", ToolRisk.Read)),
+            new AgentSubagentActivity(sid, "t2", "run-b", "general", new AgentToolCallStarted("run-b", "c1", "files_write", "Write File", "{\"path\":\"a.json\"}", ToolRisk.Write)),
+            new AgentSubagentActivity(sid, "t1", "run-a", "explorer", new AgentToolCallCompleted("run-a", "c1", "files_search", true, "3 matches")),
+            new AgentSubagentActivity(sid, "t1", "run-a", "explorer", new AgentToolCallStarted("run-a", "c2", "files_read", "Read File", "{\"path\":\"b.cs\"}", ToolRisk.Read)),
+            new AgentSubagentActivity(sid, "t2", "run-b", "general", new AgentApprovalRequested("run-b", "req-9", "c1", "files_write", "Write File", "{}", ToolRisk.Write)));
+        viewModel.CommandInputText = "fix the settings";
+
+        var turn = viewModel.SubmitCommandInputAsync();
+        var waiting = await WaitForAsync(() => session.Messages.FirstOrDefault(m => m.IsAwaitingApproval));
+
+        session.Messages.Where(m => m.IsToolStep).Select(m => m.IsSubagentStep ? $"  {m.SubagentLabel}:{m.ToolName}" : $"{m.ToolDisplayName}:{m.ToolTarget}")
+            .Should().Equal(
+                "Explorer subagent:Find settings",
+                "  Explorer:files_search",
+                "  Explorer:files_read",
+                "General subagent:Fix config",
+                "  General:files_write");
+        var explorerTask = session.Messages.Single(m => m.CallId == "t1");
+        explorerTask.SubagentRunId.Should().Be("run-a");
+        explorerTask.SubagentProgressText.Should().Be("2 steps · Read File");
+        waiting.ToolName.Should().Be("files_write");
+        viewModel.ApproveToolCallCommand.Execute(waiting);
+        runtime.Resolutions.Should().Equal(("req-9", true, false));
+
+        runtime.Script(
+            new AgentSubagentActivity(sid, "t1", "run-a", "explorer", new AgentToolCallCompleted("run-a", "c2", "files_read", true, "read")),
+            new AgentSubagentActivity(sid, "t2", "run-b", "general", new AgentToolCallCompleted("run-b", "c1", "files_write", true, "written")),
+            new AgentSubagentCompleted(sid, "t1", "run-a", SubagentRunStatus.Completed, 2, 10, 5),
+            new AgentSubagentCompleted(sid, "t2", "run-b", SubagentRunStatus.Completed, 1, 10, 5),
+            new AgentToolCallCompleted(sid, "t1", "task", true, "Settings are read in b.cs."),
+            new AgentToolCallCompleted(sid, "t2", "task", true, "Fixed a.json."),
+            new AgentTurnCompleted(sid, "Done.", 2, 0, 0));
+        runtime.Finish();
+        await turn;
+
+        explorerTask.SubagentProgressText.Should().Be("2 steps");
+        session.Messages.Where(m => m.IsToolStep).Should().OnlyContain(m => m.ToolStatusText == "Done");
+    }
+
+    [Fact]
+    public async Task SubagentCompleted_EndsItsStepsThatStillWaitForApproval()
+    {
+        var runtime = new ScriptedRuntime();
+        var viewModel = CreateViewModel(runtime);
+        var session = viewModel.SelectedAgentChatSession!;
+        var sid = session.SessionId;
+        runtime.Script(
+            new AgentToolCallStarted(sid, "t1", "task", "Subagent", "{\"subagent_type\":\"general\",\"description\":\"Write\"}", ToolRisk.Agent),
+            new AgentSubagentStarted(sid, "t1", "run-a", "general", "Write"),
+            new AgentSubagentActivity(sid, "t1", "run-a", "general", new AgentToolCallStarted("run-a", "c1", "shell_run", "Run Shell Command", "{}", ToolRisk.Execute)),
+            new AgentSubagentActivity(sid, "t1", "run-a", "general", new AgentApprovalRequested("run-a", "req-1", "c1", "shell_run", "Run Shell Command", "{}", ToolRisk.Execute)));
+        viewModel.CommandInputText = "run it";
+
+        var turn = viewModel.SubmitCommandInputAsync();
+        var waiting = await WaitForAsync(() => session.Messages.FirstOrDefault(m => m.IsAwaitingApproval));
+        session.HasPendingApproval.Should().BeTrue();
+
+        runtime.Script(new AgentSubagentCompleted(sid, "t1", "run-a", SubagentRunStatus.Cancelled, 1, 0, 0));
+        await WaitForAsync(() => waiting.IsAwaitingApproval ? null : waiting);
+
+        waiting.IsToolFailed.Should().BeTrue();
+        waiting.ApprovalRequestId.Should().BeNull();
+        session.HasPendingApproval.Should().BeFalse("a stopped subagent's card cannot be answered any more");
+
+        runtime.Script(new AgentToolCallCompleted(sid, "t1", "task", false, "Error: the user stopped this subagent."), new AgentTurnCompleted(sid, "Ok.", 1, 0, 0));
+        runtime.Finish();
+        await turn;
+    }
+
     private sealed class ScriptedRuntime : IAgentRuntime
     {
         private readonly Channel<AgentEvent> _events = Channel.CreateUnbounded<AgentEvent>();

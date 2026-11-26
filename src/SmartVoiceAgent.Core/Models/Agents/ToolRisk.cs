@@ -24,5 +24,11 @@ public enum ToolRisk
     /// Hands the task to another agent, such as the user's Codex CLI, whose own actions Kam cannot see or gate.
     /// Always asks for approval; only deny rules apply.
     /// </summary>
-    Delegate = 5
+    Delegate = 5,
+
+    /// <summary>
+    /// Starts one of Kam's own subagents. Starting it needs no approval; every tool call the subagent makes
+    /// passes the approval gate like the main agent's.
+    /// </summary>
+    Agent = 6
 }

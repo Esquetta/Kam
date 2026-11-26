@@ -111,6 +111,7 @@ namespace SmartVoiceAgent.Ui
 
                 var runtimeAgentRunStore = services.GetRequiredService<IRuntimeAgentRunStore>();
                 _mainViewModel.SetRuntimeAgentRunStore(runtimeAgentRunStore);
+                _mainViewModel.SetSubagentRunTracker(services.GetRequiredService<ISubagentRunTracker>());
 
                 var applicationUpdateService = services.GetRequiredService<IApplicationUpdateService>();
                 var applicationRestartPlanner = services.GetRequiredService<IApplicationRestartPlanner>();

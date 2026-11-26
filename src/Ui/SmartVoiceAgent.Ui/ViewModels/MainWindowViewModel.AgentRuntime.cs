@@ -5,6 +5,7 @@ using SmartVoiceAgent.Core.Models.Agents;
 using SmartVoiceAgent.Infrastructure.Agent.CliAgents;
 using SmartVoiceAgent.Infrastructure.Agent.Extensions;
 using SmartVoiceAgent.Infrastructure.Agent.Runtime;
+using SmartVoiceAgent.Infrastructure.Agent.Subagents;
 using SmartVoiceAgent.Infrastructure.Skills.BuiltIn;
 using SmartVoiceAgent.Ui.Services;
 using System;
@@ -215,6 +216,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             session.LastTurn = trace;
             var steps = new Dictionary<string, AgentChatMessageViewModel>(StringComparer.Ordinal);
             var approvalRequests = new List<string>();
+            var subagents = new SubagentTimeline(session, steps);
 
             try
             {
@@ -281,6 +283,34 @@ namespace SmartVoiceAgent.Ui.ViewModels
                             AddLog(completed.Success
                                 ? $"TOOL_DONE: {completed.ToolName}"
                                 : $"TOOL_FAILED: {completed.ToolName} {completed.Summary}");
+                            break;
+
+                        case AgentSubagentStarted subagentStarted:
+                            subagents.Started(subagentStarted);
+                            AddLog($"SUBAGENT_STARTED: {subagentStarted.AgentType} {subagentStarted.Description}");
+                            break;
+
+                        case AgentSubagentActivity activity:
+                            if (subagents.Apply(activity) is { } subagentApproval)
+                            {
+                                approvalRequests.Add(subagentApproval.RequestId);
+                                NotifyApprovalRequested(session, subagentApproval.Step, subagentApproval.RequestId);
+                                AddLog($"TOOL_APPROVAL_NEEDED: {activity.AgentType}/{((AgentApprovalRequested)activity.Inner).ToolName}");
+                            }
+                            else if (activity.Inner is AgentToolCallStarted subagentTool)
+                            {
+                                AddLog($"SUBAGENT_TOOL: {activity.AgentType}/{subagentTool.ToolName}");
+                            }
+
+                            break;
+
+                        case AgentSubagentCompleted subagentDone:
+                            foreach (var requestId in subagents.Completed(subagentDone))
+                            {
+                                DismissApprovalNotice(requestId);
+                            }
+
+                            AddLog($"SUBAGENT_DONE: {subagentDone.Status}, {subagentDone.ToolCallCount} tool calls, {subagentDone.InputTokens + subagentDone.OutputTokens} tokens");
                             break;
 
                         case AgentContextCompacted compacted:
@@ -698,6 +728,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 CliAgentToolProvider.ToolName => ("Delegate to Codex CLI", ToolRisk.Delegate),
                 AgentSkillToolProvider.ToolName => ("Load skill", ToolRisk.Read),
+                SubagentTaskFunction.ToolName => ("Subagent", ToolRisk.Agent),
                 _ => (toolName, ToolRisk.External)
             };
         }

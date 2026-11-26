@@ -100,6 +100,12 @@ public sealed class ToolPermissionService : IToolPermissionService
                 return ToolPermissionDecision.Ask;
             }
 
+            // Starting a subagent changes nothing by itself; each of its tool calls passes this gate.
+            if (tool.Risk == ToolRisk.Agent)
+            {
+                return ToolPermissionDecision.Allow;
+            }
+
             if (Matches(_state.AllowedTools, tool.Name, argumentsJson, isDenyRule: false))
             {
                 return ToolPermissionDecision.Allow;

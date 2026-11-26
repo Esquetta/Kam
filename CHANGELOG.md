@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Subagents: the agent starts subagents on its own with a `task` tool when work splits well. An explorer reads files and local state, a researcher also reads the web, and a general subagent may change things. Each one runs its own tool loop with its own context on the task's model and returns a report to the main agent; it cannot start subagents itself. Starting one needs no approval, but every risky call it makes asks you in the task like the main agent's. Explorers and researchers started in one response run at the same time; a general subagent runs alone. In the chat, a subagent's steps sit indented under the step that started it, labelled with its type, and that step shows how many steps it took and what it is doing now.
+- Graphs is a working page: for every task that started subagents it draws a live graph of the main agent, the subagents that ran at the same time and the points where the main agent picked up their reports. Select a subagent to see its brief, tool calls, time, tokens and report, or stop it; the main agent is told and carries on. "View in graph" on a chat step or a Runs row opens it there. Runs lists subagent runs too. Finished runs are kept in `%AppData%/Kam/subagent-runs.jsonl`.
+
 ## [0.2.0] - 2026-11-25
 
 Second pre-release. Same download and first run as 0.1.0: unzip `Kam-0.2.0-win-x64.zip` (Windows 10/11 x64, self-contained, not code-signed) and run `Kam.exe`, then add a model in Settings > AI Runtime.
