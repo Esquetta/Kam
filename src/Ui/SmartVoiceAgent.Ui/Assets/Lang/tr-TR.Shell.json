@@ -21,7 +21,7 @@
   "Shell.Ladder.Loops": "Döngüler",
   "Shell.Ladder.LoopsTip": "Kısmen: araç döngüsünün adım sınırını ve bağlam bütçesini ayarlayın. Model hataları yeniden denenir. Bütçe, önce plan ve doğrulama adımı planlandı.",
   "Shell.Ladder.Graphs": "Graflar",
-  "Shell.Ladder.GraphsTip": "Planlandı: işi ajanlara bölme, salt okunur olanları paralel çalıştırma ve onayınız için durma.",
+  "Shell.Ladder.GraphsTip": "Her görevin başlattığı alt ajanların canlı grafı: neler paralel çalışıyor, her biri ne yapıyor ve nerede onay gerekiyor. Graf düzenleyici henüz yok.",
   "Shell.Ladder.Builder": "Ajan Oluşturucu",
   "Shell.Ladder.BuilderTip": "Planlandı: bir işi tarif edin; Kam ajanı ve testlerini yazar, testler geçip siz onaylayınca açar.",
   "Shell.Ladder.Partial": "kısmen",

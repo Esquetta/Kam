@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SmartVoiceAgent.Core.Interfaces;
 using SmartVoiceAgent.Core.Models.Agents;
+using SmartVoiceAgent.Infrastructure.Agent.Subagents;
 
 namespace SmartVoiceAgent.Infrastructure.Agent.Runtime;
 
@@ -16,7 +17,7 @@ namespace SmartVoiceAgent.Infrastructure.Agent.Runtime;
 /// results go back to the model, and the loop repeats until the model answers. A model request that
 /// fails with a temporary error is sent again a few times, and read-only calls from one response run together.
 /// </summary>
-public sealed class AgentRuntime : IAgentRuntime
+public sealed partial class AgentRuntime : IAgentRuntime
 {
     private const string DeclinedResult =
         "The user declined this tool call. Do not retry it; continue without it or ask the user how to proceed.";
@@ -36,6 +37,7 @@ public sealed class AgentRuntime : IAgentRuntime
     private readonly ILogger<AgentRuntime> _logger;
     private readonly Func<DateTimeOffset> _clock;
     private readonly Func<string?> _workspaceRoot;
+    private readonly ISubagentRunTracker _subagents;
     private readonly ConcurrentDictionary<string, TaskCompletionSource<ApprovalAnswer>> _pendingApprovals = new();
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _sessionLocks = new();
 
@@ -50,6 +52,7 @@ public sealed class AgentRuntime : IAgentRuntime
     /// <param name="logger">Logger.</param>
     /// <param name="clock">Optional clock for tests.</param>
     /// <param name="workspaceRoot">Returns the folder the user is working in, or null when none is selected.</param>
+    /// <param name="subagents">Follows the subagents turns start; null keeps them in memory only.</param>
     public AgentRuntime(
         Func<IChatClient> chatClientFactory,
         IServiceScopeFactory scopeFactory,
@@ -58,8 +61,9 @@ public sealed class AgentRuntime : IAgentRuntime
         IOptionsMonitor<AgentRuntimeOptions> options,
         ILogger<AgentRuntime> logger,
         Func<DateTimeOffset>? clock = null,
-        Func<string?>? workspaceRoot = null)
-        : this(_ => chatClientFactory(), scopeFactory, permissions, sessionStore, options, logger, clock, workspaceRoot)
+        Func<string?>? workspaceRoot = null,
+        ISubagentRunTracker? subagents = null)
+        : this(_ => chatClientFactory(), scopeFactory, permissions, sessionStore, options, logger, clock, workspaceRoot, subagents)
     {
     }
 
@@ -77,6 +81,7 @@ public sealed class AgentRuntime : IAgentRuntime
     /// <param name="logger">Logger.</param>
     /// <param name="clock">Optional clock for tests.</param>
     /// <param name="workspaceRoot">Returns the folder the user is working in, or null when none is selected.</param>
+    /// <param name="subagents">Follows the subagents turns start; null keeps them in memory only.</param>
     public AgentRuntime(
         Func<string?, IChatClient> chatClientFactory,
         IServiceScopeFactory scopeFactory,
@@ -85,7 +90,8 @@ public sealed class AgentRuntime : IAgentRuntime
         IOptionsMonitor<AgentRuntimeOptions> options,
         ILogger<AgentRuntime> logger,
         Func<DateTimeOffset>? clock = null,
-        Func<string?>? workspaceRoot = null)
+        Func<string?>? workspaceRoot = null,
+        ISubagentRunTracker? subagents = null)
     {
         _chatClientFactory = chatClientFactory;
         _scopeFactory = scopeFactory;
@@ -95,6 +101,7 @@ public sealed class AgentRuntime : IAgentRuntime
         _logger = logger;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _workspaceRoot = workspaceRoot ?? (() => null);
+        _subagents = subagents ?? new SubagentRunTracker(path: null);
     }
 
     /// <inheritdoc />
@@ -154,7 +161,6 @@ public sealed class AgentRuntime : IAgentRuntime
 
             using var scope = _scopeFactory.CreateScope();
             var tools = await CollectToolsAsync(scope.ServiceProvider, cancellationToken);
-            var toolsByName = tools.ToDictionary(tool => tool.Name, StringComparer.Ordinal);
 
             history = (await _sessionStore.LoadAsync(sessionId, cancellationToken)).ToList();
             CloseDanglingToolCalls(history);
@@ -162,11 +168,17 @@ public sealed class AgentRuntime : IAgentRuntime
             // A thread can pick its own model; otherwise the model chosen in Settings runs it.
             var session = await _sessionStore.GetSummaryAsync(sessionId, cancellationToken);
             var chatClient = _chatClientFactory(session?.ModelId);
+            var promptSections = CollectPromptSections(scope.ServiceProvider);
+            // The built-in task tool wins over a provider tool of the same name.
+            tools.RemoveAll(tool => tool.Name == SubagentTaskFunction.ToolName);
+            tools.Add(CreateSubagentTool(new SubagentTurn(
+                sessionId, session?.ModelId, chatClient, tools.ToList(), promptSections, events, limits)));
+            var toolsByName = tools.ToDictionary(tool => tool.Name, StringComparer.Ordinal);
             var systemPrompt = AgentSystemPrompt.Build(
                 _clock(),
                 tools.Count,
                 _workspaceRoot(),
-                CollectPromptSections(scope.ServiceProvider));
+                promptSections);
             var toolTokens = AgentContextWindow.EstimateTokens(tools);
             var usage = new TurnUsage();
 
@@ -485,7 +497,7 @@ public sealed class AgentRuntime : IAgentRuntime
                     continue;
                 }
 
-                if (maxParallel > 1 && CanRunTogether(tool))
+                if (maxParallel > 1 && CanRunTogether(tool, call))
                 {
                     var slot = index;
                     reads.Add(Task.Run(
@@ -527,11 +539,13 @@ public sealed class AgentRuntime : IAgentRuntime
     }
 
     /// <summary>
-    /// Read-only tools (local reads and network reads without side effects) may run at the same time.
-    /// Everything that writes, executes, acts outside the machine or delegates runs alone.
+    /// Read-only tools (local reads and network reads without side effects) and read-only subagents may run at
+    /// the same time. Everything that writes, executes, acts outside the machine or delegates runs alone, and so
+    /// does a subagent that may do those things.
     /// </summary>
-    private static bool CanRunTogether(AgentToolDescriptor tool) =>
-        tool.Risk is ToolRisk.Read or ToolRisk.Network;
+    private static bool CanRunTogether(AgentToolDescriptor tool, FunctionCallContent call) =>
+        tool.Risk is ToolRisk.Read or ToolRisk.Network
+        || (tool.Function is SubagentTaskFunction && SubagentTaskFunction.StartsReadOnlySubagent(call.Arguments));
 
     /// <summary>
     /// Announces a call and passes it through the permission policy, asking the user when needed.
@@ -576,6 +590,7 @@ public sealed class AgentRuntime : IAgentRuntime
         {
             var alwaysAllowRule = _permissions.SuggestAllowRule(tool, argumentsJson);
             var answer = await WaitForApprovalAsync(sessionId, call, tool, argumentsJson, alwaysAllowRule, events, cancellationToken);
+            await events.WriteAsync(new AgentApprovalResolved(sessionId, answer.RequestId, call.CallId, answer.Approved), cancellationToken);
             if (answer.Approved && answer.AlwaysAllow && !string.IsNullOrWhiteSpace(alwaysAllowRule))
             {
                 _permissions.AddRule(alwaysAllowRule, allow: true);
@@ -607,9 +622,10 @@ public sealed class AgentRuntime : IAgentRuntime
         bool success;
         try
         {
-            var result = await tool.Function.InvokeAsync(
-                new AIFunctionArguments(call.Arguments ?? new Dictionary<string, object?>()),
-                cancellationToken);
+            var arguments = new AIFunctionArguments(call.Arguments ?? new Dictionary<string, object?>());
+            var result = tool.Function is SubagentTaskFunction subagent
+                ? await subagent.RunAsync(call.CallId, arguments, cancellationToken)
+                : await tool.Function.InvokeAsync(arguments, cancellationToken);
             resultText = StringifyResult(result);
             success = !resultText.StartsWith("Error", StringComparison.OrdinalIgnoreCase);
         }
@@ -658,7 +674,7 @@ public sealed class AgentRuntime : IAgentRuntime
                     tool.Risk,
                     alwaysAllowRule),
                 cancellationToken);
-            return await pending.Task;
+            return (await pending.Task) with { RequestId = requestId };
         }
         finally
         {
@@ -809,7 +825,7 @@ public sealed class AgentRuntime : IAgentRuntime
         return firstLine.Length <= 160 ? firstLine : firstLine[..160] + "...";
     }
 
-    private readonly record struct ApprovalAnswer(bool Approved, bool AlwaysAllow);
+    private readonly record struct ApprovalAnswer(bool Approved, bool AlwaysAllow, string RequestId = "");
 
     /// <summary>The limits one turn runs with, read once when the turn starts and clamped to safe ranges.</summary>
     private readonly record struct TurnLimits(int MaxIterations, int MaxToolResultCharacters, int ContextTokenBudget)

@@ -29,11 +29,21 @@ public sealed class ToolPermissionServiceTests : IDisposable
     [InlineData(ApprovalMode.AutoEdit, ToolRisk.External, ToolPermissionDecision.Ask)]
     [InlineData(ApprovalMode.FullAuto, ToolRisk.Execute, ToolPermissionDecision.Allow)]
     [InlineData(ApprovalMode.FullAuto, ToolRisk.External, ToolPermissionDecision.Allow)]
+    [InlineData(ApprovalMode.Ask, ToolRisk.Agent, ToolPermissionDecision.Allow)]
     public void Evaluate_AppliesModeToRisk(ApprovalMode mode, ToolRisk risk, ToolPermissionDecision expected)
     {
         var service = new ToolPermissionService(_path, mode);
 
         service.Evaluate(Tool("some_tool", risk), "{}").Should().Be(expected);
+    }
+
+    [Fact]
+    public void Evaluate_DenyRuleStillBlocksStartingSubagents()
+    {
+        var service = new ToolPermissionService(_path, ApprovalMode.Ask);
+        service.AddRule("task", allow: false);
+
+        service.Evaluate(Tool("task", ToolRisk.Agent), "{}").Should().Be(ToolPermissionDecision.Deny);
     }
 
     [Fact]

@@ -3,15 +3,6 @@
   "Build.TodayTitle": "Bugün çalışanlar",
   "Build.ComingTitle": "Henüz yapılmadı",
 
-  "Build.Graphs.Title": "Graflar",
-  "Build.Graphs.Explain": "Bir graf tek bir işi birkaç ajana böler: bazıları paralel okuyup inceler, biri yazar ve çalıştırma sizin onayınız gereken noktalarda durur. Kam'da henüz graf düzenleyici ya da graf çalıştırıcı yok; aşağıdaki parçalar tek bir görevin içinde zaten çalışıyor.",
-  "Build.Graphs.Today.RoleAgents": "Bir görev, işinin bir kısmını o anda oluşturduğu bir rol ajanına (ör. gözden geçirici ya da araştırıcı) devredebilir.",
-  "Build.Graphs.Today.Codex": "Kodlama işi, siz onayladıktan sonra salt okunur ya da çalışma alanına yazarak Codex CLI'ya gidebilir.",
-  "Build.Graphs.Today.Approvals": "Yazan, program çalıştıran ya da iş devreden her araç çağrısı, hangi görevden gelirse gelsin onayınızı bekler.",
-  "Build.Graphs.Coming.1": "Ajanları kenarları ve koşullarıyla düğümler olarak yerleştirme",
-  "Build.Graphs.Coming.2": "Salt okunur dalları paralel çalıştırma",
-  "Build.Graphs.Coming.3": "Düğümler arasında onay kapıları",
-  "Build.Graphs.Coming.4": "Her çalıştırmanın düğüm düğüm zaman çizelgesi",
 
   "Build.Builder.Title": "Ajan Oluşturucu",
   "Build.Builder.Explain": "Oluşturucu, bir işin sade bir tarifini çalışan bir ajana dönüştürür: talimatlar, araçlar, sınırlar ve testler. Ajanı ancak testleri geçip siz onayladıktan sonra açar. Henüz yapılmadı; bugün aynı parçaları elle bir araya getiriyorsunuz.",

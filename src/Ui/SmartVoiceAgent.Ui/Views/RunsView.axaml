@@ -215,6 +215,11 @@
                                                     <SelectableTextBlock Text="{Binding ErrorText}" FontSize="12.5" TextWrapping="Wrap"
                                                                          Foreground="{DynamicResource AccentErrorBrush}"/>
                                                 </StackPanel>
+                                                <Button Classes="LinkAction" HorizontalAlignment="Left"
+                                                        IsVisible="{Binding IsSubagent}"
+                                                        Content="{DynamicResource Lang.Runs.Detail.OpenGraph}"
+                                                        Command="{Binding $parent[UserControl].((vm:RunsViewModel)DataContext).OpenGraphCommand}"
+                                                        CommandParameter="{Binding}"/>
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>

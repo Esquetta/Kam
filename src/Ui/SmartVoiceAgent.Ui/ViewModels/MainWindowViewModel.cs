@@ -59,6 +59,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private IAgentPluginCatalog? _pluginCatalog;
         private IAgentSkillCatalog? _skillCatalog;
         private IRuntimeAgentRunStore? _runtimeAgentRunStore;
+        private ISubagentRunTracker? _subagentRuns;
         private IApplicationUpdateService? _applicationUpdateService;
         private IApplicationRestartPlanner? _applicationRestartPlanner;
         private IApplicationVersionProvider? _applicationVersionProvider;
@@ -1073,6 +1074,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
             RefreshSelectedRuntimeAgentRun();
         }
 
+        /// <summary>Connects the Runs and Graphs pages to the subagent runs tasks start.</summary>
+        /// <param name="subagentRuns">The subagent run tracker.</param>
+        public void SetSubagentRunTracker(ISubagentRunTracker subagentRuns)
+        {
+            _subagentRuns = subagentRuns;
+        }
+
         public void SetApplicationUpdateServices(
             IApplicationUpdateService applicationUpdateService,
             IApplicationRestartPlanner applicationRestartPlanner,
@@ -1212,8 +1220,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 NavView.Prompts => new PromptsViewModel(_agentCommands, UsePromptInNewTask),
                 NavView.Agents => new AgentsViewModel(_runtimeAgentRunStore, _cliAgentDetector, () => NavigateTo(NavView.Integrations)),
                 NavView.Loops => new LoopsViewModel(_pageSettingsService),
-                NavView.Runs => new RunsViewModel(_agentSessionStore, _runtimeAgentRunStore, OpenTaskById, LiveTaskStatus),
-                NavView.Graphs or NavView.Builder => new PlannedStepViewModel(view, NavigateTo),
+                NavView.Runs => new RunsViewModel(_agentSessionStore, _runtimeAgentRunStore, OpenTaskById, LiveTaskStatus, _subagentRuns, OpenSubagentGraph),
+                NavView.Graphs => new GraphsViewModel(_subagentRuns, _agentSessionStore, OpenTaskById, LiveTaskStatus),
+                NavView.Builder => new PlannedStepViewModel(view, NavigateTo),
                 _ => null
             };
 

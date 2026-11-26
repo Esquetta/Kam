@@ -501,6 +501,13 @@
 			<Setter Property="Margin" Value="0"/>
 		</Style>
 
+		<!-- A subagent's own step: indented under the step that started it, with an accent rail -->
+		<Style Selector="Border.ToolStep.Subagent">
+			<Setter Property="Margin" Value="22,0,0,0"/>
+			<Setter Property="BorderThickness" Value="2,1,1,1"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource AccentSubtleBrush}"/>
+		</Style>
+
 		<!-- Approval (.card): stronger hairline, warn edge while it waits -->
 		<Style Selector="Border.ToolStep.Approval">
 			<Setter Property="BorderBrush" Value="{DynamicResource AccentOrangeBrush}"/>
@@ -819,9 +826,9 @@
 									<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
 										<Border Classes="LadderLevel"><TextBlock Text="4"/></Border>
 										<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Graphs}"/>
-										<Panel Grid.Column="2" Classes="LadderBadge Planned">
+										<Panel Grid.Column="2" Classes="LadderBadge Partial">
 											<Rectangle/>
-											<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Planned}"/>
+											<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Partial}"/>
 										</Panel>
 									</Grid>
 								</Button>
@@ -1081,6 +1088,10 @@
 
 						<DataTemplate DataType="pagevm:RunsViewModel">
 							<local:RunsView/>
+						</DataTemplate>
+
+						<DataTemplate DataType="pagevm:GraphsViewModel">
+							<local:GraphsView/>
 						</DataTemplate>
 
 						<DataTemplate DataType="pagevm:PlannedStepViewModel">

@@ -66,7 +66,7 @@ Design notes and roadmap: [docs/architecture/agent-platform.md](docs/architectur
 ## What it does not do yet
 
 - **One agent, one loop.** A turn stops when the model stops calling tools, after 24 steps, or when you cancel. A model request that fails with a temporary error (timeout, 429, 5xx, dropped stream) is retried up to three times with a growing wait; other errors end the turn with a message that says what to fix. There is no cost budget and no self-check pass.
-- **No subagents or workflows in the loop.** Read-only tool calls from one model response run together; calls that write or run commands run one after another. Parallel subagents and a `task` tool are on the roadmap, not in the code.
+- **Subagents are built in, workflows are not.** The agent can start explorer, researcher and general subagents with a `task` tool and follow them live on the Graphs page, but you cannot define your own subagent types or draw a workflow graph yet.
 - **The agent cannot extend itself.** You install skills, plugins and MCP servers from the Extensions page; the agent has no tool for it.
 - **Evals cover short tasks.** 38 smoke cases check that built-in skills run, and a [skill routing eval](evals/skill-routing/README.md) checks that models pick the right skill for 48 one-step requests, and an [agent task eval](evals/agent-tasks/README.md) runs 16 multi-step file tasks through the real agent loop in a sandbox. Nothing yet measures long tasks, the shell or answer quality.
 - **Hooks and long-term memory** are described in the roadmap only.

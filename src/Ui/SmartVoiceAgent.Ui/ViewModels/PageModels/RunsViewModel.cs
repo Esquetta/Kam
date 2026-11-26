@@ -95,6 +95,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /// <summary>Gets the failure or cancellation reason, or an empty string.</summary>
         public string ErrorText { get; init; } = string.Empty;
 
+        /// <summary>Gets the task that started a subagent run, or null for other rows.</summary>
+        public string? ParentSessionId { get; init; }
+
+        /// <summary>Gets whether the row is a subagent run, which the Graphs page can show.</summary>
+        public bool IsSubagent => ParentSessionId is not null;
+
         /// <summary>Gets whether the status is running.</summary>
         public bool IsRunning => StatusKey == "running";
 
@@ -138,10 +144,13 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
     {
         private readonly IAgentSessionStore? _sessions;
         private readonly IRuntimeAgentRunStore? _agentRuns;
+        private readonly ISubagentRunTracker? _subagents;
         private readonly Action<string> _openTask;
         private readonly Func<string, string?>? _liveStatus;
+        private readonly Action<string, string>? _openGraph;
         private IReadOnlyList<AgentSessionSummary> _sessionData = [];
         private IReadOnlyList<RuntimeAgentRun> _runData = [];
+        private IReadOnlyList<SubagentRun> _subagentData = [];
         private int _loadVersion;
         private RunsFilter _filter;
         private string _searchText = string.Empty;
@@ -157,11 +166,15 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /// <param name="agentRuns">The role-agent runs.</param>
         /// <param name="openTask">Opens a task by session id.</param>
         /// <param name="liveStatus">Returns "running", "needs-you" or null for a session id that is open in a chat.</param>
+        /// <param name="subagents">The subagent runs tasks started.</param>
+        /// <param name="openGraph">Opens the Graphs page on a task (session id) and a subagent run (run id).</param>
         public RunsViewModel(
             IAgentSessionStore? sessions,
             IRuntimeAgentRunStore? agentRuns,
             Action<string> openTask,
-            Func<string, string?>? liveStatus = null)
+            Func<string, string?>? liveStatus = null,
+            ISubagentRunTracker? subagents = null,
+            Action<string, string>? openGraph = null)
         {
             ArgumentNullException.ThrowIfNull(openTask);
 
@@ -170,6 +183,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _agentRuns = agentRuns;
             _openTask = openTask;
             _liveStatus = liveStatus;
+            _subagents = subagents;
+            _openGraph = openGraph;
 
             ActivateRowCommand = ReactiveCommand.Create<RunRowViewModel>(ActivateRow);
             SetFilterCommand = ReactiveCommand.Create<string>(value =>
@@ -180,6 +195,13 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 }
             });
             RefreshCommand = ReactiveCommand.CreateFromTask(LoadAsync);
+            OpenGraphCommand = ReactiveCommand.Create<RunRowViewModel>(row =>
+            {
+                if (row.ParentSessionId is { } sessionId)
+                {
+                    _openGraph?.Invoke(sessionId, row.Id);
+                }
+            });
 
             LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
             _ = LoadAsync();
@@ -197,6 +219,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /// <summary>Gets the command that reloads the history.</summary>
         public ReactiveCommand<Unit, Unit> RefreshCommand { get; }
 
+        /// <summary>Gets the command that shows a subagent run on the Graphs page.</summary>
+        public ReactiveCommand<RunRowViewModel, Unit> OpenGraphCommand { get; }
+
         /// <summary>Gets the number of tasks last active today.</summary>
         public int TasksToday
         {
@@ -204,14 +229,14 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             private set => this.RaiseAndSetIfChanged(ref _tasksToday, value);
         }
 
-        /// <summary>Gets the number of role-agent runs started today.</summary>
+        /// <summary>Gets the number of subagent and role-agent runs started today.</summary>
         public int AgentRunsToday
         {
             get => _agentRunsToday;
             private set => this.RaiseAndSetIfChanged(ref _agentRunsToday, value);
         }
 
-        /// <summary>Gets the number of role-agent runs that failed in the last 7 days.</summary>
+        /// <summary>Gets the number of subagent and role-agent runs that failed in the last 7 days.</summary>
         public int FailedAgentRuns
         {
             get => _failedAgentRuns;
@@ -267,7 +292,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public bool IsEmpty => _hasLoaded && Rows.Count == 0;
 
         /// <summary>Gets whether the stores hold nothing at all, as opposed to the filter hiding everything.</summary>
-        public bool HasNoHistory => _sessionData.Count == 0 && _runData.Count == 0;
+        public bool HasNoHistory => _sessionData.Count == 0 && _runData.Count == 0 && _subagentData.Count == 0;
 
         /// <summary>Gets the empty-state title.</summary>
         public string EmptyTitle => Loc.Get(HasNoHistory ? "Runs.Empty.Title" : "Runs.NoMatch.Title");
@@ -286,6 +311,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             var version = ++_loadVersion;
             IReadOnlyList<AgentSessionSummary> sessions = [];
             IReadOnlyList<RuntimeAgentRun> runs = [];
+            IReadOnlyList<SubagentRun> subagentRuns = [];
 
             try
             {
@@ -312,6 +338,19 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 // See above.
             }
 
+            try
+            {
+                if (_subagents is not null)
+                {
+                    var tracker = _subagents;
+                    subagentRuns = await Task.Run(() => tracker.List(maxCount: 200)).ConfigureAwait(true);
+                }
+            }
+            catch (Exception)
+            {
+                // See above.
+            }
+
             if (version != _loadVersion)
             {
                 return;
@@ -319,6 +358,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
             _sessionData = sessions;
             _runData = runs;
+            _subagentData = subagentRuns;
             _hasLoaded = true;
             Rebuild();
         }
@@ -368,6 +408,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _allRows.Clear();
             _allRows.AddRange(_sessionData.Select(session => CreateTaskRow(session, now)));
             _allRows.AddRange(_runData.Select(run => CreateAgentRow(run, now)));
+            _allRows.AddRange(_subagentData.Select(run => CreateSubagentRow(run, now)));
             _allRows.Sort((left, right) => right.When.CompareTo(left.When));
             foreach (var row in _allRows.Where(row => expanded.Contains(row.Id)))
             {
@@ -375,8 +416,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
 
             TasksToday = _sessionData.Count(session => session.UpdatedAt.ToLocalTime().Date == today);
-            AgentRunsToday = _runData.Count(run => run.StartedAt.ToLocalTime().Date == today);
-            FailedAgentRuns = _runData.Count(run => run.Status == RuntimeAgentRunStatus.Failed && run.StartedAt >= weekAgo);
+            AgentRunsToday = _runData.Count(run => run.StartedAt.ToLocalTime().Date == today)
+                + _subagentData.Count(run => run.StartedAt.ToLocalTime().Date == today);
+            FailedAgentRuns = _runData.Count(run => run.Status == RuntimeAgentRunStatus.Failed && run.StartedAt >= weekAgo)
+                + _subagentData.Count(run => run.Status == SubagentRunStatus.Failed && run.StartedAt >= weekAgo);
 
             this.RaisePropertyChanged(nameof(HasNoHistory));
             ApplyFilter();
@@ -464,6 +507,41 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 Observations = observations.Select(item => new RunObservationItem(item.SkillId, item.Summary, item.Success)).ToList(),
                 ResponseText = run.Response ?? string.Empty,
                 ErrorText = run.ErrorMessage ?? string.Empty
+            };
+        }
+
+        private RunRowViewModel CreateSubagentRow(SubagentRun run, DateTimeOffset now)
+        {
+            var status = run.Status switch
+            {
+                SubagentRunStatus.Running when run.IsWaitingForApproval => "needs-you",
+                SubagentRunStatus.Running => "running",
+                SubagentRunStatus.Failed => "failed",
+                SubagentRunStatus.Cancelled => "cancelled",
+                _ => "done"
+            };
+            var steps = run.StepList;
+
+            return new RunRowViewModel
+            {
+                Id = run.RunId,
+                IsTask = false,
+                KindText = Loc.Get("Runs.Kind.Subagent"),
+                Name = run.Description,
+                ModelText = ModelText(run.ModelId),
+                ContextText = AgentChatMessageViewModel.SubagentTypeLabel(run.AgentType),
+                Count = steps.Count,
+                CountTooltip = Loc.Format("Runs.Count.ToolCalls", steps.Count),
+                StatusKey = status,
+                StatusText = StatusLabel(status),
+                When = run.StartedAt,
+                WhenText = AgentChatSessionViewModel.FormatRelativeTime(run.StartedAt, now),
+                WhenTooltip = Absolute(run.StartedAt),
+                TaskText = run.Prompt,
+                Observations = steps.Select(step => new RunObservationItem(step.DisplayName, step.Summary, step.Status == SubagentStepStatus.Succeeded)).ToList(),
+                ResponseText = run.Result ?? string.Empty,
+                ErrorText = run.Error ?? string.Empty,
+                ParentSessionId = run.ParentSessionId
             };
         }
 

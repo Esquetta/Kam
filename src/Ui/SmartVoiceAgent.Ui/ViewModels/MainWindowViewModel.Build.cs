@@ -13,6 +13,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// <summary>Opens the page given as the command parameter; the Build ladder, Runs and the spend card use it.</summary>
         public ReactiveCommand<NavView, Unit> NavigateToPageCommand { get; private set; } = null!;
 
+        /// <summary>Opens the Graphs page on the subagent a chat step started.</summary>
+        public ICommand OpenSubagentGraphCommand { get; private set; } = null!;
+
         /// <summary>Gets the command palette (Ctrl+K): tasks, pages, prompts and actions in one search.</summary>
         public CommandPaletteViewModel CommandPalette { get; } = new();
 
@@ -30,6 +33,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private void InitializeBuild()
         {
             NavigateToPageCommand = ReactiveCommand.Create<NavView>(NavigateTo);
+            OpenSubagentGraphCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step =>
+            {
+                if (step?.SubagentRunId is { } runId && SelectedAgentChatSession is { } session)
+                {
+                    OpenSubagentGraph(session.SessionId, runId);
+                }
+            });
             OpenCommandPaletteCommand = ReactiveCommand.Create(OpenCommandPalette);
 
             // The Loops page changes the context budget; the task context meter follows it.
@@ -62,6 +72,18 @@ namespace SmartVoiceAgent.Ui.ViewModels
             if (session is not null)
             {
                 OpenTaskCommand.Execute(session);
+            }
+        }
+
+        /// <summary>Opens the Graphs page on a task and, when given, one of its subagents; chat steps and Runs rows use it.</summary>
+        /// <param name="sessionId">The task's session id.</param>
+        /// <param name="runId">The subagent run id, or null.</param>
+        public void OpenSubagentGraph(string sessionId, string? runId)
+        {
+            NavigateTo(NavView.Graphs);
+            if (GetOrCreateViewModel(NavView.Graphs) is PageModels.GraphsViewModel graphs)
+            {
+                graphs.Focus(sessionId, runId);
             }
         }
 

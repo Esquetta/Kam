@@ -105,7 +105,7 @@ public sealed class KamStudioShellMetadataTests
             .Select(badge => AttributeValue(badge, "Classes"))
             .Should().Equal(
                 "LadderBadge Partial", "LadderBadge Partial", "LadderBadge Partial",
-                "LadderBadge Planned", "LadderBadge Planned");
+                "LadderBadge Partial", "LadderBadge Planned");
         steps.Should().OnlyContain(step => AttributeValue(step, "Command") == "{Binding NavigateToPageCommand}"
             && AttributeValue(step, "ToolTip.Tip") != null
             && AttributeValue(step, "AutomationProperties.HelpText") != null);

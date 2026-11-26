@@ -409,6 +409,15 @@ namespace SmartVoiceAgent.Ui.ViewModels
             this.RaisePropertyChanged(nameof(MessageCountText));
         }
 
+        /// <summary>Inserts an item at <paramref name="index"/>, or at the end when the index is past it.</summary>
+        /// <param name="index">Where the item goes.</param>
+        /// <param name="message">The item.</param>
+        public void InsertMessage(int index, AgentChatMessageViewModel message)
+        {
+            Messages.Insert(Math.Clamp(index, 0, Messages.Count), message);
+            this.RaisePropertyChanged(nameof(MessageCountText));
+        }
+
         public void RemoveMessage(AgentChatMessageViewModel message)
         {
             Messages.Remove(message);

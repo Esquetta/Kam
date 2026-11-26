@@ -16,6 +16,7 @@ using SmartVoiceAgent.Infrastructure.Agent.CliAgents;
 using SmartVoiceAgent.Infrastructure.Agent.Runtime;
 using SmartVoiceAgent.Infrastructure.Agent.Mcp;
 using SmartVoiceAgent.Infrastructure.Agent.Extensions;
+using SmartVoiceAgent.Infrastructure.Agent.Subagents;
 using SmartVoiceAgent.Infrastructure.Agent.Conf;
 using SmartVoiceAgent.Infrastructure.Agent.Functions;
 using SmartVoiceAgent.Infrastructure.Agent.Tools;
@@ -178,6 +179,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IOptionsMonitor<CliAgentsOptions>>(),
             sp.GetRequiredService<ICodingAgentProcessRunner>(),
             WorkspaceRoot(sp)));
+        services.AddSingleton<ISubagentRunTracker>(sp => new SubagentRunTracker(sp.GetService<ILogger<SubagentRunTracker>>()));
         services.AddSingleton<IAgentRuntime>(sp =>
         {
             // The agent loop retries model requests itself and reports each retry, so its clients
@@ -191,7 +193,8 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<IAgentSessionStore>(),
                 sp.GetRequiredService<IOptionsMonitor<AgentRuntimeOptions>>(),
                 sp.GetRequiredService<ILogger<AgentRuntime>>(),
-                workspaceRoot: WorkspaceRoot(sp));
+                workspaceRoot: WorkspaceRoot(sp),
+                subagents: sp.GetRequiredService<ISubagentRunTracker>());
         });
 
         // Host control service (must be registered before hosted service)
