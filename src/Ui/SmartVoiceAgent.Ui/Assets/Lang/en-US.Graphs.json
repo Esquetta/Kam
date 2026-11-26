@@ -23,5 +23,12 @@
   "Graphs.Detail.Steps": "Tool calls",
   "Graphs.Detail.NoSteps": "No tool calls yet.",
   "Graphs.Detail.Report": "Report",
-  "Graphs.Detail.Error": "Why it stopped"
+  "Graphs.Detail.Error": "Why it stopped",
+  "Graphs.Zoom.Percent": "{0}%",
+  "Graphs.Zoom.Out": "Zoom out",
+  "Graphs.Zoom.In": "Zoom in",
+  "Graphs.Zoom.Fit": "Fit",
+  "Graphs.Zoom.FitTip": "Zooms so every node fits in view",
+  "Graphs.Layout.Reset": "Reset layout",
+  "Graphs.Layout.ResetTip": "Moves the nodes you dragged back to their places"
 }

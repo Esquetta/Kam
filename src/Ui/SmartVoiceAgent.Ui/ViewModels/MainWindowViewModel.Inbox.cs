@@ -153,8 +153,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private void RefreshTaskCounts()
         {
             var waiting = AgentChatSessions
-                .SelectMany(session => session.Messages
-                    .Where(message => message.IsAwaitingApproval)
+                .SelectMany(session => session.ToolSteps
+                    .Where(step => step.IsAwaitingApproval)
                     .Select(step => new PendingApprovalItem(session, step)))
                 .ToList();
 

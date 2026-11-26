@@ -27,10 +27,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
     public sealed record GraphNodePlacement(string Id, GraphNodeKind Kind, Rect Bounds, SubagentRun? Run = null);
 
     /// <summary>An edge from the right middle of one node to the left middle of another.</summary>
+    /// <param name="FromId">The id of the node it starts at.</param>
+    /// <param name="ToId">The id of the node it ends at.</param>
     /// <param name="From">Where the edge starts.</param>
     /// <param name="To">Where it ends.</param>
     /// <param name="StatusKey">The status of the subagent it leads to or from: running, needs-you, done, failed or cancelled.</param>
-    public sealed record GraphEdge(Point From, Point To, string StatusKey);
+    public sealed record GraphEdge(string FromId, string ToId, Point From, Point To, string StatusKey);
 
     /// <summary>The nodes and edges of one task's graph, and the canvas size they need.</summary>
     public sealed record AgentGraph(IReadOnlyList<GraphNodePlacement> Nodes, IReadOnlyList<GraphEdge> Edges, Size Size);
@@ -79,32 +81,35 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             var root = new Rect(x, spine - (RootSize.Height / 2), RootSize.Width, RootSize.Height);
             nodes.Add(new GraphNodePlacement("root", GraphNodeKind.Root, root));
             var anchor = RightMiddle(root);
+            var anchorId = "root";
             x += RootSize.Width + ColumnGap;
 
             for (var index = 0; index < waves.Count; index++)
             {
                 var wave = waves[index];
                 var top = spine - (((wave.Count * AgentSize.Height) + ((wave.Count - 1) * RowGap)) / 2);
-                var placed = new List<(Rect Bounds, string Status)>();
+                var placed = new List<(string Id, Rect Bounds, string Status)>();
                 foreach (var run in wave)
                 {
                     var bounds = new Rect(x, top, AgentSize.Width, AgentSize.Height);
                     var status = StatusKey(run);
                     nodes.Add(new GraphNodePlacement(run.RunId, GraphNodeKind.Agent, bounds, run));
-                    edges.Add(new GraphEdge(anchor, LeftMiddle(bounds), status));
-                    placed.Add((bounds, status));
+                    edges.Add(new GraphEdge(anchorId, run.RunId, anchor, LeftMiddle(bounds), status));
+                    placed.Add((run.RunId, bounds, status));
                     top += AgentSize.Height + RowGap;
                 }
 
                 x += AgentSize.Width + ColumnGap;
                 var join = new Rect(x, spine - (JoinSize / 2), JoinSize, JoinSize);
-                nodes.Add(new GraphNodePlacement($"join:{index}", GraphNodeKind.Join, join));
-                foreach (var (bounds, status) in placed)
+                var joinId = $"join:{index}";
+                nodes.Add(new GraphNodePlacement(joinId, GraphNodeKind.Join, join));
+                foreach (var (id, bounds, status) in placed)
                 {
-                    edges.Add(new GraphEdge(RightMiddle(bounds), LeftMiddle(join), status));
+                    edges.Add(new GraphEdge(id, joinId, RightMiddle(bounds), LeftMiddle(join), status));
                 }
 
                 anchor = RightMiddle(join);
+                anchorId = joinId;
                 x += JoinSize + ColumnGap;
             }
 
@@ -152,8 +157,12 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _ => "done"
         };
 
-        private static Point LeftMiddle(Rect bounds) => new(bounds.Left, bounds.Top + (bounds.Height / 2));
+        /// <summary>Gets the middle of a node's left side, where edges end.</summary>
+        /// <param name="bounds">The node's bounds.</param>
+        public static Point LeftMiddle(Rect bounds) => new(bounds.Left, bounds.Top + (bounds.Height / 2));
 
-        private static Point RightMiddle(Rect bounds) => new(bounds.Right, bounds.Top + (bounds.Height / 2));
+        /// <summary>Gets the middle of a node's right side, where edges start.</summary>
+        /// <param name="bounds">The node's bounds.</param>
+        public static Point RightMiddle(Rect bounds) => new(bounds.Right, bounds.Top + (bounds.Height / 2));
     }
 }

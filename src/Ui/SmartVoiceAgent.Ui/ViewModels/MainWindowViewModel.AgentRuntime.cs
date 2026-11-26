@@ -249,7 +249,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                                 started.ArgumentsJson,
                                 started.Risk);
                             steps[started.CallId] = step;
-                            session.AddMessage(step);
+                            session.AddToolStep(step);
                             trace.AddStep(step);
                             AddLog($"TOOL: {started.ToolName}");
                             break;
@@ -258,6 +258,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                             if (steps.TryGetValue(approval.CallId, out var waiting))
                             {
                                 waiting.RequestApproval(approval.RequestId, approval.AlwaysAllowRule);
+                                session.ReleaseFromGroup(waiting);
                                 approvalRequests.Add(approval.RequestId);
                                 NotifyApprovalRequested(session, waiting, approval.RequestId);
                             }
@@ -275,7 +276,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                                     "{}",
                                     ToolRisk.Read);
                                 steps[completed.CallId] = finished;
-                                session.AddMessage(finished);
+                                session.AddToolStep(finished);
                                 trace.AddStep(finished);
                             }
 
@@ -600,6 +601,11 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 var history = await _agentSessionStore.LoadAsync(session.SessionId);
                 session.LoadHistory(BuildTimeline(history));
+                if (_subagentRuns is not null)
+                {
+                    AttachSavedSubagentRuns(session.Messages, _subagentRuns.List(session.SessionId));
+                }
+
                 RaiseAgentChatStateChanged();
             }
             catch (Exception ex)
@@ -609,7 +615,43 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /// <summary>
-        /// Turns a saved conversation back into chat bubbles and tool steps.
+        /// Ties the subagent cards of a reopened thread to their saved runs: each card gets its run (so "View in graph"
+        /// works), the run's tool calls as its steps, and the run's real duration. A card whose run is no longer kept
+        /// stays as the thread saved it.
+        /// </summary>
+        /// <param name="items">The thread's top-level items.</param>
+        /// <param name="runs">The saved subagent runs of the thread.</param>
+        public static void AttachSavedSubagentRuns(IEnumerable<AgentChatMessageViewModel> items, IReadOnlyList<SubagentRun> runs)
+        {
+            foreach (var card in items.Where(item => item.IsSubagentTask && item.SubagentRunId is null))
+            {
+                var run = runs.FirstOrDefault(candidate => candidate.ParentCallId == card.CallId);
+                if (run is null)
+                {
+                    continue;
+                }
+
+                card.AttachSubagentRun(run.RunId);
+                foreach (var saved in run.StepList)
+                {
+                    var step = AgentChatMessageViewModel.ToolStep(saved.CallId, saved.ToolName, saved.DisplayName, saved.ArgumentsJson, saved.Risk);
+                    step.MarkSubagentStep(run.AgentType);
+                    var took = saved.CompletedAt is { } completed ? completed - saved.StartedAt : (TimeSpan?)null;
+                    step.CompleteTool(saved.Status == SubagentStepStatus.Succeeded, saved.Summary, took, measured: false);
+                    card.Children.Add(step);
+                }
+
+                card.ShowSubagentProgress(run.StepList.Count, null);
+                if (run.CompletedAt is { } ended)
+                {
+                    card.ShowDuration(ended - run.StartedAt);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Turns a saved conversation back into chat bubbles and tool steps, with consecutive read-only steps
+        /// grouped as in a live turn.
         /// </summary>
         public static IReadOnlyList<AgentChatMessageViewModel> BuildTimeline(IEnumerable<ChatMessage> history)
         {
@@ -655,7 +697,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                                     SerializeArguments(call.Arguments),
                                     risk);
                                 steps[call.CallId] = step;
-                                items.Add(step);
+                                ToolStepGrouping.Append(items, step);
                                 break;
                         }
                     }
@@ -676,14 +718,17 @@ namespace SmartVoiceAgent.Ui.ViewModels
                         var resultText = result.Result?.ToString() ?? string.Empty;
                         if (resultText.StartsWith("The user declined", StringComparison.Ordinal))
                         {
-                            step.CompleteTool(false, "Declined");
+                            // It asked for approval, so it stands on its own line as it did live.
+                            step.CompleteTool(false, "Declined", measured: false);
+                            ToolStepGrouping.Release(items, step);
                         }
                         else
                         {
                             var firstLine = resultText.ReplaceLineEndings("\n").Split('\n', 2)[0].Trim();
                             step.CompleteTool(
                                 !resultText.StartsWith("Error", StringComparison.OrdinalIgnoreCase),
-                                firstLine.Length <= 160 ? firstLine : firstLine[..160] + "...");
+                                firstLine.Length <= 160 ? firstLine : firstLine[..160] + "...",
+                                measured: false);
                         }
                     }
                 }

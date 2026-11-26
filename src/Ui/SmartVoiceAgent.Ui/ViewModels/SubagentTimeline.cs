@@ -5,22 +5,22 @@ using System.Collections.Generic;
 namespace SmartVoiceAgent.Ui.ViewModels
 {
     /// <summary>
-    /// Places the steps of a turn's subagents in the chat: each subagent's steps go right after the step that
-    /// started it (or after its own previous step), marked with its type, so parallel subagents stay grouped.
-    /// The starting step shows the subagent's step count and current tool.
+    /// Places the steps of a turn's subagents in the chat: each subagent's steps go into the
+    /// <see cref="AgentChatMessageViewModel.Children"/> of the step that started it, marked with its type, so the
+    /// thread shows one card per subagent. The starting step shows the subagent's step count and current tool,
+    /// and opens when one of its steps asks for approval.
     /// </summary>
     public sealed class SubagentTimeline
     {
         private readonly AgentChatSessionViewModel _session;
         private readonly Dictionary<string, AgentChatMessageViewModel> _steps;
-        private readonly Dictionary<string, AgentChatMessageViewModel> _lastItemByRun = new(StringComparer.Ordinal);
         private readonly Dictionary<string, int> _stepCountByRun = new(StringComparer.Ordinal);
         private readonly Dictionary<string, List<string>> _pendingByRun = new(StringComparer.Ordinal);
 
         /// <summary>
         /// Creates the timeline for one turn.
         /// </summary>
-        /// <param name="session">The chat the turn runs in.</param>
+        /// <param name="session">The chat the turn runs in; it takes a step whose starting step is unknown.</param>
         /// <param name="steps">The turn's steps by call id; subagent steps are added under "runId/callId".</param>
         public SubagentTimeline(AgentChatSessionViewModel session, Dictionary<string, AgentChatMessageViewModel> steps)
         {
@@ -41,7 +41,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 taskStep.AttachSubagentRun(started.RunId);
                 taskStep.ShowSubagentProgress(0, null);
-                _lastItemByRun[started.RunId] = taskStep;
             }
         }
 
@@ -61,9 +60,17 @@ namespace SmartVoiceAgent.Ui.ViewModels
                         started.Risk);
                     step.MarkSubagentStep(activity.AgentType);
                     _steps[Key(activity.RunId, started.CallId)] = step;
-                    Insert(activity.RunId, step);
                     var count = _stepCountByRun[activity.RunId] = _stepCountByRun.GetValueOrDefault(activity.RunId) + 1;
-                    TaskStep(activity)?.ShowSubagentProgress(count, started.DisplayName);
+                    if (TaskStep(activity) is { } taskStep)
+                    {
+                        taskStep.Children.Add(step);
+                        taskStep.ShowSubagentProgress(count, started.DisplayName);
+                    }
+                    else
+                    {
+                        _session.AddMessage(step);
+                    }
+
                     return null;
 
                 case AgentApprovalRequested approval when _steps.TryGetValue(Key(activity.RunId, approval.CallId), out var waiting):
@@ -84,7 +91,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         /// <summary>
         /// Shows the subagent's final step count on the starting step and ends its steps that never finished, such as
-        /// a card still waiting for approval when the subagent was stopped. Returns the approval requests it asked for,
+        /// a step still waiting for approval when the subagent was stopped. Returns the approval requests it asked for,
         /// so their notices can be dismissed.
         /// </summary>
         public IReadOnlyList<string> Completed(AgentSubagentCompleted completed)
@@ -108,21 +115,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         private AgentChatMessageViewModel? TaskStep(AgentSubagentActivity activity) =>
             _steps.TryGetValue(activity.CallId, out var step) ? step : null;
-
-        private void Insert(string runId, AgentChatMessageViewModel step)
-        {
-            var index = _lastItemByRun.TryGetValue(runId, out var last) ? _session.Messages.IndexOf(last) : -1;
-            if (index < 0)
-            {
-                _session.AddMessage(step);
-            }
-            else
-            {
-                _session.InsertMessage(index + 1, step);
-            }
-
-            _lastItemByRun[runId] = step;
-        }
 
         private static string Key(string runId, string callId) => runId + "/" + callId;
     }

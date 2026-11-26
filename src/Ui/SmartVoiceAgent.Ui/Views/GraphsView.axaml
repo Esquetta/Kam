@@ -95,6 +95,22 @@
             <Setter Property="Canvas.Top" Value="{Binding Y}"/>
         </Style>
 
+        <!-- Zoom and layout toolbar in the graph's corner -->
+        <Style Selector="Border.GraphToolbar">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="Margin" Value="10"/>
+            <Setter Property="Padding" Value="3"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+        </Style>
+        <Style Selector="Border.GraphToolbar Viewbox">
+            <Setter Property="Width" Value="14"/>
+            <Setter Property="Height" Value="14"/>
+        </Style>
+
         <!-- Detail -->
         <Style Selector="ItemsControl.GraphSteps > ContentPresenter:nth-last-child(1) Border.PaneRow">
             <Setter Property="BorderThickness" Value="0"/>
@@ -279,83 +295,116 @@
             </ScrollViewer>
         </Border>
 
-        <!-- The graph: main agent, subagent groups and the joins between them -->
+        <!-- The graph: main agent, subagent groups and the joins between them. Drag a node to move it, drag empty
+             space to pan, Ctrl+wheel to zoom; the code-behind handles the pointer. -->
         <Border Classes="Pane GraphCanvas" IsVisible="{Binding HasGraph}" Background="{DynamicResource SurfaceBgBrush}">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-                <Panel Width="{Binding CanvasWidth}" Height="{Binding CanvasHeight}" HorizontalAlignment="Left" VerticalAlignment="Top">
-                    <controls:AgentGraphEdges Edges="{Binding Edges}" IsHitTestVisible="False"/>
-                    <ItemsControl Classes="GraphNodes" ItemsSource="{Binding Nodes}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <Canvas/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="pagevm:GraphNodeViewModel">
-                                <Panel>
-                                    <!-- Main agent -->
-                                    <Button Classes="GraphRoot" IsVisible="{Binding IsRoot}"
-                                            Width="{Binding Width}" Height="{Binding Height}"
-                                            Command="{Binding $parent[UserControl].((pagevm:GraphsViewModel)DataContext).SelectNodeCommand}"
-                                            CommandParameter="{Binding}"
-                                            AutomationProperties.Name="{Binding Title}">
-                                        <StackPanel Spacing="2">
-                                            <StackPanel Orientation="Horizontal" Spacing="7">
-                                                <Border Classes="StatusDot"
-                                                        Classes.Accent="{Binding IsRunning}"
-                                                        Classes.Warning="{Binding IsNeedsYou}"
-                                                        Classes.Success="{Binding IsDone}"/>
-                                                <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            </StackPanel>
-                                            <TextBlock Text="{Binding Subtitle}" FontSize="11.5" TextTrimming="CharacterEllipsis"
-                                                       Foreground="{DynamicResource TextSecondaryBrush}" ToolTip.Tip="{Binding Subtitle}"/>
-                                            <TextBlock Text="{Binding MetaText}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
-                                        </StackPanel>
-                                    </Button>
+            <Panel>
+                <ScrollViewer x:Name="GraphScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                    <LayoutTransformControl x:Name="GraphZoom" HorizontalAlignment="Left" VerticalAlignment="Top">
+                        <Panel x:Name="GraphSurface" Width="{Binding CanvasWidth}" Height="{Binding CanvasHeight}"
+                               HorizontalAlignment="Left" VerticalAlignment="Top" Background="Transparent" Cursor="Hand">
+                            <controls:AgentGraphEdges Edges="{Binding Edges}" IsHitTestVisible="False"/>
+                            <ItemsControl Classes="GraphNodes" ItemsSource="{Binding Nodes}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="pagevm:GraphNodeViewModel">
+                                        <Panel>
+                                            <!-- Main agent -->
+                                            <Button Classes="GraphRoot" IsVisible="{Binding IsRoot}"
+                                                    Width="{Binding Width}" Height="{Binding Height}"
+                                                    Command="{Binding $parent[UserControl].((pagevm:GraphsViewModel)DataContext).SelectNodeCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    AutomationProperties.Name="{Binding Title}">
+                                                <StackPanel Spacing="2">
+                                                    <StackPanel Orientation="Horizontal" Spacing="7">
+                                                        <Border Classes="StatusDot"
+                                                                Classes.Accent="{Binding IsRunning}"
+                                                                Classes.Warning="{Binding IsNeedsYou}"
+                                                                Classes.Success="{Binding IsDone}"/>
+                                                        <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding Subtitle}" FontSize="11.5" TextTrimming="CharacterEllipsis"
+                                                               Foreground="{DynamicResource TextSecondaryBrush}" ToolTip.Tip="{Binding Subtitle}"/>
+                                                    <TextBlock Text="{Binding MetaText}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                </StackPanel>
+                                            </Button>
 
-                                    <!-- Subagent -->
-                                    <Button Classes="GraphNode" IsVisible="{Binding IsAgent}"
-                                            Classes.Running="{Binding IsRunning}"
-                                            Classes.NeedsYou="{Binding IsNeedsYou}"
-                                            Classes.Failed="{Binding IsFailed}"
-                                            Classes.Selected="{Binding IsSelected}"
-                                            Width="{Binding Width}" Height="{Binding Height}"
-                                            Command="{Binding $parent[UserControl].((pagevm:GraphsViewModel)DataContext).SelectNodeCommand}"
-                                            CommandParameter="{Binding}"
-                                            AutomationProperties.Name="{Binding Subtitle}">
-                                        <StackPanel Spacing="4">
-                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                                                <TextBlock Text="{Binding Title}" Classes="Overline" VerticalAlignment="Center"/>
-                                                <Border Grid.Column="1" Classes="Pill"
-                                                        Classes.Accent="{Binding IsRunning}"
-                                                        Classes.Warning="{Binding IsNeedsYou}"
-                                                        Classes.Success="{Binding IsDone}"
-                                                        Classes.Danger="{Binding IsFailed}">
-                                                    <TextBlock Text="{Binding StatusText}"/>
-                                                </Border>
-                                            </Grid>
-                                            <TextBlock Text="{Binding Subtitle}" FontSize="12.5" FontWeight="Medium"
-                                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                                       TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Subtitle}"/>
-                                            <TextBlock Text="{Binding MetaText}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"
-                                                       TextTrimming="CharacterEllipsis"/>
-                                            <TextBlock Text="{Binding CurrentText}" IsVisible="{Binding HasCurrent}"
-                                                       FontSize="11" FontFamily="{StaticResource MonoFontFamily}"
-                                                       Foreground="{DynamicResource AccentBrush}" TextTrimming="CharacterEllipsis"/>
-                                        </StackPanel>
-                                    </Button>
+                                            <!-- Subagent -->
+                                            <Button Classes="GraphNode" IsVisible="{Binding IsAgent}"
+                                                    Classes.Running="{Binding IsRunning}"
+                                                    Classes.NeedsYou="{Binding IsNeedsYou}"
+                                                    Classes.Failed="{Binding IsFailed}"
+                                                    Classes.Selected="{Binding IsSelected}"
+                                                    Width="{Binding Width}" Height="{Binding Height}"
+                                                    Command="{Binding $parent[UserControl].((pagevm:GraphsViewModel)DataContext).SelectNodeCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    AutomationProperties.Name="{Binding Subtitle}">
+                                                <StackPanel Spacing="4">
+                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                                        <TextBlock Text="{Binding Title}" Classes="Overline" VerticalAlignment="Center"/>
+                                                        <Border Grid.Column="1" Classes="Pill"
+                                                                Classes.Accent="{Binding IsRunning}"
+                                                                Classes.Warning="{Binding IsNeedsYou}"
+                                                                Classes.Success="{Binding IsDone}"
+                                                                Classes.Danger="{Binding IsFailed}">
+                                                            <TextBlock Text="{Binding StatusText}"/>
+                                                        </Border>
+                                                    </Grid>
+                                                    <TextBlock Text="{Binding Subtitle}" FontSize="12.5" FontWeight="Medium"
+                                                               Foreground="{DynamicResource TextPrimaryBrush}"
+                                                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Subtitle}"/>
+                                                    <TextBlock Text="{Binding MetaText}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding CurrentText}" IsVisible="{Binding HasCurrent}"
+                                                               FontSize="11" FontFamily="{StaticResource MonoFontFamily}"
+                                                               Foreground="{DynamicResource AccentBrush}" TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                            </Button>
 
-                                    <!-- Join: the main agent picks up the reports -->
-                                    <Ellipse IsVisible="{Binding IsJoin}" Width="{Binding Width}" Height="{Binding Height}"
-                                             Fill="{DynamicResource SurfaceBgBrush}"
-                                             Stroke="{DynamicResource TextMutedBrush}" StrokeThickness="1.5"/>
-                                </Panel>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </Panel>
-            </ScrollViewer>
+                                            <!-- Join: the main agent picks up the reports -->
+                                            <Ellipse IsVisible="{Binding IsJoin}" Width="{Binding Width}" Height="{Binding Height}"
+                                                     Fill="{DynamicResource SurfaceBgBrush}"
+                                                     Stroke="{DynamicResource TextMutedBrush}" StrokeThickness="1.5"/>
+                                        </Panel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Panel>
+                    </LayoutTransformControl>
+                </ScrollViewer>
+
+                <Border Classes="GraphToolbar">
+                    <StackPanel Orientation="Horizontal" Spacing="2">
+                        <Button Classes="IconButton CompactIconButton" Command="{Binding ZoomOutCommand}"
+                                AutomationProperties.Name="{DynamicResource Lang.Graphs.Zoom.Out}"
+                                ToolTip.Tip="{DynamicResource Lang.Graphs.Zoom.Out}">
+                            <Viewbox><Path Classes="Icon" Data="{StaticResource IconMinus}"/></Viewbox>
+                        </Button>
+                        <TextBlock Text="{Binding ZoomText}" Classes="Caption" MinWidth="40" TextAlignment="Center" VerticalAlignment="Center"/>
+                        <Button Classes="IconButton CompactIconButton" Command="{Binding ZoomInCommand}"
+                                AutomationProperties.Name="{DynamicResource Lang.Graphs.Zoom.In}"
+                                ToolTip.Tip="{DynamicResource Lang.Graphs.Zoom.In}">
+                            <Viewbox><Path Classes="Icon" Data="{StaticResource IconPlus}"/></Viewbox>
+                        </Button>
+                        <Border Width="1" Margin="3,4" Background="{DynamicResource BorderSubtleBrush}"/>
+                        <Button Classes="IconButton CompactIconButton" Command="{Binding FitCommand}"
+                                AutomationProperties.Name="{DynamicResource Lang.Graphs.Zoom.Fit}"
+                                ToolTip.Tip="{DynamicResource Lang.Graphs.Zoom.FitTip}">
+                            <Viewbox><Path Classes="Icon" Data="{StaticResource IconMaximize}"/></Viewbox>
+                        </Button>
+                        <Button Classes="IconButton CompactIconButton" Command="{Binding ResetLayoutCommand}"
+                                AutomationProperties.Name="{DynamicResource Lang.Graphs.Layout.Reset}"
+                                ToolTip.Tip="{DynamicResource Lang.Graphs.Layout.ResetTip}">
+                            <Viewbox><Path Classes="Icon" Data="{StaticResource IconUndo}"/></Viewbox>
+                        </Button>
+                    </StackPanel>
+                </Border>
+            </Panel>
         </Border>
     </DockPanel>
 </UserControl>
