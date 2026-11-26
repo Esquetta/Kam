@@ -6,12 +6,12 @@ This document describes the responsive design improvements made to the Smart Voi
 
 The shell follows the Kam Studio breakpoints:
 
-| Width | Behavior |
-|-------|----------|
-| 1280px and up | Tasks shows the task list (270px) and the thread |
-| < 1280px | Task list narrows to 240px (`IsLogPanelVisible` is false) |
-| < 980px | Top bar drops the wake phrase pill and the search text (`IsNarrow`) |
-| < 760px | Rail shows icons only and the task list sits above the thread (`IsRailCompact`) |
+| Size | Behavior |
+|------|----------|
+| Any width | One rail (232px, resizable) holds navigation and recent tasks; Tasks shows the thread in a centered 760px column |
+| < 980px wide | Top bar drops the wake phrase pill (`IsNarrow`) |
+| < 760px wide | Rail shows icons only and hides the recent tasks; Search (Ctrl+K) lists them (`IsRailCompact`) |
+| < 760px tall | Build and Manage start collapsed until the user opens or closes one (`IsShort`) |
 
 `IsCompact` (< 1024px), `IsMedium` and `IsExpanded` still drive `GridColumns` and the responsive converters.
 
@@ -24,7 +24,8 @@ A singleton service that tracks window dimensions and provides responsive state:
 - `WindowWidth` / `WindowHeight` - Current window dimensions
 - `IsCompact` / `IsMedium` / `IsExpanded` - Breakpoint flags
 - `GridColumns` - Number of columns for grid layouts (1-3)
-- `IsLogPanelVisible` - Whether the window is 1280px or wider (the Tasks list keeps 270px)
+- `IsLogPanelVisible` - Whether the window is 1280px or wider
+- `IsShort` - Whether the window is under 760px tall (the rail's Build and Manage start collapsed)
 - `ReducedMotion` - Accessibility preference for disabling animations
 
 ### 2. ResponsiveConverters.cs
@@ -113,10 +114,10 @@ if (WindowStateManager.Instance.ReducedMotion)
 ## Testing Responsive Design
 
 1. **Resize the window** to see layout adapt:
-   - 1280px and up: 270px task list and the thread
-   - < 1280px: 240px task list
-   - < 980px: top bar trims to the search icon and the mic
-   - < 760px: icon rail, task list above the thread
+   - Any width: the rail with recent tasks, and the thread in a centered column
+   - < 980px: top bar drops the wake phrase pill; search lives in the rail
+   - < 760px: icon rail without recent tasks
+   - < 760px tall: Build and Manage start collapsed
 
 2. **Toggle Reduced Motion** in Settings to see animations disable
 

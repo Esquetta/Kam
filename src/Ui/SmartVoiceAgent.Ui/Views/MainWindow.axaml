@@ -19,6 +19,99 @@
 		Width="1360" Height="860"
 		MinWidth="640" MinHeight="560">
 
+	<Window.Resources>
+		<!-- One task row in the rail; the three task groups share it. A click opens the task from any page. -->
+		<DataTemplate x:Key="TaskRowTemplate" DataType="vm:AgentChatSessionViewModel">
+			<Panel Classes="ChatSessionRow" IsVisible="{Binding IsVisibleInList}">
+				<Button Classes="ListItem TaskRow"
+						Classes.Selected="{Binding IsSelected}"
+						IsVisible="{Binding IsShowingSummary}"
+						AutomationProperties.Name="{Binding Title}"
+						Command="{Binding $parent[local:MainWindow].DataContext.OpenTaskCommand}"
+						CommandParameter="{Binding}">
+					<Button.ContextMenu>
+						<ContextMenu>
+							<MenuItem Header="{DynamicResource Lang.Common.Rename}" InputGesture="F2" Click="OnRenameChatClick"/>
+							<MenuItem Header="{DynamicResource Lang.Common.Delete}" IsEnabled="{Binding CanDelete}" Click="OnDeleteChatClick"/>
+						</ContextMenu>
+					</Button.ContextMenu>
+					<!-- Title, then a dot while it runs (accent) or waits for you (orange), and the time -->
+					<Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+						<TextBlock Grid.Column="0" Classes="TaskRowTitle" Text="{Binding Title}"/>
+						<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+							<Border Classes="TaskDot"
+									Classes.Working="{Binding IsWorking}"
+									Classes.Waiting="{Binding HasPendingApproval}"
+									Classes.Animated="{Binding !ReducedMotion, Source={x:Static services:WindowStateManager.Instance}}"
+									IsVisible="{Binding HasStatus}"
+									ToolTip.Tip="{Binding StatusText}"/>
+							<TextBlock Classes="Caption ChatRowTime"
+									   Text="{Binding RelativeTimeText}"
+									   TextWrapping="NoWrap"
+									   VerticalAlignment="Center"/>
+						</StackPanel>
+					</Grid>
+				</Button>
+
+				<!-- Row menu; shown on hover in place of the time -->
+				<Button Classes="IconButton CompactIconButton ChatRowMenu"
+						IsVisible="{Binding IsShowingSummary}"
+						HorizontalAlignment="Right"
+						VerticalAlignment="Center"
+						Margin="0,0,2,0"
+						Background="Transparent"
+						BorderThickness="0"
+						AutomationProperties.Name="{DynamicResource Lang.Chat.Options}"
+						ToolTip.Tip="{DynamicResource Lang.Chat.Options}">
+					<Button.Flyout>
+						<MenuFlyout Placement="BottomEdgeAlignedRight">
+							<MenuItem Header="{DynamicResource Lang.Common.Rename}" InputGesture="F2" Click="OnRenameChatClick"/>
+							<MenuItem Header="{DynamicResource Lang.Common.Delete}" IsEnabled="{Binding CanDelete}" Click="OnDeleteChatClick"/>
+						</MenuFlyout>
+					</Button.Flyout>
+					<Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconMore}" StrokeThickness="3" Stretch="None"/></Viewbox>
+				</Button>
+
+				<!-- Rename: Enter saves, Esc cancels -->
+				<Border Classes="ChatSessionEditor"
+						IsVisible="{Binding IsRenaming}"
+						PropertyChanged="OnRenameEditorPropertyChanged">
+					<TextBox Classes="ChatRenameInput"
+							 Text="{Binding EditTitle, Mode=TwoWay}"
+							 MaxLength="120"
+							 KeyDown="OnRenameKeyDown"
+							 LostFocus="OnRenameLostFocus"/>
+				</Border>
+
+				<!-- Delete confirmation -->
+				<Border Classes="ChatSessionEditor"
+						IsVisible="{Binding IsConfirmingDelete}">
+					<StackPanel Spacing="8">
+						<StackPanel Spacing="2">
+							<TextBlock Text="{DynamicResource Lang.Chat.DeleteConfirm.Title}"
+									   FontSize="13"
+									   FontWeight="SemiBold"
+									   Foreground="{DynamicResource TextPrimaryBrush}"/>
+							<TextBlock Text="{DynamicResource Lang.Chat.DeleteConfirm.Body}"
+									   Classes="Caption"
+									   TextWrapping="Wrap"/>
+						</StackPanel>
+						<StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+							<Button Classes="SecondaryAction ChatRowAction"
+									Content="{DynamicResource Lang.Common.Cancel}"
+									Command="{Binding $parent[local:MainWindow].DataContext.CancelDeleteAgentChatCommand}"
+									CommandParameter="{Binding}"/>
+							<Button Classes="DestructiveAction ChatRowAction"
+									Content="{DynamicResource Lang.Common.Delete}"
+									Command="{Binding $parent[local:MainWindow].DataContext.ConfirmDeleteAgentChatCommand}"
+									CommandParameter="{Binding}"/>
+						</StackPanel>
+					</StackPanel>
+				</Border>
+			</Panel>
+		</DataTemplate>
+	</Window.Resources>
+
 	<Window.Styles>
 		<!-- The window keeps its name for the taskbar and Alt-Tab, but the drawn title bar would paint it
 			 over the sidebar logo; Kam's own header shows the page instead. The separate full-screen
@@ -34,11 +127,11 @@
 		<!-- SIDEBAR NAVIGATION -->
 		<!-- ========================= -->
 
-		<!-- Rail (Kam Studio): 232 px panel with a hairline on the right; icons only below 760 px -->
+		<!-- Rail: one sidebar for navigation and recent tasks, with a hairline on the right; icons only below 760 px -->
 		<!-- The rail is as wide as the user dragged it (232 px by default); compact it is 60 px -->
 		<Style Selector="Border.Sidebar" x:DataType="vm:MainWindowViewModel">
 			<Setter Property="Width" Value="{Binding RailWidth}"/>
-			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
+			<Setter Property="Background" Value="{DynamicResource PanelBgBrush}"/>
 			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
 			<Setter Property="BorderThickness" Value="0,0,1,0"/>
 		</Style>
@@ -51,9 +144,54 @@
 			<Setter Property="IsVisible" Value="False"/>
 		</Style>
 
-		<!-- Holds labels that bind IsVisible themselves, such as the theme toggle's -->
+		<!-- Holds what sits beside a label, such as a count or a key hint -->
 		<Style Selector="Border.Sidebar.Compact Panel.NavLabelGroup">
 			<Setter Property="IsVisible" Value="False"/>
+		</Style>
+
+		<!-- Compact, the group labels and the recent tasks go; every nav icon shows, and Search (Ctrl+K) finds tasks -->
+		<Style Selector="Border.Sidebar.Compact Button.RailGroupHeader, Border.Sidebar.Compact Grid.RailTasks">
+			<Setter Property="IsVisible" Value="False"/>
+		</Style>
+
+		<!-- Build and Manage: the label is a button that collapses its group; a chevron shows the state -->
+		<Style Selector="Button.RailGroupHeader">
+			<Setter Property="Height" Value="24"/>
+			<Setter Property="Margin" Value="0,12,0,2"/>
+			<Setter Property="Padding" Value="8,0"/>
+			<Setter Property="HorizontalAlignment" Value="Stretch"/>
+			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="CornerRadius" Value="6"/>
+			<Setter Property="Cursor" Value="Hand"/>
+		</Style>
+		<Style Selector="Button.RailGroupHeader:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
+		</Style>
+		<Style Selector="Button.RailGroupHeader Viewbox.GroupChevron">
+			<Setter Property="Width" Value="12"/>
+			<Setter Property="Height" Value="12"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+		<Style Selector="Button.RailGroupHeader.Collapsed Viewbox.GroupChevron">
+			<Setter Property="RenderTransform" Value="rotate(-90deg)"/>
+		</Style>
+		<Style Selector="StackPanel.RailGroupItems.Collapsed">
+			<Setter Property="IsVisible" Value="False"/>
+		</Style>
+		<!-- After the rule above, so a collapsed group still shows its icons in the compact rail -->
+		<Style Selector="Border.Sidebar.Compact StackPanel.RailGroupItems.Collapsed">
+			<Setter Property="IsVisible" Value="True"/>
+		</Style>
+
+		<!-- Key hints on New task and Search show while the row is hovered -->
+		<Style Selector="Button.NavBtn Border.HoverKbd">
+			<Setter Property="Opacity" Value="0"/>
+		</Style>
+		<Style Selector="Button.NavBtn:pointerover Border.HoverKbd">
+			<Setter Property="Opacity" Value="1"/>
 		</Style>
 
 		<Style Selector="Button.NavBtn">
@@ -111,24 +249,6 @@
 			<Setter Property="VerticalAlignment" Value="Center"/>
 		</Style>
 
-		<!-- Top bar search: looks like an input, opens the task search -->
-		<Style Selector="Button.TitleSearch">
-			<Setter Property="MinWidth" Value="240"/>
-			<Setter Property="Height" Value="30"/>
-			<Setter Property="Padding" Value="10,0,8,0"/>
-			<Setter Property="CornerRadius" Value="8"/>
-			<Setter Property="BorderThickness" Value="1"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
-			<Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
-			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-			<Setter Property="VerticalContentAlignment" Value="Center"/>
-			<Setter Property="Cursor" Value="Hand"/>
-		</Style>
-		<Style Selector="Button.TitleSearch:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource TextMutedBrush}"/>
-		</Style>
-
 		<!-- Mic (.mic): 30 px square with a hairline; accent fill while listening -->
 		<Style Selector="Button.MicButton">
 			<Setter Property="Width" Value="30"/>
@@ -154,11 +274,8 @@
 			<Setter Property="Stroke" Value="{DynamicResource AccentOnBrush}"/>
 		</Style>
 
-		<!-- Below 980 px the top bar keeps only the search icon -->
-		<Style Selector="Grid.TopBar.narrow Button.TitleSearch">
-			<Setter Property="MinWidth" Value="0"/>
-		</Style>
-		<Style Selector="Grid.TopBar.narrow TextBlock.TitleSearchText, Grid.TopBar.narrow Border.Kbd, Grid.TopBar.narrow Panel.WakePill">
+		<!-- Below 980 px the top bar drops the wake pill -->
+		<Style Selector="Grid.TopBar.narrow Panel.WakePill">
 			<Setter Property="IsVisible" Value="False"/>
 		</Style>
 
@@ -172,22 +289,6 @@
 		</Style>
 		<Style Selector="ProgressBar.ContextMeter.Warning">
 			<Setter Property="Foreground" Value="{DynamicResource AccentOrangeBrush}"/>
-		</Style>
-
-		<!-- Count badge on a nav row, e.g. running tasks or approvals waiting -->
-		<Style Selector="Border.NavCount">
-			<Setter Property="Padding" Value="5,0"/>
-			<Setter Property="MinWidth" Value="18"/>
-			<Setter Property="MinHeight" Value="18"/>
-			<Setter Property="VerticalAlignment" Value="Center"/>
-		</Style>
-		<Style Selector="Border.NavCount TextBlock">
-			<Setter Property="FontSize" Value="11"/>
-			<Setter Property="FontWeight" Value="SemiBold"/>
-			<Setter Property="HorizontalAlignment" Value="Center"/>
-		</Style>
-		<Style Selector="Border.NavCount.Neutral TextBlock">
-			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
 		</Style>
 
 		<Style Selector="Button.NavBtn.Active TextBlock.NavLabel">
@@ -249,57 +350,61 @@
 			<Setter Property="Margin" Value="0,0,6,6"/>
 		</Style>
 
+		<!-- Strips above the composer: voice status, a missing model and queued messages -->
 		<Style Selector="Border.VoiceStatusStrip">
-			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+			<Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
 			<Setter Property="CornerRadius" Value="8"/>
 			<Setter Property="Padding" Value="10,4,4,4"/>
 			<Setter Property="MinHeight" Value="30"/>
 		</Style>
 
 		<Style Selector="Border.QueuedMessageStrip">
-			<Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+			<Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
 			<Setter Property="CornerRadius" Value="8"/>
 			<Setter Property="Padding" Value="10,4,4,4"/>
 		</Style>
 
-		<!-- Task rows (.task): full-bleed, a 2 px accent edge when selected -->
-		<Style Selector="Button.ChatSessionItem">
+		<!-- Recent tasks in the rail: group labels, then 32 px rows (a ListItem) with the title and the time -->
+		<Style Selector="Grid.TaskGroupHeader">
+			<Setter Property="Margin" Value="8,10,8,4"/>
+		</Style>
+
+		<Style Selector="Button.TaskRow">
+			<Setter Property="MinHeight" Value="32"/>
+			<Setter Property="Height" Value="32"/>
+			<Setter Property="Padding" Value="8,0"/>
+			<Setter Property="CornerRadius" Value="6"/>
+		</Style>
+
+		<!-- On other pages no task is the current one, so the rail shows only the page as selected -->
+		<Style Selector="Border.Sidebar.OffTasks Button.TaskRow.Selected">
+			<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+		</Style>
+		<Style Selector="Border.Sidebar.OffTasks Button.TaskRow.Selected:not(:pointerover) /template/ ContentPresenter#PART_ContentPresenter">
 			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="BorderBrush" Value="Transparent"/>
-			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="CornerRadius" Value="0"/>
-			<Setter Property="Padding" Value="0"/>
-			<Setter Property="Margin" Value="0"/>
-			<Setter Property="HorizontalAlignment" Value="Stretch"/>
-			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-			<Setter Property="Cursor" Value="Hand"/>
 		</Style>
 
-		<Style Selector="Button.ChatSessionItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+		<Style Selector="TextBlock.TaskRowTitle">
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="FontWeight" Value="Normal"/>
+			<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
 		</Style>
 
-		<Style Selector="Border.ChatSessionChrome">
-			<Setter Property="BorderThickness" Value="2,0,0,0"/>
-			<Setter Property="BorderBrush" Value="Transparent"/>
-			<Setter Property="CornerRadius" Value="0"/>
-			<Setter Property="Padding" Value="10,9,12,9"/>
-		</Style>
-		<Style Selector="Border.ChatSessionChrome.Selected">
-			<Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-		</Style>
+		<!-- Running: a pulsing accent dot (still under reduced motion); waiting for you: an orange dot -->
 		<Style Selector="Border.TaskDot">
-			<Setter Property="Width" Value="7"/>
-			<Setter Property="Height" Value="7"/>
-			<Setter Property="CornerRadius" Value="4"/>
-			<Setter Property="Margin" Value="0,5,0,0"/>
-			<Setter Property="VerticalAlignment" Value="Top"/>
+			<Setter Property="Width" Value="6"/>
+			<Setter Property="Height" Value="6"/>
+			<Setter Property="CornerRadius" Value="3"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
 			<Setter Property="Background" Value="{DynamicResource TextMutedBrush}"/>
 		</Style>
 		<Style Selector="Border.TaskDot.Working">
 			<Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+		</Style>
+		<Style Selector="Border.TaskDot.Working.Animated">
 			<Style.Animations>
-				<Animation Duration="0:0:1.4" IterationCount="Infinite">
+				<Animation Duration="0:0:1.2" IterationCount="Infinite">
 					<KeyFrame Cue="0%"><Setter Property="Opacity" Value="1"/></KeyFrame>
 					<KeyFrame Cue="50%"><Setter Property="Opacity" Value="0.3"/></KeyFrame>
 					<KeyFrame Cue="100%"><Setter Property="Opacity" Value="1"/></KeyFrame>
@@ -325,8 +430,9 @@
 
 		<Style Selector="Border.ChatSessionEditor">
 			<Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
+			<Setter Property="CornerRadius" Value="6"/>
 			<Setter Property="Margin" Value="0"/>
-			<Setter Property="Padding" Value="10,8"/>
+			<Setter Property="Padding" Value="8"/>
 		</Style>
 
 		<Style Selector="TextBox.ChatRenameInput">
@@ -340,14 +446,6 @@
 			<Setter Property="MinHeight" Value="28"/>
 			<Setter Property="Padding" Value="10,4"/>
 			<Setter Property="FontSize" Value="12"/>
-		</Style>
-
-		<Style Selector="TextBox.ChatSearch">
-			<Setter Property="MinHeight" Value="30"/>
-			<Setter Property="FontSize" Value="12"/>
-			<Setter Property="Padding" Value="8,5"/>
-			<Setter Property="CornerRadius" Value="7"/>
-			<Setter Property="VerticalContentAlignment" Value="Center"/>
 		</Style>
 
 		<!-- Copy buttons under messages show on hover -->
@@ -369,8 +467,8 @@
 			<Setter Property="VerticalAlignment" Value="Center"/>
 		</Style>
 
-		<!-- Model picker: a ghost Sm combo, no fill or border until hovered -->
-		<Style Selector="ComboBox.ModelPicker">
+		<!-- Model picker and permission mode: ghost Sm combos, no fill or border until hovered -->
+		<Style Selector="ComboBox.ModelPicker, ComboBox.ApprovalModePicker">
 			<Setter Property="MinHeight" Value="28"/>
 			<Setter Property="MaxWidth" Value="360"/>
 			<Setter Property="Padding" Value="8,0,4,0"/>
@@ -380,7 +478,7 @@
 			<Setter Property="FontSize" Value="12"/>
 			<Setter Property="VerticalAlignment" Value="Center"/>
 		</Style>
-		<Style Selector="ComboBox.ModelPicker:pointerover /template/ Border#Background">
+		<Style Selector="ComboBox.ModelPicker:pointerover /template/ Border#Background, ComboBox.ApprovalModePicker:pointerover /template/ Border#Background">
 			<Setter Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
 			<Setter Property="BorderBrush" Value="Transparent"/>
 		</Style>
@@ -558,32 +656,31 @@
 			<Setter Property="RenderTransform" Value="none"/>
 		</Style>
 
-		<!-- Mini select (.mini-select) in the composer bar -->
-		<Style Selector="ComboBox.ApprovalModePicker">
-			<Setter Property="MinHeight" Value="24"/>
-			<Setter Property="Padding" Value="6,0,2,0"/>
-			<Setter Property="CornerRadius" Value="6"/>
-			<Setter Property="FontSize" Value="12"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-			<Setter Property="VerticalAlignment" Value="Center"/>
-		</Style>
-
-		<!-- Attach (.pill): a small raised button in the composer bar -->
+		<!-- Context meter in the composer bar: a small raised pill, shown once the context passes half the budget -->
 		<Style Selector="Button.ComposerPill">
 			<Setter Property="MinHeight" Value="22"/>
 			<Setter Property="Height" Value="22"/>
-			<Setter Property="Padding" Value="7,0"/>
-			<Setter Property="CornerRadius" Value="6"/>
+			<Setter Property="Padding" Value="8,0"/>
+			<Setter Property="CornerRadius" Value="999"/>
 			<Setter Property="BorderThickness" Value="0"/>
 			<Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
 			<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
 			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
 			<Setter Property="VerticalContentAlignment" Value="Center"/>
 			<Setter Property="Cursor" Value="Hand"/>
 		</Style>
 		<Style Selector="Button.ComposerPill:pointerover /template/ ContentPresenter#PART_ContentPresenter">
 			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
 			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+		</Style>
+
+		<!-- The composer's mic: a ghost icon like its neighbours; accent fill while listening -->
+		<Style Selector="Button.TalkButton.listening /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource AccentStrongBrush}"/>
+		</Style>
+		<Style Selector="Button.TalkButton.listening Path.Icon">
+			<Setter Property="Stroke" Value="{DynamicResource AccentOnBrush}"/>
 		</Style>
 
 		<Style Selector="Ellipse.WorkingDot">
@@ -614,13 +711,17 @@
 			<Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
 		</Style>
 
-		<!-- Composer (.composer): one bordered panel, the prompt on top and the bar below -->
+		<!-- Composer: one quiet panel, the prompt on top and the bar below; focus darkens the border, no accent -->
 		<Style Selector="Border.ComposerSurface">
 			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
 			<Setter Property="BorderThickness" Value="1"/>
 			<Setter Property="CornerRadius" Value="12"/>
-			<Setter Property="Padding" Value="12,10,8,6"/>
+			<Setter Property="Padding" Value="12,10,8,8"/>
+			<Setter Property="MinHeight" Value="88"/>
+		</Style>
+		<Style Selector="Border.ComposerSurface:focus-within">
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
 		</Style>
 
 		<!-- Composer inputs render without their own chrome; the surrounding surface provides it -->
@@ -629,6 +730,7 @@
 			<Setter Property="MinHeight" Value="22"/>
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderThickness" Value="0"/>
+			<Setter Property="PlaceholderForeground" Value="{DynamicResource TextMutedBrush}"/>
 		</Style>
 
 		<Style Selector="TextBox.BareInput /template/ Border#PART_BorderElement">
@@ -645,34 +747,42 @@
 			<Setter Property="Background" Value="Transparent"/>
 		</Style>
 
-		<!-- Send (.btn.primary.sm) -->
+		<!-- Send: a 28 px round button with an arrow on AccentStrong; muted while the composer is empty.
+		     While a turn runs the Stop variant takes its place with a square. -->
 		<Style Selector="Button.SendButton">
-			<Setter Property="MinHeight" Value="24"/>
-			<Setter Property="Height" Value="24"/>
-			<Setter Property="Padding" Value="8,0"/>
-			<Setter Property="CornerRadius" Value="6"/>
+			<Setter Property="Width" Value="28"/>
+			<Setter Property="Height" Value="28"/>
+			<Setter Property="MinWidth" Value="28"/>
+			<Setter Property="MinHeight" Value="28"/>
+			<Setter Property="Padding" Value="0"/>
+			<Setter Property="CornerRadius" Value="999"/>
 			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="FontSize" Value="12"/>
-			<Setter Property="FontWeight" Value="Medium"/>
 			<Setter Property="Background" Value="{DynamicResource AccentStrongBrush}"/>
-			<Setter Property="Foreground" Value="{DynamicResource AccentOnBrush}"/>
 			<Setter Property="HorizontalContentAlignment" Value="Center"/>
 			<Setter Property="VerticalContentAlignment" Value="Center"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
 			<Setter Property="Cursor" Value="Hand"/>
 		</Style>
 
 		<Style Selector="Button.SendButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
 			<Setter Property="Background" Value="{DynamicResource AccentStrongHoverBrush}"/>
-			<Setter Property="Foreground" Value="{DynamicResource AccentOnBrush}"/>
-		</Style>
-
-		<Style Selector="Button.SendButton TextBlock">
-			<Setter Property="Foreground" Value="{DynamicResource AccentOnBrush}"/>
 		</Style>
 
 		<Style Selector="Button.SendButton Path.Icon">
 			<Setter Property="Stroke" Value="{DynamicResource AccentOnBrush}"/>
 			<Setter Property="StrokeThickness" Value="2.5"/>
+		</Style>
+
+		<Style Selector="Button.SendButton.Empty">
+			<Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
+		</Style>
+
+		<Style Selector="Button.SendButton.Empty:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+			<Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+		</Style>
+
+		<Style Selector="Button.SendButton.Empty Path.Icon">
+			<Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}"/>
 		</Style>
 	</Window.Styles>
 
@@ -683,7 +793,7 @@
 		</Grid.ColumnDefinitions>
 
 		<!-- ========================= -->
-		<!-- RAIL: Work, Build, Manage, then the theme toggle -->
+		<!-- RAIL: one sidebar. Brand, New task, Search, Needs you, Build and Manage, recent tasks, then Settings -->
 		<!-- ========================= -->
 		<!-- Drag the rail's right edge to resize it; a double click restores 232 px -->
 		<controls:PaneResizeHandle Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
@@ -698,194 +808,255 @@
 		<Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
 				Classes="Sidebar"
 				Classes.Compact="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsRailCompact}"
+				Classes.OffTasks="{Binding !IsChatWorkbenchVisible}"
 				PointerPressed="OnHeaderPointerPressed">
-			<Grid RowDefinitions="Auto,*,Auto" Margin="10,12,10,10">
+			<Grid RowDefinitions="48,Auto,*,Auto" Margin="10,0,10,10">
 
-				<!-- Brand -->
-				<Button Grid.Row="0"
-						Classes="NavBtn"
-						Height="40"
-						Padding="4,0"
-						Margin="0,0,0,4"
-						Command="{Binding NavigateToCoordinatorCommand}"
-						AutomationProperties.Name="Kam"
-						ToolTip.Tip="Kam">
-					<StackPanel Orientation="Horizontal" Spacing="10">
-						<Border Width="28" Height="28"
-								CornerRadius="8"
-								Background="{DynamicResource AccentStrongBrush}">
-							<Viewbox Width="16" Height="16">
-								<Path Classes="Icon"
-									  Data="{StaticResource IconBrandWave}"
-									  Stroke="{DynamicResource AccentOnBrush}"
-									  StrokeThickness="2.6"/>
-							</Viewbox>
-						</Border>
-						<StackPanel VerticalAlignment="Center" Spacing="0">
-							<TextBlock Classes="NavLabel"
-									   Text="Kam"
-									   FontSize="14"
-									   FontWeight="SemiBold"
-									   Foreground="{DynamicResource TextPrimaryBrush}"/>
-							<TextBlock Classes="NavLabel"
-									   Text="{DynamicResource Lang.Shell.Brand.Tagline}"
-									   FontSize="12"
-									   FontWeight="Normal"
-									   Foreground="{DynamicResource TextMutedBrush}"/>
-						</StackPanel>
-					</StackPanel>
-				</Button>
+				<!-- Brand: 48 px, level with the top bar and the caption buttons -->
+				<StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="8,0" VerticalAlignment="Center">
+					<Border Width="20" Height="20"
+							CornerRadius="6"
+							Background="{DynamicResource AccentStrongBrush}">
+						<Viewbox Width="12" Height="12">
+							<Path Classes="Icon"
+								  Data="{StaticResource IconBrandWave}"
+								  Stroke="{DynamicResource AccentOnBrush}"
+								  StrokeThickness="2.6"/>
+						</Viewbox>
+					</Border>
+					<TextBlock Classes="NavLabel"
+							   Text="Kam"
+							   FontSize="13"
+							   FontWeight="SemiBold"
+							   VerticalAlignment="Center"
+							   Foreground="{DynamicResource TextPrimaryBrush}"/>
+				</StackPanel>
 
-				<!-- Navigation: Work (daily use), Build, Manage -->
-				<ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-				<StackPanel VerticalAlignment="Top">
-					<TextBlock Classes="NavLabel Overline"
-								   Text="{DynamicResource Lang.Shell.Nav.Work}"
-								   Margin="8,12,0,6"/>
-					<Button Classes.NavBtn="True"
-							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Coordinator}}"
-							Command="{Binding NavigateToCoordinatorCommand}"
-							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Workbench}"
-							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Workbench}">
+				<!-- Navigation -->
+				<StackPanel Grid.Row="1">
+					<!-- New task: opens a new task on the Tasks page and focuses the composer -->
+					<Button Classes="NavBtn"
+							Click="OnNewTaskClick"
+							AutomationProperties.Name="{DynamicResource Lang.Chat.NewTask}"
+							ToolTip.Tip="{DynamicResource Lang.Chat.NewChatTip}">
 						<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconListTodo}"/></Viewbox>
-							<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Workbench}"/>
+							<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconPlus}"/></Viewbox>
+							<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Chat.NewTask}"/>
 							<Panel Grid.Column="2" Classes="NavLabelGroup">
-								<Border Classes="Pill NavCount Neutral" IsVisible="{Binding HasRunningTasks}">
-									<TextBlock Text="{Binding RunningTaskCount}"/>
-								</Border>
+								<Border Classes="Kbd HoverKbd"><TextBlock Text="Ctrl N"/></Border>
 							</Panel>
 						</Grid>
 					</Button>
+					<!-- Search: the command palette, which also lists every task -->
+					<Button Classes="NavBtn"
+							Click="OnTitleSearchClick"
+							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Search}"
+							ToolTip.Tip="{DynamicResource Lang.Shell.SearchTasksTip}">
+						<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+							<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconSearch}"/></Viewbox>
+							<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Search}"/>
+							<Panel Grid.Column="2" Classes="NavLabelGroup">
+								<Border Classes="Kbd HoverKbd"><TextBlock Text="Ctrl K"/></Border>
+							</Panel>
+						</Grid>
+					</Button>
+					<!-- Needs you: an orange dot and the count while approvals wait -->
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Inbox}}"
 							Command="{Binding NavigateToInboxCommand}"
 							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Inbox}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.InboxTip}">
 						<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconInbox}"/></Viewbox>
+							<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconInbox}"/></Viewbox>
 							<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Inbox}"/>
 							<Panel Grid.Column="2" Classes="NavLabelGroup">
-								<Border Classes="Pill Warning NavCount" IsVisible="{Binding HasPendingApprovals}">
-									<TextBlock Text="{Binding PendingApprovalCount}"/>
-								</Border>
+								<StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasPendingApprovals}">
+									<Border Classes="StatusDot Warning"/>
+									<TextBlock Classes="Caption" Text="{Binding PendingApprovalCount}" VerticalAlignment="Center"/>
+								</StackPanel>
 							</Panel>
 						</Grid>
 					</Button>
 
-					<!-- Build: prompts, agents, loops and graphs -->
-					<TextBlock Classes="NavLabel Overline"
-								   Text="{DynamicResource Lang.Shell.Nav.Build}"
-								   Margin="8,12,0,6"/>
-					<Button Classes.NavBtn="True"
-							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Prompts}}"
-							Command="{Binding NavigateToPageCommand}"
-							CommandParameter="{x:Static vm:NavView.Prompts}"
-							AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Prompts}"
-							ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.PromptsTip}">
-						<StackPanel Orientation="Horizontal" Spacing="10">
-							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconBookOpen}"/></Viewbox>
-							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Prompts}"/>
-						</StackPanel>
+					<!-- Build: prompts, agents, loops, graphs and runs. The label collapses the group; the choice is saved. -->
+					<Button Classes="RailGroupHeader"
+							Classes.Collapsed="{Binding IsBuildGroupCollapsed}"
+							Command="{Binding ToggleRailGroupCommand}"
+							CommandParameter="Build"
+							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Build}"
+							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.GroupTip}">
+						<Grid ColumnDefinitions="*,Auto">
+							<TextBlock Classes="NavLabel Overline" Text="{DynamicResource Lang.Shell.Nav.Build}" VerticalAlignment="Center"/>
+							<Viewbox Grid.Column="1" Classes="GroupChevron"><Path Classes="Icon" Data="{StaticResource IconChevronDown}"/></Viewbox>
+						</Grid>
 					</Button>
-					<Button Classes.NavBtn="True"
-							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Agents}}"
-							Command="{Binding NavigateToPageCommand}"
-							CommandParameter="{x:Static vm:NavView.Agents}"
-							AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Agents}"
-							ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.AgentsTip}">
-						<StackPanel Orientation="Horizontal" Spacing="10">
-							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconBot}"/></Viewbox>
-							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Agents}"/>
-						</StackPanel>
-					</Button>
-					<Button Classes.NavBtn="True"
-							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Loops}}"
-							Command="{Binding NavigateToPageCommand}"
-							CommandParameter="{x:Static vm:NavView.Loops}"
-							AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Loops}"
-							ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.LoopsTip}">
-						<StackPanel Orientation="Horizontal" Spacing="10">
-							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
-							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Loops}"/>
-						</StackPanel>
-					</Button>
-					<Button Classes.NavBtn="True"
-							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Graphs}}"
-							Command="{Binding NavigateToPageCommand}"
-							CommandParameter="{x:Static vm:NavView.Graphs}"
-							AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Graphs}"
-							ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.GraphsTip}">
-						<StackPanel Orientation="Horizontal" Spacing="10">
-							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconNetwork}"/></Viewbox>
-							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Graphs}"/>
-						</StackPanel>
-					</Button>
+					<StackPanel Classes="RailGroupItems" Classes.Collapsed="{Binding IsBuildGroupCollapsed}">
+						<Button Classes.NavBtn="True"
+								Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Prompts}}"
+								Command="{Binding NavigateToPageCommand}"
+								CommandParameter="{x:Static vm:NavView.Prompts}"
+								AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Prompts}"
+								ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.PromptsTip}">
+							<StackPanel Orientation="Horizontal" Spacing="10">
+								<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconBookOpen}"/></Viewbox>
+								<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Prompts}"/>
+							</StackPanel>
+						</Button>
+						<Button Classes.NavBtn="True"
+								Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Agents}}"
+								Command="{Binding NavigateToPageCommand}"
+								CommandParameter="{x:Static vm:NavView.Agents}"
+								AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Agents}"
+								ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.AgentsTip}">
+							<StackPanel Orientation="Horizontal" Spacing="10">
+								<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconBot}"/></Viewbox>
+								<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Agents}"/>
+							</StackPanel>
+						</Button>
+						<Button Classes.NavBtn="True"
+								Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Loops}}"
+								Command="{Binding NavigateToPageCommand}"
+								CommandParameter="{x:Static vm:NavView.Loops}"
+								AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Loops}"
+								ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.LoopsTip}">
+							<StackPanel Orientation="Horizontal" Spacing="10">
+								<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
+								<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Loops}"/>
+							</StackPanel>
+						</Button>
+						<Button Classes.NavBtn="True"
+								Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Graphs}}"
+								Command="{Binding NavigateToPageCommand}"
+								CommandParameter="{x:Static vm:NavView.Graphs}"
+								AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Graphs}"
+								ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.GraphsTip}">
+							<StackPanel Orientation="Horizontal" Spacing="10">
+								<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconNetwork}"/></Viewbox>
+								<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Graphs}"/>
+							</StackPanel>
+						</Button>
+						<Button Classes.NavBtn="True"
+								Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Runs}}"
+								Command="{Binding NavigateToPageCommand}"
+								CommandParameter="{x:Static vm:NavView.Runs}"
+								AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Runs}"
+								ToolTip.Tip="{DynamicResource Lang.Shell.Nav.RunsTip}">
+							<StackPanel Orientation="Horizontal" Spacing="10">
+								<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconActivity}"/></Viewbox>
+								<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Runs}"/>
+							</StackPanel>
+						</Button>
+					</StackPanel>
 
-					<!-- Manage: what agents can use and how Kam is set up -->
-					<TextBlock Classes="NavLabel Overline"
-								   Text="{DynamicResource Lang.Shell.Nav.Manage}"
-								   Margin="8,12,0,6"/>
-					<Button Classes.NavBtn="True"
-							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Runs}}"
-							Command="{Binding NavigateToPageCommand}"
-							CommandParameter="{x:Static vm:NavView.Runs}"
-							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Runs}"
-							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.RunsTip}">
-						<StackPanel Orientation="Horizontal" Spacing="10">
-							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconActivity}"/></Viewbox>
-							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Runs}"/>
-						</StackPanel>
+					<!-- Manage: what agents can use -->
+					<Button Classes="RailGroupHeader"
+							Classes.Collapsed="{Binding IsManageGroupCollapsed}"
+							Command="{Binding ToggleRailGroupCommand}"
+							CommandParameter="Manage"
+							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Manage}"
+							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.GroupTip}">
+						<Grid ColumnDefinitions="*,Auto">
+							<TextBlock Classes="NavLabel Overline" Text="{DynamicResource Lang.Shell.Nav.Manage}" VerticalAlignment="Center"/>
+							<Viewbox Grid.Column="1" Classes="GroupChevron"><Path Classes="Icon" Data="{StaticResource IconChevronDown}"/></Viewbox>
+						</Grid>
 					</Button>
-					<Button Classes.NavBtn="True"
-							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Extensions}}"
-							Command="{Binding NavigateToExtensionsCommand}"
-							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Extensions}"
-							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Extensions}">
-						<StackPanel Orientation="Horizontal" Spacing="10">
-							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconPuzzle}"/></Viewbox>
-							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Extensions}"/>
-						</StackPanel>
-					</Button>
-					<Button Classes.NavBtn="True"
-							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Integrations}}"
-							Command="{Binding NavigateToIntegrationsCommand}"
-							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Integrations}"
-							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Integrations}">
-						<StackPanel Orientation="Horizontal" Spacing="10">
-							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconPlug}"/></Viewbox>
-							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Integrations}"/>
-						</StackPanel>
-					</Button>
+					<StackPanel Classes="RailGroupItems" Classes.Collapsed="{Binding IsManageGroupCollapsed}">
+						<Button Classes.NavBtn="True"
+								Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Extensions}}"
+								Command="{Binding NavigateToExtensionsCommand}"
+								AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Extensions}"
+								ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Extensions}">
+							<StackPanel Orientation="Horizontal" Spacing="10">
+								<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconPuzzle}"/></Viewbox>
+								<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Extensions}"/>
+							</StackPanel>
+						</Button>
+						<Button Classes.NavBtn="True"
+								Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Integrations}}"
+								Command="{Binding NavigateToIntegrationsCommand}"
+								AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Integrations}"
+								ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Integrations}">
+							<StackPanel Orientation="Horizontal" Spacing="10">
+								<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconPlug}"/></Viewbox>
+								<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Integrations}"/>
+							</StackPanel>
+						</Button>
+					</StackPanel>
+				</StackPanel>
+
+				<!-- Recent tasks fill the rest: waiting for you, running, then the rest. The compact rail hides them;
+				     Search (Ctrl+K) lists every task there. -->
+				<Grid Grid.Row="2" Classes="RailTasks" RowDefinitions="Auto,*" Margin="0,12,0,0">
+					<!-- Search: matches titles and the last message -->
+					<TextBox Grid.Row="0"
+							 x:Name="ChatSearchInput"
+							 Classes="Search"
+							 PlaceholderText="{DynamicResource Lang.Chat.Search.Placeholder}"
+							 Text="{Binding AgentChatSearchText, Mode=TwoWay}"
+							 KeyDown="OnChatSearchKeyDown">
+						<TextBox.InnerLeftContent>
+							<Viewbox Classes="SearchIcon" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconSearch}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
+						</TextBox.InnerLeftContent>
+						<TextBox.InnerRightContent>
+							<Button Classes="IconButton CompactIconButton"
+									Margin="0,0,4,0"
+									Background="Transparent"
+									BorderThickness="0"
+									AutomationProperties.Name="{DynamicResource Lang.Chat.Search.Clear}"
+									ToolTip.Tip="{DynamicResource Lang.Chat.Search.Clear}"
+									IsVisible="{Binding IsAgentChatSearchActive}"
+									Command="{Binding ClearAgentChatSearchCommand}">
+								<Viewbox Width="12" Height="12"><Path Classes="Icon" Data="{StaticResource IconX}"/></Viewbox>
+							</Button>
+						</TextBox.InnerRightContent>
+					</TextBox>
+
+					<Panel Grid.Row="1">
+						<ScrollViewer VerticalScrollBarVisibility="Auto"
+									  HorizontalScrollBarVisibility="Disabled">
+							<StackPanel x:Name="ChatThreadList" Spacing="0">
+								<StackPanel Spacing="0" IsVisible="{Binding HasWaitingTasks}">
+									<Grid ColumnDefinitions="*,Auto" Classes="TaskGroupHeader">
+										<TextBlock Text="{DynamicResource Lang.Chat.Group.NeedsYou}" Classes="Overline"/>
+										<TextBlock Grid.Column="1" Text="{Binding WaitingTasks.Count}" Classes="Overline"/>
+									</Grid>
+									<ItemsControl ItemsSource="{Binding WaitingTasks}" ItemTemplate="{StaticResource TaskRowTemplate}"/>
+								</StackPanel>
+								<StackPanel Spacing="0" IsVisible="{Binding HasRunningTaskGroup}">
+									<Grid ColumnDefinitions="*,Auto" Classes="TaskGroupHeader">
+										<TextBlock Text="{DynamicResource Lang.Chat.Group.Running}" Classes="Overline"/>
+										<TextBlock Grid.Column="1" Text="{Binding RunningTasks.Count}" Classes="Overline"/>
+									</Grid>
+									<ItemsControl ItemsSource="{Binding RunningTasks}" ItemTemplate="{StaticResource TaskRowTemplate}"/>
+								</StackPanel>
+								<StackPanel Spacing="0" IsVisible="{Binding HasRecentTasks}">
+									<Grid ColumnDefinitions="*,Auto" Classes="TaskGroupHeader">
+										<TextBlock Text="{DynamicResource Lang.Chat.Group.Recent}" Classes="Overline"/>
+										<TextBlock Grid.Column="1" Text="{Binding RecentTasks.Count}" Classes="Overline"/>
+									</Grid>
+									<ItemsControl ItemsSource="{Binding RecentTasks}" ItemTemplate="{StaticResource TaskRowTemplate}"/>
+								</StackPanel>
+							</StackPanel>
+						</ScrollViewer>
+
+						<TextBlock Text="{DynamicResource Lang.Chat.Search.NoResults}"
+								   Classes="Caption"
+								   HorizontalAlignment="Center"
+								   Margin="0,16,0,0"
+								   IsVisible="{Binding HasNoAgentChatSearchResults}"/>
+					</Panel>
+				</Grid>
+
+				<!-- Footer: Settings; the theme lives in Settings and the palette -->
+				<StackPanel Grid.Row="3" Classes="SidebarFooter" Margin="0,8,0,0">
 					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Settings}}"
 							Command="{Binding NavigateToSettingsCommand}"
 							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Settings}"
 							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Settings}">
 						<StackPanel Orientation="Horizontal" Spacing="10">
-							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconSliders}"/></Viewbox>
+							<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconSliders}"/></Viewbox>
 							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Settings}"/>
-						</StackPanel>
-					</Button>
-				</StackPanel>
-				</ScrollViewer>
-
-				<!-- Bottom navigation: theme toggle -->
-				<StackPanel Grid.Row="2" Classes="SidebarFooter" Spacing="4" Margin="0,12,0,0">
-					<Button Classes="NavBtn"
-							Command="{Binding ToggleThemeCommand}"
-							AutomationProperties.Name="{DynamicResource Lang.Shell.ToggleTheme}"
-							ToolTip.Tip="{DynamicResource Lang.Shell.ToggleTheme}">
-						<StackPanel Orientation="Horizontal" Spacing="10">
-							<Panel Width="15" Height="15">
-								<Viewbox IsVisible="{Binding IsDarkMode}"><Path Classes="Icon" Data="{StaticResource IconSun}"/></Viewbox>
-								<Viewbox IsVisible="{Binding !IsDarkMode}"><Path Classes="Icon" Data="{StaticResource IconMoon}"/></Viewbox>
-							</Panel>
-							<!-- Names the theme a click switches to, in the interface language -->
-							<Panel Classes="NavLabelGroup" VerticalAlignment="Center">
-								<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.LightMode}" IsVisible="{Binding IsDarkMode}"/>
-								<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.DarkMode}" IsVisible="{Binding !IsDarkMode}"/>
-							</Panel>
 						</StackPanel>
 					</Button>
 				</StackPanel>
@@ -1005,18 +1176,6 @@
 								   Classes.Warning="{Binding IsHeaderStatusWarning}"
 								   Text="{Binding StatusText, Mode=OneWay}"/>
 					</StackPanel>
-				</Button>
-				<!-- Search: looks like an input, opens the task search -->
-				<Button Grid.Column="2"
-						Classes="TitleSearch"
-						Click="OnTitleSearchClick"
-						AutomationProperties.Name="{DynamicResource Lang.Shell.SearchTasksTip}"
-						ToolTip.Tip="{DynamicResource Lang.Shell.SearchTasksTip}">
-					<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-						<Viewbox Width="14" Height="14" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconSearch}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
-						<TextBlock Grid.Column="1" Classes="TitleSearchText" Text="{DynamicResource Lang.Shell.SearchTasks}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
-						<Border Grid.Column="2" Classes="Kbd"><TextBlock Text="Ctrl K"/></Border>
-					</Grid>
 				</Button>
 				<!-- The wake phrase listens locally; the pill shows only while it is listening -->
 				<Panel Grid.Column="3" Classes="WakePill" VerticalAlignment="Center">

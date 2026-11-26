@@ -341,7 +341,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public ICommand NavigateToExtensionsCommand { get; }
         public ICommand NavigateToIntegrationsCommand { get; }
         public ICommand NavigateToSettingsCommand { get; }
-        public ICommand ToggleThemeCommand { get; }
 
         /* ========================= */
         /* LOGGING */
@@ -409,9 +408,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 }
 
                 this.RaiseAndSetIfChanged(ref _commandInputText, normalizedValue);
+                this.RaisePropertyChanged(nameof(HasComposerText));
                 RefreshSlashCommandSuggestions();
             }
         }
+
+        /// <summary>Gets whether the composer holds text; an empty composer shows a muted send button.</summary>
+        public bool HasComposerText => !string.IsNullOrWhiteSpace(CommandInputText);
 
         public ICommand SubmitCommand { get; }
 
@@ -554,7 +557,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
             NavigateToExtensionsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Extensions));
             NavigateToIntegrationsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Integrations));
             NavigateToSettingsCommand = ReactiveCommand.Create(() => NavigateTo(NavView.Settings));
-            ToggleThemeCommand = ReactiveCommand.Create(ToggleTheme);
             HeaderStatusCommand = ReactiveCommand.Create(OnHeaderStatusClicked);
             SetUpModelCommand = ReactiveCommand.Create<string?>(SetUpModel);
             SubmitCommand = ReactiveCommand.CreateFromTask(SubmitCommandInputAsync);
@@ -572,6 +574,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             InitializeTaskContext();
             InitializeAppearance();
             InitializePaneWidths();
+            InitializeRailGroups();
             StopAgentTurnCommand = ReactiveCommand.Create(StopAgentTurn);
             ClearQueuedAgentMessagesCommand = ReactiveCommand.Create(ClearQueuedAgentMessages);
             InitializeChatExperience();

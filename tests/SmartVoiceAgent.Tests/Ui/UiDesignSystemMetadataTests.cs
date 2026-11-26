@@ -59,6 +59,7 @@ public sealed class UiDesignSystemMetadataTests
 
     [Theory]
     [InlineData("TasksView.axaml")]
+    [InlineData("MainWindow.axaml")]
     public void CompactIconButtons_DoNotOverrideSharedDimensions(string viewFileName)
     {
         var view = XDocument.Parse(LocalizedXaml.ReadAllText(FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Views", viewFileName))).Root;

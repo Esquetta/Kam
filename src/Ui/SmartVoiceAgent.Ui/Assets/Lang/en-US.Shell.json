@@ -1,10 +1,10 @@
 {
-  "Shell.Brand.Tagline": "Agent workspace",
-  "Shell.Nav.Work": "WORK",
   "Shell.Nav.Build": "BUILD",
   "Shell.Nav.Manage": "MANAGE",
+  "Shell.Nav.GroupTip": "Show or hide this group",
   "Shell.Nav.Inbox": "Needs you",
   "Shell.Nav.InboxTip": "Approvals waiting across all tasks",
+  "Shell.Nav.Search": "Search",
   "Shell.Nav.Workbench": "Tasks",
   "Shell.Nav.Diagnostics": "Diagnostics",
   "Shell.Nav.DiagnosticsTip": "Runtime Diagnostics",
@@ -23,8 +23,6 @@
   "Shell.Ladder.Graphs": "Graphs",
   "Shell.Ladder.GraphsTip": "Live graphs of the subagents each task starts: what runs in parallel, what each does, and where approval is needed.",
 
-  "Shell.ToggleTheme": "Toggle Theme",
-  "Shell.SearchTasks": "Search tasks",
   "Shell.ResizeTip": "Drag to resize. Double-click to restore the default width.",
   "Shell.SearchTasksTip": "Search tasks, pages and commands (Ctrl+K)",
   "Shell.WakeOn": "“Hey Kam” on",

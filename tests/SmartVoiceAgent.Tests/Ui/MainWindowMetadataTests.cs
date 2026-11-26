@@ -44,7 +44,7 @@ public sealed class MainWindowMetadataTests
     {
         var mainWindowText = ReadShellText();
 
-        mainWindowText.Should().Contain("Agent workspace");
+        mainWindowText.Should().NotContain("Agent workspace", "the rail's brand row is the mark and the name only");
         mainWindowText.Should().Contain("Border.Sidebar");
         mainWindowText.Should().Contain("Button.NavBtn");
         mainWindowText.Should().NotContain("ActivePageTitle", "each page owns its title; the top bar shows only the thread title on Tasks");
@@ -64,7 +64,8 @@ public sealed class MainWindowMetadataTests
     {
         var mainWindowText = ReadShellText();
 
-        mainWindowText.Should().Contain("Attach files");
+        mainWindowText.Should().Contain("ToolTip.Tip=\"Attach\"");
+        mainWindowText.Should().Contain("Data=\"{StaticResource IconPaperclip}\"");
         mainWindowText.Should().Contain("OnAttachFilesClick");
         mainWindowText.Should().Contain("ComposerAttachments");
         mainWindowText.Should().Contain("HasComposerAttachments");
@@ -90,9 +91,9 @@ public sealed class MainWindowMetadataTests
         mainWindowText.Should().Contain("ItemTemplate=\"{StaticResource TaskRowTemplate}\"");
         mainWindowText.Should().Contain("SelectedAgentChatSession.Messages");
         mainWindowText.Should().NotContain("SelectedAgentChatMessageCountText");
-        mainWindowText.Should().Contain("MessageCountText");
-        mainWindowText.Should().Contain("NewAgentChatCommand");
-        mainWindowText.Should().Contain("SelectAgentChatCommand");
+        mainWindowText.Should().NotContain("{Binding MessageCountText}", "task rows are one line: the title and the time");
+        mainWindowText.Should().Contain("Click=\"OnNewTaskClick\"");
+        mainWindowText.Should().Contain("Command=\"{Binding $parent[local:MainWindow].DataContext.OpenTaskCommand}\"");
         mainWindowText.Should().Contain("IsChatWorkbenchVisible");
         mainWindowText.Should().Contain("IsPageHostVisible");
         mainWindowText.Should().Contain("NEEDS YOU");
@@ -351,62 +352,33 @@ public sealed class MainWindowMetadataTests
     }
 
     [Fact]
-    public void MainWindow_BottomNavigationOnlyRendersThemeToggle()
+    public void MainWindow_RailFooterIsSettingsAndTheThemeLivesInThePalette()
     {
-        var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root;
+        var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root!;
 
-        var bottomNavigation = mainWindow!
+        var footer = mainWindow
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "StackPanel"
-                && AttributeValue(element, "Grid.Row") == "2"
+                && AttributeValue(element, "Grid.Row") == "3"
                 && AttributeValue(element, "Classes") == "SidebarFooter");
 
-        bottomNavigation
-            .Descendants()
+        footer.Descendants()
             .Where(element => element.Name.LocalName == "Button")
             .Should()
-            .ContainSingle(button =>
-                AttributeValue(button, "Command") == "{Binding ToggleThemeCommand}"
-                && AttributeValue(button, "ToolTip.Tip") == "Toggle Theme");
+            .ContainSingle(button => AttributeValue(button, "Command") == "{Binding NavigateToSettingsCommand}");
 
-        bottomNavigation
-            .Descendants()
-            .Where(element => element.Name.LocalName == "Border")
-            .Should()
-            .BeEmpty();
-    }
+        // No Light mode row: the theme is in Settings and the palette.
+        mainWindow.Descendants().Should().NotContain(element =>
+            AttributeValue(element, "Command") == "{Binding ToggleThemeCommand}"
+            || AttributeValue(element, "Text") == "Light mode");
 
-    [Fact]
-    public void MainWindow_ThemeToggleLabelFollowsTheLanguage()
-    {
-        var mainWindowText = File.ReadAllText(FindMainWindowXamlPath());
-        var mainWindow = XDocument.Parse(mainWindowText).Root;
+        var viewModel = new SmartVoiceAgent.Ui.ViewModels.MainWindowViewModel();
+        viewModel.OpenCommandPalette();
+        viewModel.CommandPalette.Results
+            .Select(row => row.Item?.Title)
+            .Should().Contain(viewModel.IsDarkMode ? "Light mode" : "Dark mode");
 
-        var labelGroup = mainWindow!
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "StackPanel"
-                && AttributeValue(element, "Classes") == "SidebarFooter")
-            .Descendants()
-            .Single(element => element.Name.LocalName == "Panel" && AttributeValue(element, "Classes") == "NavLabelGroup");
-
-        var labels = labelGroup.Elements().Where(element => element.Name.LocalName == "TextBlock").ToArray();
-        labels.Should().HaveCount(2);
-        labels.Select(label => (AttributeValue(label, "Text"), AttributeValue(label, "IsVisible")))
-            .Should()
-            .BeEquivalentTo(new[]
-            {
-                ("{DynamicResource Lang.Shell.LightMode}", "{Binding IsDarkMode}"),
-                ("{DynamicResource Lang.Shell.DarkMode}", "{Binding !IsDarkMode}")
-            });
-
-        // The labels bind IsVisible themselves, so the compact sidebar hides their group instead.
-        mainWindowText.Should().Contain("<Style Selector=\"Border.Sidebar.Compact Panel.NavLabelGroup\">");
-        mainWindowText.Should().NotContain("ConverterParameter='Light mode|Dark mode'");
-
-        LocalizedXaml.English["Shell.LightMode"].Should().Be("Light mode");
-        LocalizedXaml.English["Shell.DarkMode"].Should().Be("Dark mode");
         var turkish = LocalizationService.LoadDictionary("tr-TR");
         turkish["Shell.LightMode"].Should().Be("Açık tema");
         turkish["Shell.DarkMode"].Should().Be("Koyu tema");
@@ -483,7 +455,7 @@ public sealed class MainWindowMetadataTests
     }
 
     [Fact]
-    public void MainWindow_SidebarGroupsWorkBuildManageAndHostsNeedsYou()
+    public void MainWindow_SidebarGroupsBuildManageAndHostsNeedsYou()
     {
         var mainWindow = XDocument.Parse(LocalizedXaml.ReadAllText(FindMainWindowXamlPath())).Root!;
         var navCommands = mainWindow.Descendants()
@@ -493,7 +465,6 @@ public sealed class MainWindowMetadataTests
             .ToArray();
 
         navCommands.Should().Equal(
-            "{Binding NavigateToCoordinatorCommand}",
             "{Binding NavigateToInboxCommand}",
             "{Binding NavigateToPageCommand}{x:Static vm:NavView.Prompts}",
             "{Binding NavigateToPageCommand}{x:Static vm:NavView.Agents}",
@@ -509,14 +480,14 @@ public sealed class MainWindowMetadataTests
                 && AttributeValue(element, "Classes") == "NavLabel Overline")
             .Select(element => AttributeValue(element, "Text"))
             .ToArray();
-        groupLabels.Should().Equal("WORK", "BUILD", "MANAGE");
+        groupLabels.Should().Equal("BUILD", "MANAGE");
 
         mainWindow.Descendants().Should().Contain(element =>
             element.Name.LocalName == "InboxView" && AttributeValue(element, "IsVisible") == "{Binding IsInboxVisible}");
-        mainWindow.Descendants().Should().Contain(element =>
-            element.Name.LocalName == "Border"
-            && AttributeValue(element, "Classes") == "Pill Warning NavCount"
-            && AttributeValue(element, "IsVisible") == "{Binding HasPendingApprovals}");
+        // Needs you counts with an orange dot and plain text, not a pill.
+        var count = mainWindow.Descendants().Single(element =>
+            element.Name.LocalName == "StackPanel" && AttributeValue(element, "IsVisible") == "{Binding HasPendingApprovals}");
+        count.Elements().Select(element => AttributeValue(element, "Classes")).Should().Equal("StatusDot Warning", "Caption");
     }
 
     [Theory]

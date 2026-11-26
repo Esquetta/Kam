@@ -231,6 +231,18 @@ public interface ISettingsService
     double RailWidth { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the rail's Build group is collapsed; null until the user toggles it, which collapses it
+    /// only while the window is short.
+    /// </summary>
+    bool? RailBuildCollapsed { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the rail's Manage group is collapsed; null until the user toggles it, which collapses it
+    /// only while the window is short.
+    /// </summary>
+    bool? RailManageCollapsed { get; set; }
+
+    /// <summary>
     /// Gets or sets the wake phrase, such as <c>Hey Kam</c>.
     /// </summary>
     string WakeWord { get; set; }
