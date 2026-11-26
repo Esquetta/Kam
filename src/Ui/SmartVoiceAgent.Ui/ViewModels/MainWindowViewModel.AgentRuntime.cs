@@ -249,7 +249,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                                 started.ArgumentsJson,
                                 started.Risk);
                             steps[started.CallId] = step;
-                            session.AddMessage(step);
+                            session.AddToolStep(step);
                             trace.AddStep(step);
                             AddLog($"TOOL: {started.ToolName}");
                             break;
@@ -258,6 +258,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                             if (steps.TryGetValue(approval.CallId, out var waiting))
                             {
                                 waiting.RequestApproval(approval.RequestId, approval.AlwaysAllowRule);
+                                session.ReleaseFromGroup(waiting);
                                 approvalRequests.Add(approval.RequestId);
                                 NotifyApprovalRequested(session, waiting, approval.RequestId);
                             }
@@ -275,7 +276,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                                     "{}",
                                     ToolRisk.Read);
                                 steps[completed.CallId] = finished;
-                                session.AddMessage(finished);
+                                session.AddToolStep(finished);
                                 trace.AddStep(finished);
                             }
 
@@ -609,7 +610,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /// <summary>
-        /// Turns a saved conversation back into chat bubbles and tool steps.
+        /// Turns a saved conversation back into chat bubbles and tool steps, with consecutive read-only steps
+        /// grouped as in a live turn.
         /// </summary>
         public static IReadOnlyList<AgentChatMessageViewModel> BuildTimeline(IEnumerable<ChatMessage> history)
         {
@@ -655,7 +657,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                                     SerializeArguments(call.Arguments),
                                     risk);
                                 steps[call.CallId] = step;
-                                items.Add(step);
+                                ToolStepGrouping.Append(items, step);
                                 break;
                         }
                     }
@@ -676,7 +678,9 @@ namespace SmartVoiceAgent.Ui.ViewModels
                         var resultText = result.Result?.ToString() ?? string.Empty;
                         if (resultText.StartsWith("The user declined", StringComparison.Ordinal))
                         {
+                            // It asked for approval, so it stands on its own line as it did live.
                             step.CompleteTool(false, "Declined");
+                            ToolStepGrouping.Release(items, step);
                         }
                         else
                         {

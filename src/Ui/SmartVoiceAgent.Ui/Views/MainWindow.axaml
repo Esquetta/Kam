@@ -382,27 +382,42 @@
 			<Setter Property="MaxWidth" Value="620"/>
 		</Style>
 
-		<!-- Tool step (details.tools): a quiet bordered row; open it for arguments and result -->
-		<Style Selector="Border.ToolStep">
+		<!-- Tool items sit closer together than messages, so a run of steps reads as one block -->
+		<Style Selector="Border.ChatMessage.Tool">
+			<Setter Property="Margin" Value="0,0,0,2"/>
+		</Style>
+
+		<!-- Tool step (Claude / Codex style): one quiet line, no card. Waiting for approval makes it a bordered row. -->
+		<Style Selector="Border.ToolLine">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderBrush" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="CornerRadius" Value="10"/>
+			<Setter Property="Padding" Value="0"/>
+		</Style>
+		<Style Selector="Border.ToolLine.Approval">
+			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
+			<Setter Property="BorderBrush" Value="{DynamicResource AccentOrangeBrush}"/>
+			<Setter Property="Padding" Value="10,8"/>
+			<Setter Property="Margin" Value="0,6"/>
+		</Style>
+
+		<!-- A subagent's step: one card holding the subagent's own steps -->
+		<Style Selector="Border.SubagentCard">
 			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
 			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
 			<Setter Property="BorderThickness" Value="1"/>
-			<Setter Property="CornerRadius" Value="9"/>
-			<Setter Property="Padding" Value="10,8"/>
-			<Setter Property="Margin" Value="0"/>
-		</Style>
-
-		<!-- A subagent's own step: indented under the step that started it, with an accent rail -->
-		<Style Selector="Border.ToolStep.Subagent">
-			<Setter Property="Margin" Value="22,0,0,0"/>
-			<Setter Property="BorderThickness" Value="2,1,1,1"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource AccentSubtleBrush}"/>
-		</Style>
-
-		<!-- Approval (.card): stronger hairline, warn edge while it waits -->
-		<Style Selector="Border.ToolStep.Approval">
-			<Setter Property="BorderBrush" Value="{DynamicResource AccentOrangeBrush}"/>
 			<Setter Property="CornerRadius" Value="10"/>
+			<Setter Property="Padding" Value="12,9"/>
+			<Setter Property="Margin" Value="0,6"/>
+		</Style>
+
+		<!-- Steps inside a read group or a subagent card, under a hairline rail -->
+		<Style Selector="Border.ToolChildren">
+			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
+			<Setter Property="BorderThickness" Value="1,0,0,0"/>
+			<Setter Property="Margin" Value="6,2,0,4"/>
+			<Setter Property="Padding" Value="14,0,0,0"/>
 		</Style>
 
 		<Style Selector="Border.ToolArguments">
@@ -411,27 +426,90 @@
 			<Setter Property="Padding" Value="9,7"/>
 		</Style>
 
-		<!-- The whole step header is the toggle; it keeps the card's look in every state -->
-		<Style Selector="ToggleButton.ToolStepHeader">
+		<Style Selector="Panel.ToolStatusGlyph">
+			<Setter Property="Width" Value="14"/>
+			<Setter Property="Height" Value="14"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+		<Style Selector="TextBlock.ToolLineName">
+			<Setter Property="FontSize" Value="12.5"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+			<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+		<Style Selector="ToggleButton.ToolLineHeader:pointerover TextBlock.ToolLineName">
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+		</Style>
+		<Style Selector="TextBlock.ToolLineTarget">
+			<Setter Property="FontSize" Value="11.5"/>
+			<Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+			<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+		<Style Selector="TextBlock.ToolLineMeta">
+			<Setter Property="FontSize" Value="11"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+			<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+		<!-- A failed step's one-line error, in a muted red -->
+		<Style Selector="TextBlock.ToolLineError">
+			<Setter Property="FontSize" Value="11.5"/>
+			<Setter Property="Foreground" Value="{DynamicResource AccentErrorBrush}"/>
+			<Setter Property="Opacity" Value="0.8"/>
+			<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+		<Style Selector="SelectableTextBlock.ToolResult">
+			<Setter Property="FontSize" Value="12"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+			<Setter Property="TextWrapping" Value="Wrap"/>
+		</Style>
+		<Style Selector="TextBlock.SubagentJob">
+			<Setter Property="Margin" Value="22,0,0,0"/>
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="LineHeight" Value="19"/>
+			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+			<Setter Property="TextWrapping" Value="Wrap"/>
+			<Setter Property="MaxLines" Value="2"/>
+			<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+		</Style>
+
+		<!-- Risk tag on a step's line, only for writes (warn) and programs, external sends and hand-offs (danger) -->
+		<Style Selector="TextBlock.RiskTag">
+			<Setter Property="FontSize" Value="10.5"/>
+			<Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}"/>
+			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+		<Style Selector="TextBlock.RiskTag.Write">
+			<Setter Property="Foreground" Value="{DynamicResource AccentOrangeBrush}"/>
+		</Style>
+		<Style Selector="TextBlock.RiskTag.Shell">
+			<Setter Property="Foreground" Value="{DynamicResource AccentErrorBrush}"/>
+		</Style>
+
+		<!-- The whole line is the toggle; it keeps the thread's look in every state -->
+		<Style Selector="ToggleButton.ToolLineHeader">
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="BorderThickness" Value="0"/>
-			<Setter Property="Padding" Value="0"/>
+			<Setter Property="Padding" Value="0,4"/>
 			<Setter Property="HorizontalAlignment" Value="Stretch"/>
 			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
 			<Setter Property="Cursor" Value="Hand"/>
 		</Style>
-		<Style Selector="ToggleButton.ToolStepHeader:pointerover /template/ ContentPresenter#PART_ContentPresenter,
-						 ToggleButton.ToolStepHeader:pressed /template/ ContentPresenter#PART_ContentPresenter,
-						 ToggleButton.ToolStepHeader:checked /template/ ContentPresenter#PART_ContentPresenter,
-						 ToggleButton.ToolStepHeader:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+		<Style Selector="ToggleButton.ToolLineHeader:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+						 ToggleButton.ToolLineHeader:pressed /template/ ContentPresenter#PART_ContentPresenter,
+						 ToggleButton.ToolLineHeader:checked /template/ ContentPresenter#PART_ContentPresenter,
+						 ToggleButton.ToolLineHeader:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
 			<Setter Property="Background" Value="Transparent"/>
 			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
 		</Style>
-		<!-- The chevron follows what is shown: open while details are visible, also when approval or a failure keeps them open -->
-		<Style Selector="ToggleButton.ToolStepHeader Viewbox.ToolStepChevron">
+		<!-- The chevron of a group or a subagent card points down while its steps show -->
+		<Style Selector="Viewbox.ToolLineChevron">
 			<Setter Property="RenderTransform" Value="rotate(-90deg)"/>
 		</Style>
-		<Style Selector="ToggleButton.ToolStepHeader Viewbox.ToolStepChevron.open">
+		<Style Selector="Viewbox.ToolLineChevron.open">
 			<Setter Property="RenderTransform" Value="none"/>
 		</Style>
 

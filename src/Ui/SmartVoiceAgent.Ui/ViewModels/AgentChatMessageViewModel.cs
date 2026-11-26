@@ -2,7 +2,12 @@ using ReactiveUI;
 using SmartVoiceAgent.Core.Models.Agents;
 using SmartVoiceAgent.Ui.Services;
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -19,7 +24,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
         Message,
 
         /// <summary>A tool call the agent made, with its approval and result.</summary>
-        ToolStep
+        ToolStep,
+
+        /// <summary>Consecutive read-only tool calls of the main agent, shown as one summary line.</summary>
+        ToolGroup
     }
 
     /// <summary>
@@ -35,7 +43,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
     }
 
     /// <summary>
-    /// One item in a chat thread: a message, or a tool call with its approval card and result.
+    /// One item in a chat thread: a message, a tool call with its approval row and result, or a group of
+    /// read-only tool calls. A group and a step that started a subagent hold their steps in <see cref="Children"/>.
     /// Message content can grow while the model streams. Labels such as the author, risk and state
     /// follow the interface language; the thread refreshes them through <see cref="RefreshLocalizedText"/>.
     /// </summary>
@@ -70,6 +79,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private string? _alwaysAllowRule;
         private bool _isCopied;
         private bool _isExpanded;
+        private bool _askedForApproval;
         private string _subagentProgressText = string.Empty;
 
         /// <summary>
@@ -111,8 +121,21 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 : SummarizeTarget(argumentsJson);
             Risk = risk;
             _toolState = AgentToolStepState.Running;
+            if (risk == ToolRisk.Agent)
+            {
+                WatchChildren();
+            }
         }
 
+        private AgentChatMessageViewModel()
+            : this(AgentRole, string.Empty, string.Empty)
+        {
+            Kind = AgentChatItemKind.ToolGroup;
+            _toolState = AgentToolStepState.Succeeded;
+            WatchChildren();
+        }
+
+        /// <summary>Gets what the item shows: a message, a tool step or a group of read-only steps.</summary>
         public AgentChatItemKind Kind { get; }
 
         /// <summary>
@@ -156,6 +179,48 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         /// <summary>Gets whether the item is a tool call.</summary>
         public bool IsToolStep => Kind == AgentChatItemKind.ToolStep;
+
+        /// <summary>Gets whether the item is a group of read-only tool calls.</summary>
+        public bool IsToolGroup => Kind == AgentChatItemKind.ToolGroup;
+
+        /// <summary>Gets whether the item is a tool step or a group of them; the thread spaces those lines tighter than messages.</summary>
+        public bool IsToolItem => Kind != AgentChatItemKind.Message;
+
+        /// <summary>
+        /// Gets the steps this item holds: a group's read-only steps, or the steps of the subagent this step started.
+        /// Empty for every other item.
+        /// </summary>
+        public ObservableCollection<AgentChatMessageViewModel> Children { get; } = new();
+
+        /// <summary>Gets whether <see cref="Children"/> holds any steps.</summary>
+        public bool HasChildren => Children.Count > 0;
+
+        /// <summary>Gets whether one of <see cref="Children"/> waits for the user's approval.</summary>
+        public bool HasChildAwaitingApproval => Children.Any(child => child.IsAwaitingApproval);
+
+        /// <summary>
+        /// Gets a group's line: the name of the step it runs now, or a summary such as "Explored 3 files · 2 searches".
+        /// </summary>
+        public string GroupTitle => RunningChild() is { } running ? running.ToolDisplayName : SummarizeReadSteps(Children);
+
+        /// <summary>Gets what the group's running step acts on; empty once all its steps finished.</summary>
+        public string GroupTarget => RunningChild()?.ToolTarget ?? string.Empty;
+
+        /// <summary>Gets how many of a finished group's steps failed, such as "1 failed"; empty when none did.</summary>
+        public string GroupFailedText
+        {
+            get
+            {
+                var failed = Children.Count(child => child.IsToolFailed);
+                return failed == 0 || RunningChild() is not null ? string.Empty : Loc.Format("Workbench.Group.Failed", failed);
+            }
+        }
+
+        /// <summary>Gets whether <see cref="GroupFailedText"/> has anything to show.</summary>
+        public bool HasGroupFailures => GroupFailedText.Length > 0;
+
+        /// <summary>Gets whether the step asked the user for approval at some point, which keeps it out of a read group.</summary>
+        public bool AskedForApproval => _askedForApproval;
 
         /// <summary>Gets or sets whether the model is still writing this message.</summary>
         public bool IsStreaming
@@ -216,7 +281,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// </summary>
         public bool CanAlwaysAllow => Risk != ToolRisk.Delegate;
 
-        /// <summary>Gets the short risk badge label: read, web, write, shell, external or delegate.</summary>
+        /// <summary>Gets the short risk label: read, web, write, shell, external or delegate.</summary>
         public string RiskTag => Risk switch
         {
             ToolRisk.Read => Loc.Get("Workbench.Tool.RiskTag.Read"),
@@ -232,7 +297,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// <summary>Gets whether the risk badge uses the info color: reads, web lookups and subagents, whose own calls are gated.</summary>
         public bool IsReadRisk => Risk is ToolRisk.Read or ToolRisk.Network or ToolRisk.Agent;
 
-        /// <summary>Gets whether the step started a subagent; its own steps follow it, indented.</summary>
+        /// <summary>
+        /// Gets whether the step's risk earns a tag on its line: writes, programs, anything sent outside and hand-offs.
+        /// Reads, web lookups and subagents show none.
+        /// </summary>
+        public bool ShowsRiskTag => IsToolStep && Risk is ToolRisk.Write or ToolRisk.Execute or ToolRisk.External or ToolRisk.Delegate;
+
+        /// <summary>Gets whether the step started a subagent; its own steps go in <see cref="Children"/>.</summary>
         public bool IsSubagentTask => IsToolStep && Risk == ToolRisk.Agent;
 
         /// <summary>Gets the run id of the subagent this step started, once it started.</summary>
@@ -243,9 +314,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         /// <summary>Gets whether the step is one a subagent made.</summary>
         public bool IsSubagentStep => SubagentType is not null;
-
-        /// <summary>Gets the subagent's label on its own steps, such as "Explorer".</summary>
-        public string SubagentLabel => SubagentTypeLabel(SubagentType);
 
         /// <summary>Gets what the subagent started by this step is doing, such as "3 steps · Read file".</summary>
         public string SubagentProgressText
@@ -275,16 +343,22 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             SubagentType = agentType;
             this.RaisePropertyChanged(nameof(IsSubagentStep));
-            this.RaisePropertyChanged(nameof(SubagentLabel));
         }
 
-        /// <summary>Shows how far the subagent got: its step count and what it is doing now.</summary>
+        /// <summary>
+        /// Shows how far the subagent got: its step count and what it is doing now. While the subagent runs,
+        /// the step's duration shows how long it has run so far.
+        /// </summary>
         /// <param name="stepCount">The subagent's tool calls so far.</param>
         /// <param name="current">The tool it runs now, or null.</param>
         public void ShowSubagentProgress(int stepCount, string? current)
         {
             var steps = Loc.Format("Workbench.Subagent.Steps", stepCount);
             SubagentProgressText = string.IsNullOrWhiteSpace(current) ? steps : $"{steps} · {current}";
+            if (IsToolRunning)
+            {
+                ToolDurationText = AgentTurnTraceViewModel.FormatDuration(Stopwatch.GetElapsedTime(_toolStartedTimestamp));
+            }
         }
 
         /// <summary>Gets the label of a subagent type, such as "Explorer" for "explorer".</summary>
@@ -316,11 +390,14 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 this.RaisePropertyChanged(nameof(IsToolSucceeded));
                 this.RaisePropertyChanged(nameof(IsToolFailed));
                 this.RaisePropertyChanged(nameof(ShowsToolDetails));
+                this.RaisePropertyChanged(nameof(ShowsToolError));
+                this.RaisePropertyChanged(nameof(ShowsToolResult));
             }
         }
 
         /// <summary>
-        /// Gets or sets whether the user opened the step to see its arguments and result.
+        /// Gets or sets whether the user opened the item: a step shows its arguments and result, a group or a
+        /// subagent's step shows the steps it holds.
         /// </summary>
         public bool IsExpanded
         {
@@ -333,12 +410,18 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /// <summary>
-        /// Gets whether the step shows its arguments and result: when opened, while it waits for
-        /// approval, and after it failed or was declined. A finished step is one line otherwise.
+        /// Gets whether the step shows its arguments and result: when opened, and while it waits for
+        /// approval. A step is one line otherwise.
         /// </summary>
-        public bool ShowsToolDetails => IsExpanded || IsAwaitingApproval || IsToolFailed;
+        public bool ShowsToolDetails => IsExpanded || IsAwaitingApproval;
 
-        /// <summary>Gets the step's state as its pill shows it, such as "Done".</summary>
+        /// <summary>Gets whether a failed or declined step shows its one-line error under its line.</summary>
+        public bool ShowsToolError => IsToolFailed && HasToolSummary;
+
+        /// <summary>Gets whether the opened details show the result; a failed step shows it as its error line instead.</summary>
+        public bool ShowsToolResult => HasToolSummary && !IsToolFailed;
+
+        /// <summary>Gets the step's state, such as "Done"; its status glyph shows it as a tooltip.</summary>
         public string ToolStatusText => ToolState switch
         {
             AgentToolStepState.Running => Loc.Get("Workbench.State.Running"),
@@ -365,6 +448,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 this.RaiseAndSetIfChanged(ref _toolSummary, value);
                 this.RaisePropertyChanged(nameof(HasToolSummary));
+                this.RaisePropertyChanged(nameof(ShowsToolError));
+                this.RaisePropertyChanged(nameof(ShowsToolResult));
             }
         }
 
@@ -391,6 +476,14 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public static AgentChatMessageViewModel Agent(string content)
         {
             return new AgentChatMessageViewModel(AgentRole, content, FormatTime(DateTime.Now));
+        }
+
+        /// <summary>
+        /// Creates an empty group of read-only tool calls; <see cref="ToolStepGrouping"/> fills it.
+        /// </summary>
+        public static AgentChatMessageViewModel ToolGroup()
+        {
+            return new AgentChatMessageViewModel();
         }
 
         public static AgentChatMessageViewModel ToolStep(
@@ -495,6 +588,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public void RequestApproval(string requestId, string? alwaysAllowRule = null)
         {
             _approvalRequestId = requestId;
+            _askedForApproval = true;
             if (!string.IsNullOrWhiteSpace(alwaysAllowRule))
             {
                 _alwaysAllowRule = alwaysAllowRule;
@@ -528,6 +622,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             _approvalRequestId = null;
             var declined = !success && summary == DeclinedSummary;
+            _askedForApproval |= declined;
             ToolSummary = declined ? Loc.Get("Workbench.State.Declined") : summary;
             ToolState = success
                 ? AgentToolStepState.Succeeded
@@ -576,6 +671,17 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public void RefreshLocalizedText()
         {
             this.RaisePropertyChanged(nameof(Role));
+            foreach (var child in Children)
+            {
+                child.RefreshLocalizedText();
+            }
+
+            if (IsToolGroup)
+            {
+                RaiseGroupText();
+                return;
+            }
+
             if (!IsToolStep)
             {
                 return;
@@ -585,7 +691,129 @@ namespace SmartVoiceAgent.Ui.ViewModels
             this.RaisePropertyChanged(nameof(RiskTag));
             this.RaisePropertyChanged(nameof(ToolStatusText));
             this.RaisePropertyChanged(nameof(AlwaysAllowHint));
-            this.RaisePropertyChanged(nameof(SubagentLabel));
+        }
+
+        /// <summary>
+        /// Summarizes read-only steps by what they did, such as "Explored 3 files · 2 searches", or "Ran 4 read steps"
+        /// when none of them read files, searched or opened a web page. Tools are told apart by their names.
+        /// </summary>
+        /// <param name="steps">The steps.</param>
+        public static string SummarizeReadSteps(IEnumerable<AgentChatMessageViewModel> steps)
+        {
+            int files = 0, searches = 0, pages = 0, other = 0;
+            foreach (var step in steps)
+            {
+                var name = step.ToolName;
+                if (name.Contains("search", StringComparison.OrdinalIgnoreCase)
+                    || name.Contains("find", StringComparison.OrdinalIgnoreCase)
+                    || name.Contains("grep", StringComparison.OrdinalIgnoreCase))
+                {
+                    searches++;
+                }
+                else if (name.StartsWith("web_", StringComparison.OrdinalIgnoreCase))
+                {
+                    pages++;
+                }
+                else if (name.StartsWith("file", StringComparison.OrdinalIgnoreCase)
+                    || name.StartsWith("workspace_", StringComparison.OrdinalIgnoreCase)
+                    || name.StartsWith("code_", StringComparison.OrdinalIgnoreCase))
+                {
+                    files++;
+                }
+                else
+                {
+                    other++;
+                }
+            }
+
+            if (files + searches + pages == 0)
+            {
+                return Loc.Format("Workbench.Group.ReadSteps", other);
+            }
+
+            var parts = new List<string>(4);
+            AddCount(parts, files, "Workbench.Group.File", "Workbench.Group.Files");
+            AddCount(parts, searches, "Workbench.Group.Search", "Workbench.Group.Searches");
+            AddCount(parts, pages, "Workbench.Group.Page", "Workbench.Group.Pages");
+            AddCount(parts, other, "Workbench.Group.OtherStep", "Workbench.Group.OtherSteps");
+            return Loc.Format("Workbench.Group.Explored", string.Join(" · ", parts));
+        }
+
+        private static void AddCount(List<string> parts, int count, string oneKey, string manyKey)
+        {
+            if (count > 0)
+            {
+                parts.Add(count == 1 ? Loc.Get(oneKey) : Loc.Format(manyKey, count));
+            }
+        }
+
+        private AgentChatMessageViewModel? RunningChild() => Children.LastOrDefault(child => child.IsToolRunning);
+
+        private void WatchChildren()
+        {
+            Children.CollectionChanged += OnChildrenChanged;
+        }
+
+        private void OnChildrenChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems is not null)
+            {
+                foreach (AgentChatMessageViewModel child in e.OldItems)
+                {
+                    child.PropertyChanged -= OnChildPropertyChanged;
+                }
+            }
+
+            if (e.NewItems is not null)
+            {
+                foreach (AgentChatMessageViewModel child in e.NewItems)
+                {
+                    child.PropertyChanged += OnChildPropertyChanged;
+                }
+            }
+
+            this.RaisePropertyChanged(nameof(HasChildren));
+            this.RaisePropertyChanged(nameof(HasChildAwaitingApproval));
+            UpdateGroupState();
+        }
+
+        private void OnChildPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(IsAwaitingApproval))
+            {
+                // A subagent's step that asks for approval opens its card, so the approval row is in sight.
+                if (IsSubagentTask && sender is AgentChatMessageViewModel { IsAwaitingApproval: true })
+                {
+                    IsExpanded = true;
+                }
+
+                this.RaisePropertyChanged(nameof(HasChildAwaitingApproval));
+            }
+            else if (e.PropertyName == nameof(ToolState))
+            {
+                UpdateGroupState();
+            }
+        }
+
+        private void UpdateGroupState()
+        {
+            if (!IsToolGroup)
+            {
+                return;
+            }
+
+            ToolState = Children.Any(child => child.IsToolRunning || child.IsAwaitingApproval)
+                ? AgentToolStepState.Running
+                : AgentToolStepState.Succeeded;
+            RaiseGroupText();
+        }
+
+        private void RaiseGroupText()
+        {
+            this.RaisePropertyChanged(nameof(GroupTitle));
+            this.RaisePropertyChanged(nameof(GroupTarget));
+            this.RaisePropertyChanged(nameof(GroupFailedText));
+            this.RaisePropertyChanged(nameof(HasGroupFailures));
         }
 
         private static string FormatArguments(string argumentsJson, bool full)

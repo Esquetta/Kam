@@ -447,7 +447,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /// <summary>
-        /// Formats a thread as Markdown: each message under its author, and tool calls as one line each.
+        /// Formats a thread as Markdown: each message under its author, and tool calls as one line each, including
+        /// the calls inside a read group or made by a subagent.
         /// </summary>
         public static string FormatConversation(AgentChatSessionViewModel session)
         {
@@ -455,9 +456,18 @@ namespace SmartVoiceAgent.Ui.ViewModels
             builder.Append("# ").AppendLine(session.Title).AppendLine();
             foreach (var item in session.Messages)
             {
-                if (item.IsToolStep)
+                if (item.IsToolStep || item.IsToolGroup)
                 {
-                    builder.Append("> `").Append(item.ToolName).Append("` · ").AppendLine(item.ToolStatusText).AppendLine();
+                    if (item.IsToolStep)
+                    {
+                        builder.Append("> `").Append(item.ToolName).Append("` · ").AppendLine(item.ToolStatusText).AppendLine();
+                    }
+
+                    foreach (var child in item.Children)
+                    {
+                        builder.Append(item.IsToolStep ? ">> `" : "> `").Append(child.ToolName).Append("` · ").AppendLine(child.ToolStatusText).AppendLine();
+                    }
+
                     continue;
                 }
 

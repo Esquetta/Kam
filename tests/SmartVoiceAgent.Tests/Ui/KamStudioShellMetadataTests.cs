@@ -152,10 +152,11 @@ public sealed class KamStudioShellMetadataTests
         tasksText.Should().Contain("<Setter Property=\"Width\" Value=\"270\"/>");
         tasksText.Should().Contain("<Setter Property=\"Width\" Value=\"240\"/>");
 
-        // Tool steps carry a risk badge; the composer bar has the context meter and ends with a Send button, without key hints.
+        // Tool steps carry a risk tag when the risk matters; the composer bar has the context meter and ends with a Send button, without key hints.
         tasks.Descendants().Should().Contain(element =>
-            AttributeValue(element, "Classes") == "Risk"
-            && AttributeValue(element, "Classes.Shell") == "{Binding IsShellRisk}");
+            AttributeValue(element, "Classes") == "RiskTag"
+            && AttributeValue(element, "Classes.Shell") == "{Binding IsShellRisk}"
+            && AttributeValue(element, "IsVisible") == "{Binding ShowsRiskTag}");
         File.ReadAllText(FindView("TasksView.axaml")).Should().Contain("{DynamicResource Lang.Chat.Composer.SendLabel}");
         tasks.Descendants().Should().NotContain(element => AttributeValue(element, "Classes") == "Kbd");
         var meter = tasks.Descendants().Single(element => AttributeValue(element, "Classes") == "ContextMeter");
@@ -192,6 +193,51 @@ public sealed class KamStudioShellMetadataTests
             SmartVoiceAgent.Ui.ViewModels.AgentChatMessageViewModel.SystemRole, "Compacted", "10:00").IsSystem.Should().BeTrue();
         new SmartVoiceAgent.Ui.ViewModels.AgentChatMessageViewModel(
             SmartVoiceAgent.Ui.ViewModels.AgentChatMessageViewModel.AgentRole, "Done", "10:00").IsSystem.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Thread_ShowsToolStepsAsCompactLinesInACenteredColumn()
+    {
+        var tasks = XDocument.Parse(LocalizedXaml.ReadAllText(FindView("TasksView.axaml"))).Root!;
+
+        // Messages and the composer share one centered column.
+        var scroll = tasks.Descendants().Single(element => AttributeValue(element, "Name") == "ChatScrollViewer");
+        AttributeValue(scroll.Elements().First(), "MaxWidth").Should().Be("760");
+        tasks.Descendants().Should().Contain(element =>
+            element.Name.LocalName == "StackPanel" && AttributeValue(element, "Grid.Row") == "2" && AttributeValue(element, "MaxWidth") == "760");
+
+        // One line template serves top-level steps, read groups and subagent cards.
+        var line = tasks.Descendants().Single(element =>
+            element.Name.LocalName == "DataTemplate" && AttributeValue(element, "Key") == "ToolStepLineTemplate");
+        var lineBorder = line.Elements().Single();
+        AttributeValue(lineBorder, "Classes").Should().Be("ToolLine");
+        AttributeValue(lineBorder, "Classes.Approval").Should().Be("{Binding IsAwaitingApproval}");
+        line.Descendants().Should().NotContain(element => AttributeValue(element, "Classes") == "Pill", "a step has a status glyph, not a pill");
+        line.Descendants().Should().Contain(element =>
+            AttributeValue(element, "Classes") == "ToolLineError" && AttributeValue(element, "IsVisible") == "{Binding ShowsToolError}");
+
+        var childLists = tasks.Descendants()
+            .Where(element => element.Name.LocalName == "ItemsControl" && AttributeValue(element, "ItemsSource") == "{Binding Children}")
+            .ToArray();
+        childLists.Should().HaveCount(2, "a read group and a subagent card each list their steps");
+        childLists.Should().OnlyContain(list => AttributeValue(list, "ItemTemplate") == "{StaticResource ToolStepLineTemplate}");
+        childLists.Should().OnlyContain(list => list.Ancestors().Any(ancestor =>
+            AttributeValue(ancestor, "Classes") == "ToolChildren" && AttributeValue(ancestor, "IsVisible") == "{Binding IsExpanded}"));
+
+        var group = tasks.Descendants().Single(element => AttributeValue(element, "IsVisible") == "{Binding IsToolGroup}");
+        group.Descendants().Should().Contain(element => AttributeValue(element, "Text") == "{Binding GroupTitle}");
+        var card = tasks.Descendants().Single(element => AttributeValue(element, "Classes") == "SubagentCard");
+        AttributeValue(card, "IsVisible").Should().Be("{Binding IsSubagentTask}");
+        card.Descendants().Should().Contain(element =>
+            AttributeValue(element, "Command") == "{Binding $parent[local:TasksView].DataContext.OpenSubagentGraphCommand}");
+
+        // The message list stays virtualized; nesting lives only inside groups and cards.
+        var messageList = tasks.Descendants().Single(element => AttributeValue(element, "Name") == "ChatMessageList");
+        messageList.Descendants().Should().Contain(element => element.Name.LocalName == "VirtualizingStackPanel");
+
+        var mainWindowText = LocalizedXaml.ReadAllText(FindView("MainWindow.axaml"));
+        mainWindowText.Should().NotContain("Border.ToolStep");
+        mainWindowText.Should().Contain("<Style Selector=\"Border.ToolLine.Approval\">");
     }
 
     [Fact]

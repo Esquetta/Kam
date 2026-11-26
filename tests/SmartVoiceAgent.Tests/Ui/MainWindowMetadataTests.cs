@@ -184,7 +184,7 @@ public sealed class MainWindowMetadataTests
         mainWindowText.Should().Contain("Classes.Approval=\"{Binding IsAwaitingApproval}\"");
         mainWindowText.Should().Contain("Text=\"{Binding ToolDisplayName}\"");
         mainWindowText.Should().Contain("Text=\"{Binding ArgumentsPreview}\"");
-        mainWindowText.Should().Contain("Text=\"{Binding ToolStatusText}\"");
+        mainWindowText.Should().Contain("ToolTip.Tip=\"{Binding ToolStatusText}\"");
         mainWindowText.Should().Contain("ApproveToolCallCommand");
         mainWindowText.Should().Contain("AlwaysAllowToolCallCommand");
         mainWindowText.Should().Contain("DenyToolCallCommand");

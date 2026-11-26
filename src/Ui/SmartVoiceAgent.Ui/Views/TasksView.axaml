@@ -125,6 +125,91 @@
 				</Border>
 			</Panel>
 		</DataTemplate>
+
+		<!-- A tool step's state as a 14 px glyph: a pulsing dot while it runs, a check when done,
+		     an x when it failed or was declined, a shield while it waits for approval -->
+		<DataTemplate x:Key="ToolStatusGlyphTemplate" DataType="vm:AgentChatMessageViewModel">
+			<Panel Classes="ToolStatusGlyph" ToolTip.Tip="{Binding ToolStatusText}">
+				<Ellipse Classes="WorkingDot" Width="7" Height="7" Fill="{DynamicResource AccentBrush}" IsVisible="{Binding IsToolRunning}"/>
+				<Viewbox Width="13" Height="13" IsVisible="{Binding IsToolSucceeded}"><Path Classes="Icon" Data="{StaticResource IconCheck}" Stroke="{DynamicResource TextMutedBrush}"/></Viewbox>
+				<Viewbox Width="12" Height="12" IsVisible="{Binding IsToolFailed}"><Path Classes="Icon" Data="{StaticResource IconX}" Stroke="{DynamicResource AccentErrorBrush}"/></Viewbox>
+				<Viewbox Width="13" Height="13" IsVisible="{Binding IsAwaitingApproval}"><Path Classes="Icon" Data="{StaticResource IconShield}" Stroke="{DynamicResource AccentOrangeBrush}"/></Viewbox>
+			</Panel>
+		</DataTemplate>
+
+		<!-- One tool step as a quiet line: glyph, tool, target, a risk tag when it matters, duration.
+		     A click shows its arguments and result; waiting for approval turns it into a bordered row. -->
+		<DataTemplate x:Key="ToolStepLineTemplate" DataType="vm:AgentChatMessageViewModel">
+			<Border Classes="ToolLine" Classes.Approval="{Binding IsAwaitingApproval}">
+				<StackPanel Spacing="4">
+					<ToggleButton Classes="ToolLineHeader"
+								  IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+								  ToolTip.Tip="{Binding ToolName}"
+								  AutomationProperties.Name="{Binding ToolDisplayName}">
+						<Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
+							<ContentControl Grid.Column="0" Content="{Binding}" ContentTemplate="{StaticResource ToolStatusGlyphTemplate}"/>
+							<TextBlock Grid.Column="1" Classes="ToolLineName" Text="{Binding ToolDisplayName}"/>
+							<TextBlock Grid.Column="2" Classes="ToolLineTarget" Text="{Binding ToolTarget}"/>
+							<TextBlock Grid.Column="3"
+									   Classes="RiskTag"
+									   Classes.Write="{Binding IsWriteRisk}"
+									   Classes.Shell="{Binding IsShellRisk}"
+									   Text="{Binding RiskTag}"
+									   ToolTip.Tip="{Binding RiskText}"
+									   IsVisible="{Binding ShowsRiskTag}"/>
+							<TextBlock Grid.Column="4" Classes="ToolLineMeta" Text="{Binding ToolDurationText}"/>
+						</Grid>
+					</ToggleButton>
+
+					<TextBlock Classes="ToolLineError" Margin="22,0,0,0" Text="{Binding ToolSummary}" IsVisible="{Binding ShowsToolError}"/>
+
+					<StackPanel Spacing="6" Margin="22,2,0,2" IsVisible="{Binding ShowsToolDetails}">
+						<Border Classes="ToolArguments" IsVisible="{Binding HasArguments}">
+							<!-- A long brief (a hand-off to another agent shows it whole) scrolls inside the step -->
+							<ScrollViewer MaxHeight="280" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+								<SelectableTextBlock Text="{Binding ArgumentsPreview}"
+													 FontSize="12"
+													 FontFamily="{StaticResource MonoFontFamily}"
+													 Foreground="{DynamicResource TextSecondaryBrush}"
+													 TextWrapping="Wrap"/>
+							</ScrollViewer>
+						</Border>
+						<SelectableTextBlock Classes="ToolResult"
+											 Text="{Binding ToolSummary}"
+											 IsVisible="{Binding ShowsToolResult}"/>
+					</StackPanel>
+
+					<Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+						  ColumnSpacing="6"
+						  IsVisible="{Binding IsAwaitingApproval}">
+						<Viewbox Grid.Column="0" Width="13" Height="13" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconShield}" Stroke="{DynamicResource AccentOrangeBrush}"/></Viewbox>
+						<TextBlock Grid.Column="1"
+								   Text="{DynamicResource Lang.Chat.Tool.RunPrompt}"
+								   FontSize="12"
+								   FontWeight="Medium"
+								   Foreground="{DynamicResource TextPrimaryBrush}"
+								   VerticalAlignment="Center"/>
+						<Button Grid.Column="2"
+								Classes="GhostAction Sm"
+								Content="{DynamicResource Lang.Common.Deny}"
+								Command="{Binding $parent[local:TasksView].DataContext.DenyToolCallCommand}"
+								CommandParameter="{Binding}"/>
+						<Button Grid.Column="3"
+								Classes="SecondaryAction Sm"
+								Content="{DynamicResource Lang.Common.AlwaysAllow}"
+								ToolTip.Tip="{Binding AlwaysAllowHint}"
+								IsVisible="{Binding CanAlwaysAllow}"
+								Command="{Binding $parent[local:TasksView].DataContext.AlwaysAllowToolCallCommand}"
+								CommandParameter="{Binding}"/>
+						<Button Grid.Column="4"
+								Classes="PrimaryAction Sm"
+								Content="{DynamicResource Lang.Common.Approve}"
+								Command="{Binding $parent[local:TasksView].DataContext.ApproveToolCallCommand}"
+								CommandParameter="{Binding}"/>
+					</Grid>
+				</StackPanel>
+			</Border>
+		</DataTemplate>
 	</UserControl.Resources>
 
 	<UserControl.Styles>
@@ -352,7 +437,7 @@
 						  x:Name="ChatScrollViewer"
 						  VerticalScrollBarVisibility="Auto"
 						  HorizontalScrollBarVisibility="Disabled">
-				<Grid MaxWidth="780" Margin="16,16,16,8">
+				<Grid MaxWidth="760" Margin="16,16,16,8">
 					<!-- Empty state -->
 					<StackPanel Spacing="22"
 								VerticalAlignment="Center"
@@ -493,7 +578,7 @@
 						</ItemsControl.ItemsPanel>
 						<ItemsControl.ItemTemplate>
 							<DataTemplate DataType="vm:AgentChatMessageViewModel">
-								<Border Classes="ChatMessage">
+								<Border Classes="ChatMessage" Classes.Tool="{Binding IsToolItem}">
 									<Panel>
 										<!-- Outgoing (user) -->
 										<StackPanel Spacing="4"
@@ -561,128 +646,77 @@
 												</StackPanel>
 											</StackPanel>
 
-										<!-- Tool step: one line once it is done; a click shows its arguments and result.
-										     It stays open while it waits for approval and after it failed. -->
-										<Border Classes="ToolStep"
-												Classes.Approval="{Binding IsAwaitingApproval}"
-												Classes.Subagent="{Binding IsSubagentStep}"
-												IsVisible="{Binding IsToolStep}">
-											<StackPanel Spacing="8">
-												<ToggleButton Classes="ToolStepHeader"
-															  IsChecked="{Binding IsExpanded, Mode=TwoWay}"
-															  ToolTip.Tip="{Binding ToolName}" AutomationProperties.Name="{Binding ToolDisplayName}">
-													<Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="8">
-														<!-- Risk badge (.risk): read, write or shell -->
-														<Border Grid.Column="0"
-																Classes="Risk"
-																Classes.Read="{Binding IsReadRisk}"
-																Classes.Write="{Binding IsWriteRisk}"
-																Classes.Shell="{Binding IsShellRisk}"
-																ToolTip.Tip="{Binding RiskText}">
-															<TextBlock Text="{Binding RiskTag}"/>
-														</Border>
-														<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" ClipToBounds="True">
-															<!-- Which subagent made this step -->
-															<Border Classes="Pill Info" IsVisible="{Binding IsSubagentStep}" MinHeight="18" Padding="6,0">
-																<TextBlock Text="{Binding SubagentLabel}" FontSize="10.5"/>
-															</Border>
-															<TextBlock Text="{Binding ToolDisplayName}"
-																	   FontSize="12.5"
-																	   FontWeight="Medium"
-																	   Foreground="{DynamicResource TextPrimaryBrush}"
-																	   TextTrimming="CharacterEllipsis"
-																	   VerticalAlignment="Center"/>
-															<TextBlock Text="{Binding ToolTarget}"
-																	   FontSize="11.5"
-																	   FontFamily="{StaticResource MonoFontFamily}"
-																	   Foreground="{DynamicResource TextMutedBrush}"
-																	   TextTrimming="CharacterEllipsis"
-																	   VerticalAlignment="Center"/>
+										<!-- Tool step: one quiet line; a subagent's step is a card that holds the subagent's own steps -->
+										<Panel IsVisible="{Binding IsToolStep}">
+											<ContentControl IsVisible="{Binding !IsSubagentTask}"
+															Content="{Binding}"
+															ContentTemplate="{StaticResource ToolStepLineTemplate}"/>
+
+											<Border Classes="SubagentCard" IsVisible="{Binding IsSubagentTask}">
+												<StackPanel Spacing="6">
+													<ToggleButton Classes="ToolLineHeader"
+																  IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+																  ToolTip.Tip="{Binding ArgumentsPreview}"
+																  AutomationProperties.Name="{Binding ToolDisplayName}">
+														<StackPanel Spacing="3">
+															<Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+																<ContentControl Grid.Column="0" Content="{Binding}" ContentTemplate="{StaticResource ToolStatusGlyphTemplate}"/>
+																<TextBlock Grid.Column="1" Classes="ToolLineName" Text="{Binding ToolDisplayName}"/>
+																<TextBlock Grid.Column="2" Classes="ToolLineMeta" Text="{Binding ToolDurationText}"/>
+																<Viewbox Grid.Column="3" Classes="ToolLineChevron" Classes.open="{Binding IsExpanded}" IsVisible="{Binding HasChildren}" Width="12" Height="12" VerticalAlignment="Center">
+																	<Path Classes="Icon" Data="{StaticResource IconChevronDown}" Stroke="{DynamicResource TextMutedBrush}"/>
+																</Viewbox>
+															</Grid>
+															<!-- The job the subagent was given -->
+															<TextBlock Classes="SubagentJob" Text="{Binding ToolTarget}"/>
 														</StackPanel>
-														<TextBlock Grid.Column="2"
-																   Text="{Binding ToolDurationText}"
-																   FontSize="11"
-																   Foreground="{DynamicResource TextMutedBrush}"
-																   VerticalAlignment="Center"/>
-														<Border Grid.Column="3"
-																Classes="Pill"
-																Classes.Accent="{Binding IsToolRunning}"
-																Classes.Warning="{Binding IsAwaitingApproval}"
-																Classes.Success="{Binding IsToolSucceeded}"
-																Classes.Danger="{Binding IsToolFailed}"
-																VerticalAlignment="Center">
-															<TextBlock Text="{Binding ToolStatusText}"/>
-														</Border>
-														<Viewbox Grid.Column="4" Classes="ToolStepChevron" Classes.open="{Binding ShowsToolDetails}" Width="12" Height="12" VerticalAlignment="Center">
-															<Path Classes="Icon" Data="{StaticResource IconChevronDown}" Stroke="{DynamicResource TextMutedBrush}"/>
-														</Viewbox>
-													</Grid>
-												</ToggleButton>
+													</ToggleButton>
 
-												<!-- A subagent's progress and a link to its graph -->
-												<StackPanel Orientation="Horizontal" Spacing="10" Margin="2,0,0,0" IsVisible="{Binding IsSubagentTask}">
-													<TextBlock Text="{Binding SubagentProgressText}"
-															   IsVisible="{Binding HasSubagentProgress}"
-															   FontSize="11.5"
-															   Foreground="{DynamicResource TextMutedBrush}"
-															   TextTrimming="CharacterEllipsis"
-															   VerticalAlignment="Center"/>
-													<Button Classes="LinkAction"
-															IsVisible="{Binding SubagentRunId, Converter={x:Static ObjectConverters.IsNotNull}}"
-															Content="{DynamicResource Lang.Workbench.Subagent.ViewGraph}"
-															Command="{Binding $parent[local:TasksView].DataContext.OpenSubagentGraphCommand}"
-															CommandParameter="{Binding}"/>
-												</StackPanel>
+													<!-- What it does now, and a link to its graph -->
+													<StackPanel Orientation="Horizontal" Spacing="10" Margin="22,0,0,0">
+														<TextBlock Classes="ToolLineMeta"
+																   Text="{Binding SubagentProgressText}"
+																   IsVisible="{Binding HasSubagentProgress}"/>
+														<Button Classes="LinkAction"
+																IsVisible="{Binding SubagentRunId, Converter={x:Static ObjectConverters.IsNotNull}}"
+																Content="{DynamicResource Lang.Workbench.Subagent.ViewGraph}"
+																Command="{Binding $parent[local:TasksView].DataContext.OpenSubagentGraphCommand}"
+																CommandParameter="{Binding}"/>
+													</StackPanel>
+													<TextBlock Classes="ToolLineError" Margin="22,0,0,0" Text="{Binding ToolSummary}" IsVisible="{Binding ShowsToolError}"/>
 
-												<StackPanel Spacing="8" IsVisible="{Binding ShowsToolDetails}">
-													<Border Classes="ToolArguments" IsVisible="{Binding HasArguments}">
-														<!-- A long brief (a hand-off to another agent shows it whole) scrolls inside the card -->
-														<ScrollViewer MaxHeight="280" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-															<SelectableTextBlock Text="{Binding ArgumentsPreview}"
-																				 FontSize="12"
-																				 FontFamily="{StaticResource MonoFontFamily}"
-																				 Foreground="{DynamicResource TextSecondaryBrush}"
-																				 TextWrapping="Wrap"/>
-														</ScrollViewer>
+													<!-- Its steps, as compact lines; a step that asks for approval opens the card -->
+													<Border Classes="ToolChildren" IsVisible="{Binding IsExpanded}">
+														<StackPanel Spacing="2">
+															<ItemsControl ItemsSource="{Binding Children}" ItemTemplate="{StaticResource ToolStepLineTemplate}"/>
+															<SelectableTextBlock Classes="ToolResult"
+																				 Text="{Binding ToolSummary}"
+																				 IsVisible="{Binding ShowsToolResult}"/>
+														</StackPanel>
 													</Border>
-
-													<SelectableTextBlock Text="{Binding ToolSummary}"
-																		 IsVisible="{Binding HasToolSummary}"
-																		 FontSize="12"
-																		 Foreground="{DynamicResource TextMutedBrush}"
-																		 TextWrapping="Wrap"/>
 												</StackPanel>
+											</Border>
+										</Panel>
 
-												<Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
-													  ColumnSpacing="6"
-													  IsVisible="{Binding IsAwaitingApproval}">
-													<Viewbox Grid.Column="0" Width="13" Height="13" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconShield}" Stroke="{DynamicResource AccentOrangeBrush}"/></Viewbox>
-													<TextBlock Grid.Column="1"
-															   Text="{DynamicResource Lang.Chat.Tool.RunPrompt}"
-															   FontSize="12"
-															   FontWeight="Medium"
-															   Foreground="{DynamicResource TextPrimaryBrush}"
-															   VerticalAlignment="Center"/>
-													<Button Grid.Column="2"
-															Classes="GhostAction Sm"
-															Content="{DynamicResource Lang.Common.Deny}"
-															Command="{Binding $parent[local:TasksView].DataContext.DenyToolCallCommand}"
-															CommandParameter="{Binding}"/>
-													<Button Grid.Column="3"
-															Classes="SecondaryAction Sm"
-															Content="{DynamicResource Lang.Common.AlwaysAllow}"
-															ToolTip.Tip="{Binding AlwaysAllowHint}"
-															IsVisible="{Binding CanAlwaysAllow}"
-															Command="{Binding $parent[local:TasksView].DataContext.AlwaysAllowToolCallCommand}"
-															CommandParameter="{Binding}"/>
-													<Button Grid.Column="4"
-															Classes="PrimaryAction Sm"
-															Content="{DynamicResource Lang.Common.Approve}"
-															Command="{Binding $parent[local:TasksView].DataContext.ApproveToolCallCommand}"
-															CommandParameter="{Binding}"/>
+										<!-- Read group: consecutive read-only steps as one summary line; open it for the steps -->
+										<StackPanel Spacing="2" IsVisible="{Binding IsToolGroup}">
+											<ToggleButton Classes="ToolLineHeader"
+														  IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+														  AutomationProperties.Name="{Binding GroupTitle}">
+												<Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
+													<ContentControl Grid.Column="0" Content="{Binding}" ContentTemplate="{StaticResource ToolStatusGlyphTemplate}"/>
+													<TextBlock Grid.Column="1" Classes="ToolLineName" Text="{Binding GroupTitle}"/>
+													<TextBlock Grid.Column="2" Classes="ToolLineTarget" Text="{Binding GroupTarget}"/>
+													<TextBlock Grid.Column="3" Classes="ToolLineError" Text="{Binding GroupFailedText}" IsVisible="{Binding HasGroupFailures}"/>
+													<Viewbox Grid.Column="4" Classes="ToolLineChevron" Classes.open="{Binding IsExpanded}" Width="12" Height="12" VerticalAlignment="Center">
+														<Path Classes="Icon" Data="{StaticResource IconChevronDown}" Stroke="{DynamicResource TextMutedBrush}"/>
+													</Viewbox>
 												</Grid>
-											</StackPanel>
-										</Border>
+											</ToggleButton>
+											<Border Classes="ToolChildren" IsVisible="{Binding IsExpanded}">
+												<ItemsControl ItemsSource="{Binding Children}" ItemTemplate="{StaticResource ToolStepLineTemplate}"/>
+											</Border>
+										</StackPanel>
 									</Panel>
 								</Border>
 							</DataTemplate>
@@ -706,7 +740,7 @@
 
 			<!-- Composer -->
 			<StackPanel Grid.Row="2"
-						MaxWidth="812"
+						MaxWidth="760"
 						Margin="16,10,16,14"
 						Spacing="6">
 
