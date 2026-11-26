@@ -6,74 +6,114 @@
              x:Class="SmartVoiceAgent.Ui.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
 
-    <UserControl.Resources>
-    </UserControl.Resources>
-
     <UserControl.Styles>
-        <!-- Settings Section Card -->
-        <Style Selector="Border.SettingsCard">
-            <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="16"/>
+        <!-- Sub-navigation: 180 px of list items beside a 640 px form column. Below 760 px the items run
+             across the top and the form takes the full width. -->
+        <Style Selector="Grid.SettingsLayout > StackPanel.SectionNav">
+            <Setter Property="Grid.Row" Value="0"/>
+            <Setter Property="Grid.Column" Value="0"/>
+        </Style>
+        <Style Selector="Grid.SettingsLayout > Panel.SectionContent">
+            <Setter Property="Grid.Row" Value="0"/>
+            <Setter Property="Grid.Column" Value="1"/>
+        </Style>
+        <Style Selector="StackPanel.WorkbenchPage.narrow Grid.SettingsLayout">
+            <Setter Property="RowSpacing" Value="16"/>
+        </Style>
+        <Style Selector="StackPanel.WorkbenchPage.narrow Grid.SettingsLayout > StackPanel.SectionNav">
+            <Setter Property="Grid.ColumnSpan" Value="2"/>
+            <Setter Property="Orientation" Value="Horizontal"/>
+        </Style>
+        <Style Selector="StackPanel.WorkbenchPage.narrow Grid.SettingsLayout > Panel.SectionContent">
+            <Setter Property="Grid.Row" Value="1"/>
+            <Setter Property="Grid.Column" Value="0"/>
+            <Setter Property="Grid.ColumnSpan" Value="2"/>
         </Style>
 
-        <!-- Settings Item -->
-        <Style Selector="Border.SettingsItem">
-            <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="16,14"/>
-            <Setter Property="Margin" Value="0"/>
-        </Style>
-
-        <Style Selector="ToggleButton.AdvancedToggle">
+        <!-- Sub-navigation item (ListItem look): 36 px, radius 8; selection is RaisedBg, never accent -->
+        <Style Selector="Button.SectionNavItem">
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0,2"/>
-            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
-        <Style Selector="ToggleButton.AdvancedToggle:pointerover /template/ ContentPresenter#PART_ContentPresenter,
-                         ToggleButton.AdvancedToggle:checked /template/ ContentPresenter#PART_ContentPresenter,
-                         ToggleButton.AdvancedToggle:pressed /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{DynamicResource AccentStrongBrush}"/>
+        <Style Selector="Button.SectionNavItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
-        <!-- Accent swatches in Settings > Appearance: a ring marks the one in use -->
+        <Style Selector="Button.SectionNavItem.Selected">
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="Button.SectionNavItem.Selected /template/ ContentPresenter#PART_ContentPresenter, Button.SectionNavItem.Selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+
+        <!-- Accent swatches: 20 px circles 12 px apart; the one in use gets a 2 px TextPrimary ring 2 px out -->
         <Style Selector="Button.AccentSwatch">
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="CornerRadius" Value="14"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="6,4"/>
-            <Setter Property="Margin" Value="0,0,8,4"/>
-            <Setter Property="MinWidth" Value="64"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
-        <Style Selector="Button.AccentSwatch:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
+        <Style Selector="Button.AccentSwatch:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.AccentSwatch:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
         </Style>
         <Style Selector="Button.AccentSwatch Border.SwatchRing">
-            <Setter Property="Padding" Value="3"/>
-            <Setter Property="CornerRadius" Value="99"/>
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="CornerRadius" Value="14"/>
             <Setter Property="BorderThickness" Value="2"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
         </Style>
+        <Style Selector="Button.AccentSwatch:pointerover Border.SwatchRing">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+        </Style>
         <Style Selector="Button.AccentSwatch.Selected Border.SwatchRing">
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
-        <Style Selector="Button.AccentSwatch TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+
+        <!-- Quiet strips inside a Pane: fill only, no border -->
+        <Style Selector="Border.InlineNote">
+            <Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,8"/>
         </Style>
-        <Style Selector="Button.AccentSwatch.Selected TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
+        <Style Selector="Border.InlineError">
+            <Setter Property="Background" Value="{DynamicResource AccentErrorGlowBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,8"/>
+        </Style>
+        <Style Selector="Border.InlineError TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentErrorBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+
+        <!-- Section heading: a SectionTitle with one muted line under it -->
+        <Style Selector="StackPanel.SectionHead">
+            <Setter Property="Spacing" Value="4"/>
+        </Style>
+        <Style Selector="StackPanel.SectionHead TextBlock.Secondary">
+            <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel Classes="WorkbenchPage PageColumn Form">
+        <!-- The form column is 640 px; with the 180 px sub-navigation and a 32 px gap the page is 852 px -->
+        <StackPanel Classes="WorkbenchPage PageColumn Form"
+                    MaxWidth="852"
+                    Classes.narrow="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsRailCompact}">
 
             <Grid Classes="PageHeader" ColumnDefinitions="*,Auto">
                 <StackPanel Classes="PageHeaderText">
@@ -82,1064 +122,874 @@
                 </StackPanel>
             </Grid>
 
-            <!-- AI Runtime Section: the model comes first, because nothing works without it -->
-            <StackPanel Spacing="8" Margin="0,8,0,8">
-                <TextBlock Text="{DynamicResource Lang.Settings.AiRuntime}"
-                           Classes="Overline"
-                           Margin="4,0,0,4"/>
+            <Grid Classes="SettingsLayout" ColumnDefinitions="180,*" RowDefinitions="Auto,Auto" ColumnSpacing="32">
 
-                <Border Classes="SettingsItem">
-                    <StackPanel Spacing="12">
-                        <Grid ColumnDefinitions="Auto, *">
-                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
-                                <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconChat}"/></Viewbox>
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="{DynamicResource Lang.Settings.ChatModel}"
-                                           FontSize="13"
-                                           FontWeight="Medium"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,0,0">
+                <!-- Sub-navigation -->
+                <StackPanel Classes="SectionNav" Spacing="2">
+                    <Button Classes="SectionNavItem"
+                            Classes.Selected="{Binding IsModelSectionSelected}"
+                            Command="{Binding SelectSectionCommand}"
+                            CommandParameter="{x:Static vm:SettingsSection.Model}"
+                            Content="{DynamicResource Lang.Settings.Section.Model}"/>
+                    <Button Classes="SectionNavItem"
+                            Classes.Selected="{Binding IsAppearanceSectionSelected}"
+                            Command="{Binding SelectSectionCommand}"
+                            CommandParameter="{x:Static vm:SettingsSection.Appearance}"
+                            Content="{DynamicResource Lang.Settings.Section.Appearance}"/>
+                    <Button Classes="SectionNavItem"
+                            Classes.Selected="{Binding IsVoiceSectionSelected}"
+                            Command="{Binding SelectSectionCommand}"
+                            CommandParameter="{x:Static vm:SettingsSection.Voice}"
+                            Content="{DynamicResource Lang.Settings.Section.Voice}"/>
+                    <Button Classes="SectionNavItem"
+                            Classes.Selected="{Binding IsStartupSectionSelected}"
+                            Command="{Binding SelectSectionCommand}"
+                            CommandParameter="{x:Static vm:SettingsSection.Startup}"
+                            Content="{DynamicResource Lang.Settings.Section.Startup}"/>
+                    <Button Classes="SectionNavItem"
+                            Classes.Selected="{Binding IsAdvancedSectionSelected}"
+                            Command="{Binding SelectSectionCommand}"
+                            CommandParameter="{x:Static vm:SettingsSection.Advanced}"
+                            Content="{DynamicResource Lang.Settings.Section.Advanced}"/>
+                </StackPanel>
+
+                <Panel Classes="SectionContent" MaxWidth="640" HorizontalAlignment="Stretch">
+
+                    <!-- Model: the agent model comes first, because nothing works without it -->
+                    <StackPanel Spacing="24" IsVisible="{Binding IsModelSectionSelected}">
+                        <StackPanel Spacing="12">
+                            <StackPanel Classes="SectionHead">
+                                <TextBlock Text="{DynamicResource Lang.Settings.ChatModel}" Classes="SectionTitle"/>
+                                <StackPanel Orientation="Horizontal" Spacing="6">
                                     <Border Classes="StatusDot Warning" IsVisible="{Binding ChatProfileShowsWarning}"/>
-                                    <TextBlock Text="{Binding ChatProfileStateText}"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource TextMutedBrush}"/>
+                                    <TextBlock Text="{Binding ChatProfileStateText}" Classes="Secondary"/>
                                 </StackPanel>
                             </StackPanel>
-                        </Grid>
 
-                        <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" ColumnSpacing="10" RowSpacing="10">
-                            <StackPanel Grid.Row="0" Grid.Column="0" Spacing="6">
-                                <TextBlock Text="{DynamicResource Lang.Settings.Provider}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                                <ComboBox ItemsSource="{Binding AiProviders}"
-                                          SelectedItem="{Binding ChatProvider, Mode=TwoWay}"
-                                          HorizontalAlignment="Stretch"/>
-                            </StackPanel>
+                            <Border Classes="Pane">
+                                <StackPanel Classes="SettingRows">
+                                    <Border Classes="PaneRow">
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+                                            <StackPanel Grid.Column="0" Classes="Field">
+                                                <TextBlock Text="{DynamicResource Lang.Settings.Provider}" Classes="Label"/>
+                                                <ComboBox ItemsSource="{Binding AiProviders}"
+                                                          SelectedItem="{Binding ChatProvider, Mode=TwoWay}"
+                                                          HorizontalAlignment="Stretch"
+                                                          AutomationProperties.Name="{DynamicResource Lang.Settings.Provider}"/>
+                                            </StackPanel>
 
-                            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="6">
-                                <TextBlock Text="{DynamicResource Lang.Settings.Model}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                                <Grid ColumnDefinitions="*, Auto"
-                                      ColumnSpacing="8"
-                                      IsVisible="{Binding IsChatModelCatalogBacked}">
-                                    <ComboBox Grid.Column="0"
-                                              ItemsSource="{Binding ChatModelOptions}"
-                                              SelectedItem="{Binding ChatModelId, Mode=TwoWay}"
-                                              HorizontalAlignment="Stretch"/>
-                                    <Button Grid.Column="1"
-                                            Command="{Binding RefreshChatModelsCommand}"
-                                            IsEnabled="{Binding !IsRefreshingChatModels}"
-                                            Classes="SecondaryAction"
-                                            Padding="12,8">
-                                        <TextBlock Text="{DynamicResource Lang.Common.Refresh}" FontSize="12" FontWeight="Medium"/>
-                                    </Button>
-                                </Grid>
-                                <TextBox Text="{Binding ChatModelId, Mode=TwoWay}"
-                                         IsVisible="{Binding !IsChatModelCatalogBacked}"
-                                         PlaceholderText="custom/model-id"/>
-                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Classes="Field">
+                                                <TextBlock Text="{DynamicResource Lang.Settings.Model}" Classes="Label"/>
+                                                <Grid ColumnDefinitions="*,Auto"
+                                                      ColumnSpacing="4"
+                                                      IsVisible="{Binding IsChatModelCatalogBacked}">
+                                                    <ComboBox Grid.Column="0"
+                                                              ItemsSource="{Binding ChatModelOptions}"
+                                                              SelectedItem="{Binding ChatModelId, Mode=TwoWay}"
+                                                              HorizontalAlignment="Stretch"
+                                                              AutomationProperties.Name="{DynamicResource Lang.Settings.Model}"/>
+                                                    <Button Grid.Column="1"
+                                                            Classes="IconButton"
+                                                            VerticalAlignment="Center"
+                                                            Command="{Binding RefreshChatModelsCommand}"
+                                                            IsEnabled="{Binding !IsRefreshingChatModels}"
+                                                            AutomationProperties.Name="{DynamicResource Lang.Common.Refresh}"
+                                                            ToolTip.Tip="{DynamicResource Lang.Common.Refresh}">
+                                                        <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
+                                                    </Button>
+                                                </Grid>
+                                                <TextBox Text="{Binding ChatModelId, Mode=TwoWay}"
+                                                         IsVisible="{Binding !IsChatModelCatalogBacked}"
+                                                         PlaceholderText="custom/model-id"
+                                                         AutomationProperties.Name="{DynamicResource Lang.Settings.Model}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
 
-                            <Grid Grid.Row="1"
-                                  Grid.Column="0"
-                                  Grid.ColumnSpan="2"
-                                  ColumnDefinitions="*, Auto"
-                                  RowDefinitions="Auto, Auto, Auto, Auto"
-                                  ColumnSpacing="10"
-                                  RowSpacing="6">
-                                <TextBlock Grid.Row="0"
-                                           Grid.Column="0"
-                                           Grid.ColumnSpan="2"
-                                           Text="{DynamicResource Lang.Settings.ApiKey}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                                <TextBox Grid.Row="1"
-                                         Grid.Column="0"
-                                         Text="{Binding ChatApiKey, Mode=TwoWay}"
-                                         PasswordChar="*"
-                                         PlaceholderText="sk-..."/>
-                                <Button Grid.Row="1"
-                                        Grid.Column="1"
-                                        Command="{Binding TestAiConnectionCommand}"
-                                        IsEnabled="{Binding !IsTestingAiConnection}"
-                                        Classes="SecondaryAction"
-                                        MinWidth="180"
-                                        HorizontalAlignment="Stretch"
-                                        VerticalAlignment="Stretch"
-                                        Padding="16,9">
-                                    <TextBlock Text="{Binding AiConnectionTestButtonText}" FontSize="12" FontWeight="Medium"/>
-                                </Button>
-                                <TextBlock Grid.Row="2"
-                                           Grid.Column="0"
-                                           Grid.ColumnSpan="2"
-                                           Text="{Binding MaskedChatApiKey}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           TextTrimming="CharacterEllipsis"/>
-                                <StackPanel Grid.Row="3"
-                                            Grid.Column="0"
-                                            Grid.ColumnSpan="2"
-                                            Orientation="Horizontal"
-                                            Spacing="6"
-                                            IsVisible="{Binding ChatShowsDeepSeekKeyLink}">
-                                    <TextBlock Text="{DynamicResource Lang.Settings.DeepSeekKeyHint}"
-                                               FontSize="11"
-                                               VerticalAlignment="Center"
-                                               Foreground="{DynamicResource TextMutedBrush}"/>
-                                    <Button Classes="LinkAction"
-                                            Command="{Binding OpenDeepSeekKeyPageCommand}"
-                                            Content="{DynamicResource Lang.Settings.DeepSeekKeyLink}"/>
+                                    <Border Classes="PaneRow">
+                                        <Grid ColumnDefinitions="*,Auto"
+                                              RowDefinitions="Auto,Auto,Auto,Auto"
+                                              ColumnSpacing="8"
+                                              RowSpacing="6">
+                                            <TextBlock Grid.Row="0"
+                                                       Grid.Column="0"
+                                                       Grid.ColumnSpan="2"
+                                                       Text="{DynamicResource Lang.Settings.ApiKey}"
+                                                       Classes="Label"/>
+                                            <TextBox Grid.Row="1"
+                                                     Grid.Column="0"
+                                                     Classes="revealPasswordButton"
+                                                     Text="{Binding ChatApiKey, Mode=TwoWay}"
+                                                     PasswordChar="*"
+                                                     PlaceholderText="sk-..."
+                                                     AutomationProperties.Name="{DynamicResource Lang.Settings.ApiKey}"/>
+                                            <Button Grid.Row="1"
+                                                    Grid.Column="1"
+                                                    Command="{Binding TestAiConnectionCommand}"
+                                                    IsEnabled="{Binding !IsTestingAiConnection}"
+                                                    Classes="SecondaryAction"
+                                                    VerticalAlignment="Stretch"
+                                                    Content="{Binding AiConnectionTestButtonText}"/>
+                                            <TextBlock Grid.Row="2"
+                                                       Grid.Column="0"
+                                                       Grid.ColumnSpan="2"
+                                                       Text="{Binding AiProfileStatus}"
+                                                       Classes="Secondary"
+                                                       TextWrapping="Wrap"/>
+                                            <StackPanel Grid.Row="3"
+                                                        Grid.Column="0"
+                                                        Grid.ColumnSpan="2"
+                                                        Orientation="Horizontal"
+                                                        Spacing="6"
+                                                        IsVisible="{Binding ChatShowsDeepSeekKeyLink}">
+                                                <TextBlock Text="{DynamicResource Lang.Settings.DeepSeekKeyHint}"
+                                                           Classes="Secondary"
+                                                           VerticalAlignment="Center"/>
+                                                <Button Classes="LinkAction"
+                                                        Command="{Binding OpenDeepSeekKeyPageCommand}"
+                                                        Content="{DynamicResource Lang.Settings.DeepSeekKeyLink}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
                                 </StackPanel>
-                            </Grid>
-                        </Grid>
-                        <TextBlock Text="{Binding AiProfileStatus}"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource TextMutedBrush}"
-                                   TextWrapping="Wrap"/>
+                            </Border>
+                        </StackPanel>
 
                         <!-- The planner only serves the older command mode (AgentRuntime:Enabled=false) -->
-                        <ToggleButton x:Name="PlannerToggle"
-                                      Classes="AdvancedToggle"
-                                      HorizontalAlignment="Left">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <TextBlock Text="{DynamicResource Lang.Settings.PlannerAdvanced}" FontSize="12" FontWeight="Medium"/>
-                                <Viewbox Width="12" Height="12"><Path Classes="Icon" Data="{StaticResource IconChevronDown}" Stroke="{DynamicResource AccentBrush}"/></Viewbox>
-                            </StackPanel>
-                        </ToggleButton>
-                        <StackPanel Spacing="12" IsVisible="{Binding #PlannerToggle.IsChecked}">
-                            <TextBlock Text="{DynamicResource Lang.Settings.PlannerAdvancedDesc}"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       TextWrapping="Wrap"/>
-                            <Grid ColumnDefinitions="Auto, *">
-                                <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
-                                    <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconSparkles}"/></Viewbox>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="{DynamicResource Lang.Settings.PlannerModel}"
-                                               FontSize="13"
-                                               FontWeight="Medium"
-                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                    <TextBlock Text="{Binding ActivePlannerProfileId}"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource TextMutedBrush}"
-                                               Margin="0,2,0,0"/>
+                        <StackPanel Spacing="12">
+                            <ToggleButton x:Name="PlannerToggle"
+                                          Classes="Disclosure"
+                                          HorizontalAlignment="Left">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Viewbox Classes="Chevron" Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconChevronDown}"/></Viewbox>
+                                    <TextBlock Text="{DynamicResource Lang.Settings.PlannerAdvanced}" VerticalAlignment="Center"/>
                                 </StackPanel>
-                            </Grid>
+                            </ToggleButton>
 
-                            <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" ColumnSpacing="10" RowSpacing="10">
-                                <StackPanel Grid.Row="0" Grid.Column="0" Spacing="6">
-                                    <TextBlock Text="{DynamicResource Lang.Settings.Provider}"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource TextMutedBrush}"/>
-                                    <ComboBox ItemsSource="{Binding AiProviders}"
-                                              SelectedItem="{Binding AiProvider, Mode=TwoWay}"
-                                              HorizontalAlignment="Stretch"/>
-                                </StackPanel>
-
-                                <StackPanel Grid.Row="0" Grid.Column="1" Spacing="6">
-                                    <TextBlock Text="{DynamicResource Lang.Settings.Model}"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource TextMutedBrush}"/>
-                                    <Grid ColumnDefinitions="*, Auto"
-                                          ColumnSpacing="8"
-                                          IsVisible="{Binding IsPlannerModelCatalogBacked}">
-                                        <ComboBox Grid.Column="0"
-                                                  ItemsSource="{Binding AiModelOptions}"
-                                                  SelectedItem="{Binding AiModelId, Mode=TwoWay}"
-                                                  HorizontalAlignment="Stretch"/>
-                                        <Button Grid.Column="1"
-                                                Command="{Binding RefreshAiModelsCommand}"
-                                                IsEnabled="{Binding !IsRefreshingAiModels}"
-                                                Classes="SecondaryAction"
-                                                Padding="12,8">
-                                            <TextBlock Text="{DynamicResource Lang.Common.Refresh}" FontSize="12" FontWeight="Medium"/>
-                                        </Button>
-                                    </Grid>
-                                    <TextBox Text="{Binding AiModelId, Mode=TwoWay}"
-                                             IsVisible="{Binding !IsPlannerModelCatalogBacked}"
-                                             PlaceholderText="custom/model-id"/>
-                                </StackPanel>
-
-                                <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Spacing="6">
-                                    <TextBlock Text="{DynamicResource Lang.Settings.ApiKey}"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource TextMutedBrush}"/>
-                                    <TextBox Text="{Binding AiApiKey, Mode=TwoWay}"
-                                             PasswordChar="*"
-                                             PlaceholderText="sk-..."/>
-                                    <TextBlock Text="{Binding MaskedAiApiKey}"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource TextMutedBrush}"
-                                               TextTrimming="CharacterEllipsis"/>
-                                    <StackPanel Orientation="Horizontal"
-                                                Spacing="6"
-                                                IsVisible="{Binding AiShowsDeepSeekKeyLink}">
-                                        <TextBlock Text="{DynamicResource Lang.Settings.DeepSeekKeyHint}"
-                                                   FontSize="11"
-                                                   VerticalAlignment="Center"
-                                                   Foreground="{DynamicResource TextMutedBrush}"/>
-                                        <Button Classes="LinkAction"
-                                                Command="{Binding OpenDeepSeekKeyPageCommand}"
-                                                Content="{DynamicResource Lang.Settings.DeepSeekKeyLink}"/>
-                                    </StackPanel>
-                                </StackPanel>
-                            </Grid>
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
-
-            <!-- Appearance: theme and accent color, applied at once and saved -->
-            <StackPanel Spacing="8" Margin="0,8,0,8">
-                <TextBlock Text="{DynamicResource Lang.Settings.Look}"
-                           Classes="Overline"
-                           Margin="4,0,0,4"/>
-
-                <Border Classes="SettingsItem">
-                    <Grid ColumnDefinitions="Auto, *, Auto">
-                        <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
-                            <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconMoon}"/></Viewbox>
-                        </Border>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Lang.Settings.Theme}"
-                                       FontSize="13"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="{DynamicResource Lang.Settings.ThemeDesc}"
-                                       FontSize="12"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       Margin="0,2,0,0"/>
-                        </StackPanel>
-                        <Border Grid.Column="2" Classes="Segmented" Width="200" VerticalAlignment="Center">
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="2">
-                                <Button Grid.Column="0"
-                                        Classes="DrawerTab"
-                                        Classes.Selected="{Binding IsDarkThemeSelected}"
-                                        Content="{DynamicResource Lang.Settings.Theme.Dark}"
-                                        Command="{Binding UseDarkThemeCommand}"/>
-                                <Button Grid.Column="1"
-                                        Classes="DrawerTab"
-                                        Classes.Selected="{Binding IsLightThemeSelected}"
-                                        Content="{DynamicResource Lang.Settings.Theme.Light}"
-                                        Command="{Binding UseLightThemeCommand}"/>
-                            </Grid>
-                        </Border>
-                    </Grid>
-                </Border>
-
-                <Border Classes="SettingsItem">
-                    <Grid ColumnDefinitions="Auto, *">
-                        <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0" VerticalAlignment="Top">
-                            <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconSparkles}"/></Viewbox>
-                        </Border>
-                        <StackPanel Grid.Column="1" Spacing="12">
-                            <StackPanel>
-                                <TextBlock Text="{DynamicResource Lang.Settings.Accent}"
-                                           FontSize="13"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <TextBlock Text="{DynamicResource Lang.Settings.AccentDesc}"
-                                           FontSize="12"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           TextWrapping="Wrap"
-                                           Margin="0,2,0,0"/>
-                            </StackPanel>
-                            <ItemsControl ItemsSource="{Binding AccentOptions}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="vm:AccentOptionViewModel">
-                                        <Button Classes="AccentSwatch"
-                                                Classes.Selected="{Binding IsSelected}"
-                                                Command="{Binding SelectCommand}"
-                                                AutomationProperties.Name="{Binding Name}"
-                                                ToolTip.Tip="{Binding Name}">
-                                            <StackPanel Spacing="6" HorizontalAlignment="Center">
-                                                <Border Classes="SwatchRing" HorizontalAlignment="Center">
-                                                    <Ellipse Width="26" Height="26" Fill="{Binding Swatch}"/>
-                                                </Border>
-                                                <TextBlock Text="{Binding Name}" FontSize="11" HorizontalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Button>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-            </StackPanel>
-
-            <!-- General Section -->
-            <StackPanel Spacing="8" Margin="0,8,0,8">
-                <TextBlock Text="{DynamicResource Lang.Settings.Appearance}"
-                           Classes="Overline"
-                           Margin="4,0,0,4"/>
-
-                <!-- Startup Behavior -->
-                <Border Classes="SettingsItem">
-                    <Grid ColumnDefinitions="Auto, *, Auto">
-                        <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
-                            <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconPower}"/></Viewbox>
-                        </Border>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Lang.Settings.Startup}"
-                                       FontSize="13"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="{DynamicResource Lang.Settings.StartupDesc}"
-                                       FontSize="12"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       Margin="0,2,0,0"/>
-                        </StackPanel>
-                        <!-- Toggle Switch -->
-                        <ToggleSwitch Grid.Column="2"
-                                      IsChecked="{Binding ShowOnStartup, Mode=TwoWay}"
-                                      OnContent=""
-                                      OffContent=""
-                                      VerticalAlignment="Center"/>
-                    </Grid>
-                </Border>
-
-                <!-- Auto Start with Windows -->
-                <Border Classes="SettingsItem">
-                    <Grid ColumnDefinitions="Auto, *, Auto">
-                        <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
-                            <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconShield}"/></Viewbox>
-                        </Border>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Lang.Settings.AutoStart}"
-                                       FontSize="13"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="{DynamicResource Lang.Settings.AutoStartDesc}"
-                                       FontSize="12"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       Margin="0,2,0,0"/>
-                        </StackPanel>
-                        <ToggleSwitch Grid.Column="2"
-                                      IsChecked="{Binding AutoStart, Mode=TwoWay}"
-                                      OnContent=""
-                                      OffContent=""
-                                      VerticalAlignment="Center"/>
-                    </Grid>
-                </Border>
-            </StackPanel>
-
-            <!-- Voice Settings Section -->
-            <StackPanel Spacing="8" Margin="0,8,0,8">
-                <Grid ColumnDefinitions="*, Auto">
-                    <TextBlock Grid.Column="0"
-                               Text="{DynamicResource Lang.Settings.Voice.Section}"
-                               Classes="Overline"
-                               Margin="4,0,0,0"
-                               VerticalAlignment="Center"/>
-                    <Button Grid.Column="1"
-                            Command="{Binding RefreshDevicesCommand}"
-                            Background="Transparent"
-                            Padding="8"
-                            ToolTip.Tip="{DynamicResource Lang.Settings.Voice.RefreshDevices}">
-                        <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
-                    </Button>
-                </Grid>
-
-                <!-- Audio Error Message -->
-                <Border Background="{DynamicResource AccentErrorGlowBrush}"
-                        CornerRadius="8"
-                        Padding="12,10"
-                        IsVisible="{Binding AudioErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Viewbox Width="16" Height="16"><Path Classes="Icon Danger" Data="{StaticResource IconAlertCircle}"/></Viewbox>
-                        <TextBlock Text="{Binding AudioErrorMessage}"
-                                   FontSize="12"
-                                   Foreground="{DynamicResource AccentErrorBrush}"
-                                   TextWrapping="Wrap"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- Speech Recognition -->
-                <Border Classes="SettingsItem">
-                    <StackPanel Spacing="12">
-                        <Grid ColumnDefinitions="Auto, *">
-                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
-                                <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconAudioLines}"/></Viewbox>
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.Recognition}"
-                                           FontSize="13"
-                                           FontWeight="Medium"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.RecognitionDesc}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           Margin="0,2,0,0"
-                                           TextWrapping="Wrap"/>
-                            </StackPanel>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
-                            <StackPanel Grid.Column="0" Spacing="6">
-                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.SpokenLanguage}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                                <ComboBox ItemsSource="{Binding VoiceLanguageOptions}"
-                                          SelectedItem="{Binding SelectedVoiceLanguage, Mode=TwoWay}"
-                                          HorizontalAlignment="Stretch">
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
-                            </StackPanel>
-
-                            <StackPanel Grid.Column="1" Spacing="6">
-                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.Engine}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                                <ComboBox ItemsSource="{Binding SpeechEngineOptions}"
-                                          SelectedItem="{Binding SelectedSpeechEngine, Mode=TwoWay}"
-                                          HorizontalAlignment="Stretch">
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
-                            </StackPanel>
-                        </Grid>
-
-                        <!-- Local Whisper model -->
-                        <StackPanel Spacing="6" IsVisible="{Binding IsLocalSpeechEngine}">
-                            <TextBlock Text="{DynamicResource Lang.Settings.Model}"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource TextMutedBrush}"/>
-                            <Grid ColumnDefinitions="*, Auto" ColumnSpacing="8">
-                                <ComboBox Grid.Column="0"
-                                          ItemsSource="{Binding LocalSpeechModelOptions}"
-                                          SelectedItem="{Binding SelectedLocalSpeechModel, Mode=TwoWay}"
-                                          IsEnabled="{Binding !IsDownloadingSpeechModel}"
-                                          HorizontalAlignment="Stretch">
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid ColumnDefinitions="Auto, *" ColumnSpacing="10">
-                                                <TextBlock Grid.Column="0"
-                                                           Text="{Binding Label}"
+                            <Border Classes="Pane" IsVisible="{Binding #PlannerToggle.IsChecked}">
+                                <StackPanel Classes="SettingRows">
+                                    <Border Classes="PaneRow">
+                                        <StackPanel Classes="SectionHead">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="{DynamicResource Lang.Settings.PlannerModel}" Classes="RowTitle"/>
+                                                <TextBlock Text="{Binding ActivePlannerProfileId}"
+                                                           Classes="Caption Mono"
                                                            VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="1"
-                                                           Text="{Binding Hint}"
-                                                           FontSize="11"
-                                                           Foreground="{DynamicResource TextMutedBrush}"
-                                                           VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
+                                            </StackPanel>
+                                            <TextBlock Text="{DynamicResource Lang.Settings.PlannerAdvancedDesc}" Classes="Secondary"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Classes="PaneRow">
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+                                            <StackPanel Grid.Column="0" Classes="Field">
+                                                <TextBlock Text="{DynamicResource Lang.Settings.Provider}" Classes="Label"/>
+                                                <ComboBox ItemsSource="{Binding AiProviders}"
+                                                          SelectedItem="{Binding AiProvider, Mode=TwoWay}"
+                                                          HorizontalAlignment="Stretch"
+                                                          AutomationProperties.Name="{DynamicResource Lang.Settings.Provider}"/>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="1" Classes="Field">
+                                                <TextBlock Text="{DynamicResource Lang.Settings.Model}" Classes="Label"/>
+                                                <Grid ColumnDefinitions="*,Auto"
+                                                      ColumnSpacing="4"
+                                                      IsVisible="{Binding IsPlannerModelCatalogBacked}">
+                                                    <ComboBox Grid.Column="0"
+                                                              ItemsSource="{Binding AiModelOptions}"
+                                                              SelectedItem="{Binding AiModelId, Mode=TwoWay}"
+                                                              HorizontalAlignment="Stretch"
+                                                              AutomationProperties.Name="{DynamicResource Lang.Settings.Model}"/>
+                                                    <Button Grid.Column="1"
+                                                            Classes="IconButton"
+                                                            VerticalAlignment="Center"
+                                                            Command="{Binding RefreshAiModelsCommand}"
+                                                            IsEnabled="{Binding !IsRefreshingAiModels}"
+                                                            AutomationProperties.Name="{DynamicResource Lang.Common.Refresh}"
+                                                            ToolTip.Tip="{DynamicResource Lang.Common.Refresh}">
+                                                        <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
+                                                    </Button>
+                                                </Grid>
+                                                <TextBox Text="{Binding AiModelId, Mode=TwoWay}"
+                                                         IsVisible="{Binding !IsPlannerModelCatalogBacked}"
+                                                         PlaceholderText="custom/model-id"
+                                                         AutomationProperties.Name="{DynamicResource Lang.Settings.Model}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <Border Classes="PaneRow">
+                                        <StackPanel Classes="Field">
+                                            <TextBlock Text="{DynamicResource Lang.Settings.ApiKey}" Classes="Label"/>
+                                            <TextBox Classes="revealPasswordButton"
+                                                     Text="{Binding AiApiKey, Mode=TwoWay}"
+                                                     PasswordChar="*"
+                                                     PlaceholderText="sk-..."
+                                                     AutomationProperties.Name="{DynamicResource Lang.Settings.ApiKey}"/>
+                                            <StackPanel Orientation="Horizontal"
+                                                        Spacing="6"
+                                                        IsVisible="{Binding AiShowsDeepSeekKeyLink}">
+                                                <TextBlock Text="{DynamicResource Lang.Settings.DeepSeekKeyHint}"
+                                                           Classes="Secondary"
+                                                           VerticalAlignment="Center"/>
+                                                <Button Classes="LinkAction"
+                                                        Command="{Binding OpenDeepSeekKeyPageCommand}"
+                                                        Content="{DynamicResource Lang.Settings.DeepSeekKeyLink}"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Appearance: theme and accent color apply at once and are saved -->
+                    <StackPanel Spacing="12" IsVisible="{Binding IsAppearanceSectionSelected}">
+                        <TextBlock Text="{DynamicResource Lang.Settings.Section.Appearance}" Classes="SectionTitle"/>
+                        <Border Classes="Pane">
+                            <StackPanel Classes="SettingRows">
+                                <Border Classes="PaneRow">
+                                    <Grid Classes="SettingRow" ColumnDefinitions="*,Auto">
+                                        <StackPanel Classes="SettingText">
+                                            <TextBlock Text="{DynamicResource Lang.Settings.Theme}" Classes="RowTitle"/>
+                                            <TextBlock Text="{DynamicResource Lang.Settings.ThemeDesc}" Classes="Secondary"/>
+                                        </StackPanel>
+                                        <Border Grid.Column="1" Classes="Segmented" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Spacing="2">
+                                                <Button Classes="DrawerTab"
+                                                        Classes.Selected="{Binding IsDarkThemeSelected}"
+                                                        Content="{DynamicResource Lang.Settings.Theme.Dark}"
+                                                        Command="{Binding UseDarkThemeCommand}"/>
+                                                <Button Classes="DrawerTab"
+                                                        Classes.Selected="{Binding IsLightThemeSelected}"
+                                                        Content="{DynamicResource Lang.Settings.Theme.Light}"
+                                                        Command="{Binding UseLightThemeCommand}"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+
+                                <Border Classes="PaneRow">
+                                    <Grid Classes="SettingRow" ColumnDefinitions="*,Auto">
+                                        <StackPanel Classes="SettingText">
+                                            <TextBlock Text="{DynamicResource Lang.Settings.Accent}" Classes="RowTitle"/>
+                                            <TextBlock Text="{DynamicResource Lang.Settings.AccentDesc}" Classes="Secondary"/>
+                                        </StackPanel>
+                                        <ItemsControl Grid.Column="1" ItemsSource="{Binding AccentOptions}" VerticalAlignment="Center">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <!-- 28 px buttons 4 px apart leave 12 px between the 20 px circles -->
+                                                    <StackPanel Orientation="Horizontal" Spacing="4"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="vm:AccentOptionViewModel">
+                                                    <Button Classes="AccentSwatch"
+                                                            Classes.Selected="{Binding IsSelected}"
+                                                            Command="{Binding SelectCommand}"
+                                                            AutomationProperties.Name="{Binding Name}"
+                                                            ToolTip.Tip="{Binding Name}">
+                                                        <Border Classes="SwatchRing">
+                                                            <Ellipse Width="20" Height="20" Fill="{Binding Swatch}"
+                                                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+                                </Border>
+
+                                <Border Classes="PaneRow">
+                                    <Grid Classes="SettingRow" ColumnDefinitions="*,Auto">
+                                        <StackPanel Classes="SettingText">
+                                            <TextBlock Text="{DynamicResource Lang.Settings.Language}" Classes="RowTitle"/>
+                                            <TextBlock Text="{DynamicResource Lang.Settings.LanguageDesc}" Classes="Secondary"/>
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="1"
+                                                  ItemsSource="{Binding Languages}"
+                                                  SelectedItem="{Binding SelectedLanguage}"
+                                                  MinWidth="200"
+                                                  VerticalAlignment="Center"
+                                                  AutomationProperties.Name="{DynamicResource Lang.Settings.Language}"/>
+                                    </Grid>
+                                </Border>
+
+                                <Border Classes="PaneRow">
+                                    <Grid Classes="SettingRow" ColumnDefinitions="*,Auto">
+                                        <StackPanel Classes="SettingText">
+                                            <TextBlock Text="{DynamicResource Lang.Settings.ReducedMotion}" Classes="RowTitle"/>
+                                            <TextBlock Text="{DynamicResource Lang.Settings.ReducedMotionDesc}" Classes="Secondary"/>
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="1"
+                                                      Classes="RowToggle"
+                                                      AutomationProperties.Name="{DynamicResource Lang.Settings.ReducedMotion}"
+                                                      IsChecked="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=ReducedMotion, Mode=TwoWay}"/>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Voice Settings Section -->
+                    <StackPanel Spacing="24" IsVisible="{Binding IsVoiceSectionSelected}">
+
+                        <!-- Audio Error Message -->
+                        <Border Classes="InlineError"
+                                IsVisible="{Binding AudioErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Viewbox Width="16" Height="16"><Path Classes="Icon Danger" Data="{StaticResource IconAlertCircle}"/></Viewbox>
+                                <TextBlock Text="{Binding AudioErrorMessage}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Speech Recognition -->
+                        <StackPanel Spacing="12">
+                            <StackPanel Classes="SectionHead">
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.Recognition}" Classes="SectionTitle"/>
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.RecognitionDesc}" Classes="Secondary"/>
+                            </StackPanel>
+                            <Border Classes="Pane">
+                                <StackPanel Classes="SettingRows">
+                                    <Border Classes="PaneRow">
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+                                            <StackPanel Grid.Column="0" Classes="Field">
+                                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.SpokenLanguage}" Classes="Label"/>
+                                                <ComboBox ItemsSource="{Binding VoiceLanguageOptions}"
+                                                          SelectedItem="{Binding SelectedVoiceLanguage, Mode=TwoWay}"
+                                                          HorizontalAlignment="Stretch"
+                                                          AutomationProperties.Name="{DynamicResource Lang.Settings.Voice.SpokenLanguage}">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="1" Classes="Field">
+                                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.Engine}" Classes="Label"/>
+                                                <ComboBox ItemsSource="{Binding SpeechEngineOptions}"
+                                                          SelectedItem="{Binding SelectedSpeechEngine, Mode=TwoWay}"
+                                                          HorizontalAlignment="Stretch"
+                                                          AutomationProperties.Name="{DynamicResource Lang.Settings.Voice.Engine}">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- One row holds the engine's settings, so the last visible row never keeps a hairline -->
+                                    <Border Classes="PaneRow">
+                                        <Panel>
+                                            <!-- Local Whisper model -->
+                                            <StackPanel Classes="Field" IsVisible="{Binding IsLocalSpeechEngine}">
+                                                <TextBlock Text="{DynamicResource Lang.Settings.Model}" Classes="Label"/>
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                    <ComboBox Grid.Column="0"
+                                                              ItemsSource="{Binding LocalSpeechModelOptions}"
+                                                              SelectedItem="{Binding SelectedLocalSpeechModel, Mode=TwoWay}"
+                                                              IsEnabled="{Binding !IsDownloadingSpeechModel}"
+                                                              HorizontalAlignment="Stretch"
+                                                              AutomationProperties.Name="{DynamicResource Lang.Settings.Model}">
+                                                        <ComboBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Grid ColumnDefinitions="Auto, *" ColumnSpacing="10">
+                                                                    <TextBlock Grid.Column="0"
+                                                                               Text="{Binding Label}"
+                                                                               VerticalAlignment="Center"/>
+                                                                    <TextBlock Grid.Column="1"
+                                                                               Text="{Binding Hint}"
+                                                                               Classes="Caption"
+                                                                               VerticalAlignment="Center"
+                                                                               TextWrapping="NoWrap"
+                                                                               TextTrimming="CharacterEllipsis"/>
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ComboBox.ItemTemplate>
+                                                    </ComboBox>
+                                                    <Button Grid.Column="1"
+                                                            Command="{Binding DownloadSpeechModelCommand}"
+                                                            IsEnabled="{Binding CanDownloadSpeechModel}"
+                                                            Classes="SecondaryAction"
+                                                            Content="{DynamicResource Lang.Settings.Voice.Model.Download}"/>
+                                                </Grid>
+                                                <TextBlock Text="{Binding SpeechModelStatus}" Classes="Secondary" TextWrapping="Wrap"/>
+                                                <Grid ColumnDefinitions="*, Auto"
+                                                      ColumnSpacing="8"
+                                                      IsVisible="{Binding IsDownloadingSpeechModel}">
+                                                    <ProgressBar Grid.Column="0"
+                                                                 Value="{Binding SpeechModelDownloadProgress, Mode=OneWay}"
+                                                                 Minimum="0"
+                                                                 Maximum="1"
+                                                                 Height="6"
+                                                                 CornerRadius="3"
+                                                                 VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding SpeechModelDownloadPercent}"
+                                                               Classes="Caption"
+                                                               MinWidth="36"
+                                                               TextAlignment="Right"
+                                                               VerticalAlignment="Center"/>
+                                                </Grid>
+                                                <TextBlock Text="{Binding SpeechModelDownloadError}"
+                                                           IsVisible="{Binding HasSpeechModelDownloadError}"
+                                                           Classes="ErrorText"/>
+                                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.Model.Note}" Classes="Secondary" TextWrapping="Wrap"/>
+                                            </StackPanel>
+
+                                            <!-- OpenAI-compatible transcription API -->
+                                            <StackPanel Spacing="16" IsVisible="{Binding IsApiSpeechEngine}">
+                                                <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+                                                    <StackPanel Grid.Column="0" Classes="Field">
+                                                        <TextBlock Text="{DynamicResource Lang.Settings.Voice.Api.Endpoint}" Classes="Label"/>
+                                                        <TextBox Text="{Binding SpeechApiEndpoint, Mode=TwoWay}"
+                                                                 PlaceholderText="https://api.openai.com/v1"
+                                                                 AutomationProperties.Name="{DynamicResource Lang.Settings.Voice.Api.Endpoint}"/>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1" Classes="Field">
+                                                        <TextBlock Text="{DynamicResource Lang.Settings.Model}" Classes="Label"/>
+                                                        <TextBox Text="{Binding SpeechApiModel, Mode=TwoWay}"
+                                                                 PlaceholderText="whisper-1"
+                                                                 AutomationProperties.Name="{DynamicResource Lang.Settings.Model}"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                                <StackPanel Classes="Field">
+                                                    <TextBlock Text="{DynamicResource Lang.Settings.ApiKey}" Classes="Label"/>
+                                                    <TextBox Classes="revealPasswordButton"
+                                                             Text="{Binding SpeechApiKey, Mode=TwoWay}"
+                                                             PasswordChar="*"
+                                                             PlaceholderText="sk-..."
+                                                             AutomationProperties.Name="{DynamicResource Lang.Settings.ApiKey}"/>
+                                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.Api.Note}" Classes="Secondary" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Panel>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Microphone -->
+                        <StackPanel Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                <StackPanel Classes="SectionHead">
+                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.Microphone}" Classes="SectionTitle"/>
+                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicrophoneDesc}" Classes="Secondary"/>
+                                </StackPanel>
                                 <Button Grid.Column="1"
-                                        Command="{Binding DownloadSpeechModelCommand}"
-                                        IsEnabled="{Binding CanDownloadSpeechModel}"
-                                        Classes="SecondaryAction"
-                                        Padding="12,8">
-                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.Model.Download}" FontSize="12" FontWeight="Medium"/>
+                                        Classes="IconButton"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding RefreshDevicesCommand}"
+                                        AutomationProperties.Name="{DynamicResource Lang.Settings.Voice.RefreshDevices}"
+                                        ToolTip.Tip="{DynamicResource Lang.Settings.Voice.RefreshDevices}">
+                                    <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
                                 </Button>
                             </Grid>
-                            <TextBlock Text="{Binding SpeechModelStatus}"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       TextWrapping="Wrap"/>
-                            <Grid ColumnDefinitions="*, Auto"
-                                  ColumnSpacing="8"
-                                  IsVisible="{Binding IsDownloadingSpeechModel}">
-                                <ProgressBar Grid.Column="0"
-                                             Value="{Binding SpeechModelDownloadProgress, Mode=OneWay}"
-                                             Minimum="0"
-                                             Maximum="1"
-                                             Height="6"
-                                             CornerRadius="3"
-                                             VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding SpeechModelDownloadPercent}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           MinWidth="36"
-                                           TextAlignment="Right"
-                                           VerticalAlignment="Center"/>
-                            </Grid>
-                            <TextBlock Text="{Binding SpeechModelDownloadError}"
-                                       IsVisible="{Binding HasSpeechModelDownloadError}"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource AccentErrorBrush}"
-                                       TextWrapping="Wrap"/>
-                            <TextBlock Text="{DynamicResource Lang.Settings.Voice.Model.Note}"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       TextWrapping="Wrap"/>
+                            <Border Classes="Pane">
+                                <StackPanel Classes="SettingRows">
+                                    <Border Classes="PaneRow">
+                                        <StackPanel Spacing="8">
+                                            <ComboBox ItemsSource="{Binding InputDevices}"
+                                                      SelectedItem="{Binding SelectedInputDevice}"
+                                                      HorizontalAlignment="Stretch"
+                                                      IsVisible="{Binding HasInputDevices}"
+                                                      AutomationProperties.Name="{DynamicResource Lang.Settings.Voice.Microphone}"
+                                                      ToolTip.Tip="{DynamicResource Lang.Settings.Voice.MicrophoneTip}">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+
+                                            <Border Classes="InlineNote" IsVisible="{Binding !HasInputDevices}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Viewbox Width="16" Height="16"><Path Classes="Icon Muted" Data="{StaticResource IconInfo}"/></Viewbox>
+                                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.NoMicrophones}" Classes="Secondary" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- Input volume, with the live level under the slider -->
+                                            <StackPanel Spacing="4">
+                                                <Grid ColumnDefinitions="Auto, *, Auto">
+                                                    <Viewbox Grid.Column="0" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,8,0">
+                                                        <Path Classes="Icon Muted" Data="{StaticResource IconMic}"/>
+                                                    </Viewbox>
+                                                    <Slider Grid.Column="1"
+                                                            Value="{Binding InputVolume, Mode=TwoWay}"
+                                                            Minimum="0" Maximum="1"
+                                                            VerticalAlignment="Center"
+                                                            ToolTip.Tip="{DynamicResource Lang.Settings.Voice.InputVolumeTip}"/>
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding InputVolume, StringFormat='{}{0:P0}'}"
+                                                               Classes="Caption"
+                                                               Width="35"
+                                                               TextAlignment="Right"
+                                                               VerticalAlignment="Center"
+                                                               Margin="8,0,0,0"/>
+                                                </Grid>
+                                                <ProgressBar Value="{Binding InputLevel, Mode=OneWay}"
+                                                             Maximum="1"
+                                                             Height="4"
+                                                             MinHeight="4"
+                                                             CornerRadius="2"
+                                                             Margin="22,0,43,0">
+                                                    <ProgressBar.Styles>
+                                                        <Style Selector="ProgressBar">
+                                                            <Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}"/>
+                                                            <Setter Property="Foreground" Value="{DynamicResource AccentGreenBrush}"/>
+                                                        </Style>
+                                                    </ProgressBar.Styles>
+                                                </ProgressBar>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Mic test -->
+                                    <Border Classes="PaneRow">
+                                        <StackPanel Spacing="8">
+                                            <Grid Classes="SettingRow" ColumnDefinitions="*,Auto">
+                                                <StackPanel Classes="SettingText">
+                                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTest}" Classes="RowTitle"/>
+                                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTestDesc}" Classes="Secondary"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                    <Button Command="{Binding StartMicTestCommand}"
+                                                            IsEnabled="{Binding !IsRecordingTest}"
+                                                            Classes="PrimaryAction"
+                                                            ToolTip.Tip="{DynamicResource Lang.Settings.Voice.MicTest.StartTip}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconMic}"/></Viewbox>
+                                                            <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTest.Start}"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button Command="{Binding StopMicTestCommand}"
+                                                            IsEnabled="{Binding IsRecordingTest}"
+                                                            Classes="SecondaryAction"
+                                                            ToolTip.Tip="{DynamicResource Lang.Settings.Voice.MicTest.StopTip}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconStop}"/></Viewbox>
+                                                            <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTest.Stop}"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button Command="{Binding PlayTestRecordingCommand}"
+                                                            IsEnabled="{Binding HasTestRecording}"
+                                                            Classes="SecondaryAction"
+                                                            IsVisible="{Binding HasTestRecording}"
+                                                            ToolTip.Tip="{DynamicResource Lang.Settings.Voice.MicTest.PlayTip}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconPlay}"/></Viewbox>
+                                                            <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTest.Play}"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <!-- Recording status -->
+                                            <Border Classes="InlineError" IsVisible="{Binding IsRecordingTest}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Border Width="8" Height="8"
+                                                            Background="{DynamicResource AccentErrorBrush}"
+                                                            CornerRadius="4">
+                                                        <Border.Styles>
+                                                            <Style Selector="Border">
+                                                                <Style.Animations>
+                                                                    <Animation Duration="0:0:1" IterationCount="Infinite">
+                                                                        <KeyFrame Cue="0%">
+                                                                            <Setter Property="Opacity" Value="1"/>
+                                                                        </KeyFrame>
+                                                                        <KeyFrame Cue="50%">
+                                                                            <Setter Property="Opacity" Value="0.3"/>
+                                                                        </KeyFrame>
+                                                                        <KeyFrame Cue="100%">
+                                                                            <Setter Property="Opacity" Value="1"/>
+                                                                        </KeyFrame>
+                                                                    </Animation>
+                                                                </Style.Animations>
+                                                            </Style>
+                                                        </Border.Styles>
+                                                    </Border>
+                                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTest.Recording}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
 
-                        <!-- OpenAI-compatible transcription API -->
-                        <StackPanel Spacing="10" IsVisible="{Binding IsApiSpeechEngine}">
-                            <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
-                                <StackPanel Grid.Column="0" Spacing="6">
-                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.Api.Endpoint}"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource TextMutedBrush}"/>
-                                    <TextBox Text="{Binding SpeechApiEndpoint, Mode=TwoWay}"
-                                             PlaceholderText="https://api.openai.com/v1"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Spacing="6">
-                                    <TextBlock Text="{DynamicResource Lang.Settings.Model}"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource TextMutedBrush}"/>
-                                    <TextBox Text="{Binding SpeechApiModel, Mode=TwoWay}"
-                                             PlaceholderText="whisper-1"/>
-                                </StackPanel>
-                            </Grid>
-                            <StackPanel Spacing="6">
-                                <TextBlock Text="{DynamicResource Lang.Settings.ApiKey}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                                <TextBox Text="{Binding SpeechApiKey, Mode=TwoWay}"
-                                         PasswordChar="*"
-                                         PlaceholderText="sk-..."/>
-                                <TextBlock Text="{Binding MaskedSpeechApiKey}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           TextTrimming="CharacterEllipsis"/>
+                        <!-- Hands-free -->
+                        <StackPanel Spacing="12">
+                            <StackPanel Classes="SectionHead">
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.HandsFree}" Classes="SectionTitle"/>
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.HandsFreeDesc}" Classes="Secondary"/>
                             </StackPanel>
-                            <TextBlock Text="{DynamicResource Lang.Settings.Voice.Api.Note}"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       TextWrapping="Wrap"/>
+                            <Border Classes="Pane">
+                                <StackPanel Classes="SettingRows">
+                                    <!-- Wake phrase -->
+                                    <Border Classes="PaneRow">
+                                        <StackPanel Spacing="8">
+                                            <Grid Classes="SettingRow" ColumnDefinitions="*,Auto">
+                                                <StackPanel Classes="SettingText">
+                                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.WakeWord}" Classes="RowTitle"/>
+                                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.WakeWordDesc}" Classes="Secondary"/>
+                                                </StackPanel>
+                                                <ToggleSwitch Grid.Column="1"
+                                                              Classes="RowToggle"
+                                                              AutomationProperties.Name="{DynamicResource Lang.Settings.Voice.WakeWord}"
+                                                              IsChecked="{Binding WakeWordEnabled, Mode=TwoWay}"/>
+                                            </Grid>
+                                            <TextBox Text="{Binding WakeWord, Mode=TwoWay}"
+                                                     IsEnabled="{Binding WakeWordEnabled}"
+                                                     PlaceholderText="Hey Kam"
+                                                     AutomationProperties.Name="{DynamicResource Lang.Settings.Voice.WakeWord}"/>
+                                            <TextBlock Text="{Binding WakeWordNote}" Classes="Secondary" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Talk shortcut -->
+                                    <Border Classes="PaneRow">
+                                        <StackPanel Spacing="8">
+                                            <Grid Classes="SettingRow" ColumnDefinitions="*,Auto">
+                                                <StackPanel Classes="SettingText">
+                                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.Shortcut}" Classes="RowTitle"/>
+                                                </StackPanel>
+                                                <ComboBox Grid.Column="1"
+                                                          ItemsSource="{Binding TalkShortcutOptions}"
+                                                          SelectedItem="{Binding SelectedTalkShortcut, Mode=TwoWay}"
+                                                          MinWidth="200"
+                                                          VerticalAlignment="Center"
+                                                          AutomationProperties.Name="{DynamicResource Lang.Settings.Voice.Shortcut}">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                            </Grid>
+                                            <TextBlock Text="{DynamicResource Lang.Settings.Voice.Shortcut.Note}" Classes="Secondary" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Spoken replies -->
+                        <StackPanel Spacing="12">
+                            <StackPanel Classes="SectionHead">
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.SpokenReplies}" Classes="SectionTitle"/>
+                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.SpokenRepliesDesc}" Classes="Secondary"/>
+                            </StackPanel>
+                            <Border Classes="Pane">
+                                <StackPanel Classes="SettingRows">
+                                    <Border Classes="PaneRow">
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+                                            <StackPanel Grid.Column="0" Classes="Field">
+                                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.SpokenReplies.Mode}" Classes="Label"/>
+                                                <ComboBox ItemsSource="{Binding SpokenRepliesOptions}"
+                                                          SelectedItem="{Binding SelectedSpokenReplies, Mode=TwoWay}"
+                                                          HorizontalAlignment="Stretch"
+                                                          AutomationProperties.Name="{DynamicResource Lang.Settings.Voice.SpokenReplies.Mode}">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="1" Classes="Field">
+                                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.Voice}" Classes="Label"/>
+                                                <ComboBox ItemsSource="{Binding SpeechVoiceOptions}"
+                                                          SelectedItem="{Binding SelectedSpeechVoice, Mode=TwoWay}"
+                                                          IsEnabled="{Binding CanUseSpeechOutput}"
+                                                          HorizontalAlignment="Stretch"
+                                                          AutomationProperties.Name="{DynamicResource Lang.Settings.Voice.Voice}">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Speaking rate and preview -->
+                                    <Border Classes="PaneRow">
+                                        <StackPanel Spacing="12">
+                                            <StackPanel Classes="Field" IsEnabled="{Binding CanUseSpeechOutput}">
+                                                <Grid ColumnDefinitions="*, Auto">
+                                                    <TextBlock Grid.Column="0"
+                                                               Text="{DynamicResource Lang.Settings.Voice.Rate}"
+                                                               Classes="Label"/>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding SpeechRateText}"
+                                                               Classes="Caption"/>
+                                                </Grid>
+                                                <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="10">
+                                                    <TextBlock Grid.Column="0"
+                                                               Text="{DynamicResource Lang.Settings.Voice.Rate.Slower}"
+                                                               Classes="Caption"
+                                                               VerticalAlignment="Center"/>
+                                                    <Slider Grid.Column="1"
+                                                            Value="{Binding SpeechRate, Mode=TwoWay}"
+                                                            Minimum="-5"
+                                                            Maximum="5"
+                                                            TickFrequency="1"
+                                                            IsSnapToTickEnabled="True"
+                                                            VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{DynamicResource Lang.Settings.Voice.Rate.Faster}"
+                                                               Classes="Caption"
+                                                               VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </StackPanel>
+
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <Button Command="{Binding PreviewSpeechCommand}"
+                                                        IsEnabled="{Binding CanPreviewSpeech}"
+                                                        Classes="SecondaryAction">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconPlay}"/></Viewbox>
+                                                        <TextBlock Text="{DynamicResource Lang.Settings.Voice.Preview}"/>
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Command="{Binding StopSpeechPreviewCommand}"
+                                                        IsEnabled="{Binding IsPreviewingSpeech}"
+                                                        Classes="SecondaryAction">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconStop}"/></Viewbox>
+                                                        <TextBlock Text="{DynamicResource Lang.Settings.Voice.Preview.Stop}"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </StackPanel>
+
+                                            <TextBlock Text="{Binding SpeechOutputProblem}"
+                                                       IsVisible="{Binding HasSpeechOutputProblem}"
+                                                       Classes="Secondary"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Output device -->
+                                    <Border Classes="PaneRow">
+                                        <StackPanel Classes="Field">
+                                            <TextBlock Text="{DynamicResource Lang.Settings.Voice.Output}" Classes="Label"/>
+                                            <ComboBox ItemsSource="{Binding OutputDevices}"
+                                                      SelectedItem="{Binding SelectedOutputDevice}"
+                                                      HorizontalAlignment="Stretch"
+                                                      IsVisible="{Binding HasOutputDevices}"
+                                                      AutomationProperties.Name="{DynamicResource Lang.Settings.Voice.Output}"
+                                                      ToolTip.Tip="{DynamicResource Lang.Settings.Voice.OutputTip}">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+
+                                            <Border Classes="InlineNote" IsVisible="{Binding !HasOutputDevices}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Viewbox Width="16" Height="16"><Path Classes="Icon Muted" Data="{StaticResource IconInfo}"/></Viewbox>
+                                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.NoOutputs}" Classes="Secondary" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <Grid ColumnDefinitions="Auto, *, Auto">
+                                                <Viewbox Width="14" Height="14" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0"><Path Classes="Icon Muted" Data="{StaticResource IconVolume}"/></Viewbox>
+                                                <Slider Grid.Column="1"
+                                                        Value="{Binding OutputVolume, Mode=TwoWay}"
+                                                        Minimum="0" Maximum="1"
+                                                        VerticalAlignment="Center"
+                                                        ToolTip.Tip="{DynamicResource Lang.Settings.Voice.OutputVolumeTip}"/>
+                                                <TextBlock Grid.Column="2"
+                                                           Text="{Binding OutputVolume, StringFormat='{}{0:P0}'}"
+                                                           Classes="Caption"
+                                                           Width="35"
+                                                           TextAlignment="Right"
+                                                           VerticalAlignment="Center"
+                                                           Margin="8,0,0,0"/>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </StackPanel>
-                </Border>
 
-                <!-- Microphone -->
-                <Border Classes="SettingsItem">
-                    <StackPanel Spacing="12">
-                        <Grid ColumnDefinitions="Auto, *">
-                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
-                                <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconMic}"/></Viewbox>
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.Microphone}"
-                                           FontSize="13"
-                                           FontWeight="Medium"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicrophoneDesc}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           Margin="0,2,0,0"/>
-                            </StackPanel>
-                        </Grid>
-
-                        <ComboBox ItemsSource="{Binding InputDevices}"
-                                  SelectedItem="{Binding SelectedInputDevice}"
-                                  HorizontalAlignment="Stretch"
-                                  IsVisible="{Binding HasInputDevices}"
-                                  ToolTip.Tip="{DynamicResource Lang.Settings.Voice.MicrophoneTip}">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
-
-                        <Border Background="{DynamicResource CardBgHoverBrush}"
-                                CornerRadius="6"
-                                Padding="12,8"
-                                IsVisible="{Binding !HasInputDevices}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Viewbox Width="16" Height="16"><Path Classes="Icon Muted" Data="{StaticResource IconInfo}"/></Viewbox>
-                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.NoMicrophones}"
-                                           FontSize="12"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           TextWrapping="Wrap"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Input volume, with the live level under the slider -->
-                        <StackPanel Spacing="4">
-                            <Grid ColumnDefinitions="Auto, *, Auto">
-                                <Viewbox Grid.Column="0" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,8,0">
-                                    <Path Classes="Icon" Data="{StaticResource IconMic}" Stroke="{DynamicResource TextMutedBrush}"/>
-                                </Viewbox>
-                                <Slider Grid.Column="1"
-                                        Value="{Binding InputVolume, Mode=TwoWay}"
-                                        Minimum="0" Maximum="1"
-                                        VerticalAlignment="Center"
-                                        ToolTip.Tip="{DynamicResource Lang.Settings.Voice.InputVolumeTip}"/>
-                                <TextBlock Grid.Column="2"
-                                           Text="{Binding InputVolume, StringFormat='{}{0:P0}'}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           Width="35"
-                                           TextAlignment="Right"
-                                           VerticalAlignment="Center"
-                                           Margin="8,0,0,0"/>
-                            </Grid>
-                            <ProgressBar Value="{Binding InputLevel, Mode=OneWay}"
-                                         Maximum="1"
-                                         Height="4"
-                                         MinHeight="4"
-                                         CornerRadius="2"
-                                         Margin="22,0,43,0">
-                                <ProgressBar.Styles>
-                                    <Style Selector="ProgressBar">
-                                        <Setter Property="Background" Value="{DynamicResource BorderSubtleBrush}"/>
-                                        <Setter Property="Foreground" Value="{DynamicResource AccentGreenBrush}"/>
-                                    </Style>
-                                </ProgressBar.Styles>
-                            </ProgressBar>
-                        </StackPanel>
-
-                        <Border Height="1" Background="{DynamicResource BorderSubtleBrush}"/>
-
-                        <!-- Mic test -->
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTest}"
-                                       FontSize="13"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTestDesc}"
-                                       FontSize="12"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       Margin="0,2,0,0"/>
-                        </StackPanel>
-
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button Command="{Binding StartMicTestCommand}"
-                                    IsEnabled="{Binding !IsRecordingTest}"
-                                    Classes="PrimaryAction"
-                                    Padding="16,8"
-                                    ToolTip.Tip="{DynamicResource Lang.Settings.Voice.MicTest.StartTip}">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Viewbox Width="14" Height="14">
-                                        <Path Classes="Icon" Data="{StaticResource IconMic}" Fill="Transparent" Stroke="{DynamicResource AccentOnBrush}"/>
-                                    </Viewbox>
-                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTest.Start}" FontSize="12" FontWeight="Medium"/>
-                                </StackPanel>
-                            </Button>
-
-                            <Button Command="{Binding StopMicTestCommand}"
-                                    IsEnabled="{Binding IsRecordingTest}"
-                                    Classes="SecondaryAction"
-                                    Padding="16,8"
-                                    ToolTip.Tip="{DynamicResource Lang.Settings.Voice.MicTest.StopTip}">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Viewbox Width="12" Height="12">
-                                        <Path Classes="Icon" Data="{StaticResource IconStop}"/>
-                                    </Viewbox>
-                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTest.Stop}" FontSize="12" FontWeight="Medium"/>
-                                </StackPanel>
-                            </Button>
-
-                            <Button Command="{Binding PlayTestRecordingCommand}"
-                                    IsEnabled="{Binding HasTestRecording}"
-                                    Classes="SecondaryAction"
-                                    Padding="16,8"
-                                    IsVisible="{Binding HasTestRecording}"
-                                    ToolTip.Tip="{DynamicResource Lang.Settings.Voice.MicTest.PlayTip}">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconPlay}"/></Viewbox>
-                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTest.Play}" FontSize="12" FontWeight="Medium"/>
-                                </StackPanel>
-                            </Button>
-                        </StackPanel>
-
-                        <!-- Recording status -->
-                        <Border Background="{DynamicResource AccentErrorGlowBrush}"
-                                CornerRadius="6"
-                                Padding="12,8"
-                                IsVisible="{Binding IsRecordingTest}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Border Width="8" Height="8"
-                                        Background="{DynamicResource AccentErrorBrush}"
-                                        CornerRadius="4">
-                                    <Border.Styles>
-                                        <Style Selector="Border">
-                                            <Style.Animations>
-                                                <Animation Duration="0:0:1" IterationCount="Infinite">
-                                                    <KeyFrame Cue="0%">
-                                                        <Setter Property="Opacity" Value="1"/>
-                                                    </KeyFrame>
-                                                    <KeyFrame Cue="50%">
-                                                        <Setter Property="Opacity" Value="0.3"/>
-                                                    </KeyFrame>
-                                                    <KeyFrame Cue="100%">
-                                                        <Setter Property="Opacity" Value="1"/>
-                                                    </KeyFrame>
-                                                </Animation>
-                                            </Style.Animations>
-                                        </Style>
-                                    </Border.Styles>
+                    <!-- Startup -->
+                    <StackPanel Spacing="12" IsVisible="{Binding IsStartupSectionSelected}">
+                        <TextBlock Text="{DynamicResource Lang.Settings.Section.Startup}" Classes="SectionTitle"/>
+                        <Border Classes="Pane">
+                            <StackPanel Classes="SettingRows">
+                                <Border Classes="PaneRow">
+                                    <Grid Classes="SettingRow" ColumnDefinitions="*,Auto">
+                                        <StackPanel Classes="SettingText">
+                                            <TextBlock Text="{DynamicResource Lang.Settings.Startup}" Classes="RowTitle"/>
+                                            <TextBlock Text="{DynamicResource Lang.Settings.StartupDesc}" Classes="Secondary"/>
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="1"
+                                                      Classes="RowToggle"
+                                                      AutomationProperties.Name="{DynamicResource Lang.Settings.Startup}"
+                                                      IsChecked="{Binding ShowOnStartup, Mode=TwoWay}"/>
+                                    </Grid>
                                 </Border>
-                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.MicTest.Recording}"
-                                           FontSize="12"
-                                           Foreground="{DynamicResource AccentErrorBrush}"/>
+
+                                <Border Classes="PaneRow">
+                                    <Grid Classes="SettingRow" ColumnDefinitions="*,Auto">
+                                        <StackPanel Classes="SettingText">
+                                            <TextBlock Text="{DynamicResource Lang.Settings.AutoStart}" Classes="RowTitle"/>
+                                            <TextBlock Text="{DynamicResource Lang.Settings.AutoStartDesc}" Classes="Secondary"/>
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="1"
+                                                      Classes="RowToggle"
+                                                      AutomationProperties.Name="{DynamicResource Lang.Settings.AutoStart}"
+                                                      IsChecked="{Binding AutoStart, Mode=TwoWay}"/>
+                                    </Grid>
+                                </Border>
                             </StackPanel>
                         </Border>
                     </StackPanel>
-                </Border>
 
-                <!-- Hands-free -->
-                <Border Classes="SettingsItem">
-                    <StackPanel Spacing="12">
-                        <Grid ColumnDefinitions="Auto, *">
-                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
-                                <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconRadio}"/></Viewbox>
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.HandsFree}"
-                                           FontSize="13"
-                                           FontWeight="Medium"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.HandsFreeDesc}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           Margin="0,2,0,0"/>
+                    <!-- Advanced: version, diagnostics and about -->
+                    <StackPanel Spacing="12" IsVisible="{Binding IsAdvancedSectionSelected}">
+                        <TextBlock Text="{DynamicResource Lang.Settings.Section.Advanced}" Classes="SectionTitle"/>
+                        <Border Classes="Pane">
+                            <StackPanel Classes="SettingRows">
+                                <Border Classes="PaneRow">
+                                    <Grid Classes="SettingRow" ColumnDefinitions="*,Auto">
+                                        <StackPanel Classes="SettingText">
+                                            <TextBlock Text="{DynamicResource Lang.Settings.RuntimeVersion}" Classes="RowTitle"/>
+                                            <TextBlock Text="{DynamicResource Lang.Settings.RuntimeVersionValue}" Classes="Caption Mono"/>
+                                        </StackPanel>
+                                        <!-- Diagnostics left the rail; it opens from here and from the command palette -->
+                                        <Button Grid.Column="1"
+                                                Classes="LinkAction"
+                                                Content="{DynamicResource Lang.Shell.Nav.Diagnostics}"
+                                                ToolTip.Tip="{DynamicResource Lang.Shell.Nav.DiagnosticsTip}"
+                                                Command="{Binding $parent[Window].((shell:MainWindowViewModel)DataContext).NavigateToDiagnosticsCommand}"/>
+                                    </Grid>
+                                </Border>
+
+                                <Border Classes="PaneRow">
+                                    <Grid Classes="SettingRow" ColumnDefinitions="*,Auto">
+                                        <StackPanel Classes="SettingText">
+                                            <TextBlock Text="{DynamicResource Lang.App.Name}" Classes="RowTitle"/>
+                                            <TextBlock Text="{DynamicResource Lang.App.Description}" Classes="Secondary"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
                             </StackPanel>
-                        </Grid>
-
-                        <!-- Wake phrase -->
-                        <Grid ColumnDefinitions="*, Auto">
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.WakeWord}"
-                                           FontSize="13"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.WakeWordDesc}"
-                                           FontSize="12"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           Margin="0,2,0,0"
-                                           TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1"
-                                          IsChecked="{Binding WakeWordEnabled, Mode=TwoWay}"
-                                          OnContent=""
-                                          OffContent=""
-                                          VerticalAlignment="Center"/>
-                        </Grid>
-                        <TextBox Text="{Binding WakeWord, Mode=TwoWay}"
-                                 IsEnabled="{Binding WakeWordEnabled}"
-                                 PlaceholderText="Hey Kam"/>
-                        <TextBlock Text="{Binding WakeWordNote}"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource TextMutedBrush}"
-                                   TextWrapping="Wrap"/>
-
-                        <Border Height="1" Background="{DynamicResource BorderSubtleBrush}"/>
-
-                        <!-- Talk shortcut -->
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="{DynamicResource Lang.Settings.Voice.Shortcut}"
-                                       FontSize="13"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <ComboBox ItemsSource="{Binding TalkShortcutOptions}"
-                                      SelectedItem="{Binding SelectedTalkShortcut, Mode=TwoWay}"
-                                      HorizontalAlignment="Stretch">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <TextBlock Text="{DynamicResource Lang.Settings.Voice.Shortcut.Note}"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       TextWrapping="Wrap"/>
-                        </StackPanel>
+                        </Border>
                     </StackPanel>
-                </Border>
-
-                <!-- Spoken replies -->
-                <Border Classes="SettingsItem">
-                    <StackPanel Spacing="12">
-                        <Grid ColumnDefinitions="Auto, *">
-                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
-                                <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconVolume}"/></Viewbox>
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.SpokenReplies}"
-                                           FontSize="13"
-                                           FontWeight="Medium"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.SpokenRepliesDesc}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           Margin="0,2,0,0"/>
-                            </StackPanel>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
-                            <StackPanel Grid.Column="0" Spacing="6">
-                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.SpokenReplies.Mode}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                                <ComboBox ItemsSource="{Binding SpokenRepliesOptions}"
-                                          SelectedItem="{Binding SelectedSpokenReplies, Mode=TwoWay}"
-                                          HorizontalAlignment="Stretch">
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
-                            </StackPanel>
-
-                            <StackPanel Grid.Column="1" Spacing="6">
-                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.Voice}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                                <ComboBox ItemsSource="{Binding SpeechVoiceOptions}"
-                                          SelectedItem="{Binding SelectedSpeechVoice, Mode=TwoWay}"
-                                          IsEnabled="{Binding CanUseSpeechOutput}"
-                                          HorizontalAlignment="Stretch">
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
-                            </StackPanel>
-                        </Grid>
-
-                        <!-- Speaking rate -->
-                        <StackPanel Spacing="6" IsEnabled="{Binding CanUseSpeechOutput}">
-                            <Grid ColumnDefinitions="*, Auto">
-                                <TextBlock Grid.Column="0"
-                                           Text="{DynamicResource Lang.Settings.Voice.Rate}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding SpeechRateText}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                            </Grid>
-                            <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="10">
-                                <TextBlock Grid.Column="0"
-                                           Text="{DynamicResource Lang.Settings.Voice.Rate.Slower}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           VerticalAlignment="Center"/>
-                                <Slider Grid.Column="1"
-                                        Value="{Binding SpeechRate, Mode=TwoWay}"
-                                        Minimum="-5"
-                                        Maximum="5"
-                                        TickFrequency="1"
-                                        IsSnapToTickEnabled="True"
-                                        VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="2"
-                                           Text="{DynamicResource Lang.Settings.Voice.Rate.Faster}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           VerticalAlignment="Center"/>
-                            </Grid>
-                        </StackPanel>
-
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button Command="{Binding PreviewSpeechCommand}"
-                                    IsEnabled="{Binding CanPreviewSpeech}"
-                                    Classes="SecondaryAction"
-                                    Padding="16,8">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconPlay}"/></Viewbox>
-                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.Preview}" FontSize="12" FontWeight="Medium"/>
-                                </StackPanel>
-                            </Button>
-                            <Button Command="{Binding StopSpeechPreviewCommand}"
-                                    IsEnabled="{Binding IsPreviewingSpeech}"
-                                    Classes="SecondaryAction"
-                                    Padding="16,8">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconStop}"/></Viewbox>
-                                    <TextBlock Text="{DynamicResource Lang.Settings.Voice.Preview.Stop}" FontSize="12" FontWeight="Medium"/>
-                                </StackPanel>
-                            </Button>
-                        </StackPanel>
-
-                        <TextBlock Text="{Binding SpeechOutputProblem}"
-                                   IsVisible="{Binding HasSpeechOutputProblem}"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource TextMutedBrush}"
-                                   TextWrapping="Wrap"/>
-
-                        <Border Height="1" Background="{DynamicResource BorderSubtleBrush}"/>
-
-                        <!-- Output device -->
-                        <TextBlock Text="{DynamicResource Lang.Settings.Voice.Output}"
-                                   FontSize="13"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
-                        <ComboBox ItemsSource="{Binding OutputDevices}"
-                                  SelectedItem="{Binding SelectedOutputDevice}"
-                                  HorizontalAlignment="Stretch"
-                                  IsVisible="{Binding HasOutputDevices}"
-                                  ToolTip.Tip="{DynamicResource Lang.Settings.Voice.OutputTip}">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
-
-                        <Border Background="{DynamicResource CardBgHoverBrush}"
-                                CornerRadius="6"
-                                Padding="12,8"
-                                IsVisible="{Binding !HasOutputDevices}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Viewbox Width="16" Height="16"><Path Classes="Icon Muted" Data="{StaticResource IconInfo}"/></Viewbox>
-                                <TextBlock Text="{DynamicResource Lang.Settings.Voice.NoOutputs}"
-                                           FontSize="12"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           TextWrapping="Wrap"/>
-                            </StackPanel>
-                        </Border>
-
-                        <Grid ColumnDefinitions="Auto, *, Auto">
-                            <Viewbox Width="14" Height="14" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0"><Path Classes="Icon Muted" Data="{StaticResource IconVolume}"/></Viewbox>
-                            <Slider Grid.Column="1"
-                                    Value="{Binding OutputVolume, Mode=TwoWay}"
-                                    Minimum="0" Maximum="1"
-                                    VerticalAlignment="Center"
-                                    ToolTip.Tip="{DynamicResource Lang.Settings.Voice.OutputVolumeTip}"/>
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding OutputVolume, StringFormat='{}{0:P0}'}"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       Width="35"
-                                       TextAlignment="Right"
-                                       VerticalAlignment="Center"
-                                       Margin="8,0,0,0"/>
-                        </Grid>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
-
-            <!-- Interface Section -->
-            <StackPanel Spacing="8" Margin="0,8,0,8">
-                <TextBlock Text="{DynamicResource Lang.Settings.Interface}"
-                           Classes="Overline"
-                           Margin="4,0,0,4"/>
-
-                <!-- Reduced Motion -->
-                <Border Classes="SettingsItem">
-                    <Grid ColumnDefinitions="Auto, *, Auto">
-                        <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
-                            <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconMonitor}"/></Viewbox>
-                        </Border>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Lang.Settings.ReducedMotion}"
-                                       FontSize="13"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="{DynamicResource Lang.Settings.ReducedMotionDesc}"
-                                       FontSize="12"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       Margin="0,2,0,0"/>
-                        </StackPanel>
-                        <ToggleSwitch Grid.Column="2"
-                                      IsChecked="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=ReducedMotion, Mode=TwoWay}"
-                                      OnContent=""
-                                      OffContent=""
-                                      VerticalAlignment="Center"/>
-                    </Grid>
-                </Border>
-
-                <!-- Language Selector -->
-                <Border Classes="SettingsItem">
-                    <Grid RowDefinitions="Auto, Auto">
-                        <Grid Grid.Row="0" ColumnDefinitions="Auto, *">
-                            <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
-                                <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconLanguages}"/></Viewbox>
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="{DynamicResource Lang.Settings.Language}"
-                                           FontSize="13"
-                                           FontWeight="Medium"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                <TextBlock Text="{DynamicResource Lang.Settings.LanguageDesc}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           Margin="0,2,0,0"
-                                           TextWrapping="Wrap"/>
-                            </StackPanel>
-                        </Grid>
-                        <ComboBox Grid.Row="1"
-                                  ItemsSource="{Binding Languages}"
-                                  SelectedItem="{Binding SelectedLanguage}"
-                                  HorizontalAlignment="Stretch"
-                                  Margin="0,12,0,0"/>
-                    </Grid>
-                </Border>
-            </StackPanel>
-
-            <!-- System Section -->
-            <StackPanel Spacing="8" Margin="0,8,0,8">
-                <TextBlock Text="{DynamicResource Lang.Settings.System}"
-                           Classes="Overline"
-                           Margin="4,0,0,4"/>
-
-                <Border Classes="SettingsItem">
-                    <Grid ColumnDefinitions="Auto, *, Auto">
-                        <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
-                            <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconCpu}"/></Viewbox>
-                        </Border>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Lang.Settings.RuntimeVersion}"
-                                       FontSize="13"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="{DynamicResource Lang.Settings.RuntimeVersionValue}"
-                                       FontSize="11"
-                                       FontFamily="{StaticResource MonoFontFamily}"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       Margin="0,2,0,0"/>
-                        </StackPanel>
-                        <!-- Diagnostics left the rail; it opens from here and from the command palette -->
-                        <Button Grid.Column="2"
-                                Classes="SecondaryAction Sm"
-                                VerticalAlignment="Center"
-                                Content="{DynamicResource Lang.Shell.Nav.Diagnostics}"
-                                ToolTip.Tip="{DynamicResource Lang.Shell.Nav.DiagnosticsTip}"
-                                Command="{Binding $parent[Window].((shell:MainWindowViewModel)DataContext).NavigateToDiagnosticsCommand}"/>
-                    </Grid>
-                </Border>
-            </StackPanel>
-
-            <!-- About Section -->
-            <StackPanel Spacing="12">
-                <TextBlock Text="{DynamicResource Lang.Settings.About}"
-                           Classes="Overline"
-                           Margin="4,0,0,4"/>
-
-                <Border Classes="SettingsItem">
-                    <Grid ColumnDefinitions="Auto, *">
-                        <Border Grid.Column="0" Classes="IconBadge" Margin="0,0,16,0">
-                            <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconInfo}"/></Viewbox>
-                        </Border>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Lang.App.Name}"
-                                       FontSize="13"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="{DynamicResource Lang.App.Description}"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       TextWrapping="Wrap"
-                                       LineHeight="18"
-                                       Margin="0,4,0,0"/>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-            </StackPanel>
+                </Panel>
+            </Grid>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

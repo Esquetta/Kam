@@ -4,12 +4,15 @@
   "Loops.Limits.Title": "Sınırlar",
   "Loops.Reset": "Varsayılanlara dön",
   "Loops.Steps.Label": "Tur başına adım sınırı",
-  "Loops.Steps.Help": "Ajan durup size sormadan önce tek bir mesaj için yapılabilecek en fazla model turu. 1 ile 200 arası, varsayılan 24.",
+  "Loops.Steps.Help": "1–200 · varsayılan 24",
+  "Loops.Steps.Tip": "Ajan durup size sormadan önce tek bir mesaj için yapılabilecek en fazla model turu.",
   "Loops.Steps.Unit": "adım",
   "Loops.Result.Label": "Modele geri gönderilen en uzun araç sonucu",
-  "Loops.Result.Help": "Daha uzun araç çıktıları model okumadan önce bu uzunluğa kısaltılır. 1.000 ile 200.000 arası, varsayılan 16.000.",
+  "Loops.Result.Help": "1.000–200.000 · varsayılan 16.000",
+  "Loops.Result.Tip": "Daha uzun araç çıktıları model okumadan önce bu uzunluğa kısaltılır.",
   "Loops.Result.Unit": "karakter",
   "Loops.Context.Label": "Sıkıştırma öncesi bağlam bütçesi",
-  "Loops.Context.Help": "Bir istek bu boyutu aşacaksa eski araç sonuçları kısaltılır ve önceki turlar özetlenir. 0 kapatır; aksi halde 8.000 ile 1.000.000 arası, varsayılan 64.000.",
-  "Loops.Context.Unit": "token, 0 = kapalı"
+  "Loops.Context.Help": "0 = kapalı · 8.000–1.000.000 · varsayılan 64.000",
+  "Loops.Context.Tip": "Bir istek bu boyutu aşacaksa eski araç sonuçları kısaltılır ve önceki turlar özetlenir.",
+  "Loops.Context.Unit": "token"
 }

@@ -35,6 +35,69 @@ public sealed class IntegrationsViewModelTests : IDisposable
     }
 
     [Fact]
+    public void FormState_IsDirtyWhileEditedAndSavedAfterSave()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var viewModel = new IntegrationsViewModel(settingsService);
+        var changed = new List<string?>();
+        viewModel.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        viewModel.IsTodoistDirty.Should().BeFalse();
+        viewModel.HasSavedTodoist.Should().BeFalse();
+        viewModel.IsEmailDirty.Should().BeFalse("loading the saved settings is not an edit");
+        viewModel.IsSmsDirty.Should().BeFalse();
+        viewModel.IsGitHubAppDirty.Should().BeFalse();
+        viewModel.IsWebSearchDirty.Should().BeFalse();
+
+        viewModel.TodoistApiKey = "todoist-key";
+        viewModel.IsTodoistDirty.Should().BeTrue();
+        changed.Should().Contain(nameof(IntegrationsViewModel.IsTodoistDirty));
+
+        viewModel.SaveTodoistCommand.Execute(null);
+        viewModel.IsTodoistDirty.Should().BeFalse();
+        viewModel.HasSavedTodoist.Should().BeTrue();
+
+        viewModel.ClearTodoistCommand.Execute(null);
+        viewModel.IsTodoistDirty.Should().BeFalse();
+        viewModel.HasSavedTodoist.Should().BeFalse();
+    }
+
+    [Fact]
+    public void FormState_TracksEmailSmsGitHubAndWebSearchSeparately()
+    {
+        using var settingsService = new JsonSettingsService(_settingsDirectory);
+        var viewModel = new IntegrationsViewModel(settingsService);
+
+        viewModel.SmtpUsername = "me@example.com";
+        viewModel.IsEmailDirty.Should().BeTrue();
+        viewModel.IsSmsDirty.Should().BeFalse();
+        viewModel.SaveEmailCommand.Execute(null);
+        viewModel.IsEmailDirty.Should().BeFalse();
+        viewModel.HasSavedEmail.Should().BeTrue();
+
+        viewModel.TwilioPhoneNumber = "+1234567890";
+        viewModel.IsSmsDirty.Should().BeTrue();
+        viewModel.SaveSmsCommand.Execute(null);
+        viewModel.HasSavedSms.Should().BeTrue();
+        viewModel.ClearSmsCommand.Execute(null);
+        viewModel.HasSavedSms.Should().BeFalse();
+        viewModel.IsSmsDirty.Should().BeFalse();
+
+        viewModel.GitHubAppId = "12345";
+        viewModel.IsGitHubAppDirty.Should().BeTrue();
+        viewModel.SaveGitHubAppCommand.Execute(null);
+        viewModel.IsGitHubAppDirty.Should().BeFalse();
+        viewModel.HasSavedGitHubApp.Should().BeTrue();
+
+        // Saved values are trimmed, so surrounding spaces alone do not count as an edit after saving.
+        viewModel.WebSearchApiKey = " key ";
+        viewModel.WebSearchEngineId = "engine";
+        viewModel.IsWebSearchDirty.Should().BeTrue();
+        viewModel.SaveWebSearchCommand.Execute(null);
+        viewModel.IsWebSearchDirty.Should().BeFalse();
+    }
+
+    [Fact]
     public void Constructor_LoadsGitHubAppSettingsFromSettingsService()
     {
         using var settingsService = new JsonSettingsService(_settingsDirectory);

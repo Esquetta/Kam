@@ -130,6 +130,15 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             TestGitHubAppConnectionCommand = ReactiveCommand.CreateFromTask(TestGitHubAppConnectionAsync);
             ListGitHubAppRepositoriesCommand = ReactiveCommand.CreateFromTask(ListGitHubAppRepositoriesAsync);
 
+            // Editing a field changes whether its Save button is the primary action
+            PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName is { } name && FormFieldNames.Contains(name))
+                {
+                    RaiseFormState();
+                }
+            };
+
             LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
         }
 
@@ -582,6 +591,87 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         #endregion
 
+        #region Form State
+
+        private static readonly HashSet<string> FormFieldNames =
+        [
+            nameof(TodoistApiKey),
+            nameof(WebSearchApiKey), nameof(WebSearchEngineId),
+            nameof(GitHubAppId), nameof(GitHubInstallationId), nameof(GitHubPrivateKeyPath),
+            nameof(EmailProvider), nameof(SmtpHost), nameof(SmtpPort), nameof(SmtpUsername), nameof(SmtpPassword),
+            nameof(SenderEmail), nameof(SmtpEnableSsl),
+            nameof(TwilioAccountSid), nameof(TwilioAuthToken), nameof(TwilioPhoneNumber)
+        ];
+
+        /// <summary>Gets whether the Todoist key differs from the saved one.</summary>
+        public bool IsTodoistDirty => !Same(TodoistApiKey, _settingsService.TodoistApiKey);
+
+        /// <summary>Gets whether a Todoist key is saved, so there is something to clear.</summary>
+        public bool HasSavedTodoist => !string.IsNullOrWhiteSpace(_settingsService.TodoistApiKey);
+
+        /// <summary>Gets whether the web search fields differ from the saved ones.</summary>
+        public bool IsWebSearchDirty =>
+            !Same(WebSearchApiKey.Trim(), _settingsService.WebSearchApiKey)
+            || !Same(WebSearchEngineId.Trim(), _settingsService.WebSearchEngineId);
+
+        /// <summary>Gets whether the GitHub App fields differ from the saved ones.</summary>
+        public bool IsGitHubAppDirty =>
+            !Same(GitHubAppId, _settingsService.GitHubAppId)
+            || !Same(GitHubInstallationId, _settingsService.GitHubAppInstallationId)
+            || !Same(GitHubPrivateKeyPath, _settingsService.GitHubAppPrivateKeyPath);
+
+        /// <summary>Gets whether any GitHub App setting is saved, so there is something to clear.</summary>
+        public bool HasSavedGitHubApp =>
+            !string.IsNullOrWhiteSpace(_settingsService.GitHubAppId)
+            || !string.IsNullOrWhiteSpace(_settingsService.GitHubAppInstallationId)
+            || !string.IsNullOrWhiteSpace(_settingsService.GitHubAppPrivateKeyPath);
+
+        /// <summary>Gets whether the email fields differ from the saved ones.</summary>
+        public bool IsEmailDirty =>
+            !Same(EmailProvider, _settingsService.EmailProvider)
+            || !Same(SmtpHost, _settingsService.SmtpHost)
+            || SmtpPort != _settingsService.SmtpPort
+            || !Same(SmtpUsername, _settingsService.SmtpUsername)
+            || !Same(SmtpPassword, _settingsService.SmtpPassword)
+            || !Same(SenderEmail, _settingsService.SenderEmail)
+            || SmtpEnableSsl != _settingsService.SmtpEnableSsl;
+
+        /// <summary>Gets whether an email account is saved, so there is something to clear.</summary>
+        public bool HasSavedEmail =>
+            !string.IsNullOrWhiteSpace(_settingsService.SmtpUsername)
+            || !string.IsNullOrWhiteSpace(_settingsService.SmtpPassword)
+            || !string.IsNullOrWhiteSpace(_settingsService.SenderEmail);
+
+        /// <summary>Gets whether the Twilio fields differ from the saved ones.</summary>
+        public bool IsSmsDirty =>
+            !Same(TwilioAccountSid, _settingsService.TwilioAccountSid)
+            || !Same(TwilioAuthToken, _settingsService.TwilioAuthToken)
+            || !Same(TwilioPhoneNumber, _settingsService.TwilioPhoneNumber);
+
+        /// <summary>Gets whether any Twilio setting is saved, so there is something to clear.</summary>
+        public bool HasSavedSms =>
+            !string.IsNullOrWhiteSpace(_settingsService.TwilioAccountSid)
+            || !string.IsNullOrWhiteSpace(_settingsService.TwilioAuthToken)
+            || !string.IsNullOrWhiteSpace(_settingsService.TwilioPhoneNumber);
+
+        private static bool Same(string? edited, string? saved) =>
+            string.Equals(edited ?? string.Empty, saved ?? string.Empty, StringComparison.Ordinal);
+
+        private void RaiseFormState()
+        {
+            this.RaisePropertyChanged(nameof(IsTodoistDirty));
+            this.RaisePropertyChanged(nameof(HasSavedTodoist));
+            this.RaisePropertyChanged(nameof(IsWebSearchDirty));
+            this.RaisePropertyChanged(nameof(IsGitHubAppDirty));
+            this.RaisePropertyChanged(nameof(HasSavedGitHubApp));
+            this.RaisePropertyChanged(nameof(IsEmailDirty));
+            this.RaisePropertyChanged(nameof(HasSavedEmail));
+            this.RaisePropertyChanged(nameof(IsSmsDirty));
+            this.RaisePropertyChanged(nameof(HasSavedSms));
+        }
+
+        #endregion
+
         #region Commands
 
         // Todoist Commands
@@ -831,6 +921,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         {
             this.RaisePropertyChanged(nameof(TodoistBadge));
             this.RaisePropertyChanged(nameof(TodoistStatusText));
+            RaiseFormState();
         }
 
         #endregion
@@ -843,6 +934,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _settingsService.WebSearchEngineId = WebSearchEngineId.Trim();
             _settingsService.Save();
             IsWebSearchConfigured = CanSaveWebSearch;
+            RaiseFormState();
         }
 
         private void ClearWebSearch()
@@ -906,6 +998,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 _settingsService.GitHubAppInstallationId = GitHubInstallationId;
                 _settingsService.GitHubAppPrivateKeyPath = string.Empty;
                 _settingsService.Save();
+                RaiseFormState();
                 SetGitHubAppDisconnected(
                     GitHubConnectionState.InvalidPrivateKeyPath,
                     static () => Loc.Get("Integrations.GitHub.Detail.KeyDiscarded"));
@@ -916,6 +1009,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _settingsService.GitHubAppInstallationId = GitHubInstallationId;
             _settingsService.GitHubAppPrivateKeyPath = GitHubPrivateKeyPath;
             _settingsService.Save();
+            RaiseFormState();
             RefreshGitHubAppConfigured();
             if (IsGitHubAppConfigured && !_isGitHubAppConnected)
             {
@@ -937,6 +1031,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _settingsService.GitHubAppInstallationId = string.Empty;
             _settingsService.GitHubAppPrivateKeyPath = string.Empty;
             _settingsService.Save();
+            RaiseFormState();
             IsGitHubAppConfigured = false;
             SetGitHubAppDisconnected(
                 GitHubConnectionState.NotConfigured,
@@ -1407,6 +1502,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _settingsService.SenderEmail = SenderEmail;
             _settingsService.SmtpEnableSsl = SmtpEnableSsl;
             _settingsService.Save();
+            RaiseFormState();
             
             IsEmailEnabled = !string.IsNullOrWhiteSpace(SmtpHost) && 
                             !string.IsNullOrWhiteSpace(SmtpUsername) &&
@@ -1431,6 +1527,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _settingsService.SenderEmail = string.Empty;
             _settingsService.SmtpEnableSsl = true;
             _settingsService.Save();
+            RaiseFormState();
             
             IsEmailEnabled = false;
         }
@@ -1446,6 +1543,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _settingsService.TwilioPhoneNumber = TwilioPhoneNumber;
             _settingsService.SmsEnabled = true;
             _settingsService.Save();
+            RaiseFormState();
             
             IsSmsEnabled = !string.IsNullOrWhiteSpace(TwilioAccountSid) &&
                           !string.IsNullOrWhiteSpace(TwilioAuthToken) &&
@@ -1463,6 +1561,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _settingsService.TwilioPhoneNumber = string.Empty;
             _settingsService.SmsEnabled = false;
             _settingsService.Save();
+            RaiseFormState();
             
             IsSmsEnabled = false;
         }

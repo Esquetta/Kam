@@ -10,878 +10,548 @@
         <converters:StringEqualsConverter x:Key="StringEqualsConverter" />
     </UserControl.Resources>
 
+    <UserControl.Styles>
+        <!-- Pane body: the fields and the actions under the head -->
+        <Style Selector="StackPanel.PaneBody">
+            <Setter Property="Margin" Value="16"/>
+            <Setter Property="Spacing" Value="16"/>
+        </Style>
+        <!-- Actions sit on the right: Clear (only when something is saved), then Save -->
+        <Style Selector="StackPanel.FormActions">
+            <Setter Property="Orientation" Value="Horizontal"/>
+            <Setter Property="Spacing" Value="8"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+        </Style>
+        <Style Selector="StackPanel.FormActions > Button">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <!-- The Pane border closes the last CLI row -->
+        <Style Selector="ItemsControl.CliRows ContentPresenter:nth-last-child(1) > Border.PaneRow">
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+    </UserControl.Styles>
+
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <Grid Classes="WorkbenchPage PageColumn Form" RowDefinitions="Auto,*">
 
             <Grid Grid.Row="0" Classes="PageHeader" ColumnDefinitions="*,Auto">
                 <StackPanel Classes="PageHeaderText">
                     <TextBlock Text="{DynamicResource Lang.Integrations.Title}" Classes="PageTitle"/>
-                    <TextBlock Text="{DynamicResource Lang.Integrations.Subtitle}" Classes="PageSubtitle"/>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" HorizontalAlignment="Left">
+                        <TextBlock Text="{DynamicResource Lang.Integrations.Subtitle}" Classes="PageSubtitle"/>
+                        <Button Grid.Column="1"
+                                Classes="InfoTip"
+                                AutomationProperties.Name="{DynamicResource Lang.Common.MoreInfo}"
+                                ToolTip.Tip="{DynamicResource Lang.Integrations.Info}">
+                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconInfo}"/></Viewbox>
+                        </Button>
+                    </Grid>
                 </StackPanel>
             </Grid>
 
-            <!-- Integrations Grid -->
+            <!-- One Pane per integration -->
             <StackPanel Grid.Row="1" Spacing="16">
-                
-                <!-- Todoist Integration Card -->
-                <Border Classes="IntegrationCard">
-                    <Grid RowDefinitions="Auto,Auto,Auto">
-                        <!-- Card Header -->
-                        <Grid Grid.Row="0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto" MinWidth="100"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0"
-                                    Classes="IconBadge">
-                                <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconListTodo}"/></Viewbox>
-                            </Border>
-                            
-                            <StackPanel Grid.Column="1" Margin="16,0,12,0" VerticalAlignment="Center">
-                                <TextBlock Text="Todoist"
-                                           FontSize="16"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <TextBlock Text="{DynamicResource Lang.Integrations.Todoist.Subtitle}"
-                                           FontSize="12"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                            </StackPanel>
-                            
-                            <!-- Status Badge -->
-                            <Border Grid.Column="2" Classes="Pill"
-                                    Classes.Success="{Binding TodoistBadge.IsSuccess}"
-                                    Classes.Warning="{Binding TodoistBadge.IsWarning}"
-                                    Classes.Danger="{Binding TodoistBadge.IsDanger}"
-                                    Classes.Accent="{Binding TodoistBadge.IsAccent}"
-                                    HorizontalAlignment="Right">
-                                <TextBlock Text="{Binding TodoistStatusText}"/>
-                            </Border>
-                        </Grid>
-                        
-                        <!-- Description -->
-                        <TextBlock Grid.Row="1" 
-                                   Text="{Binding TodoistDescription}"
-                                   FontSize="13"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   TextWrapping="Wrap"
-                                   Margin="0,16,0,0"/>
-                        
-                        <!-- API Key Input Section -->
-                        <StackPanel Grid.Row="2" Margin="0,24,0,0" Spacing="8">
-                            <TextBlock Text="{DynamicResource Lang.Integrations.Todoist.ApiKey}"
-                                       FontSize="12"
-                                       FontWeight="Medium"
-                                       Foreground="{DynamicResource TextMutedBrush}"/>
-                            
-                            <!-- Responsive Input Layout -->
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBox Grid.Column="0"
-                                         Text="{Binding TodoistApiKey, Mode=TwoWay}"
-                                         PlaceholderText="{DynamicResource Lang.Integrations.Todoist.ApiKeyPlaceholder}"
-                                         PasswordChar="●"
-                                         Classes="IntegrationInput"
-                                         Height="40"
-                                         VerticalContentAlignment="Center"
-                                         Margin="0,0,12,0"/>
-                                
-                                <!-- Buttons Stack -->
-                                <StackPanel Grid.Column="1" 
-                                            Orientation="Horizontal" 
-                                            Spacing="8"
-                                            VerticalAlignment="Center">
-                                    <!-- Save Button -->
-                                    <Button Command="{Binding SaveTodoistCommand}"
-                                            Classes="PrimaryAction"
-                                            IsEnabled="{Binding TodoistApiKey, Converter={StaticResource StringIsNotNullOrEmptyConverter}}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconSave}"/></Viewbox>
-                                            <TextBlock Text="{DynamicResource Lang.Common.Save}"/>
-                                        </StackPanel>
-                                    </Button>
-                                    
-                                    <!-- Clear Button -->
-                                    <Button Command="{Binding ClearTodoistCommand}"
-                                            Classes="SecondaryAction"
-                                            IsEnabled="{Binding IsTaskAgentEnabled}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconX}"/></Viewbox>
-                                            <TextBlock Text="{DynamicResource Lang.Common.Clear}"/>
-                                        </StackPanel>
-                                    </Button>
+
+                <!-- Todoist -->
+                <Border Classes="Pane">
+                    <StackPanel>
+                        <Border Classes="PaneHead">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                <StackPanel Spacing="2" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="Todoist" Classes="SectionTitle"/>
+                                        <Button Classes="InfoTip"
+                                                AutomationProperties.Name="{DynamicResource Lang.Common.MoreInfo}"
+                                                ToolTip.Tip="{Binding TodoistDescription}">
+                                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconInfo}"/></Viewbox>
+                                        </Button>
+                                    </StackPanel>
+                                    <TextBlock Text="{DynamicResource Lang.Integrations.Todoist.Subtitle}" Classes="Secondary" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Classes="PaneStatus">
+                                    <Border Classes="StatusDot"
+                                            Classes.Success="{Binding TodoistBadge.IsSuccess}"
+                                            Classes.Warning="{Binding TodoistBadge.IsWarning}"
+                                            Classes.Danger="{Binding TodoistBadge.IsDanger}"
+                                            Classes.Accent="{Binding TodoistBadge.IsAccent}"/>
+                                    <TextBlock Text="{Binding TodoistStatusText}" Classes="Secondary"/>
                                 </StackPanel>
                             </Grid>
+                        </Border>
+
+                        <StackPanel Classes="PaneBody">
+                            <StackPanel Classes="Field">
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Todoist.ApiKey}" Classes="Label"/>
+                                <TextBox Text="{Binding TodoistApiKey, Mode=TwoWay}"
+                                         PlaceholderText="{DynamicResource Lang.Integrations.Todoist.ApiKeyPlaceholder}"
+                                         PasswordChar="●"
+                                         AutomationProperties.Name="{DynamicResource Lang.Integrations.Todoist.ApiKey}"/>
+                            </StackPanel>
+                            <StackPanel Classes="FormActions">
+                                <Button Command="{Binding ClearTodoistCommand}"
+                                        Classes="GhostAction Sm"
+                                        IsVisible="{Binding HasSavedTodoist}"
+                                        Content="{DynamicResource Lang.Common.Clear}"/>
+                                <Button Command="{Binding SaveTodoistCommand}"
+                                        Classes.PrimaryAction="{Binding IsTodoistDirty}"
+                                        Classes.SecondaryAction="{Binding !IsTodoistDirty}"
+                                        IsEnabled="{Binding TodoistApiKey, Converter={StaticResource StringIsNotNullOrEmptyConverter}}"
+                                        Content="{DynamicResource Lang.Common.Save}"/>
+                            </StackPanel>
                         </StackPanel>
-                    </Grid>
+                    </StackPanel>
                 </Border>
 
-                <!-- Web Search Integration Card -->
-                <Border Classes="IntegrationCard">
-                    <Grid RowDefinitions="Auto,Auto,Auto">
-                        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
-                            <Border Grid.Column="0" Classes="IconBadge">
-                                <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconSearch}"/></Viewbox>
-                            </Border>
-
-                            <StackPanel Grid.Column="1" Margin="16,0,12,0" VerticalAlignment="Center">
-                                <TextBlock Text="{DynamicResource Lang.Integrations.WebSearch.Title}"
-                                           FontSize="16"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <TextBlock Text="{DynamicResource Lang.Integrations.WebSearch.Subtitle}"
-                                           FontSize="12"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                            </StackPanel>
-
-                            <!-- Search works with or without a Google key, so the pill is always green and names the source. -->
-                            <Border Grid.Column="2" Classes="Pill"
-                                    Classes.Success="{Binding WebSearchBadge.IsSuccess}"
-                                    Classes.Warning="{Binding WebSearchBadge.IsWarning}"
-                                    Classes.Danger="{Binding WebSearchBadge.IsDanger}"
-                                    Classes.Accent="{Binding WebSearchBadge.IsAccent}"
-                                    HorizontalAlignment="Right">
-                                <TextBlock Text="{Binding WebSearchStatusText}"/>
-                            </Border>
-                        </Grid>
-
-                        <TextBlock Grid.Row="1"
-                                   Text="{Binding WebSearchDescription}"
-                                   FontSize="13"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   TextWrapping="Wrap"
-                                   Margin="0,16,0,0"/>
-
-                        <Grid Grid.Row="2"
-                              Margin="0,24,0,0"
-                              ColumnDefinitions="*,12,*"
-                              RowDefinitions="Auto,8,Auto,16,Auto">
-                            <TextBlock Grid.Row="0" Grid.Column="0"
-                                       Text="{DynamicResource Lang.Integrations.WebSearch.ApiKey}"
-                                       FontSize="12"
-                                       FontWeight="Medium"
-                                       Foreground="{DynamicResource TextMutedBrush}"/>
-                            <TextBox Grid.Row="2" Grid.Column="0"
-                                     Text="{Binding WebSearchApiKey, Mode=TwoWay}"
-                                     PlaceholderText="{DynamicResource Lang.Integrations.WebSearch.ApiKeyPlaceholder}"
-                                     PasswordChar="●"
-                                     Classes="IntegrationInput"
-                                     Height="40"
-                                     VerticalContentAlignment="Center"/>
-                            <TextBlock Grid.Row="0" Grid.Column="2"
-                                       Text="{DynamicResource Lang.Integrations.WebSearch.EngineId}"
-                                       FontSize="12"
-                                       FontWeight="Medium"
-                                       Foreground="{DynamicResource TextMutedBrush}"/>
-                            <TextBox Grid.Row="2" Grid.Column="2"
-                                     Text="{Binding WebSearchEngineId, Mode=TwoWay}"
-                                     PlaceholderText="{DynamicResource Lang.Integrations.WebSearch.EngineIdPlaceholder}"
-                                     Classes="IntegrationInput"
-                                     Height="40"
-                                     VerticalContentAlignment="Center"/>
-                            <StackPanel Grid.Row="4" Grid.ColumnSpan="3"
-                                        Orientation="Horizontal"
-                                        Spacing="8"
-                                        HorizontalAlignment="Right">
-                                <Button Command="{Binding SaveWebSearchCommand}"
-                                        Classes="PrimaryAction"
-                                        IsEnabled="{Binding CanSaveWebSearch}">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconSave}"/></Viewbox>
-                                        <TextBlock Text="{DynamicResource Lang.Common.Save}"/>
+                <!-- Web search -->
+                <Border Classes="Pane">
+                    <StackPanel>
+                        <Border Classes="PaneHead">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                <StackPanel Spacing="2" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="{DynamicResource Lang.Integrations.WebSearch.Title}" Classes="SectionTitle"/>
+                                        <Button Classes="InfoTip"
+                                                AutomationProperties.Name="{DynamicResource Lang.Common.MoreInfo}"
+                                                ToolTip.Tip="{Binding WebSearchDescription}">
+                                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconInfo}"/></Viewbox>
+                                        </Button>
                                     </StackPanel>
-                                </Button>
+                                    <TextBlock Text="{DynamicResource Lang.Integrations.WebSearch.Subtitle}" Classes="Secondary" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <!-- Search works with or without a Google key, so the status names the source -->
+                                <StackPanel Grid.Column="1" Classes="PaneStatus">
+                                    <Border Classes="StatusDot"
+                                            Classes.Success="{Binding WebSearchBadge.IsSuccess}"
+                                            Classes.Warning="{Binding WebSearchBadge.IsWarning}"
+                                            Classes.Danger="{Binding WebSearchBadge.IsDanger}"
+                                            Classes.Accent="{Binding WebSearchBadge.IsAccent}"/>
+                                    <TextBlock Text="{Binding WebSearchStatusText}" Classes="Secondary"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <StackPanel Classes="PaneBody">
+                            <!-- Both fields are short, so they share a row -->
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+                                <StackPanel Grid.Column="0" Classes="Field">
+                                    <TextBlock Text="{DynamicResource Lang.Integrations.WebSearch.ApiKey}" Classes="Label"/>
+                                    <TextBox Text="{Binding WebSearchApiKey, Mode=TwoWay}"
+                                             PlaceholderText="{DynamicResource Lang.Integrations.WebSearch.ApiKeyPlaceholder}"
+                                             PasswordChar="●"
+                                             AutomationProperties.Name="{DynamicResource Lang.Integrations.WebSearch.ApiKey}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Classes="Field">
+                                    <TextBlock Text="{DynamicResource Lang.Integrations.WebSearch.EngineId}" Classes="Label"/>
+                                    <TextBox Text="{Binding WebSearchEngineId, Mode=TwoWay}"
+                                             PlaceholderText="{DynamicResource Lang.Integrations.WebSearch.EngineIdPlaceholder}"
+                                             AutomationProperties.Name="{DynamicResource Lang.Integrations.WebSearch.EngineId}"/>
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel Classes="FormActions">
                                 <Button Command="{Binding ClearWebSearchCommand}"
-                                        Classes="SecondaryAction"
-                                        IsEnabled="{Binding IsWebSearchConfigured}">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconX}"/></Viewbox>
-                                        <TextBlock Text="{DynamicResource Lang.Common.Clear}"/>
-                                    </StackPanel>
-                                </Button>
+                                        Classes="GhostAction Sm"
+                                        IsVisible="{Binding IsWebSearchConfigured}"
+                                        Content="{DynamicResource Lang.Common.Clear}"/>
+                                <Button Command="{Binding SaveWebSearchCommand}"
+                                        Classes.PrimaryAction="{Binding IsWebSearchDirty}"
+                                        Classes.SecondaryAction="{Binding !IsWebSearchDirty}"
+                                        IsEnabled="{Binding CanSaveWebSearch}"
+                                        Content="{DynamicResource Lang.Common.Save}"/>
                             </StackPanel>
-                        </Grid>
-                    </Grid>
+                        </StackPanel>
+                    </StackPanel>
                 </Border>
 
                 <!-- Coding agent CLIs: the user's own signed-in Codex CLI runs delegated tasks on its plan. -->
-                <Border Classes="IntegrationCard"
+                <Border Classes="Pane"
                         DataContext="{Binding CliAgents}"
                         x:DataType="vm:CliAgentsViewModel">
-                    <Grid RowDefinitions="Auto,Auto,Auto">
-                        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
-                            <Border Grid.Column="0" Classes="IconBadge">
-                                <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconTerminal}"/></Viewbox>
-                            </Border>
-
-                            <StackPanel Grid.Column="1" Margin="16,0,12,0" VerticalAlignment="Center">
-                                <TextBlock Text="{DynamicResource Lang.Integrations.CliAgents.Title}"
-                                           FontSize="16"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <TextBlock Text="{DynamicResource Lang.Integrations.CliAgents.Subtitle}"
-                                           FontSize="12"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                            </StackPanel>
-
-                            <Button Grid.Column="2"
-                                    Classes="SecondaryAction"
-                                    Command="{Binding RefreshCommand}"
-                                    AutomationProperties.Name="{DynamicResource Lang.Integrations.CliAgents.Refresh}"
-                                    IsEnabled="{Binding !IsChecking}">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
-                                    <TextBlock Text="{DynamicResource Lang.Integrations.CliAgents.Refresh}"/>
+                    <StackPanel>
+                        <Border Classes="PaneHead">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                <StackPanel Spacing="2" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="{DynamicResource Lang.Integrations.CliAgents.Title}" Classes="SectionTitle"/>
+                                        <Button Classes="InfoTip"
+                                                AutomationProperties.Name="{DynamicResource Lang.Common.MoreInfo}"
+                                                ToolTip.Tip="{DynamicResource Lang.Integrations.CliAgents.Description}">
+                                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconInfo}"/></Viewbox>
+                                        </Button>
+                                    </StackPanel>
+                                    <TextBlock Text="{DynamicResource Lang.Integrations.CliAgents.Subtitle}" Classes="Secondary" TextWrapping="Wrap"/>
                                 </StackPanel>
-                            </Button>
-                        </Grid>
+                                <Button Grid.Column="1"
+                                        Classes="IconButton"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding RefreshCommand}"
+                                        AutomationProperties.Name="{DynamicResource Lang.Integrations.CliAgents.Refresh}"
+                                        ToolTip.Tip="{DynamicResource Lang.Integrations.CliAgents.Refresh}"
+                                        IsEnabled="{Binding !IsChecking}">
+                                    <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
+                                </Button>
+                            </Grid>
+                        </Border>
 
-                        <TextBlock Grid.Row="1"
-                                   Text="{DynamicResource Lang.Integrations.CliAgents.Description}"
-                                   FontSize="13"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   TextWrapping="Wrap"
-                                   Margin="0,16,0,0"/>
-
-                        <ItemsControl Grid.Row="2"
-                                      Margin="0,20,0,0"
-                                      ItemsSource="{Binding Agents}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Spacing="16"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
+                        <ItemsControl Classes="CliRows" ItemsSource="{Binding Agents}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:CliAgentRowViewModel">
-                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
-                                        <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
-                                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <TextBlock Text="{Binding Name}"
-                                                           FontSize="14"
-                                                           FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                                <TextBlock Text="{Binding VersionText}"
-                                                           FontFamily="{StaticResource MonoFontFamily}"
-                                                           FontSize="12"
-                                                           Foreground="{DynamicResource TextMutedBrush}"
-                                                           VerticalAlignment="Center"/>
+                                    <Border Classes="PaneRow">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <TextBlock Text="{Binding Name}" Classes="RowTitle"/>
+                                                    <TextBlock Text="{Binding VersionText}"
+                                                               Classes="Caption Mono"
+                                                               VerticalAlignment="Center"/>
+                                                    <Button Classes="InfoTip"
+                                                            AutomationProperties.Name="{DynamicResource Lang.Common.MoreInfo}"
+                                                            ToolTip.Tip="{Binding Note}">
+                                                        <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconInfo}"/></Viewbox>
+                                                    </Button>
+                                                </StackPanel>
+                                                <StackPanel Classes="PaneStatus" HorizontalAlignment="Left">
+                                                    <Border Classes="StatusDot"
+                                                            Classes.Success="{Binding Badge.IsSuccess}"
+                                                            Classes.Warning="{Binding Badge.IsWarning}"
+                                                            Classes.Danger="{Binding Badge.IsDanger}"
+                                                            Classes.Accent="{Binding Badge.IsAccent}"/>
+                                                    <TextBlock Text="{Binding StatusText}" Classes="Secondary"/>
+                                                </StackPanel>
                                             </StackPanel>
-                                            <TextBlock Text="{Binding Note}"
-                                                       FontSize="12"
-                                                       Foreground="{DynamicResource TextMutedBrush}"
-                                                       TextWrapping="Wrap"/>
-                                        </StackPanel>
 
-                                        <Border Grid.Column="1" Classes="Pill"
-                                                Classes.Success="{Binding Badge.IsSuccess}"
-                                                Classes.Warning="{Binding Badge.IsWarning}"
-                                                Classes.Danger="{Binding Badge.IsDanger}"
-                                                Classes.Accent="{Binding Badge.IsAccent}"
-                                                VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding StatusText}"/>
-                                        </Border>
-
-                                        <ToggleSwitch Grid.Column="2"
-                                                      Classes="RowToggle"
-                                                      AutomationProperties.Name="{Binding Name}"
-                                                      IsChecked="{Binding IsEnabled, Mode=TwoWay}"
-                                                      IsEnabled="{Binding CanToggle}"/>
-                                    </Grid>
+                                            <ToggleSwitch Grid.Column="1"
+                                                          Classes="RowToggle"
+                                                          AutomationProperties.Name="{Binding Name}"
+                                                          IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                                          IsEnabled="{Binding CanToggle}"/>
+                                        </Grid>
+                                    </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </Grid>
+                    </StackPanel>
                 </Border>
 
-                <!-- GitHub Integration Card -->
-                <Border Classes="IntegrationCard">
-                    <Grid RowDefinitions="Auto,Auto,Auto">
-                        <!-- Card Header -->
-                        <Grid Grid.Row="0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto" MinWidth="100"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0"
-                                    Classes="IconBadge">
-                                <Path Data="M12 .5C5.65.5.5 5.65.5 12c0 5.1 3.29 9.42 7.86 10.95.58.11.79-.25.79-.56v-2.17c-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.18 1.18.92-.26 1.91-.38 2.89-.39.98.01 1.97.13 2.89.39 2.21-1.49 3.18-1.18 3.18-1.18.63 1.58.23 2.75.11 3.04.74.8 1.19 1.83 1.19 3.08 0 4.41-2.69 5.39-5.25 5.67.41.36.78 1.06.78 2.14v3.2c0 .31.21.68.8.56A11.52 11.52 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"
-                                      Fill="{DynamicResource AccentGreenBrush}"
-                                      Width="24"
-                                      Height="24"
-                                      Stretch="Uniform"
-                                      HorizontalAlignment="Center"
-                                      VerticalAlignment="Center"/>
-                            </Border>
+                <!-- GitHub -->
+                <Border Classes="Pane">
+                    <StackPanel>
+                        <Border Classes="PaneHead">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                <StackPanel Spacing="2" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="GitHub" Classes="SectionTitle"/>
+                                        <Button Classes="InfoTip"
+                                                AutomationProperties.Name="{DynamicResource Lang.Common.MoreInfo}"
+                                                ToolTip.Tip="{Binding GitHubAppDescription}">
+                                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconInfo}"/></Viewbox>
+                                        </Button>
+                                    </StackPanel>
+                                    <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.Subtitle}" Classes="Secondary" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Classes="PaneStatus">
+                                    <Border Classes="StatusDot"
+                                            Classes.Success="{Binding GitHubBadge.IsSuccess}"
+                                            Classes.Warning="{Binding GitHubBadge.IsWarning}"
+                                            Classes.Danger="{Binding GitHubBadge.IsDanger}"
+                                            Classes.Accent="{Binding GitHubBadge.IsAccent}"/>
+                                    <TextBlock Text="{Binding GitHubAppStatusText}" Classes="Secondary"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
 
-                            <StackPanel Grid.Column="1" Margin="16,0,12,0" VerticalAlignment="Center">
-                                <TextBlock Text="GitHub"
-                                           FontSize="16"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.Subtitle}"
-                                           FontSize="12"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                            </StackPanel>
-
-                            <!-- Status Badge -->
-                            <Border Grid.Column="2" Classes="Pill"
-                                    Classes.Success="{Binding GitHubBadge.IsSuccess}"
-                                    Classes.Warning="{Binding GitHubBadge.IsWarning}"
-                                    Classes.Danger="{Binding GitHubBadge.IsDanger}"
-                                    Classes.Accent="{Binding GitHubBadge.IsAccent}"
-                                    HorizontalAlignment="Right">
-                                <TextBlock Text="{Binding GitHubAppStatusText}"/>
-                            </Border>
-                        </Grid>
-
-                        <!-- Description -->
-                        <TextBlock Grid.Row="1"
-                                   Text="{Binding GitHubAppDescription}"
-                                   FontSize="13"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   TextWrapping="Wrap"
-                                   Margin="0,16,0,0"/>
-
-                        <!-- GitHub Configuration -->
-                        <StackPanel Grid.Row="2" Margin="0,24,0,0" Spacing="16">
-                            <Border Background="{DynamicResource SurfaceBgBrush}"
-                                    BorderBrush="{DynamicResource BorderSubtleBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="8"
-                                    Padding="12">
-                                <StackPanel Spacing="6">
-                                    <TextBlock Text="{Binding GitHubConnectionStatusText}"
-                                               FontSize="12"
-                                               FontWeight="SemiBold"
-                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                    <TextBlock Text="{Binding GitHubConnectionDetailText}"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource TextMutedBrush}"
-                                               TextWrapping="Wrap"/>
+                        <StackPanel Classes="PaneBody">
+                            <Border Classes="Note">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="{Binding GitHubConnectionStatusText}" FontWeight="Medium"/>
+                                    <TextBlock Text="{Binding GitHubConnectionDetailText}"/>
                                     <TextBlock Text="{Binding GitHubRepositoryPreviewText}"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource TextSecondaryBrush}"
-                                               TextWrapping="Wrap"
                                                IsVisible="{Binding HasGitHubRepositoryPreview}"/>
                                 </StackPanel>
                             </Border>
 
-                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                                <Button Command="{Binding ConnectGitHubCommand}"
-                                        Classes="PrimaryAction"
-                                        IsEnabled="{Binding CanConnectGitHub}">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Path Data="M12 .5C5.65.5.5 5.65.5 12c0 5.1 3.29 9.42 7.86 10.95.58.11.79-.25.79-.56v-2.17c-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.18 1.18.92-.26 1.91-.38 2.89-.39.98.01 1.97.13 2.89.39 2.21-1.49 3.18-1.18 3.18-1.18.63 1.58.23 2.75.11 3.04.74.8 1.19 1.83 1.19 3.08 0 4.41-2.69 5.39-5.25 5.67.41.36.78 1.06.78 2.14v3.2c0 .31.21.68.8.56A11.52 11.52 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"
-                                              Width="16"
-                                              Height="16"
-                                              Stretch="Uniform"/>
-                                        <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.Connect}"/>
-                                    </StackPanel>
-                                </Button>
-
+                            <StackPanel Classes="FormActions">
+                                <Button Command="{Binding ToggleGitHubAppAdvancedSettingsCommand}"
+                                        Classes="GhostAction"
+                                        Content="{DynamicResource Lang.Integrations.GitHub.Advanced}"/>
                                 <Button Command="{Binding ListGitHubAppRepositoriesCommand}"
                                         Classes="SecondaryAction"
-                                        IsEnabled="{Binding CanListGitHubAppRepositories}">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
-                                        <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.RefreshRepositories}"/>
-                                    </StackPanel>
-                                </Button>
-
-                                <Button Command="{Binding ToggleGitHubAppAdvancedSettingsCommand}"
-                                        Classes="SecondaryAction">
-                                    <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.Advanced}"/>
-                                </Button>
+                                        IsEnabled="{Binding CanListGitHubAppRepositories}"
+                                        Content="{DynamicResource Lang.Integrations.GitHub.RefreshRepositories}"/>
+                                <Button Command="{Binding ConnectGitHubCommand}"
+                                        Classes="SecondaryAction"
+                                        IsEnabled="{Binding CanConnectGitHub}"
+                                        Content="{DynamicResource Lang.Integrations.GitHub.Connect}"/>
                             </StackPanel>
 
                             <StackPanel Spacing="16"
                                         IsVisible="{Binding ShowGitHubAppAdvancedSettings}">
-                            <StackPanel Spacing="10"
-                                        IsVisible="{Binding HasGitHubAppSetupSteps}">
-                                <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.SetupChecklist}"
-                                           FontSize="12"
-                                           FontFamily="{StaticResource MonoFontFamily}"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource AccentGreenBrush}"/>
-                                <ItemsControl ItemsSource="{Binding GitHubAppSetupSteps}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:RuntimeDiagnosticItemViewModel">
-                                            <Grid ColumnDefinitions="Auto,*,Auto"
-                                                  ColumnSpacing="10"
-                                                  Margin="0,0,0,8">
-                                                <Ellipse Grid.Column="0"
-                                                         Width="8"
-                                                         Height="8"
-                                                         Fill="{DynamicResource AccentGreenBrush}"
-                                                         VerticalAlignment="Center"
-                                                         IsVisible="{Binding IsReady}"/>
-                                                <Ellipse Grid.Column="0"
-                                                         Width="8"
-                                                         Height="8"
-                                                         Fill="{DynamicResource AccentOrangeBrush}"
-                                                         VerticalAlignment="Center"
-                                                         IsVisible="{Binding IsWarning}"/>
-                                                <Ellipse Grid.Column="0"
-                                                         Width="8"
-                                                         Height="8"
-                                                         Fill="{DynamicResource AccentErrorBrush}"
-                                                         VerticalAlignment="Center"
-                                                         IsVisible="{Binding IsBlocked}"/>
-                                                <StackPanel Grid.Column="1" Spacing="2">
-                                                    <TextBlock Text="{Binding Name}"
-                                                               FontSize="12"
-                                                               FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                                    <TextBlock Text="{Binding Detail}"
-                                                               FontSize="11"
-                                                               Foreground="{DynamicResource TextMutedBrush}"
-                                                               TextWrapping="Wrap"/>
-                                                </StackPanel>
-                                                <TextBlock Grid.Column="2"
-                                                           Text="{Binding Value}"
-                                                           FontSize="11"
-                                                           FontFamily="{StaticResource MonoFontFamily}"
-                                                           Foreground="{DynamicResource TextSecondaryBrush}"
-                                                           TextWrapping="Wrap"
-                                                           MaxWidth="120"
-                                                           TextAlignment="Right"
-                                                           VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
-                                <StackPanel Grid.Column="0" Spacing="8">
-                                    <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.AppId}"
-                                               FontSize="12"
-                                               FontWeight="Medium"
-                                               Foreground="{DynamicResource TextMutedBrush}"/>
-                                    <TextBox Text="{Binding GitHubAppId, Mode=TwoWay}"
-                                             PlaceholderText="123456"
-                                             Classes="IntegrationInput"
-                                             Height="40"
-                                             VerticalContentAlignment="Center"/>
+                                <StackPanel Spacing="8"
+                                            IsVisible="{Binding HasGitHubAppSetupSteps}">
+                                    <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.SetupChecklist}" Classes="Label"/>
+                                    <ItemsControl ItemsSource="{Binding GitHubAppSetupSteps}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:RuntimeDiagnosticItemViewModel">
+                                                <Grid ColumnDefinitions="Auto,*,Auto"
+                                                      ColumnSpacing="10"
+                                                      Margin="0,0,0,8">
+                                                    <Ellipse Grid.Column="0"
+                                                             Width="6"
+                                                             Height="6"
+                                                             Fill="{DynamicResource AccentGreenBrush}"
+                                                             VerticalAlignment="Center"
+                                                             IsVisible="{Binding IsReady}"/>
+                                                    <Ellipse Grid.Column="0"
+                                                             Width="6"
+                                                             Height="6"
+                                                             Fill="{DynamicResource AccentOrangeBrush}"
+                                                             VerticalAlignment="Center"
+                                                             IsVisible="{Binding IsWarning}"/>
+                                                    <Ellipse Grid.Column="0"
+                                                             Width="6"
+                                                             Height="6"
+                                                             Fill="{DynamicResource AccentErrorBrush}"
+                                                             VerticalAlignment="Center"
+                                                             IsVisible="{Binding IsBlocked}"/>
+                                                    <StackPanel Grid.Column="1" Spacing="2">
+                                                        <TextBlock Text="{Binding Name}" Classes="RowTitle"/>
+                                                        <TextBlock Text="{Binding Detail}" Classes="Secondary" TextWrapping="Wrap"/>
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding Value}"
+                                                               Classes="Caption Mono"
+                                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                                               MaxWidth="120"
+                                                               TextAlignment="Right"
+                                                               VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
                                 </StackPanel>
 
-                                <StackPanel Grid.Column="1" Spacing="8">
-                                    <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.InstallationId}"
-                                               FontSize="12"
-                                               FontWeight="Medium"
-                                               Foreground="{DynamicResource TextMutedBrush}"/>
-                                    <TextBox Text="{Binding GitHubInstallationId, Mode=TwoWay}"
-                                             PlaceholderText="987654"
-                                             Classes="IntegrationInput"
-                                             Height="40"
-                                             VerticalContentAlignment="Center"/>
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+                                    <StackPanel Grid.Column="0" Classes="Field">
+                                        <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.AppId}" Classes="Label"/>
+                                        <TextBox Text="{Binding GitHubAppId, Mode=TwoWay}"
+                                                 PlaceholderText="123456"
+                                                 AutomationProperties.Name="{DynamicResource Lang.Integrations.GitHub.AppId}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Classes="Field">
+                                        <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.InstallationId}" Classes="Label"/>
+                                        <TextBox Text="{Binding GitHubInstallationId, Mode=TwoWay}"
+                                                 PlaceholderText="987654"
+                                                 AutomationProperties.Name="{DynamicResource Lang.Integrations.GitHub.InstallationId}"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <StackPanel Classes="Field">
+                                    <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.PrivateKeyPath}" Classes="Label"/>
+                                    <TextBox Text="{Binding GitHubPrivateKeyPath, Mode=TwoWay}"
+                                             PlaceholderText="C:\secure\kam-github-app.pem"
+                                             AutomationProperties.Name="{DynamicResource Lang.Integrations.GitHub.PrivateKeyPath}"/>
+                                    <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.PrivateKeyHint}" Classes="Secondary" TextWrapping="Wrap"/>
                                 </StackPanel>
-                            </Grid>
 
-                            <StackPanel Spacing="8">
-                                <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.PrivateKeyPath}"
-                                           FontSize="12"
-                                           FontWeight="Medium"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                                <TextBox Text="{Binding GitHubPrivateKeyPath, Mode=TwoWay}"
-                                         PlaceholderText="C:\secure\kam-github-app.pem"
-                                         Classes="IntegrationInput"
-                                         Height="40"
-                                         VerticalContentAlignment="Center"/>
-                                <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.PrivateKeyHint}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           TextWrapping="Wrap"/>
-                            </StackPanel>
-
-                            <!-- Buttons Stack -->
-                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                                <!-- Save Button -->
-                                <Button Command="{Binding SaveGitHubAppCommand}"
-                                        Classes="PrimaryAction">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconSave}"/></Viewbox>
-                                        <TextBlock Text="{DynamicResource Lang.Common.Save}"/>
-                                    </StackPanel>
-                                </Button>
-
-                                <Button Command="{Binding TestGitHubAppConnectionCommand}"
-                                        Classes="SecondaryAction"
-                                        IsEnabled="{Binding CanTestGitHubAppConnection}">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconCheck}"/></Viewbox>
-                                        <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.TestConnection}"/>
-                                    </StackPanel>
-                                </Button>
-
-                                <Button Command="{Binding ListGitHubAppRepositoriesCommand}"
-                                        Classes="SecondaryAction"
-                                        IsEnabled="{Binding CanListGitHubAppRepositories}">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconFolder}"/></Viewbox>
-                                        <TextBlock Text="{DynamicResource Lang.Integrations.GitHub.ListRepositories}"/>
-                                    </StackPanel>
-                                </Button>
-
-                                <!-- Clear Button -->
-                                <Button Command="{Binding ClearGitHubAppCommand}"
-                                        Classes="SecondaryAction"
-                                        IsEnabled="{Binding IsGitHubAppConfigured}">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconX}"/></Viewbox>
-                                        <TextBlock Text="{DynamicResource Lang.Common.Clear}"/>
-                                    </StackPanel>
-                                </Button>
-                            </StackPanel>
+                                <StackPanel Classes="FormActions">
+                                    <Button Command="{Binding ClearGitHubAppCommand}"
+                                            Classes="GhostAction Sm"
+                                            IsVisible="{Binding HasSavedGitHubApp}"
+                                            Content="{DynamicResource Lang.Common.Clear}"/>
+                                    <Button Command="{Binding ListGitHubAppRepositoriesCommand}"
+                                            Classes="SecondaryAction"
+                                            IsEnabled="{Binding CanListGitHubAppRepositories}"
+                                            Content="{DynamicResource Lang.Integrations.GitHub.ListRepositories}"/>
+                                    <Button Command="{Binding TestGitHubAppConnectionCommand}"
+                                            Classes="SecondaryAction"
+                                            IsEnabled="{Binding CanTestGitHubAppConnection}"
+                                            Content="{DynamicResource Lang.Integrations.GitHub.TestConnection}"/>
+                                    <Button Command="{Binding SaveGitHubAppCommand}"
+                                            Classes.PrimaryAction="{Binding IsGitHubAppDirty}"
+                                            Classes.SecondaryAction="{Binding !IsGitHubAppDirty}"
+                                            Content="{DynamicResource Lang.Common.Save}"/>
+                                </StackPanel>
                             </StackPanel>
                         </StackPanel>
-                    </Grid>
+                    </StackPanel>
                 </Border>
 
-                <!-- Email (SMTP) Integration Card -->
-                <Border Classes="IntegrationCard">
-                    <Grid RowDefinitions="Auto,Auto,Auto">
-                        <!-- Card Header -->
-                        <Grid Grid.Row="0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto" MinWidth="100"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0"
-                                    Classes="IconBadge">
-                                <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconMail}"/></Viewbox>
-                            </Border>
-                            
-                            <StackPanel Grid.Column="1" Margin="16,0,12,0" VerticalAlignment="Center">
-                                <TextBlock Text="{DynamicResource Lang.Integrations.Email.Title}"
-                                           FontSize="16"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <TextBlock Text="{DynamicResource Lang.Integrations.Email.Subtitle}"
-                                           FontSize="12"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                            </StackPanel>
-                            
-                            <!-- Status Badge -->
-                            <Border Grid.Column="2" Classes="Pill"
-                                    Classes.Success="{Binding EmailBadge.IsSuccess}"
-                                    Classes.Warning="{Binding EmailBadge.IsWarning}"
-                                    Classes.Danger="{Binding EmailBadge.IsDanger}"
-                                    Classes.Accent="{Binding EmailBadge.IsAccent}"
-                                    HorizontalAlignment="Right">
-                                <TextBlock Text="{Binding EmailStatusText}"/>
-                            </Border>
-                        </Grid>
-                        
-                        <!-- Description -->
-                        <TextBlock Grid.Row="1" 
-                                   Text="{Binding EmailDescription}"
-                                   FontSize="13"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   TextWrapping="Wrap"
-                                   Margin="0,16,0,0"/>
-                        
-                        <!-- Email Configuration -->
-                        <StackPanel Grid.Row="2" Margin="0,24,0,0" Spacing="16">
-                            
-                            <!-- Provider Selection -->
-                            <Grid ColumnDefinitions="Auto,*">
-                                <TextBlock Grid.Column="0" 
-                                           Text="{DynamicResource Lang.Integrations.Email.Provider}"
-                                           FontSize="12"
-                                           FontWeight="Medium"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           VerticalAlignment="Center"
-                                           Margin="0,0,16,0"/>
-                                <ComboBox Grid.Column="1"
-                                          ItemsSource="{Binding EmailProviderOptions}"
-                                          SelectedItem="{Binding SelectedEmailProviderOption, Mode=TwoWay}"
-                                          HorizontalAlignment="Stretch"/>
+                <!-- Email (SMTP) -->
+                <Border Classes="Pane">
+                    <StackPanel>
+                        <Border Classes="PaneHead">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                <StackPanel Spacing="2" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="{DynamicResource Lang.Integrations.Email.Title}" Classes="SectionTitle"/>
+                                        <Button Classes="InfoTip"
+                                                AutomationProperties.Name="{DynamicResource Lang.Common.MoreInfo}"
+                                                ToolTip.Tip="{Binding EmailDescription}">
+                                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconInfo}"/></Viewbox>
+                                        </Button>
+                                    </StackPanel>
+                                    <TextBlock Text="{DynamicResource Lang.Integrations.Email.Subtitle}" Classes="Secondary" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Classes="PaneStatus">
+                                    <Border Classes="StatusDot"
+                                            Classes.Success="{Binding EmailBadge.IsSuccess}"
+                                            Classes.Warning="{Binding EmailBadge.IsWarning}"
+                                            Classes.Danger="{Binding EmailBadge.IsDanger}"
+                                            Classes.Accent="{Binding EmailBadge.IsAccent}"/>
+                                    <TextBlock Text="{Binding EmailStatusText}" Classes="Secondary"/>
+                                </StackPanel>
                             </Grid>
+                        </Border>
 
-                            <!-- SMTP Username / Email -->
-                            <StackPanel Spacing="8">
-                                <TextBlock Text="{DynamicResource Lang.Integrations.Email.Username}"
-                                           FontSize="12"
-                                           FontWeight="Medium"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                        <StackPanel Classes="PaneBody">
+                            <StackPanel Classes="Field">
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Email.Provider}" Classes="Label"/>
+                                <ComboBox ItemsSource="{Binding EmailProviderOptions}"
+                                          SelectedItem="{Binding SelectedEmailProviderOption, Mode=TwoWay}"
+                                          HorizontalAlignment="Stretch"
+                                          AutomationProperties.Name="{DynamicResource Lang.Integrations.Email.Provider}"/>
+                            </StackPanel>
+
+                            <StackPanel Classes="Field">
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Email.Username}" Classes="Label"/>
                                 <TextBox Text="{Binding SmtpUsername, Mode=TwoWay}"
                                          PlaceholderText="your.email@gmail.com"
-                                         Classes="IntegrationInput"
-                                         Height="40"
-                                         VerticalContentAlignment="Center"/>
+                                         AutomationProperties.Name="{DynamicResource Lang.Integrations.Email.Username}"/>
                             </StackPanel>
 
-                            <!-- SMTP Password -->
-                            <StackPanel Spacing="8">
-                                <TextBlock Text="{DynamicResource Lang.Integrations.Email.Password}"
-                                           FontSize="12"
-                                           FontWeight="Medium"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                            <StackPanel Classes="Field">
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Email.Password}" Classes="Label"/>
                                 <TextBox Text="{Binding SmtpPassword, Mode=TwoWay}"
                                          PlaceholderText="{DynamicResource Lang.Integrations.Email.PasswordPlaceholder}"
                                          PasswordChar="●"
-                                         Classes="IntegrationInput"
-                                         Height="40"
-                                         VerticalContentAlignment="Center"/>
+                                         AutomationProperties.Name="{DynamicResource Lang.Integrations.Email.Password}"/>
                                 <TextBlock Text="{DynamicResource Lang.Integrations.Email.GmailTip}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           Classes="Secondary"
                                            TextWrapping="Wrap"
                                            IsVisible="{Binding EmailProvider, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Gmail}"/>
                             </StackPanel>
 
-                            <!-- Sender Email (Optional) -->
-                            <StackPanel Spacing="8">
-                                <TextBlock Text="{DynamicResource Lang.Integrations.Email.Sender}"
-                                           FontSize="12"
-                                           FontWeight="Medium"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                            <StackPanel Classes="Field">
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Email.Sender}" Classes="Label"/>
                                 <TextBox Text="{Binding SenderEmail, Mode=TwoWay}"
                                          PlaceholderText="{DynamicResource Lang.Integrations.Email.SenderPlaceholder}"
-                                         Classes="IntegrationInput"
-                                         Height="40"
-                                         VerticalContentAlignment="Center"/>
+                                         AutomationProperties.Name="{DynamicResource Lang.Integrations.Email.Sender}"/>
                             </StackPanel>
 
-                            <!-- Advanced Settings Toggle -->
-                            <ToggleButton IsChecked="{Binding ShowEmailAdvanced, Mode=TwoWay}"
-                                          Content="{DynamicResource Lang.Integrations.Email.Advanced}"
-                                          FontSize="12"
-                                          Foreground="{DynamicResource AccentBrush}"
-                                          HorizontalAlignment="Left"
-                                          Background="Transparent"
-                                          BorderThickness="0"/>
+                            <ToggleButton Classes="Disclosure"
+                                          IsChecked="{Binding ShowEmailAdvanced, Mode=TwoWay}"
+                                          HorizontalAlignment="Left">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Viewbox Classes="Chevron" Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconChevronDown}"/></Viewbox>
+                                    <TextBlock Text="{DynamicResource Lang.Integrations.Email.Advanced}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </ToggleButton>
 
-                            <!-- Advanced Settings -->
                             <StackPanel IsVisible="{Binding ShowEmailAdvanced}" Spacing="16">
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                                    <StackPanel Grid.Column="0" Spacing="8">
-                                        <TextBlock Text="{DynamicResource Lang.Integrations.Email.SmtpHost}"
-                                                   FontSize="12"
-                                                   FontWeight="Medium"
-                                                   Foreground="{DynamicResource TextMutedBrush}"/>
+                                    <StackPanel Grid.Column="0" Classes="Field">
+                                        <TextBlock Text="{DynamicResource Lang.Integrations.Email.SmtpHost}" Classes="Label"/>
                                         <TextBox Text="{Binding SmtpHost, Mode=TwoWay}"
                                                  PlaceholderText="smtp.gmail.com"
-                                                 Classes="IntegrationInput"
-                                                 Height="40"
-                                                 VerticalContentAlignment="Center"/>
+                                                 AutomationProperties.Name="{DynamicResource Lang.Integrations.Email.SmtpHost}"/>
                                     </StackPanel>
-                                    <StackPanel Grid.Column="1" Spacing="8" Width="100">
-                                        <TextBlock Text="{DynamicResource Lang.Integrations.Email.Port}"
-                                                   FontSize="12"
-                                                   FontWeight="Medium"
-                                                   Foreground="{DynamicResource TextMutedBrush}"/>
+                                    <StackPanel Grid.Column="1" Classes="Field" Width="100">
+                                        <TextBlock Text="{DynamicResource Lang.Integrations.Email.Port}" Classes="Label"/>
                                         <TextBox Text="{Binding SmtpPort, Mode=TwoWay}"
                                                  PlaceholderText="587"
-                                                 Classes="IntegrationInput"
-                                                 Height="40"
-                                                 VerticalContentAlignment="Center"/>
+                                                 AutomationProperties.Name="{DynamicResource Lang.Integrations.Email.Port}"/>
                                     </StackPanel>
                                 </Grid>
 
-                                <!-- SSL Toggle -->
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <TextBlock Grid.Column="0"
-                                               Text="{DynamicResource Lang.Integrations.Email.EnableSsl}"
-                                               FontSize="12"
-                                               FontWeight="Medium"
-                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <TextBlock Text="{DynamicResource Lang.Integrations.Email.EnableSsl}"
+                                               Classes="RowTitle"
                                                VerticalAlignment="Center"/>
                                     <ToggleSwitch Grid.Column="1"
-                                                  IsChecked="{Binding SmtpEnableSsl, Mode=TwoWay}"
-                                                  OnContent=""
-                                                  OffContent=""/>
+                                                  Classes="RowToggle"
+                                                  AutomationProperties.Name="{DynamicResource Lang.Integrations.Email.EnableSsl}"
+                                                  IsChecked="{Binding SmtpEnableSsl, Mode=TwoWay}"/>
                                 </Grid>
                             </StackPanel>
-                            
-                            <!-- Buttons Stack -->
-                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                                <!-- Save Button -->
-                                <Button Command="{Binding SaveEmailCommand}"
-                                        Classes="PrimaryAction">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconSave}"/></Viewbox>
-                                        <TextBlock Text="{DynamicResource Lang.Common.Save}"/>
-                                    </StackPanel>
-                                </Button>
-                                
-                                <!-- Clear Button -->
+
+                            <StackPanel Classes="FormActions">
                                 <Button Command="{Binding ClearEmailCommand}"
-                                        Classes="SecondaryAction">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconX}"/></Viewbox>
-                                        <TextBlock Text="{DynamicResource Lang.Common.Clear}"/>
-                                    </StackPanel>
-                                </Button>
+                                        Classes="GhostAction Sm"
+                                        IsVisible="{Binding HasSavedEmail}"
+                                        Content="{DynamicResource Lang.Common.Clear}"/>
+                                <Button Command="{Binding SaveEmailCommand}"
+                                        Classes.PrimaryAction="{Binding IsEmailDirty}"
+                                        Classes.SecondaryAction="{Binding !IsEmailDirty}"
+                                        Content="{DynamicResource Lang.Common.Save}"/>
                             </StackPanel>
                         </StackPanel>
-                    </Grid>
+                    </StackPanel>
                 </Border>
 
-                <!-- SMS (Twilio) Integration Card -->
-                <Border Classes="IntegrationCard">
-                    <Grid RowDefinitions="Auto,Auto,Auto">
-                        <!-- Card Header -->
-                        <Grid Grid.Row="0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto" MinWidth="100"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0"
-                                    Classes="IconBadge">
-                                <Viewbox Width="20" Height="20"><Path Classes="Icon" Data="{StaticResource IconSmartphone}"/></Viewbox>
-                            </Border>
-                            
-                            <StackPanel Grid.Column="1" Margin="16,0,12,0" VerticalAlignment="Center">
-                                <TextBlock Text="SMS (Twilio)"
-                                           FontSize="16"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <TextBlock Text="{DynamicResource Lang.Integrations.Sms.Subtitle}"
-                                           FontSize="12"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
-                            </StackPanel>
-                            
-                            <!-- Status Badge -->
-                            <Border Grid.Column="2" Classes="Pill"
-                                    Classes.Success="{Binding SmsBadge.IsSuccess}"
-                                    Classes.Warning="{Binding SmsBadge.IsWarning}"
-                                    Classes.Danger="{Binding SmsBadge.IsDanger}"
-                                    Classes.Accent="{Binding SmsBadge.IsAccent}"
-                                    HorizontalAlignment="Right">
-                                <TextBlock Text="{Binding SmsStatusText}"/>
-                            </Border>
-                        </Grid>
-                        
-                        <!-- Description -->
-                        <TextBlock Grid.Row="1" 
-                                   Text="{Binding SmsDescription}"
-                                   FontSize="13"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   TextWrapping="Wrap"
-                                   Margin="0,16,0,0"/>
-                        
-                        <!-- Twilio Configuration -->
-                        <StackPanel Grid.Row="2" Margin="0,24,0,0" Spacing="16">
-                            
-                            <!-- Account SID -->
-                            <StackPanel Spacing="8">
-                                <TextBlock Text="{DynamicResource Lang.Integrations.Sms.AccountSid}"
-                                           FontSize="12"
-                                           FontWeight="Medium"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                <!-- SMS (Twilio) -->
+                <Border Classes="Pane">
+                    <StackPanel>
+                        <Border Classes="PaneHead">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                <StackPanel Spacing="2" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="SMS (Twilio)" Classes="SectionTitle"/>
+                                        <Button Classes="InfoTip"
+                                                AutomationProperties.Name="{DynamicResource Lang.Common.MoreInfo}"
+                                                ToolTip.Tip="{Binding SmsDescription}">
+                                            <Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconInfo}"/></Viewbox>
+                                        </Button>
+                                    </StackPanel>
+                                    <TextBlock Text="{DynamicResource Lang.Integrations.Sms.Subtitle}" Classes="Secondary" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Classes="PaneStatus">
+                                    <Border Classes="StatusDot"
+                                            Classes.Success="{Binding SmsBadge.IsSuccess}"
+                                            Classes.Warning="{Binding SmsBadge.IsWarning}"
+                                            Classes.Danger="{Binding SmsBadge.IsDanger}"
+                                            Classes.Accent="{Binding SmsBadge.IsAccent}"/>
+                                    <TextBlock Text="{Binding SmsStatusText}" Classes="Secondary"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <StackPanel Classes="PaneBody">
+                            <StackPanel Classes="Field">
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Sms.AccountSid}" Classes="Label"/>
                                 <TextBox Text="{Binding TwilioAccountSid, Mode=TwoWay}"
                                          PlaceholderText="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                                         Classes="IntegrationInput"
-                                         Height="40"
-                                         VerticalContentAlignment="Center"/>
+                                         AutomationProperties.Name="{DynamicResource Lang.Integrations.Sms.AccountSid}"/>
                             </StackPanel>
 
-                            <!-- Auth Token -->
-                            <StackPanel Spacing="8">
-                                <TextBlock Text="{DynamicResource Lang.Integrations.Sms.AuthToken}"
-                                           FontSize="12"
-                                           FontWeight="Medium"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                            <StackPanel Classes="Field">
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Sms.AuthToken}" Classes="Label"/>
                                 <TextBox Text="{Binding TwilioAuthToken, Mode=TwoWay}"
                                          PlaceholderText="{DynamicResource Lang.Integrations.Sms.AuthTokenPlaceholder}"
                                          PasswordChar="●"
-                                         Classes="IntegrationInput"
-                                         Height="40"
-                                         VerticalContentAlignment="Center"/>
+                                         AutomationProperties.Name="{DynamicResource Lang.Integrations.Sms.AuthToken}"/>
                             </StackPanel>
 
-                            <!-- Phone Number -->
-                            <StackPanel Spacing="8">
-                                <TextBlock Text="{DynamicResource Lang.Integrations.Sms.PhoneNumber}"
-                                           FontSize="12"
-                                           FontWeight="Medium"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                            <StackPanel Classes="Field">
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Sms.PhoneNumber}" Classes="Label"/>
                                 <TextBox Text="{Binding TwilioPhoneNumber, Mode=TwoWay}"
                                          PlaceholderText="+1234567890"
-                                         Classes="IntegrationInput"
-                                         Height="40"
-                                         VerticalContentAlignment="Center"/>
-                                <TextBlock Text="{DynamicResource Lang.Integrations.Sms.PhoneNumberFormat}"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                                         AutomationProperties.Name="{DynamicResource Lang.Integrations.Sms.PhoneNumber}"/>
+                                <TextBlock Text="{DynamicResource Lang.Integrations.Sms.PhoneNumberFormat}" Classes="Secondary"/>
                             </StackPanel>
-                            
-                            <!-- Buttons Stack -->
-                            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                                <!-- Save Button -->
-                                <Button Command="{Binding SaveSmsCommand}"
-                                        Classes="PrimaryAction">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconSave}"/></Viewbox>
-                                        <TextBlock Text="{DynamicResource Lang.Common.Save}"/>
-                                    </StackPanel>
-                                </Button>
-                                
-                                <!-- Clear Button -->
+
+                            <StackPanel Classes="FormActions">
                                 <Button Command="{Binding ClearSmsCommand}"
-                                        Classes="SecondaryAction">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconX}"/></Viewbox>
-                                        <TextBlock Text="{DynamicResource Lang.Common.Clear}"/>
-                                    </StackPanel>
-                                </Button>
+                                        Classes="GhostAction Sm"
+                                        IsVisible="{Binding HasSavedSms}"
+                                        Content="{DynamicResource Lang.Common.Clear}"/>
+                                <Button Command="{Binding SaveSmsCommand}"
+                                        Classes.PrimaryAction="{Binding IsSmsDirty}"
+                                        Classes.SecondaryAction="{Binding !IsSmsDirty}"
+                                        Content="{DynamicResource Lang.Common.Save}"/>
                             </StackPanel>
                         </StackPanel>
-                    </Grid>
-                </Border>
-                
-                <!-- Info Card -->
-                <Border Classes="InfoCard" Margin="0,16,0,0">
-                    <Grid ColumnDefinitions="Auto,*">
-                        <Viewbox Width="20" Height="20" Grid.Column="0" VerticalAlignment="Top" Margin="0,0,12,0"><Path Classes="Icon Accent" Data="{StaticResource IconInfo}"/></Viewbox>
-                        <TextBlock Grid.Column="1"
-                                   Text="{DynamicResource Lang.Integrations.Info}"
-                                   FontSize="13"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   TextWrapping="Wrap"/>
-                    </Grid>
+                    </StackPanel>
                 </Border>
             </StackPanel>
         </Grid>
     </ScrollViewer>
-    
-    <UserControl.Styles>
-        <!-- Integration Card Style -->
-        <Style Selector="Border.IntegrationCard">
-            <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="20"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="BorderBrush" Duration="0:0:0.3"/>
-                    <BrushTransition Property="Background" Duration="0:0:0.3"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        
-        <Style Selector="Border.IntegrationCard:pointerover">
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
-        </Style>
-        
-        <!-- Integration Input Style -->
-        <Style Selector="TextBox.IntegrationInput">
-            <Setter Property="Padding" Value="12,0"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        </Style>
-        
-        <!-- Info Card Style -->
-        <Style Selector="Border.InfoCard">
-            <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16"/>
-        </Style>
-    </UserControl.Styles>
 </UserControl>

@@ -1,6 +1,7 @@
 using FluentAssertions;
 using SmartVoiceAgent.Ui.Services;
 using SmartVoiceAgent.Ui.ViewModels.PageModels;
+using System.Globalization;
 
 namespace SmartVoiceAgent.Tests.Ui.ViewModels;
 
@@ -19,8 +20,8 @@ public sealed class LoopsViewModelTests : IDisposable
         var viewModel = new LoopsViewModel(settings);
 
         viewModel.MaxIterationsText.Should().Be("24");
-        viewModel.MaxToolResultCharactersText.Should().Be("16000");
-        viewModel.ContextTokenBudgetText.Should().Be("64000");
+        viewModel.MaxToolResultCharactersText.Should().Be(Grouped(16000));
+        viewModel.ContextTokenBudgetText.Should().Be(Grouped(64000));
         viewModel.Explanation.Should().Contain("think");
     }
 
@@ -72,7 +73,7 @@ public sealed class LoopsViewModelTests : IDisposable
 
         viewModel.MaxToolResultCharactersText = typed;
 
-        viewModel.MaxToolResultCharactersText.Should().Be(saved);
+        viewModel.MaxToolResultCharactersText.Should().Be(Grouped(int.Parse(saved)));
         settings.AgentMaxToolResultCharacters.Should().Be(int.Parse(saved));
     }
 
@@ -87,8 +88,20 @@ public sealed class LoopsViewModelTests : IDisposable
 
         viewModel.ContextTokenBudgetText = typed;
 
-        viewModel.ContextTokenBudgetText.Should().Be(saved);
+        viewModel.ContextTokenBudgetText.Should().Be(Grouped(int.Parse(saved)));
         settings.AgentContextTokenBudget.Should().Be(int.Parse(saved));
+    }
+
+    [Fact]
+    public void Limits_ShowAndAcceptThousandsSeparators()
+    {
+        using var settings = new JsonSettingsService(_settingsDirectory);
+        var viewModel = new LoopsViewModel(settings);
+
+        viewModel.MaxToolResultCharactersText = Grouped(30000);
+
+        settings.AgentMaxToolResultCharacters.Should().Be(30000);
+        viewModel.MaxToolResultCharactersText.Should().Be(Grouped(30000));
     }
 
     [Fact]
@@ -116,12 +129,15 @@ public sealed class LoopsViewModelTests : IDisposable
         viewModel.ResetCommand.Execute(null);
 
         viewModel.MaxIterationsText.Should().Be("24");
-        viewModel.MaxToolResultCharactersText.Should().Be("16000");
-        viewModel.ContextTokenBudgetText.Should().Be("64000");
+        viewModel.MaxToolResultCharactersText.Should().Be(Grouped(16000));
+        viewModel.ContextTokenBudgetText.Should().Be(Grouped(64000));
         settings.AgentMaxIterations.Should().Be(24);
         settings.AgentMaxToolResultCharacters.Should().Be(16000);
         settings.AgentContextTokenBudget.Should().Be(64000);
     }
+
+    // The page shows numbers with the current culture's thousands separator, such as 16,000 or 16.000.
+    private static string Grouped(int value) => value.ToString("N0", CultureInfo.CurrentCulture);
 
     public void Dispose()
     {
