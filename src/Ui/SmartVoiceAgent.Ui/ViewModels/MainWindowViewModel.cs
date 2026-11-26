@@ -941,6 +941,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             InitializeBuild();
             InitializeTaskContext();
             InitializeAppearance();
+            InitializePaneWidths();
             StopAgentTurnCommand = ReactiveCommand.Create(StopAgentTurn);
             ClearQueuedAgentMessagesCommand = ReactiveCommand.Create(ClearQueuedAgentMessages);
             InitializeChatExperience();

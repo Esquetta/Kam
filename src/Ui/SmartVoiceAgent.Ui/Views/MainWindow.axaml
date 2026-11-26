@@ -35,8 +35,9 @@
 		<!-- ========================= -->
 
 		<!-- Rail (Kam Studio): 232 px panel with a hairline on the right; icons only below 760 px -->
-		<Style Selector="Border.Sidebar">
-			<Setter Property="Width" Value="232"/>
+		<!-- The rail is as wide as the user dragged it (232 px by default); compact it is 60 px -->
+		<Style Selector="Border.Sidebar" x:DataType="vm:MainWindowViewModel">
+			<Setter Property="Width" Value="{Binding RailWidth}"/>
 			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
 			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
 			<Setter Property="BorderThickness" Value="0,0,1,0"/>
@@ -679,6 +680,16 @@
 		<!-- ========================= -->
 		<!-- RAIL: Work, the Build ladder, Manage, then the spend meter and the theme toggle -->
 		<!-- ========================= -->
+		<!-- Drag the rail's right edge to resize it; a double click restores 232 px -->
+		<controls:PaneResizeHandle Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
+								   Width="8" Margin="0,0,-4,0" ZIndex="10"
+								   HorizontalAlignment="Right"
+								   IsVisible="{Binding !IsRailCompact, Source={x:Static services:WindowStateManager.Instance}}"
+								   Size="{Binding RailWidth}"
+								   DefaultSize="{Binding RailDefaultWidth}"
+								   Committed="{Binding SavePaneWidthsCommand}"
+								   LineBrush="{DynamicResource AccentBrush}"
+								   ToolTip.Tip="{DynamicResource Lang.Shell.ResizeTip}"/>
 		<Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
 				Classes="Sidebar"
 				Classes.Compact="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsRailCompact}"

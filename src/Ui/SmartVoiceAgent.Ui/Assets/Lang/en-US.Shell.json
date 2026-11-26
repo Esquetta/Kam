@@ -31,6 +31,7 @@
 
   "Shell.ToggleTheme": "Toggle Theme",
   "Shell.SearchTasks": "Search tasks",
+  "Shell.ResizeTip": "Drag to resize. Double-click to restore the default width.",
   "Shell.SearchTasksTip": "Search tasks, pages and commands (Ctrl+K)",
   "Shell.WakeOn": "“Hey Kam” on",
   "Shell.WakeOnTip": "Listening for the wake phrase on this PC; nothing is sent until you speak",

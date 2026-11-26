@@ -31,6 +31,7 @@
 
   "Shell.ToggleTheme": "Temayı değiştir",
   "Shell.SearchTasks": "Görevlerde ara",
+  "Shell.ResizeTip": "Boyutu değiştirmek için sürükleyin. Varsayılan genişliğe dönmek için çift tıklayın.",
   "Shell.SearchTasksTip": "Görev, sayfa ve komutlarda ara (Ctrl+K)",
   "Shell.WakeOn": "“Hey Kam” açık",
   "Shell.WakeOnTip": "Bu bilgisayarda uyandırma sözcüğü dinleniyor; siz konuşana kadar hiçbir şey gönderilmez",

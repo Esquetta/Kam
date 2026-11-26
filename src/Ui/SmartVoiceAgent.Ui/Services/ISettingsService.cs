@@ -226,6 +226,11 @@ public interface ISettingsService
     string Theme { get; set; }
 
     /// <summary>
+    /// Gets or sets the rail width the user dragged it to, in pixels; 0 uses the default (see <see cref="PaneWidths"/>).
+    /// </summary>
+    double RailWidth { get; set; }
+
+    /// <summary>
     /// Gets or sets the wake phrase, such as <c>Hey Kam</c>.
     /// </summary>
     string WakeWord { get; set; }
