@@ -429,8 +429,15 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public int OnCount
         {
             get => _onCount;
-            private set => this.RaiseAndSetIfChanged(ref _onCount, value);
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _onCount, value);
+                this.RaisePropertyChanged(nameof(HasOn));
+            }
         }
+
+        /// <summary>Gets whether any skill is on; the On chip shows only then.</summary>
+        public bool HasOn => OnCount > 0;
 
         /// <summary>Gets how many skills are on but cannot run yet.</summary>
         public int AttentionCount
@@ -450,8 +457,15 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public int OffCount
         {
             get => _offCount;
-            private set => this.RaiseAndSetIfChanged(ref _offCount, value);
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _offCount, value);
+                this.RaisePropertyChanged(nameof(HasOff));
+            }
         }
+
+        /// <summary>Gets whether any skill is off; the Off chip shows only then.</summary>
+        public bool HasOff => OffCount > 0;
 
         /// <summary>Gets whether the search and filter hide every skill.</summary>
         public bool HasNoMatches

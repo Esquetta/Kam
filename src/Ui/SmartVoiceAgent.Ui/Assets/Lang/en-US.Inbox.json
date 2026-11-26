@@ -3,5 +3,8 @@
   "Inbox.Subtitle": "Tool calls waiting for your approval across all tasks.",
   "Inbox.Empty.Title": "Nothing waiting",
   "Inbox.Empty.Body": "Approvals from any task show up here.",
-  "Inbox.OpenTask": "Open task"
+  "Inbox.OpenTask": "Open task",
+  "Inbox.ShowAll": "Show all",
+  "Inbox.ShowLess": "Show less",
+  "Inbox.Allow": "Allow"
 }

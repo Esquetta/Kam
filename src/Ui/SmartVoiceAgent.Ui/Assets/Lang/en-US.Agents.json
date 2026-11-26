@@ -4,7 +4,9 @@
   "Agents.SubtitleTip": "An agent is instructions, a model, tools and a permission mode. Kam creates role agents for a task on its own and can hand coding work to Codex. Saved agents you configure yourself are coming next.",
   "Agents.Group.Coding": "Coding agents",
   "Agents.Group.Roles": "Recent role agents",
-  "Agents.SetUp": "Set up in Integrations",
+  "Agents.Configure": "Configure",
+  "Agents.Column.Steps": "Steps",
+  "Agents.Column.When": "When",
   "Agents.Empty.Body": "No role agents yet. They show up when a task delegates work to one, such as a reviewer.",
   "Agents.Status.Running": "Running",
   "Agents.Status.Succeeded": "Completed",
@@ -36,6 +38,5 @@
   "Agents.Cli.Chip.NotChecked": "Checking",
   "Agents.Cli.Chip.NotInstalled": "Not installed",
   "Agents.Cli.Chip.SignedOut": "Signed out",
-  "Agents.Cli.Chip.Ready": "Ready",
-  "Agents.Cli.Detail.Note": "Turn the hand-off on or off, and see the sign-in state, in Integrations."
+  "Agents.Cli.Chip.Ready": "Ready"
 }
