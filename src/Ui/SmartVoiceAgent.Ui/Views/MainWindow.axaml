@@ -1103,19 +1103,7 @@
 				<!-- ========================= -->
 				<!-- ACTIVITY PANEL -->
 				<!-- ========================= -->
-				<!-- Drag the Activity panel's left edge to resize it; a double click restores 290 px -->
-				<controls:PaneResizeHandle Grid.Column="1"
-										   Width="8" Margin="-4,0,0,0" ZIndex="10"
-										   HorizontalAlignment="Left"
-										   GrowsLeft="True"
-										   IsVisible="{Binding IsActivityPanelShown}"
-										   Size="{Binding ActivityWidth}"
-										   DefaultSize="{Binding ActivityDefaultWidth}"
-										   Committed="{Binding SavePaneWidthsCommand}"
-										   LineBrush="{DynamicResource AccentBrush}"
-										   ToolTip.Tip="{DynamicResource Lang.Shell.ResizeTip}"/>
-
-				<!-- The context pane (.ctx) beside the thread, from 1280 px up; 290 px unless the user resized it -->
+				<!-- The 290 px context pane (.ctx) beside the thread, from 1280 px up -->
 				<Border Grid.Column="1"
 						Background="{DynamicResource CardBgBrush}"
 						BorderBrush="{DynamicResource BorderSubtleBrush}"

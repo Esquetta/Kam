@@ -231,11 +231,6 @@ public interface ISettingsService
     double RailWidth { get; set; }
 
     /// <summary>
-    /// Gets or sets the Activity panel width the user dragged it to, in pixels; 0 uses the default (see <see cref="PaneWidths"/>).
-    /// </summary>
-    double ActivityPanelWidth { get; set; }
-
-    /// <summary>
     /// Gets or sets the wake phrase, such as <c>Hey Kam</c>.
     /// </summary>
     string WakeWord { get; set; }

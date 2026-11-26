@@ -288,12 +288,6 @@ public class JsonSettingsService : ISettingsService, IDisposable
         set => SetProperty(nameof(RailWidth), PaneWidths.ClampRail(value), v => _data.RailWidth = v);
     }
 
-    public double ActivityPanelWidth
-    {
-        get => PaneWidths.ClampActivity(_data.ActivityPanelWidth);
-        set => SetProperty(nameof(ActivityPanelWidth), PaneWidths.ClampActivity(value), v => _data.ActivityPanelWidth = v);
-    }
-
     public string WakeWord
     {
         get => string.IsNullOrWhiteSpace(_data.WakeWord) ? "Hey Kam" : _data.WakeWord;
@@ -493,7 +487,6 @@ public class JsonSettingsService : ISettingsService, IDisposable
             nameof(AccentColor) => (T?)(object?)_data.AccentColor,
             nameof(Theme) => (T?)(object?)_data.Theme,
             nameof(RailWidth) => (T?)(object?)PaneWidths.ClampRail(_data.RailWidth),
-            nameof(ActivityPanelWidth) => (T?)(object?)PaneWidths.ClampActivity(_data.ActivityPanelWidth),
             nameof(TalkShortcut) => (T?)(object?)_data.TalkShortcut,
             nameof(SpokenReplies) => (T?)(object?)_data.SpokenReplies,
             nameof(SpeechVoice) => (T?)(object?)_data.SpeechVoice,
@@ -693,7 +686,6 @@ public class JsonSettingsService : ISettingsService, IDisposable
             AccentColor = source.AccentColor,
             Theme = source.Theme,
             RailWidth = source.RailWidth,
-            ActivityPanelWidth = source.ActivityPanelWidth,
             TalkShortcut = source.TalkShortcut,
             SpokenReplies = source.SpokenReplies,
             SpeechVoice = source.SpeechVoice,
@@ -844,7 +836,6 @@ public class JsonSettingsService : ISettingsService, IDisposable
         public string? AccentColor { get; set; }
         public string? Theme { get; set; }
         public double RailWidth { get; set; }
-        public double ActivityPanelWidth { get; set; }
         public string? TalkShortcut { get; set; }
         public string? SpokenReplies { get; set; }
         public string? SpeechVoice { get; set; }

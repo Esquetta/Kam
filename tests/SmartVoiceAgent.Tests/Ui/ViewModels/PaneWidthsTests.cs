@@ -26,16 +26,8 @@ public sealed class PaneWidthsTests : IDisposable
     public void ClampRail_KeepsTheRailBetweenItsLimits(double requested, double expected) =>
         PaneWidths.ClampRail(requested).Should().Be(expected);
 
-    [Theory]
-    [InlineData(0, 290)]
-    [InlineData(100, 240)]
-    [InlineData(400, 400)]
-    [InlineData(2000, 560)]
-    public void ClampActivity_KeepsThePanelBetweenItsLimits(double requested, double expected) =>
-        PaneWidths.ClampActivity(requested).Should().Be(expected);
-
     [Fact]
-    public void Widths_StartAtTheDefaultsAndAreLimitedWhileDragging()
+    public void RailWidth_StartsAtTheDefaultAndIsLimitedWhileDragging()
     {
         using var settings = new JsonSettingsService(_directory);
         var viewModel = new MainWindowViewModel(settings);
@@ -43,14 +35,9 @@ public sealed class PaneWidthsTests : IDisposable
         viewModel.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
 
         viewModel.RailWidth.Should().Be(232);
-        viewModel.ActivityWidth.Should().Be(290);
 
         viewModel.RailWidth = 50;
-        viewModel.ActivityWidth = 410;
-
         viewModel.RailWidth.Should().Be(180);
-        viewModel.ActivityWidth.Should().Be(410);
-        changes.Should().Contain([nameof(MainWindowViewModel.RailWidth), nameof(MainWindowViewModel.ActivityPanelWidth)]);
 
         changes.Clear();
         viewModel.RailWidth = 20;
@@ -59,23 +46,15 @@ public sealed class PaneWidthsTests : IDisposable
     }
 
     [Fact]
-    public void SavePaneWidths_KeepsTheWidthsForTheNextStart()
+    public void SavePaneWidths_KeepsTheRailWidthForTheNextStart()
     {
         using (var settings = new JsonSettingsService(_directory))
         {
-            var viewModel = new MainWindowViewModel(settings)
-            {
-                RailWidth = 300,
-                ActivityWidth = 420
-            };
-
+            var viewModel = new MainWindowViewModel(settings) { RailWidth = 300 };
             viewModel.SavePaneWidthsCommand.Execute(null);
         }
 
         using var reopened = new JsonSettingsService(_directory);
-        var next = new MainWindowViewModel(reopened);
-
-        next.RailWidth.Should().Be(300);
-        next.ActivityWidth.Should().Be(420);
+        new MainWindowViewModel(reopened).RailWidth.Should().Be(300);
     }
 }
