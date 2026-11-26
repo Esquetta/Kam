@@ -587,19 +587,27 @@ public sealed class MainWindowAgentRuntimeTests
         viewModel.CommandInputText = "fix the settings";
 
         var turn = viewModel.SubmitCommandInputAsync();
-        var waiting = await WaitForAsync(() => session.Messages.FirstOrDefault(m => m.IsAwaitingApproval));
+        var waiting = await WaitForAsync(() => session.ToolSteps.FirstOrDefault(m => m.IsAwaitingApproval));
 
-        session.Messages.Where(m => m.IsToolStep).Select(m => m.IsSubagentStep ? $"  {m.SubagentLabel}:{m.ToolName}" : $"{m.ToolDisplayName}:{m.ToolTarget}")
+        // One card per subagent; its steps live inside it, not in the thread's own list.
+        session.Messages.Select(m => m.IsToolStep
+                ? $"{m.ToolDisplayName}:{m.ToolTarget}:" + string.Join(",", m.Children.Select(c => $"{c.SubagentType}/{c.ToolName}"))
+                : $"{m.Role}:{m.Content}")
             .Should().Equal(
-                "Explorer subagent:Find settings",
-                "  Explorer:files_search",
-                "  Explorer:files_read",
-                "General subagent:Fix config",
-                "  General:files_write");
+                "You:fix the settings",
+                "Explorer subagent:Find settings:explorer/files_search,explorer/files_read",
+                "General subagent:Fix config:general/files_write");
         var explorerTask = session.Messages.Single(m => m.CallId == "t1");
+        var generalTask = session.Messages.Single(m => m.CallId == "t2");
         explorerTask.SubagentRunId.Should().Be("run-a");
         explorerTask.SubagentProgressText.Should().Be("2 steps · Read File");
+        explorerTask.ToolDurationText.Should().NotBeEmpty("a running subagent shows how long it has run");
+        explorerTask.IsExpanded.Should().BeFalse("a subagent's steps stay folded until asked for");
+        generalTask.IsExpanded.Should().BeTrue("a step that asks for approval opens its card");
+        generalTask.HasChildAwaitingApproval.Should().BeTrue();
+        session.HasPendingApproval.Should().BeTrue();
         waiting.ToolName.Should().Be("files_write");
+        waiting.IsSubagentStep.Should().BeTrue();
         viewModel.ApproveToolCallCommand.Execute(waiting);
         runtime.Resolutions.Should().Equal(("req-9", true, false));
 
@@ -615,7 +623,9 @@ public sealed class MainWindowAgentRuntimeTests
         await turn;
 
         explorerTask.SubagentProgressText.Should().Be("2 steps");
-        session.Messages.Where(m => m.IsToolStep).Should().OnlyContain(m => m.ToolStatusText == "Done");
+        session.ToolSteps.Should().HaveCount(5);
+        session.ToolSteps.Should().OnlyContain(m => m.ToolStatusText == "Done");
+        session.HasPendingApproval.Should().BeFalse();
     }
 
     [Fact]
@@ -633,8 +643,9 @@ public sealed class MainWindowAgentRuntimeTests
         viewModel.CommandInputText = "run it";
 
         var turn = viewModel.SubmitCommandInputAsync();
-        var waiting = await WaitForAsync(() => session.Messages.FirstOrDefault(m => m.IsAwaitingApproval));
+        var waiting = await WaitForAsync(() => session.ToolSteps.FirstOrDefault(m => m.IsAwaitingApproval));
         session.HasPendingApproval.Should().BeTrue();
+        session.Messages.Single(m => m.IsSubagentTask).Children.Should().Equal(waiting);
 
         runtime.Script(new AgentSubagentCompleted(sid, "t1", "run-a", SubagentRunStatus.Cancelled, 1, 0, 0));
         await WaitForAsync(() => waiting.IsAwaitingApproval ? null : waiting);
@@ -646,6 +657,194 @@ public sealed class MainWindowAgentRuntimeTests
         runtime.Script(new AgentToolCallCompleted(sid, "t1", "task", false, "Error: the user stopped this subagent."), new AgentTurnCompleted(sid, "Ok.", 1, 0, 0));
         runtime.Finish();
         await turn;
+    }
+
+    [Fact]
+    public async Task SubagentStepAwaitingApproval_ReachesNeedsYouAndTheToast()
+    {
+        var runtime = new ScriptedRuntime();
+        var viewModel = CreateViewModel(runtime);
+        var notifier = new RecordingNotifier();
+        viewModel.SetApprovalNotifier(notifier);
+        var session = viewModel.SelectedAgentChatSession!;
+        var sid = session.SessionId;
+        runtime.Script(
+            new AgentToolCallStarted(sid, "t1", "task", "Subagent", "{\"subagent_type\":\"general\",\"description\":\"Clean up\"}", ToolRisk.Agent),
+            new AgentSubagentStarted(sid, "t1", "run-a", "general", "Clean up"),
+            new AgentSubagentActivity(sid, "t1", "run-a", "general", new AgentToolCallStarted("run-a", "c1", "shell_run", "Run Shell Command", "{\"command\":\"git clean -n\"}", ToolRisk.Execute)),
+            new AgentSubagentActivity(sid, "t1", "run-a", "general", new AgentApprovalRequested("run-a", "req-7", "c1", "shell_run", "Run Shell Command", "{}", ToolRisk.Execute)));
+        viewModel.CommandInputText = "clean up";
+
+        var turn = viewModel.SubmitCommandInputAsync();
+        var waiting = await WaitForAsync(() => session.ToolSteps.FirstOrDefault(m => m.IsAwaitingApproval));
+
+        viewModel.PendingApprovals.Should().ContainSingle()
+            .Which.Should().Be(new PendingApprovalItem(session, waiting), "a subagent's step waits on Needs you like any other");
+        notifier.Shown.Should().ContainSingle().Which.RequestId.Should().Be("req-7");
+        session.Messages.Single(m => m.IsSubagentTask).IsExpanded.Should().BeTrue();
+
+        viewModel.ApproveToolCallCommand.Execute(waiting);
+
+        runtime.Resolutions.Should().Equal(("req-7", true, false));
+        notifier.Dismissed.Should().Contain("req-7");
+        viewModel.HasPendingApprovals.Should().BeFalse();
+
+        runtime.Script(
+            new AgentSubagentActivity(sid, "t1", "run-a", "general", new AgentToolCallCompleted("run-a", "c1", "shell_run", true, "nothing to clean")),
+            new AgentSubagentCompleted(sid, "t1", "run-a", SubagentRunStatus.Completed, 1, 0, 0),
+            new AgentToolCallCompleted(sid, "t1", "task", true, "Nothing to clean."),
+            new AgentTurnCompleted(sid, "Done.", 1, 0, 0));
+        runtime.Finish();
+        await turn;
+    }
+
+    [Fact]
+    public async Task ReadSteps_InARowFoldIntoOneGroupThatWritesAndTextEnd()
+    {
+        var runtime = new ScriptedRuntime();
+        var viewModel = CreateViewModel(runtime);
+        var session = viewModel.SelectedAgentChatSession!;
+        var sid = session.SessionId;
+        runtime.Script(
+            new AgentToolCallStarted(sid, "r1", "files_read", "Read File", "{\"path\":\"a.cs\"}", ToolRisk.Read),
+            new AgentToolCallCompleted(sid, "r1", "files_read", true, "ok"),
+            new AgentToolCallStarted(sid, "r2", "files_search", "Search Files", "{\"pattern\":\"Foo\"}", ToolRisk.Read),
+            new AgentToolCallCompleted(sid, "r2", "files_search", true, "2 matches"),
+            new AgentToolCallStarted(sid, "r3", "files_read", "Read File", "{\"path\":\"b.cs\"}", ToolRisk.Read));
+        viewModel.CommandInputText = "look around";
+
+        var turn = viewModel.SubmitCommandInputAsync();
+        var group = await WaitForAsync(() => session.Messages.FirstOrDefault(m => m.IsToolGroup && m.Children.Count == 3));
+
+        group.IsToolRunning.Should().BeTrue();
+        group.GroupTitle.Should().Be("Read File", "a running group names the step it runs");
+        group.GroupTarget.Should().Be("b.cs");
+
+        runtime.Script(
+            new AgentToolCallCompleted(sid, "r3", "files_read", false, "Error: missing"),
+            new AgentToolCallStarted(sid, "w1", "files_write", "Write File", "{\"path\":\"b.cs\"}", ToolRisk.Write),
+            new AgentToolCallCompleted(sid, "w1", "files_write", true, "saved"),
+            new AgentToolCallStarted(sid, "r4", "web_search", "Search Web", "{\"query\":\"x\"}", ToolRisk.Network),
+            new AgentToolCallCompleted(sid, "r4", "web_search", true, "ok"),
+            new AgentTextDelta(sid, "Checked."),
+            new AgentToolCallStarted(sid, "r5", "web_fetch", "Fetch Page", "{\"url\":\"https://example.com\"}", ToolRisk.Network),
+            new AgentToolCallCompleted(sid, "r5", "web_fetch", true, "ok"),
+            new AgentTurnCompleted(sid, "Checked.", 6, 0, 0));
+        runtime.Finish();
+        await turn;
+
+        session.Messages.Select(m => m.IsToolGroup
+                ? "group:" + string.Join(",", m.Children.Select(c => c.CallId))
+                : m.IsToolStep ? $"step:{m.CallId}" : $"{m.Role}:{m.Content}")
+            .Should().Equal(
+                "You:look around",
+                "group:r1,r2,r3",
+                "step:w1",
+                "step:r4",
+                "Kam:Checked.",
+                "step:r5");
+        group.IsToolRunning.Should().BeFalse();
+        group.GroupTitle.Should().Be("Explored 2 files · 1 search");
+        group.GroupFailedText.Should().Be("1 failed");
+        group.IsExpanded.Should().BeFalse("a finished group stays one line until opened");
+        session.MessageCountText.Should().Be("2 messages", "tool steps are not messages");
+    }
+
+    [Fact]
+    public async Task ReadStepAskingForApproval_LeavesItsGroup()
+    {
+        var runtime = new ScriptedRuntime();
+        var viewModel = CreateViewModel(runtime);
+        var session = viewModel.SelectedAgentChatSession!;
+        var sid = session.SessionId;
+        runtime.Script(
+            new AgentToolCallStarted(sid, "r1", "files_read", "Read File", "{\"path\":\"a.cs\"}", ToolRisk.Read),
+            new AgentToolCallCompleted(sid, "r1", "files_read", true, "ok"),
+            new AgentToolCallStarted(sid, "r2", "web_fetch", "Fetch Page", "{\"url\":\"https://example.com\"}", ToolRisk.Network),
+            new AgentApprovalRequested(sid, "req-2", "r2", "web_fetch", "Fetch Page", "{}", ToolRisk.Network));
+        viewModel.CommandInputText = "fetch it";
+
+        var turn = viewModel.SubmitCommandInputAsync();
+        var waiting = await WaitForAsync(() => session.Messages.FirstOrDefault(m => m.IsAwaitingApproval));
+
+        session.Messages.Select(m => m.IsToolGroup ? "group" : m.IsToolStep ? $"step:{m.CallId}" : m.Role)
+            .Should().Equal("You", "step:r1", "step:r2");
+        session.HasPendingApproval.Should().BeTrue();
+
+        viewModel.ApproveToolCallCommand.Execute(waiting);
+        runtime.Script(
+            new AgentToolCallCompleted(sid, "r2", "web_fetch", true, "ok"),
+            new AgentToolCallStarted(sid, "r3", "files_read", "Read File", "{\"path\":\"b.cs\"}", ToolRisk.Read),
+            new AgentToolCallCompleted(sid, "r3", "files_read", true, "ok"),
+            new AgentTurnCompleted(sid, "Done.", 3, 0, 0));
+        runtime.Finish();
+        await turn;
+
+        // A step that asked for approval ends the run of reads, so r3 does not group with it.
+        session.Messages.Where(m => m.IsToolStep || m.IsToolGroup).Select(m => m.IsToolGroup ? "group" : $"step:{m.CallId}")
+            .Should().Equal("step:r1", "step:r2", "step:r3");
+    }
+
+    [Fact]
+    public void BuildTimeline_GroupsSavedReadStepsLikeALiveTurn()
+    {
+        List<ChatMessage> history =
+        [
+            new(ChatRole.User, "where is the config read?"),
+            new(ChatRole.Assistant, [
+                new FunctionCallContent("a", "files_search", new Dictionary<string, object?> { ["pattern"] = "config" }),
+                new FunctionCallContent("b", "files_read", new Dictionary<string, object?> { ["path"] = "a.cs" }),
+                new FunctionCallContent("c", "web_fetch", new Dictionary<string, object?> { ["url"] = "https://example.com" })
+            ]),
+            new(ChatRole.Tool, [
+                new FunctionResultContent("a", "2 matches"),
+                new FunctionResultContent("b", "class A"),
+                new FunctionResultContent("c", "The user declined this tool call. Do not retry it.")
+            ]),
+            new(ChatRole.Assistant, [new TextContent("In a.cs."), new FunctionCallContent("d", "shell_run"), new FunctionCallContent("e", "files_read")]),
+            new(ChatRole.Tool, [new FunctionResultContent("d", "ok"), new FunctionResultContent("e", "ok")])
+        ];
+
+        var timeline = MainWindowViewModel.BuildTimeline(history);
+
+        timeline.Select(m => m.IsToolGroup
+                ? "group:" + string.Join(",", m.Children.Select(c => c.CallId))
+                : m.IsToolStep ? $"step:{m.CallId}:{m.ToolStatusText}" : m.Content)
+            .Should().Equal(
+                "where is the config read?",
+                "group:a,b",
+                "step:c:Declined",
+                "In a.cs.",
+                "step:d:Done",
+                "step:e:Done");
+        timeline[1].GroupTitle.Should().Be("Explored 1 file · 1 search");
+        timeline[1].IsToolSucceeded.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ReopenedThread_ShowsNoMadeUpDurationsAndLinksSubagentCardsToTheirRuns()
+    {
+        var started = new DateTimeOffset(2026, 11, 26, 12, 0, 0, TimeSpan.Zero);
+        var history = new List<ChatMessage>
+        {
+            new(ChatRole.User, "find settings"),
+            new(ChatRole.Assistant, [new FunctionCallContent("t1", "task", new Dictionary<string, object?> { ["subagent_type"] = "explorer", ["description"] = "Find settings", ["prompt"] = "p" })]),
+            new(ChatRole.Tool, [new FunctionResultContent("t1", "Settings are read in a.cs.")]),
+            new(ChatRole.Assistant, "Done.")
+        };
+        var run = new SubagentRun("run-a", "s1", "t1", "explorer", "Find settings", "p", SubagentRunStatus.Completed, started, started.AddSeconds(25),
+            Steps: [new SubagentStep("c1", "files_read", "Read File", "{\"path\":\"a.cs\"}", ToolRisk.Read, SubagentStepStatus.Succeeded, started.AddSeconds(1), started.AddSeconds(2), "ok")]);
+
+        var timeline = MainWindowViewModel.BuildTimeline(history);
+        var card = timeline.Single(item => item.IsSubagentTask);
+        card.ToolDurationText.Should().BeEmpty("a saved thread does not know how long the call took");
+
+        MainWindowViewModel.AttachSavedSubagentRuns(timeline, [run]);
+
+        card.SubagentRunId.Should().Be("run-a");
+        card.ToolDurationText.Should().Be("25 s");
+        card.Children.Should().ContainSingle(step => step.ToolName == "files_read" && step.IsToolSucceeded && step.ToolDurationText == "1.0 s");
+        card.SubagentProgressText.Should().Be("1 steps");
     }
 
     private sealed class ScriptedRuntime : IAgentRuntime
@@ -712,6 +911,17 @@ public sealed class MainWindowAgentRuntimeTests
             Resolutions.Add((requestId, approved, alwaysAllow));
             return true;
         }
+    }
+
+    private sealed class RecordingNotifier : IApprovalNotifier
+    {
+        public List<ApprovalNotice> Shown { get; } = [];
+
+        public List<string> Dismissed { get; } = [];
+
+        public void Show(ApprovalNotice notice) => Shown.Add(notice);
+
+        public void Dismiss(string requestId) => Dismissed.Add(requestId);
     }
 
     private sealed class FakePermissions : IToolPermissionService

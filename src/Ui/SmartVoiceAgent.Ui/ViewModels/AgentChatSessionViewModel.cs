@@ -308,7 +308,8 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         private void OnMessagePropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(AgentChatMessageViewModel.IsAwaitingApproval))
+            if (e.PropertyName is nameof(AgentChatMessageViewModel.IsAwaitingApproval)
+                or nameof(AgentChatMessageViewModel.HasChildAwaitingApproval))
             {
                 UpdatePendingApproval();
             }
@@ -316,7 +317,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         private void UpdatePendingApproval()
         {
-            var pending = Messages.Any(message => message.IsAwaitingApproval);
+            var pending = Messages.Any(message => message.IsAwaitingApproval || message.HasChildAwaitingApproval);
             if (pending == _hasPendingApproval)
             {
                 return;
@@ -330,9 +331,29 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /// <summary>
-        /// Gets the number of items in the thread, such as "4 messages".
+        /// Gets the number of messages in the thread, such as "4 messages"; tool steps do not count.
         /// </summary>
-        public string MessageCountText => FormatMessageCount(NeedsHistoryLoad ? _persistedMessageCount : Messages.Count);
+        public string MessageCountText => FormatMessageCount(NeedsHistoryLoad
+            ? _persistedMessageCount
+            : Messages.Count(message => message.Kind == AgentChatItemKind.Message));
+
+        /// <summary>
+        /// Gets every tool step in the thread in order, including the steps inside read groups and subagent cards.
+        /// </summary>
+        public IEnumerable<AgentChatMessageViewModel> ToolSteps => Messages.SelectMany(StepsOf);
+
+        private static IEnumerable<AgentChatMessageViewModel> StepsOf(AgentChatMessageViewModel item)
+        {
+            if (item.IsToolStep)
+            {
+                yield return item;
+            }
+
+            foreach (var child in item.Children)
+            {
+                yield return child;
+            }
+        }
 
         /// <summary>
         /// Formats a message count, such as "No messages", "1 message" or "4 messages", in the interface language.
@@ -409,13 +430,22 @@ namespace SmartVoiceAgent.Ui.ViewModels
             this.RaisePropertyChanged(nameof(MessageCountText));
         }
 
-        /// <summary>Inserts an item at <paramref name="index"/>, or at the end when the index is past it.</summary>
-        /// <param name="index">Where the item goes.</param>
-        /// <param name="message">The item.</param>
-        public void InsertMessage(int index, AgentChatMessageViewModel message)
+        /// <summary>
+        /// Adds a tool step of the main agent; a read-only step joins the read group before it (see <see cref="ToolStepGrouping"/>).
+        /// </summary>
+        /// <param name="step">The step.</param>
+        public void AddToolStep(AgentChatMessageViewModel step)
         {
-            Messages.Insert(Math.Clamp(index, 0, Messages.Count), message);
-            this.RaisePropertyChanged(nameof(MessageCountText));
+            ToolStepGrouping.Append(Messages, step);
+        }
+
+        /// <summary>
+        /// Moves a step out of its read group onto its own line, such as a read that asks for approval.
+        /// </summary>
+        /// <param name="step">The step.</param>
+        public void ReleaseFromGroup(AgentChatMessageViewModel step)
+        {
+            ToolStepGrouping.Release(Messages, step);
         }
 
         public void RemoveMessage(AgentChatMessageViewModel message)
