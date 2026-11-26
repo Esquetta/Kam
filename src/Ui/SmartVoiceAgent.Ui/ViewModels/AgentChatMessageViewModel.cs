@@ -255,6 +255,12 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public bool HasArguments => ArgumentsPreview.Length > 0;
 
         /// <summary>
+        /// Gets whether a compact card cuts the arguments short, so the Needs you page offers "Show all".
+        /// </summary>
+        public bool HasMoreArguments => ArgumentsMaxLines > 0
+            && ArgumentsPreview.ReplaceLineEndings("\n").Split('\n').Length > ArgumentsMaxLines;
+
+        /// <summary>
         /// Gets what the call acts on, on one line: the command, file, folder, address or search text.
         /// The step header shows it next to the tool's name, so several calls to one tool can be told apart.
         /// </summary>

@@ -60,7 +60,7 @@ public sealed class RunsViewModelTests
         task.IsRunning.Should().BeTrue();
 
         var noModel = viewModel.Rows.Single(row => row.Id == "s2");
-        noModel.ModelText.Should().Be("Settings default");
+        noModel.ModelText.Should().Be("Default");
         noModel.ContextText.Should().Be("—");
         noModel.IsDone.Should().BeTrue();
         viewModel.Rows.Single(row => row.Id == "s3").IsNeedsYou.Should().BeTrue();
@@ -161,5 +161,73 @@ public sealed class RunsViewModelTests
         var viewModel = await CreateAsync();
 
         viewModel.Rows.Should().OnlyContain(row => !row.IsTask).And.HaveCount(4);
+    }
+
+    [Fact]
+    public async Task SubagentRuns_SitUnderTheirTaskInsteadOfAmongTheOtherRows()
+    {
+        var viewModel = await CreateWithSubagentsAsync();
+
+        viewModel.Rows.Select(row => row.Id).Should().Equal("s1", "sa", "sb", "so", "s3", "r2", "r1", "r4", "s2", "r3");
+        viewModel.Rows.Single(row => row.Id == "s1").HasChildren.Should().BeTrue();
+        viewModel.Rows.Where(row => row.IsNested).Select(row => row.Id).Should().Equal("sa", "sb");
+        viewModel.Rows.Single(row => row.Id == "so").IsNested.Should().BeFalse("its task is gone, so it stands on its own");
+        viewModel.Rows.Single(row => row.Id == "s3").HasChildren.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ToggleChildren_FoldsAndUnfoldsATasksSubagentRuns()
+    {
+        var viewModel = await CreateWithSubagentsAsync();
+        var task = viewModel.Rows.Single(row => row.Id == "s1");
+
+        viewModel.ToggleChildrenCommand.Execute(task).Subscribe();
+        task.IsChildrenExpanded.Should().BeFalse();
+        task.HasChildren.Should().BeTrue("the chevron stays to unfold them again");
+        viewModel.Rows.Select(row => row.Id).Should().NotContain(["sa", "sb"]);
+
+        await viewModel.LoadAsync();
+        viewModel.Rows.Select(row => row.Id).Should().NotContain("sa", "a reload keeps the task folded");
+
+        viewModel.ToggleChildren(viewModel.Rows.Single(row => row.Id == "s1"));
+        viewModel.Rows.Select(row => row.Id).Should().ContainInConsecutiveOrder("s1", "sa", "sb");
+    }
+
+    [Fact]
+    public async Task Filter_NestsSubagentRunsUnderTasksAndListsThemFlatAsAgentRuns()
+    {
+        var viewModel = await CreateWithSubagentsAsync();
+
+        viewModel.SetFilterCommand.Execute("Tasks").Subscribe();
+        viewModel.Rows.Select(row => row.Id).Should().Equal("s1", "sa", "sb", "s3", "s2");
+
+        viewModel.SetFilterCommand.Execute("AgentRuns").Subscribe();
+        viewModel.Rows.Select(row => row.Id).Should().Equal("sa", "so", "r2", "r1", "sb", "r4", "r3");
+        viewModel.Rows.Should().OnlyContain(row => !row.IsNested && !row.HasChildren);
+    }
+
+    [Fact]
+    public async Task Search_ShowsATaskWithTheSubagentRunsThatMatch()
+    {
+        var viewModel = await CreateWithSubagentsAsync();
+
+        viewModel.SearchText = "logs";
+
+        viewModel.Rows.Select(row => row.Id).Should().Equal("s1", "sb");
+        viewModel.Rows.Single(row => row.Id == "sb").IsNested.Should().BeTrue();
+    }
+
+    private async Task<RunsViewModel> CreateWithSubagentsAsync()
+    {
+        var tracker = new Mock<ISubagentRunTracker>();
+        tracker.Setup(t => t.List(It.IsAny<string?>(), It.IsAny<int>())).Returns(
+        [
+            new SubagentRun("sa", "s1", "call-a", "explorer", "Read the code", "Brief a", SubagentRunStatus.Completed, _now.AddMinutes(-2)),
+            new SubagentRun("sb", "s1", "call-b", "explorer", "Scan the logs", "Brief b", SubagentRunStatus.Failed, _now.AddMinutes(-61)),
+            new SubagentRun("so", "gone", "call-o", "explorer", "Orphan job", "Brief o", SubagentRunStatus.Completed, _now.AddMinutes(-10))
+        ]);
+        var viewModel = new RunsViewModel(_sessions.Object, _runs.Object, _opened.Add, subagents: tracker.Object);
+        await viewModel.LoadAsync();
+        return viewModel;
     }
 }

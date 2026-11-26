@@ -162,6 +162,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /// <summary>Gets the number of installed extensions of every kind.</summary>
         public int InstalledCount => McpServers.Count + Plugins.Count + Skills.Count + Commands.Count;
 
+        /// <summary>Gets whether anything is installed; the kind chips and the counts show only then.</summary>
+        public bool HasInstalled => InstalledCount > 0;
+
         /// <summary>Gets the number of MCP servers.</summary>
         public int McpServerCount => McpServers.Count;
 
@@ -790,6 +793,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             this.RaisePropertyChanged(nameof(HasNoSkills));
             this.RaisePropertyChanged(nameof(HasNoCommands));
             this.RaisePropertyChanged(nameof(InstalledCount));
+            this.RaisePropertyChanged(nameof(HasInstalled));
             this.RaisePropertyChanged(nameof(McpServerCount));
             this.RaisePropertyChanged(nameof(PluginCount));
             this.RaisePropertyChanged(nameof(SkillCount));

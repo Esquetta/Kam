@@ -40,6 +40,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
     public sealed class RunRowViewModel : ReactiveObject
     {
         private bool _isExpanded;
+        private bool _isNested;
+        private bool _hasChildren;
+        private bool _isChildrenExpanded = true;
 
         /// <summary>Gets the session id for a task, or the run id for an agent run.</summary>
         public required string Id { get; init; }
@@ -53,7 +56,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /// <summary>Gets the task title or agent name.</summary>
         public required string Name { get; init; }
 
-        /// <summary>Gets the model name, or the Settings default text.</summary>
+        /// <summary>Gets the model name, or "Default" when the run used the model chosen in Settings.</summary>
         public required string ModelText { get; init; }
 
         /// <summary>Gets the trimmed workspace folder (tasks) or role (agent runs).</summary>
@@ -134,6 +137,27 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             get => _isExpanded;
             set => this.RaiseAndSetIfChanged(ref _isExpanded, value);
         }
+
+        /// <summary>Gets whether the row is a subagent run listed under the task that started it.</summary>
+        public bool IsNested
+        {
+            get => _isNested;
+            internal set => this.RaiseAndSetIfChanged(ref _isNested, value);
+        }
+
+        /// <summary>Gets whether the row is a task with subagent runs listed under it.</summary>
+        public bool HasChildren
+        {
+            get => _hasChildren;
+            internal set => this.RaiseAndSetIfChanged(ref _hasChildren, value);
+        }
+
+        /// <summary>Gets whether a task's subagent runs are shown under it; they are until the user folds them.</summary>
+        public bool IsChildrenExpanded
+        {
+            get => _isChildrenExpanded;
+            internal set => this.RaiseAndSetIfChanged(ref _isChildrenExpanded, value);
+        }
     }
 
     /// <summary>
@@ -191,6 +215,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                     Filter = filter;
                 }
             });
+            ToggleChildrenCommand = ReactiveCommand.Create<RunRowViewModel>(ToggleChildren);
             RefreshCommand = ReactiveCommand.CreateFromTask(LoadAsync);
             OpenGraphCommand = ReactiveCommand.Create<RunRowViewModel>(row =>
             {
@@ -209,6 +234,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
 
         /// <summary>Gets the command a row click runs: opens a task or toggles an agent run's detail.</summary>
         public ReactiveCommand<RunRowViewModel, Unit> ActivateRowCommand { get; }
+
+        /// <summary>Gets the command that folds or unfolds the subagent runs under a task row.</summary>
+        public ReactiveCommand<RunRowViewModel, Unit> ToggleChildrenCommand { get; }
 
         /// <summary>Gets the command that picks the filter by its <see cref="RunsFilter"/> name.</summary>
         public ReactiveCommand<string, Unit> SetFilterCommand { get; }
@@ -357,6 +385,18 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             }
         }
 
+        /// <summary>
+        /// Folds or unfolds the subagent runs listed under a task row.
+        /// </summary>
+        /// <param name="row">The task row.</param>
+        public void ToggleChildren(RunRowViewModel row)
+        {
+            ArgumentNullException.ThrowIfNull(row);
+
+            row.IsChildrenExpanded = !row.IsChildrenExpanded;
+            ApplyFilter();
+        }
+
         /// <inheritdoc />
         public void Dispose()
         {
@@ -379,28 +419,71 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             var now = DateTimeOffset.Now;
 
             var expanded = _allRows.Where(row => row.IsExpanded).Select(row => row.Id).ToHashSet();
+            var folded = _allRows.Where(row => !row.IsChildrenExpanded).Select(row => row.Id).ToHashSet();
             _allRows.Clear();
             _allRows.AddRange(_sessionData.Select(session => CreateTaskRow(session, now)));
             _allRows.AddRange(_runData.Select(run => CreateAgentRow(run, now)));
             _allRows.AddRange(_subagentData.Select(run => CreateSubagentRow(run, now)));
             _allRows.Sort((left, right) => right.When.CompareTo(left.When));
-            foreach (var row in _allRows.Where(row => expanded.Contains(row.Id)))
+            foreach (var row in _allRows)
             {
-                row.IsExpanded = true;
+                row.IsExpanded = expanded.Contains(row.Id);
+                row.IsChildrenExpanded = !folded.Contains(row.Id);
             }
 
             this.RaisePropertyChanged(nameof(HasNoHistory));
             ApplyFilter();
         }
 
+        /// <summary>
+        /// Lists the rows the filter and search show. Where tasks are listed, a task's subagent runs sit under it
+        /// (newest first) instead of among the other rows; a task shows when it or one of its runs matches the search.
+        /// </summary>
         private void ApplyFilter()
         {
             var query = _searchText.Trim();
-            var visible = _allRows.Where(row =>
-                (_filter == RunsFilter.All
+            var nest = _filter != RunsFilter.AgentRuns;
+            var taskIds = _allRows.Where(row => row.IsTask).Select(row => row.Id).ToHashSet();
+            var children = _allRows
+                .Where(row => nest && row.ParentSessionId is { } parent && taskIds.Contains(parent))
+                .ToLookup(row => row.ParentSessionId!);
+            var visible = new List<RunRowViewModel>();
+
+            foreach (var row in _allRows)
+            {
+                if (nest && row.ParentSessionId is { } parent && taskIds.Contains(parent))
+                {
+                    continue;
+                }
+
+                var listsKind = _filter == RunsFilter.All
                     || (_filter == RunsFilter.Tasks && row.IsTask)
-                    || (_filter == RunsFilter.AgentRuns && !row.IsTask))
-                && (query.Length == 0 || Matches(row, query))).ToList();
+                    || (_filter == RunsFilter.AgentRuns && !row.IsTask);
+                if (!listsKind)
+                {
+                    continue;
+                }
+
+                var rowMatches = query.Length == 0 || Matches(row, query);
+                var runs = children[row.Id].Where(child => rowMatches || Matches(child, query)).ToList();
+                if (!rowMatches && runs.Count == 0)
+                {
+                    continue;
+                }
+
+                row.IsNested = false;
+                row.HasChildren = runs.Count > 0;
+                visible.Add(row);
+                if (row.IsChildrenExpanded)
+                {
+                    foreach (var run in runs)
+                    {
+                        run.IsNested = true;
+                        run.HasChildren = false;
+                        visible.Add(run);
+                    }
+                }
+            }
 
             Rows.Clear();
             foreach (var row in visible)
