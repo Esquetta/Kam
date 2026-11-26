@@ -17,20 +17,20 @@ public sealed class KamStudioShellMetadataTests
         var dark = ReadColors("Colors.Dark.axaml");
         var light = ReadColors("Colors.Light.axaml");
 
-        dark["PanelBg"].Should().Be("#0D0D12");
-        dark["CardBg"].Should().Be("#13131A");
-        dark["RaisedBg"].Should().Be("#1A1A23");
-        dark["CardBgHover"].Should().Be("#20202B");
-        dark["BorderSubtle"].Should().Be("#262632");
-        dark["BorderMuted"].Should().Be("#363645");
-        dark["TextPrimary"].Should().Be("#F2F1F7");
+        dark["PanelBg"].Should().Be("#0B0B0E");
+        dark["CardBg"].Should().Be("#17171B");
+        dark["RaisedBg"].Should().Be("#1E1E23");
+        dark["CardBgHover"].Should().Be("#25252B");
+        dark["BorderSubtle"].Should().Be("#26262C");
+        dark["BorderMuted"].Should().Be("#36363E");
+        dark["TextPrimary"].Should().Be("#EDEDF0");
         dark["Accent"].Should().Be("#8B7CFF");
         dark["AccentStrong"].Should().Be("#6E5BF0");
         dark["AccentInfo"].Should().Be("#60A5FA");
 
-        light["PanelBg"].Should().Be("#F5F4F9");
+        light["PanelBg"].Should().Be("#F7F7F8");
         light["CardBg"].Should().Be("#FFFFFF");
-        light["RaisedBg"].Should().Be("#F0EFF6");
+        light["RaisedBg"].Should().Be("#F3F3F5");
         light["Accent"].Should().Be("#5B47E0");
         light["AccentError"].Should().Be("#C81E1E", "the prototype's #DC2626 is 4.4:1 on the light surface");
         light["AccentInfo"].Should().Be("#2563EB");

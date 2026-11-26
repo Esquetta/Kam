@@ -39,7 +39,7 @@ public sealed class UiDesignSystemMetadataTests
             .Attribute("Value")!
             .Value
             .Should()
-            .Be("10");
+            .Be("12");
 
         foreach (var selector in new[] { "Button.PrimaryAction", "Button.SecondaryAction", "Button.DestructiveAction" })
         {
@@ -113,6 +113,41 @@ public sealed class UiDesignSystemMetadataTests
         viewText.Should().NotContain("LetterSpacing=\"16\"");
         viewText.Should().NotContain("FontSize=\"48\"");
         viewText.Should().NotContain("CornerRadius=\"12\"");
+    }
+
+    [Fact]
+    public void Views_UseOnlyTheTypeScale()
+    {
+        var scale = new[] { "11", "12", "13", "14", "16", "20" };
+        var viewsDirectory = Path.GetDirectoryName(FindProjectFilePath("src", "Ui", "SmartVoiceAgent.Ui", "Views", "MainWindow.axaml"))!;
+
+        // TasksView and GraphsView follow once their rework lands.
+        var excluded = new[] { "TasksView.axaml", "GraphsView.axaml" };
+
+        var offScale = Directory.GetFiles(viewsDirectory, "*.axaml")
+            .Where(path => !excluded.Contains(Path.GetFileName(path)))
+            .SelectMany(path => XDocument.Load(path).Root!
+                .DescendantsAndSelf()
+                .SelectMany(element => FontSizeValues(element))
+                .Where(value => !scale.Contains(value))
+                .Select(value => $"{Path.GetFileName(path)}: FontSize {value}"))
+            .ToArray();
+
+        offScale.Should().BeEmpty("views use only the sizes 11, 12, 13, 14, 16 and 20");
+    }
+
+    private static IEnumerable<string> FontSizeValues(XElement element)
+    {
+        if (AttributeValue(element, "FontSize") is { } attribute)
+        {
+            yield return attribute;
+        }
+
+        if (element.Name.LocalName == "Setter" && AttributeValue(element, "Property") == "FontSize"
+            && AttributeValue(element, "Value") is { } setter)
+        {
+            yield return setter;
+        }
     }
 
     private static string? AttributeValue(XElement element, string attributeName)

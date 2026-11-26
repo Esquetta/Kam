@@ -176,7 +176,7 @@
                                            Grid.Column="0"
                                            Grid.ColumnSpan="2"
                                            Text="{Binding MaskedChatApiKey}"
-                                           FontSize="10"
+                                           FontSize="11"
                                            Foreground="{DynamicResource TextMutedBrush}"
                                            TextTrimming="CharacterEllipsis"/>
                                 <StackPanel Grid.Row="3"
@@ -272,7 +272,7 @@
                                              PasswordChar="*"
                                              PlaceholderText="sk-..."/>
                                     <TextBlock Text="{Binding MaskedAiApiKey}"
-                                               FontSize="10"
+                                               FontSize="11"
                                                Foreground="{DynamicResource TextMutedBrush}"
                                                TextTrimming="CharacterEllipsis"/>
                                     <StackPanel Orientation="Horizontal"
@@ -609,7 +609,7 @@
                                          PasswordChar="*"
                                          PlaceholderText="sk-..."/>
                                 <TextBlock Text="{Binding MaskedSpeechApiKey}"
-                                           FontSize="10"
+                                           FontSize="11"
                                            Foreground="{DynamicResource TextMutedBrush}"
                                            TextTrimming="CharacterEllipsis"/>
                             </StackPanel>

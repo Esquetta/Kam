@@ -3,22 +3,22 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- Neutral surfaces (Kam Studio): window/page bg < panels and cards < raised fills < hover -->
-    <Color x:Key="PanelBg">#F5F4F9</Color>
-    <Color x:Key="SurfaceBg">#F5F4F9</Color>
+    <Color x:Key="PanelBg">#F7F7F8</Color>
+    <Color x:Key="SurfaceBg">#FFFFFF</Color>
     <Color x:Key="CardBg">#FFFFFF</Color>
     <Color x:Key="SurfaceBgElevated">#FFFFFF</Color>
-    <Color x:Key="RaisedBg">#F0EFF6</Color>
-    <Color x:Key="CardBgHover">#E9E7F2</Color>
+    <Color x:Key="RaisedBg">#F3F3F5</Color>
+    <Color x:Key="CardBgHover">#ECECEF</Color>
     <!-- Translucent fills for ghost controls, so hover reads the same on any surface -->
     <Color x:Key="ControlHover">#12302060</Color>
     <Color x:Key="ControlPressed">#20302060</Color>
-    <Color x:Key="BorderSubtle">#E2E0EB</Color>
-    <Color x:Key="BorderMuted">#CDCADB</Color>
+    <Color x:Key="BorderSubtle">#E6E6EA</Color>
+    <Color x:Key="BorderMuted">#D4D4DA</Color>
     <!-- Off switch track: 3:1 against cards and against the white knob -->
-    <Color x:Key="SwitchOffTrack">#858296</Color>
-    <Color x:Key="TextPrimary">#17161F</Color>
-    <Color x:Key="TextSecondary">#45434F</Color>
-    <Color x:Key="TextMuted">#646274</Color>
+    <Color x:Key="SwitchOffTrack">#85858F</Color>
+    <Color x:Key="TextPrimary">#18181B</Color>
+    <Color x:Key="TextSecondary">#44444C</Color>
+    <Color x:Key="TextMuted">#64646E</Color>
 
     <!-- Brand accent: Accent is for text and icons, AccentStrong for fills and focus rings -->
     <Color x:Key="Accent">#5B47E0</Color>

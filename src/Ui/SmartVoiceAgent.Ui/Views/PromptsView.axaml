@@ -71,7 +71,7 @@
             <Border Classes="Pane" IsVisible="{Binding IsUnavailable}">
                 <StackPanel Spacing="6" Margin="22" HorizontalAlignment="Center">
                     <Viewbox Width="18" Height="18" HorizontalAlignment="Center"><Path Classes="Icon Muted" Data="{StaticResource IconAlertCircle}"/></Viewbox>
-                    <TextBlock Text="{DynamicResource Lang.Prompts.Unavailable.Title}" FontSize="13.5" FontWeight="Medium" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{DynamicResource Lang.Prompts.Unavailable.Title}" FontSize="14" FontWeight="Medium" HorizontalAlignment="Center"/>
                     <TextBlock Text="{DynamicResource Lang.Prompts.Unavailable.Body}" Classes="Caption" TextAlignment="Center" TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
@@ -80,7 +80,7 @@
             <Border Classes="Pane" IsVisible="{Binding IsEmpty}">
                 <StackPanel Spacing="8" Margin="22" HorizontalAlignment="Center" MaxWidth="520">
                     <Viewbox Width="18" Height="18" HorizontalAlignment="Center"><Path Classes="Icon Muted" Data="{StaticResource IconBookOpen}"/></Viewbox>
-                    <TextBlock Text="{DynamicResource Lang.Prompts.Empty.Title}" FontSize="13.5" FontWeight="Medium" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{DynamicResource Lang.Prompts.Empty.Title}" FontSize="14" FontWeight="Medium" HorizontalAlignment="Center"/>
                     <TextBlock Text="{DynamicResource Lang.Prompts.Empty.Body}" Classes="Caption" TextAlignment="Center" TextWrapping="Wrap"/>
                     <Border Classes="Code">
                         <SelectableTextBlock Text="{Binding UserDirectory}" TextWrapping="Wrap"/>
@@ -129,7 +129,7 @@
                                                             Command="{Binding SelectCommand}">
                                                         <StackPanel Spacing="2">
                                                             <TextBlock Text="{Binding Slash}"
-                                                                       FontSize="12.5"
+                                                                       FontSize="13"
                                                                        FontFamily="{StaticResource MonoFontFamily}"
                                                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                                                        TextTrimming="CharacterEllipsis"/>
@@ -213,7 +213,7 @@
                                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding FilePath}" Classes="KvValue"
                                            TextAlignment="Left"
                                            FontFamily="{StaticResource MonoFontFamily}"
-                                           FontSize="11.5"
+                                           FontSize="12"
                                            ToolTip.Tip="{Binding FilePath}"/>
                             </Grid>
 

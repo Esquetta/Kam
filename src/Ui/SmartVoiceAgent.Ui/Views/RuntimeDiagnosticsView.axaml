@@ -105,7 +105,7 @@
                                     <TextBlock Text="{Binding Name}" Classes="GroupTitle"/>
                                 </StackPanel>
                                 <TextBlock Text="{Binding Value}"
-                                           FontSize="15"
+                                           FontSize="16"
                                            FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextPrimaryBrush}"
                                            TextWrapping="Wrap"/>

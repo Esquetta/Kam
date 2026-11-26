@@ -324,7 +324,7 @@
                                                 <TextBlock Text="{Binding Name}" Classes="RowTitle"/>
                                                 <TextBlock Text="{Binding VersionText}" Classes="Caption" VerticalAlignment="Center"/>
                                             </StackPanel>
-                                            <TextBlock Text="{Binding Description}" Classes="RowText"/>
+                                            <TextBlock Text="{Binding Description}" Classes="Secondary"/>
                                             <TextBlock Text="{Binding ComponentsText}" Classes="Caption"/>
                                             <TextBlock Text="{Binding Error}" Classes="ErrorText" IsVisible="{Binding HasError}"/>
                                         </StackPanel>
@@ -381,7 +381,7 @@
                                         </Border>
                                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Name}" Classes="RowTitle Mono"/>
-                                            <TextBlock Text="{Binding Description}" Classes="RowText"/>
+                                            <TextBlock Text="{Binding Description}" Classes="Secondary"/>
                                         </StackPanel>
                                         <TextBlock Grid.Column="2" Text="{Binding SourceText}" Classes="Caption" VerticalAlignment="Center"/>
                                         <Button Grid.Column="3"
@@ -436,7 +436,7 @@
                                         </Border>
                                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Usage}" Classes="RowTitle Mono"/>
-                                            <TextBlock Text="{Binding Description}" Classes="RowText"/>
+                                            <TextBlock Text="{Binding Description}" Classes="Secondary"/>
                                         </StackPanel>
                                         <TextBlock Grid.Column="2" Text="{Binding SourceText}" Classes="Caption" VerticalAlignment="Center"/>
                                         <Button Grid.Column="3"

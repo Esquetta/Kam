@@ -28,10 +28,10 @@
 
     <!-- Shape scale shared by Fluent controls and Kam surfaces -->
     <CornerRadius x:Key="ControlCornerRadius">8</CornerRadius>
-    <CornerRadius x:Key="OverlayCornerRadius">10</CornerRadius>
+    <CornerRadius x:Key="OverlayCornerRadius">12</CornerRadius>
     <CornerRadius x:Key="RadiusSmall">6</CornerRadius>
     <CornerRadius x:Key="RadiusMedium">8</CornerRadius>
-    <CornerRadius x:Key="RadiusLarge">10</CornerRadius>
+    <CornerRadius x:Key="RadiusLarge">12</CornerRadius>
     <CornerRadius x:Key="RadiusPill">999</CornerRadius>
 
     <!-- Stroke icons (24x24, Lucide-style). Render with Path.Icon inside a Viewbox. -->

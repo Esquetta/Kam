@@ -7,8 +7,11 @@
         Surfaces:   PanelBg (window) < SurfaceBg (content) < CardBg (cards) < CardBgHover (hover/pressed)
         Accent:     AccentBrush for text and icons, AccentStrongBrush for fills and focus, AccentSubtleBrush for tints
         Type:       Geist (UiFontFamily) and Geist Mono (MonoFontFamily)
-        Type scale: PageTitle 17 / SectionTitle 14.5 / Body 13.5 / Caption 12 / Overline 11 caps
-        Shape:      6 (small buttons), 7 (buttons, inputs), 10 (panels, cards), 999 (chips)
+        Type scale: views use only 11, 12, 13, 14, 16 and 20. PageTitle 20 / CardTitle 16 / SectionTitle 14 /
+                    Body and RowTitle 13 / Secondary, Label and Mono 12 / Caption and Overline 11
+        Shape:      4 (badges, kbd, risk), 6 (Sm and Xs buttons, chips, nav rows), 8 (buttons, inputs, code),
+                    12 (panes, cards, popovers), 999 (pills)
+        Selection:  neutral (RaisedBg with TextPrimary); accent is for the primary action, focus, toggles and links
         Kam Studio primitives: buttons (PrimaryAction, SecondaryAction, GhostAction, plus Sm), chips (Pill with
         Accent, Success, Warning, Danger, Info), Pane and PaneHead (panel), Segmented and DrawerTab (seg),
         ToggleSwitch (toggle), Risk (Read, Write, Shell), KvKey and KvValue (kv), Note, Explain, Code, Kbd
@@ -42,7 +45,7 @@
 
     <Style Selector="Border.Card">
         <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="CornerRadius" Value="12" />
         <Setter Property="Padding" Value="14" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
@@ -93,38 +96,71 @@
     </Style>
 
     <Style Selector="TextBlock.PageTitle">
-        <Setter Property="FontSize" Value="17" />
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="LineHeight" Value="28" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-        <Setter Property="LetterSpacing" Value="-0.17" />
+        <Setter Property="LetterSpacing" Value="-0.2" />
     </Style>
 
     <Style Selector="TextBlock.PageSubtitle">
-        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="LineHeight" Value="20" />
         <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
         <Setter Property="LetterSpacing" Value="0" />
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
 
     <Style Selector="TextBlock.SectionTitle">
-        <Setter Property="FontSize" Value="14.5" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="LineHeight" Value="20" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
 
-    <Style Selector="TextBlock.Overline">
-        <Setter Property="FontSize" Value="11" />
-        <Setter Property="FontWeight" Value="Medium" />
-        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
-        <Setter Property="LetterSpacing" Value="0.88" />
+    <!-- Dialogs and the Prompts detail title only -->
+    <Style Selector="TextBlock.CardTitle">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="LineHeight" Value="24" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
 
-    <Style Selector="TextBlock.Caption">
+    <!-- Help text and metadata under a row title -->
+    <Style Selector="TextBlock.Secondary">
         <Setter Property="FontSize" Value="12" />
+        <Setter Property="LineHeight" Value="18" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+
+    <!-- Form field labels above an input -->
+    <Style Selector="TextBlock.Label">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="LineHeight" Value="16" />
+        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    </Style>
+
+    <!-- Rail section labels -->
+    <Style Selector="TextBlock.Overline">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="LineHeight" Value="16" />
+        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="LetterSpacing" Value="0.5" />
+    </Style>
+
+    <!-- Table headers, counts and timestamps -->
+    <Style Selector="TextBlock.Caption">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="LineHeight" Value="16" />
+        <Setter Property="FontWeight" Value="Medium" />
         <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
 
+    <!-- Mono only swaps the family, because it combines with Caption, RowTitle and KvValue, which set the size -->
     <Style Selector="TextBlock.Mono">
         <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
     </Style>
@@ -134,17 +170,26 @@
     <!-- ========================= -->
 
     <Style Selector="Button">
-        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="CornerRadius" Value="8" />
         <Setter Property="FontSize" Value="13" />
+        <!-- Keyboard focus (:focus-visible): a 2 px accent ring around every button, nav rows included -->
+        <Setter Property="FocusAdorner">
+            <FocusAdornerTemplate>
+                <Border BorderThickness="2"
+                        BorderBrush="{DynamicResource AccentStrongBrush}"
+                        CornerRadius="8"
+                        Margin="-2" />
+            </FocusAdornerTemplate>
+        </Setter>
     </Style>
 
     <Style Selector="Button.PrimaryAction">
         <Setter Property="Background" Value="{DynamicResource AccentStrongBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource AccentOnBrush}" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="7" />
-        <Setter Property="Padding" Value="11,0" />
-        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="MinHeight" Value="32" />
         <Setter Property="FontWeight" Value="Medium" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -188,9 +233,9 @@
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="7" />
-        <Setter Property="Padding" Value="11,0" />
-        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="MinHeight" Value="32" />
         <Setter Property="FontWeight" Value="Medium" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -222,9 +267,9 @@
         <Setter Property="Background" Value="{DynamicResource AccentErrorBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource AccentErrorOnBrush}" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="7" />
-        <Setter Property="Padding" Value="11,0" />
-        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="MinHeight" Value="32" />
         <Setter Property="FontWeight" Value="Medium" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -240,9 +285,9 @@
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="7" />
-        <Setter Property="Padding" Value="11,0" />
-        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="MinHeight" Value="32" />
         <Setter Property="FontWeight" Value="Medium" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -264,6 +309,14 @@
 
     <!-- Small buttons (btn sm): add Sm to any action class -->
     <Style Selector="Button.Sm">
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="CornerRadius" Value="6" />
+    </Style>
+
+    <!-- Extra small buttons: chips, segmented items and inline row actions -->
+    <Style Selector="Button.Xs">
         <Setter Property="MinHeight" Value="24" />
         <Setter Property="Padding" Value="8,0" />
         <Setter Property="FontSize" Value="12" />
@@ -464,7 +517,7 @@
     <!-- Segmented control: the activity drawer tabs and the Extensions tabs -->
     <Style Selector="Border.Segmented">
         <Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
-        <Setter Property="CornerRadius" Value="7"/>
+        <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Padding" Value="3"/>
     </Style>
 
@@ -476,7 +529,7 @@
         <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="CornerRadius" Value="5"/>
+        <Setter Property="CornerRadius" Value="6"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -515,7 +568,7 @@
         <Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="999"/>
+        <Setter Property="CornerRadius" Value="6"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Cursor" Value="Hand"/>
     </Style>
@@ -527,13 +580,13 @@
     </Style>
 
     <Style Selector="Button.Chip.Selected">
-        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
     </Style>
 
     <Style Selector="Button.Chip.Selected /template/ ContentPresenter#PART_ContentPresenter, Button.Chip.Selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
-        <Setter Property="BorderBrush" Value="Transparent"/>
-        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource RaisedBgBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
     </Style>
 
     <Style Selector="Button.Chip TextBlock.ChipCount">
@@ -542,20 +595,20 @@
     </Style>
 
     <Style Selector="Button.Chip.Selected TextBlock.ChipCount">
-        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
     </Style>
 
     <Style Selector="Border.Pill">
         <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}" />
         <Setter Property="Padding" Value="8,0" />
-        <Setter Property="MinHeight" Value="21" />
+        <Setter Property="MinHeight" Value="20" />
         <Setter Property="Background" Value="{DynamicResource RaisedBgBrush}" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
     <Style Selector="Border.Pill TextBlock">
-        <Setter Property="FontSize" Value="11.5" />
+        <Setter Property="FontSize" Value="11" />
         <Setter Property="FontWeight" Value="Medium" />
         <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
         <Setter Property="VerticalAlignment" Value="Center" />
@@ -628,7 +681,7 @@
         <Setter Property="Background" Value="{DynamicResource RaisedBgBrush}" />
     </Style>
     <Style Selector="Border.Risk TextBlock">
-        <Setter Property="FontSize" Value="10.5" />
+        <Setter Property="FontSize" Value="11" />
         <Setter Property="FontWeight" Value="Medium" />
         <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
     </Style>
@@ -660,28 +713,28 @@
         <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="CornerRadius" Value="12" />
         <Setter Property="ClipToBounds" Value="True" />
     </Style>
     <Style Selector="Border.PaneHead">
-        <Setter Property="Padding" Value="12,10" />
+        <Setter Property="Padding" Value="16,12" />
         <Setter Property="MinHeight" Value="44" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
         <Setter Property="BorderThickness" Value="0,0,0,1" />
     </Style>
     <Style Selector="Border.PaneRow">
-        <Setter Property="Padding" Value="14,12" />
+        <Setter Property="Padding" Value="16,12" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
         <Setter Property="BorderThickness" Value="0,0,0,1" />
     </Style>
 
     <!-- Key/value list (.kv): muted key on the left, value on the right -->
     <Style Selector="TextBlock.KvKey">
-        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="FontSize" Value="12" />
         <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
     </Style>
     <Style Selector="TextBlock.KvValue">
-        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="FontSize" Value="12" />
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         <Setter Property="TextAlignment" Value="Right" />
         <Setter Property="TextTrimming" Value="CharacterEllipsis" />
@@ -708,7 +761,7 @@
         <Setter Property="MaxWidth" Value="720" />
     </Style>
     <Style Selector="Border.Explain TextBlock">
-        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="FontSize" Value="13" />
         <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
@@ -718,7 +771,7 @@
         <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="CornerRadius" Value="8" />
         <Setter Property="Padding" Value="11,9" />
     </Style>
     <Style Selector="Border.Code SelectableTextBlock, Border.Code TextBlock">
@@ -748,29 +801,40 @@
     <!-- INPUTS -->
     <!-- ========================= -->
 
+    <!-- Inputs: 32 px, radius 8, CardBg with a BorderMuted hairline; focus turns the hairline accent
+         and keyboard focus adds a 2 px AccentSubtle ring -->
     <Style Selector="TextBox">
-        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="MinHeight" Value="32" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="SelectionBrush" Value="{DynamicResource AccentStrongBrush}" />
         <Setter Property="SelectionForegroundBrush" Value="{DynamicResource AccentOnBrush}" />
         <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}" />
         <!-- The template binds these, and a template value beats a style on the template part -->
-        <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}" />
+        <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}" />
+        <Setter Property="FocusAdorner">
+            <FocusAdornerTemplate>
+                <Border BorderThickness="2"
+                        BorderBrush="{DynamicResource AccentSubtleBrush}"
+                        CornerRadius="8"
+                        Margin="-2" />
+            </FocusAdornerTemplate>
+        </Setter>
     </Style>
 
     <Style Selector="TextBox /template/ Border#PART_BorderElement">
-        <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}" />
+        <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}" />
     </Style>
 
     <Style Selector="TextBox:pointerover /template/ Border#PART_BorderElement">
-        <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource InputHoverBorderBrush}" />
     </Style>
 
     <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
-        <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}" />
+        <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource AccentStrongBrush}" />
         <Setter Property="BorderThickness" Value="1" />
     </Style>
@@ -781,7 +845,7 @@
     </Style>
 
     <Style Selector="TextBox:disabled /template/ Border#PART_BorderElement">
-        <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}" />
+        <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}" />
     </Style>
 
@@ -813,18 +877,27 @@
     </Style>
 
     <Style Selector="ComboBox">
-        <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}" />
+        <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="7" />
-        <Setter Property="Padding" Value="9,5" />
-        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="FontSize" Value="13" />
+        <Setter Property="FocusAdorner">
+            <FocusAdornerTemplate>
+                <Border BorderThickness="2"
+                        BorderBrush="{DynamicResource AccentSubtleBrush}"
+                        CornerRadius="8"
+                        Margin="-2" />
+            </FocusAdornerTemplate>
+        </Setter>
     </Style>
 
     <Style Selector="ComboBox:pointerover /template/ Border#Background">
-        <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource TextMutedBrush}" />
+        <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource InputHoverBorderBrush}" />
     </Style>
 
     <Style Selector="ComboBox:focus /template/ Border#Background">
@@ -836,7 +909,7 @@
     </Style>
 
     <Style Selector="ComboBox:disabled /template/ Border#Background">
-        <Setter Property="Background" Value="{DynamicResource SurfaceBgBrush}" />
+        <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}" />
     </Style>
 
@@ -926,7 +999,7 @@
         <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="CornerRadius" Value="8" />
         <Setter Property="ClipToBounds" Value="True" />
     </Style>
 
@@ -943,7 +1016,7 @@
 
     <Style Selector="SelectableTextBlock.MarkdownCode">
         <Setter Property="FontFamily" Value="{StaticResource MonoFontFamily}" />
-        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="FontSize" Value="12" />
         <Setter Property="LineHeight" Value="19" />
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         <Setter Property="TextWrapping" Value="NoWrap" />
@@ -1001,7 +1074,7 @@
         <Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="CornerRadius" Value="12"/>
         <Setter Property="Padding" Value="12,10"/>
         <Setter Property="Transitions">
             <Transitions>
@@ -1066,14 +1139,9 @@
 
     <Style Selector="TextBlock.RowTitle">
         <Setter Property="FontSize" Value="13"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="LineHeight" Value="20"/>
+        <Setter Property="FontWeight" Value="Medium"/>
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-    </Style>
-
-    <Style Selector="TextBlock.RowText">
-        <Setter Property="FontSize" Value="12"/>
-        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
     </Style>
 
     <Style Selector="TextBlock.ErrorText">
