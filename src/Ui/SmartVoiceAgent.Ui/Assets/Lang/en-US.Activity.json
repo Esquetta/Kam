@@ -1,25 +1,15 @@
 {
-  "Activity.Title": "Activity",
-  "Activity.Subtitle": "This chat",
-  "Activity.Tab.Runs": "Steps",
-  "Activity.Tab.Events": "Event stream",
-  "Activity.Context": "Context",
-  "Activity.Task.Title": "This task",
   "Activity.Task.Context": "Context window",
   "Activity.Task.ContextUsage": "{0} of {1} tokens",
   "Activity.Task.ContextUsageNoBudget": "{0} tokens, compaction off",
+  "Activity.Task.ContextPercent": "{0}%",
   "Activity.Task.ContextUnknown": "Measured after the next turn",
-  "Activity.Task.ContextHint": "When the context reaches the budget, Kam summarizes older messages so the task can go on.",
   "Activity.Task.NotCompacted": "Not compacted yet",
   "Activity.Task.CompactedOnce": "Compacted once since Kam started",
   "Activity.Task.CompactedMany": "Compacted {0} times since Kam started",
   "Activity.Task.CompactNow": "Compact now",
   "Activity.Task.CompactNowTip": "Summarize older messages now, the same as /compact",
 
-  "Activity.Show": "Show activity",
-  "Activity.Hide": "Hide activity",
-  "Activity.Trace.Empty": "Run a task in this chat to see its steps here: each tool call, how it ended and how long it took, then the tokens used.",
-  "Activity.Trace.NoTools": "Answered without tools.",
   "Activity.Trace.Outcome.Running": "Working",
   "Activity.Trace.Outcome.Done": "Done",
   "Activity.Trace.Outcome.Failed": "Failed",
@@ -31,23 +21,5 @@
   "Activity.Duration.Minutes": "{0} min {1} s",
 
   "Activity.ApprovalNeeded": "Approval needed",
-  "Activity.Reject": "Reject",
-
-  "Activity.Runs.Title": "Agent runs",
-  "Activity.RunDetail.Title": "Run detail",
-  "Activity.RunDetail.Model": "Model",
-  "Activity.RunDetail.Duration": "Duration",
-
-  "Activity.PlanTrace.Title": "Plan trace",
-  "Activity.PlanTrace.Clear": "Clear planner trace",
-
-  "Activity.SkillResults.Title": "Skill results",
-  "Activity.SkillResults.Clear": "Clear result history",
-  "Activity.SkillResults.Filter": "Filter result history...",
-  "Activity.SkillResults.ClearFilters": "Clear filters",
-  "Activity.SkillResults.NoMatches": "No matching executions",
-  "Activity.SkillResults.CopyResult": "Copy result",
-  "Activity.SkillResults.CopyStdOut": "Copy stdout",
-  "Activity.SkillResults.CopyStdErr": "Copy stderr",
-  "Activity.SkillResults.Rerun": "Rerun skill"
+  "Activity.Reject": "Reject"
 }

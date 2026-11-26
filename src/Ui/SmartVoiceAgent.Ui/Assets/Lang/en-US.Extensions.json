@@ -1,6 +1,7 @@
 {
   "Extensions.Title": "Extensions",
   "Extensions.Subtitle": "Give the agent new tools and know-how: MCP servers, plugins, skills and slash commands.",
+  "Extensions.SkillsLink": "Skill tests and policies",
   "Extensions.OpenFolder": "Open folder",
   "Extensions.NoDescription": "No description.",
   "Extensions.MoreActions": "More actions",

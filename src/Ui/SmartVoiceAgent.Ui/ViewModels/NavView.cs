@@ -14,7 +14,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
         Agents,
         Loops,
         Graphs,
-        Builder,
         Runs
     }
 }

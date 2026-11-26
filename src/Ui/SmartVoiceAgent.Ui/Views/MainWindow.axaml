@@ -47,10 +47,6 @@
 			<Setter Property="Width" Value="60"/>
 		</Style>
 
-		<Style Selector="Border.Sidebar.Compact Border.LadderBadge, Border.Sidebar.Compact Panel.LadderBadge, Border.Sidebar.Compact Button.SpendCard, Border.Sidebar.Compact Border.LadderLine">
-			<Setter Property="IsVisible" Value="False"/>
-		</Style>
-
 		<Style Selector="Border.Sidebar.Compact TextBlock.NavLabel">
 			<Setter Property="IsVisible" Value="False"/>
 		</Style>
@@ -115,82 +111,6 @@
 			<Setter Property="VerticalAlignment" Value="Center"/>
 		</Style>
 
-		<!-- Build ladder: numbered steps on a vertical line; each row is a nav button -->
-		<Style Selector="Border.LadderLine">
-			<Setter Property="Width" Value="1"/>
-			<Setter Property="Margin" Value="18,16,0,16"/>
-			<Setter Property="HorizontalAlignment" Value="Left"/>
-			<Setter Property="Background" Value="{DynamicResource BorderMutedBrush}"/>
-		</Style>
-		<Style Selector="Button.LadderStep TextBlock.NavLabel">
-			<Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-		</Style>
-		<Style Selector="Button.LadderStep.Active Border.LadderLevel">
-			<Setter Property="Background" Value="{DynamicResource AccentStrongBrush}"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource AccentStrongBrush}"/>
-		</Style>
-		<Style Selector="Button.LadderStep.Active Border.LadderLevel TextBlock">
-			<Setter Property="Foreground" Value="{DynamicResource AccentOnBrush}"/>
-		</Style>
-		<Style Selector="Button.NavBtn.Active TextBlock.NavLabel">
-			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-		</Style>
-		<Style Selector="Border.LadderLevel">
-			<Setter Property="Width" Value="22"/>
-			<Setter Property="Height" Value="22"/>
-			<Setter Property="CornerRadius" Value="11"/>
-			<Setter Property="BorderThickness" Value="1"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
-			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
-		</Style>
-		<Style Selector="Border.LadderLevel TextBlock">
-			<Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}"/>
-			<Setter Property="FontSize" Value="10.5"/>
-			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
-			<Setter Property="HorizontalAlignment" Value="Center"/>
-			<Setter Property="VerticalAlignment" Value="Center"/>
-		</Style>
-		<!-- Status badge: partial (warn) or planned (muted, dashed outline) -->
-		<Style Selector="Panel.LadderBadge">
-			<Setter Property="VerticalAlignment" Value="Center"/>
-		</Style>
-		<Style Selector="Panel.LadderBadge TextBlock">
-			<Setter Property="FontSize" Value="9.5"/>
-			<Setter Property="FontWeight" Value="Medium"/>
-			<Setter Property="Margin" Value="6,1"/>
-			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
-		</Style>
-		<Style Selector="Panel.LadderBadge Rectangle">
-			<Setter Property="RadiusX" Value="8"/>
-			<Setter Property="RadiusY" Value="8"/>
-			<Setter Property="Stroke" Value="{DynamicResource BorderMutedBrush}"/>
-			<Setter Property="StrokeThickness" Value="1"/>
-			<Setter Property="StrokeDashArray" Value="3,2"/>
-		</Style>
-		<Style Selector="Panel.LadderBadge.Partial Rectangle">
-			<Setter Property="Fill" Value="{DynamicResource AccentOrangeGlowBrush}"/>
-			<Setter Property="StrokeThickness" Value="0"/>
-		</Style>
-		<Style Selector="Panel.LadderBadge.Partial TextBlock">
-			<Setter Property="Foreground" Value="{DynamicResource AccentOrangeBrush}"/>
-		</Style>
-
-		<!-- Spend meter in the rail foot: Kam does not track spend yet, so it only says planned; it opens Runs -->
-		<Style Selector="Button.SpendCard">
-			<Setter Property="HorizontalAlignment" Value="Stretch"/>
-			<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-			<Setter Property="BorderThickness" Value="1"/>
-			<Setter Property="CornerRadius" Value="10"/>
-			<Setter Property="Padding" Value="10,9"/>
-			<Setter Property="Cursor" Value="Hand"/>
-		</Style>
-		<Style Selector="Button.SpendCard:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-			<Setter Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource BorderMutedBrush}"/>
-		</Style>
-
 		<!-- Top bar search: looks like an input, opens the task search -->
 		<Style Selector="Button.TitleSearch">
 			<Setter Property="MinWidth" Value="240"/>
@@ -242,7 +162,7 @@
 			<Setter Property="IsVisible" Value="False"/>
 		</Style>
 
-		<!-- Context meter in the Activity panel: thin, accent, orange near the budget -->
+		<!-- Context meter in the composer bar: thin, accent, orange near the budget -->
 		<Style Selector="ProgressBar.ContextMeter">
 			<Setter Property="Height" Value="6"/>
 			<Setter Property="MinHeight" Value="6"/>
@@ -272,36 +192,6 @@
 
 		<Style Selector="Button.NavBtn.Active TextBlock.NavLabel">
 			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-		</Style>
-
-		<!-- ========================= -->
-		<!-- ACTIVITY PANEL -->
-		<!-- ========================= -->
-
-		<Style Selector="Border.ActivityLogItem">
-			<Setter Property="Background" Value="Transparent"/>
-			<Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}"/>
-			<Setter Property="BorderThickness" Value="0,0,0,1"/>
-			<Setter Property="CornerRadius" Value="0"/>
-			<Setter Property="Padding" Value="4,10"/>
-			<Setter Property="Margin" Value="0"/>
-		</Style>
-
-		<Style Selector="Border.ActivityLogItem:pointerover">
-			<Setter Property="Background" Value="{DynamicResource CardBgBrush}"/>
-		</Style>
-
-		<Style Selector="TextBlock.ActivityMeta">
-			<Setter Property="FontSize" Value="11"/>
-			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
-			<Setter Property="FontWeight" Value="Medium"/>
-		</Style>
-
-		<Style Selector="TextBlock.ActivityMessage">
-			<Setter Property="FontSize" Value="12"/>
-			<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-			<Setter Property="LineHeight" Value="18"/>
-			<Setter Property="TextWrapping" Value="Wrap"/>
 		</Style>
 
 		<!-- ========================= -->
@@ -573,14 +463,6 @@
 			<Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
 		</Style>
 
-		<!-- Context pane section heading (.ctx h3) -->
-		<Style Selector="TextBlock.CtxHeading">
-			<Setter Property="FontSize" Value="12"/>
-			<Setter Property="FontWeight" Value="Medium"/>
-			<Setter Property="LetterSpacing" Value="0.72"/>
-			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
-		</Style>
-
 		<Style Selector="Ellipse.WorkingDot">
 			<Style.Animations>
 				<Animation Duration="0:0:1.2" IterationCount="Infinite">
@@ -678,7 +560,7 @@
 		</Grid.ColumnDefinitions>
 
 		<!-- ========================= -->
-		<!-- RAIL: Work, the Build ladder, Manage, then the spend meter and the theme toggle -->
+		<!-- RAIL: Work, Build, Manage, then the theme toggle -->
 		<!-- ========================= -->
 		<!-- Drag the rail's right edge to resize it; a double click restores 232 px -->
 		<controls:PaneResizeHandle Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
@@ -694,7 +576,7 @@
 				Classes="Sidebar"
 				Classes.Compact="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsRailCompact}"
 				PointerPressed="OnHeaderPointerPressed">
-			<Grid RowDefinitions="Auto,*,Auto,Auto" Margin="10,12,10,10">
+			<Grid RowDefinitions="Auto,*,Auto" Margin="10,12,10,10">
 
 				<!-- Brand -->
 				<Button Grid.Row="0"
@@ -731,7 +613,7 @@
 					</StackPanel>
 				</Button>
 
-				<!-- Navigation: Work (daily use), Build (the five-step ladder), Manage -->
+				<!-- Navigation: Work (daily use), Build, Manage -->
 				<ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
 				<StackPanel VerticalAlignment="Top">
 					<TextBlock Classes="NavLabel Overline"
@@ -768,100 +650,54 @@
 						</Grid>
 					</Button>
 
-					<!-- Build: the five-step ladder. Each step opens its page; the badge says how much of it Kam has today. -->
+					<!-- Build: prompts, agents, loops and graphs -->
 					<TextBlock Classes="NavLabel Overline"
 								   Text="{DynamicResource Lang.Shell.Nav.Build}"
 								   Margin="8,12,0,6"/>
-					<Panel Classes="Ladder">
-						<Border Classes="LadderLine"/>
-						<StackPanel>
-								<Button Classes.NavBtn="True"
-										Classes.LadderStep="True"
-										Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Prompts}}"
-										Command="{Binding NavigateToPageCommand}"
-										CommandParameter="{x:Static vm:NavView.Prompts}"
-										AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Prompts}"
-										AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.PromptsTip}"
-										ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.PromptsTip}">
-									<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
-										<Border Classes="LadderLevel"><TextBlock Text="1"/></Border>
-										<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Prompts}"/>
-										<Panel Grid.Column="2" Classes="LadderBadge Partial">
-											<Rectangle/>
-											<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Partial}"/>
-										</Panel>
-									</Grid>
-								</Button>
-								<Button Classes.NavBtn="True"
-										Classes.LadderStep="True"
-										Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Agents}}"
-										Command="{Binding NavigateToPageCommand}"
-										CommandParameter="{x:Static vm:NavView.Agents}"
-										AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Agents}"
-										AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.AgentsTip}"
-										ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.AgentsTip}">
-									<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
-										<Border Classes="LadderLevel"><TextBlock Text="2"/></Border>
-										<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Agents}"/>
-										<Panel Grid.Column="2" Classes="LadderBadge Partial">
-											<Rectangle/>
-											<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Partial}"/>
-										</Panel>
-									</Grid>
-								</Button>
-								<Button Classes.NavBtn="True"
-										Classes.LadderStep="True"
-										Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Loops}}"
-										Command="{Binding NavigateToPageCommand}"
-										CommandParameter="{x:Static vm:NavView.Loops}"
-										AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Loops}"
-										AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.LoopsTip}"
-										ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.LoopsTip}">
-									<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
-										<Border Classes="LadderLevel"><TextBlock Text="3"/></Border>
-										<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Loops}"/>
-										<Panel Grid.Column="2" Classes="LadderBadge Partial">
-											<Rectangle/>
-											<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Partial}"/>
-										</Panel>
-									</Grid>
-								</Button>
-								<Button Classes.NavBtn="True"
-										Classes.LadderStep="True"
-										Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Graphs}}"
-										Command="{Binding NavigateToPageCommand}"
-										CommandParameter="{x:Static vm:NavView.Graphs}"
-										AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Graphs}"
-										AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.GraphsTip}"
-										ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.GraphsTip}">
-									<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
-										<Border Classes="LadderLevel"><TextBlock Text="4"/></Border>
-										<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Graphs}"/>
-										<Panel Grid.Column="2" Classes="LadderBadge Partial">
-											<Rectangle/>
-											<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Partial}"/>
-										</Panel>
-									</Grid>
-								</Button>
-								<Button Classes.NavBtn="True"
-										Classes.LadderStep="True"
-										Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Builder}}"
-										Command="{Binding NavigateToPageCommand}"
-										CommandParameter="{x:Static vm:NavView.Builder}"
-										AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Builder}"
-										AutomationProperties.HelpText="{DynamicResource Lang.Shell.Ladder.BuilderTip}"
-										ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.BuilderTip}">
-									<Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
-										<Border Classes="LadderLevel"><TextBlock Text="5"/></Border>
-										<TextBlock Grid.Column="1" Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Builder}"/>
-										<Panel Grid.Column="2" Classes="LadderBadge Planned">
-											<Rectangle/>
-											<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Planned}"/>
-										</Panel>
-									</Grid>
-								</Button>
+					<Button Classes.NavBtn="True"
+							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Prompts}}"
+							Command="{Binding NavigateToPageCommand}"
+							CommandParameter="{x:Static vm:NavView.Prompts}"
+							AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Prompts}"
+							ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.PromptsTip}">
+						<StackPanel Orientation="Horizontal" Spacing="10">
+							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconBookOpen}"/></Viewbox>
+							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Prompts}"/>
 						</StackPanel>
-					</Panel>
+					</Button>
+					<Button Classes.NavBtn="True"
+							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Agents}}"
+							Command="{Binding NavigateToPageCommand}"
+							CommandParameter="{x:Static vm:NavView.Agents}"
+							AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Agents}"
+							ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.AgentsTip}">
+						<StackPanel Orientation="Horizontal" Spacing="10">
+							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconBot}"/></Viewbox>
+							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Agents}"/>
+						</StackPanel>
+					</Button>
+					<Button Classes.NavBtn="True"
+							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Loops}}"
+							Command="{Binding NavigateToPageCommand}"
+							CommandParameter="{x:Static vm:NavView.Loops}"
+							AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Loops}"
+							ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.LoopsTip}">
+						<StackPanel Orientation="Horizontal" Spacing="10">
+							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconRefresh}"/></Viewbox>
+							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Loops}"/>
+						</StackPanel>
+					</Button>
+					<Button Classes.NavBtn="True"
+							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Graphs}}"
+							Command="{Binding NavigateToPageCommand}"
+							CommandParameter="{x:Static vm:NavView.Graphs}"
+							AutomationProperties.Name="{DynamicResource Lang.Shell.Ladder.Graphs}"
+							ToolTip.Tip="{DynamicResource Lang.Shell.Ladder.GraphsTip}">
+						<StackPanel Orientation="Horizontal" Spacing="10">
+							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconNetwork}"/></Viewbox>
+							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Ladder.Graphs}"/>
+						</StackPanel>
+					</Button>
 
 					<!-- Manage: what agents can use and how Kam is set up -->
 					<TextBlock Classes="NavLabel Overline"
@@ -876,16 +712,6 @@
 						<StackPanel Orientation="Horizontal" Spacing="10">
 							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconActivity}"/></Viewbox>
 							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Runs}"/>
-						</StackPanel>
-					</Button>
-					<Button Classes.NavBtn="True"
-							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Plugins}}"
-							Command="{Binding NavigateToPluginsCommand}"
-							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Skills}"
-							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.Skills}">
-						<StackPanel Orientation="Horizontal" Spacing="10">
-							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconBlocks}"/></Viewbox>
-							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Skills}"/>
 						</StackPanel>
 					</Button>
 					<Button Classes.NavBtn="True"
@@ -909,16 +735,6 @@
 						</StackPanel>
 					</Button>
 					<Button Classes.NavBtn="True"
-							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Diagnostics}}"
-							Command="{Binding NavigateToDiagnosticsCommand}"
-							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Diagnostics}"
-							ToolTip.Tip="{DynamicResource Lang.Shell.Nav.DiagnosticsTip}">
-						<StackPanel Orientation="Horizontal" Spacing="10">
-							<Viewbox Width="15" Height="15"><Path Classes="Icon" Data="{StaticResource IconCpu}"/></Viewbox>
-							<TextBlock Classes="NavLabel" Text="{DynamicResource Lang.Shell.Nav.Diagnostics}"/>
-						</StackPanel>
-					</Button>
-					<Button Classes.NavBtn="True"
 							Classes.Active="{Binding ActiveView, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:NavView.Settings}}"
 							Command="{Binding NavigateToSettingsCommand}"
 							AutomationProperties.Name="{DynamicResource Lang.Shell.Nav.Settings}"
@@ -931,26 +747,8 @@
 				</StackPanel>
 				</ScrollViewer>
 
-				<!-- Spend meter: Kam does not record model spend yet, so the card says so instead of showing a number; it opens Runs -->
-				<Button Grid.Row="2"
-						Classes="SpendCard"
-						Margin="0,12,0,6"
-						Command="{Binding NavigateToPageCommand}"
-						CommandParameter="{x:Static vm:NavView.Runs}"
-						AutomationProperties.Name="{DynamicResource Lang.Shell.Spend.Title}"
-						AutomationProperties.HelpText="{DynamicResource Lang.Shell.Spend.Tip}"
-						ToolTip.Tip="{DynamicResource Lang.Shell.Spend.Tip}">
-					<Grid ColumnDefinitions="*,Auto">
-						<TextBlock Text="{DynamicResource Lang.Shell.Spend.Title}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
-						<Panel Grid.Column="1" Classes="LadderBadge Planned">
-							<Rectangle/>
-							<TextBlock Text="{DynamicResource Lang.Shell.Ladder.Planned}"/>
-						</Panel>
-					</Grid>
-				</Button>
-
 				<!-- Bottom navigation: theme toggle -->
-				<StackPanel Grid.Row="3" Classes="SidebarFooter" Spacing="4">
+				<StackPanel Grid.Row="2" Classes="SidebarFooter" Spacing="4" Margin="0,12,0,0">
 					<Button Classes="NavBtn"
 							Command="{Binding ToggleThemeCommand}"
 							AutomationProperties.Name="{DynamicResource Lang.Shell.ToggleTheme}"
@@ -1018,9 +816,11 @@
 						<Border Grid.Column="2" Classes="Kbd"><TextBlock Text="Ctrl K"/></Border>
 					</Grid>
 				</Button>
-				<!-- The wake phrase listens locally -->
+				<!-- The wake phrase listens locally; the pill shows only while it is listening -->
 				<Panel Grid.Column="4" Classes="WakePill" VerticalAlignment="Center">
-					<StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsWakeWordEnabled}" ToolTip.Tip="{DynamicResource Lang.Shell.WakeOnTip}">
+					<StackPanel Orientation="Horizontal" Spacing="6"
+								IsVisible="{Binding VoiceState, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static services:VoiceState.WakeListening}}"
+								ToolTip.Tip="{DynamicResource Lang.Shell.WakeOnTip}">
 						<Border Classes="StatusDot Success" VerticalAlignment="Center"/>
 						<TextBlock Text="{DynamicResource Lang.Shell.WakeOn}" FontSize="11.5" Foreground="{DynamicResource TextMutedBrush}"/>
 					</StackPanel>
@@ -1040,29 +840,21 @@
 		</Border>
 
 		<!-- ========================= -->
-		<!-- CONTENT + CONTEXT PANE -->
+		<!-- CONTENT -->
 		<!-- ========================= -->
 		<Border Grid.Row="1" Grid.Column="1"
 				Background="{DynamicResource SurfaceBgBrush}"
 				ClipToBounds="True">
 			<Grid>
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="*"/>
-					<ColumnDefinition Width="{Binding ActivityPanelWidth}"/>
-				</Grid.ColumnDefinitions>
-
 				<!-- Tasks: task list, conversation and composer -->
 				<local:TasksView x:Name="TasksPanel"
-								 Grid.Column="0"
 								 IsVisible="{Binding IsChatWorkbenchVisible}"/>
 
 				<!-- Needs you: approvals waiting across all tasks -->
-				<local:InboxView Grid.Column="0"
-								 IsVisible="{Binding IsInboxVisible}"/>
+				<local:InboxView IsVisible="{Binding IsInboxVisible}"/>
 
 				<!-- Page host -->
 				<ContentControl Content="{Binding CurrentViewModel}"
-								Grid.Column="0"
 								IsVisible="{Binding IsPageHostVisible}">
 					<ContentControl.DataTemplates>
 						<DataTemplate DataType="pagevm:PluginsViewModel">
@@ -1104,873 +896,8 @@
 						<DataTemplate DataType="pagevm:GraphsViewModel">
 							<local:GraphsView/>
 						</DataTemplate>
-
-						<DataTemplate DataType="pagevm:PlannedStepViewModel">
-							<local:PlannedStepView/>
-						</DataTemplate>
 					</ContentControl.DataTemplates>
 				</ContentControl>
-
-				<!-- ========================= -->
-				<!-- ACTIVITY PANEL -->
-				<!-- ========================= -->
-				<!-- The 290 px context pane (.ctx) beside the thread, from 1280 px up -->
-				<Border Grid.Column="1"
-						Background="{DynamicResource CardBgBrush}"
-						BorderBrush="{DynamicResource BorderSubtleBrush}"
-						BorderThickness="1,0,0,0"
-						IsVisible="{Binding IsActivityPanelShown}">
-					<Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, *">
-
-						<!-- Activity Header -->
-						<Border Grid.Row="0"
-								BorderBrush="{DynamicResource BorderSubtleBrush}"
-								BorderThickness="0,0,0,1">
-							<Grid RowDefinitions="Auto,Auto"
-								  RowSpacing="10"
-								  Margin="14,12,14,12">
-								<Grid Grid.Row="0" ColumnDefinitions="*, Auto">
-									<StackPanel Grid.Column="0" Spacing="1" VerticalAlignment="Center">
-										<TextBlock Text="{DynamicResource Lang.Activity.Title}" Classes="SectionTitle" FontSize="13.5"/>
-										<TextBlock Text="{DynamicResource Lang.Activity.Subtitle}" Classes="Caption"/>
-									</StackPanel>
-									<Button Grid.Column="1"
-											Classes="IconButton CompactIconButton"
-											Background="Transparent"
-											BorderThickness="0"
-											VerticalAlignment="Center"
-											AutomationProperties.Name="{DynamicResource Lang.Activity.Hide}"
-											ToolTip.Tip="{DynamicResource Lang.Activity.Hide}"
-											Command="{Binding ToggleActivityPanelCommand}">
-										<Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconX}"/></Viewbox>
-									</Button>
-								</Grid>
-								<Border Grid.Row="1" Classes="Segmented" HorizontalAlignment="Left">
-									<Grid ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="2" HorizontalAlignment="Left">
-										<Button Grid.Column="0"
-												Classes="DrawerTab"
-												Classes.Selected="{Binding IsActivityRunsPanelVisible}"
-												Content="{DynamicResource Lang.Activity.Tab.Runs}"
-												Command="{Binding ShowRunsCommand}"/>
-										<Button Grid.Column="1"
-												Classes="DrawerTab"
-												Classes.Selected="{Binding IsActivityContextPanelVisible}"
-												Content="{DynamicResource Lang.Activity.Context}"
-												Command="{Binding ShowContextCommand}"/>
-										<Button Grid.Column="2"
-												Classes="DrawerTab"
-												Classes.Selected="{Binding IsActivityEventsPanelVisible}"
-												Content="{DynamicResource Lang.Activity.Tab.Events}"
-												Command="{Binding ShowEventsCommand}"/>
-									</Grid>
-								</Border>
-							</Grid>
-						</Border>
-
-						<!-- Pending Skill Confirmations -->
-						<Border Grid.Row="1"
-								Background="{DynamicResource CardBgHoverBrush}"
-								BorderBrush="{DynamicResource AccentStrongBrush}"
-								BorderThickness="0,0,0,1"
-								Padding="16,12"
-								IsVisible="{Binding HasPendingSkillConfirmations}">
-							<StackPanel Spacing="8">
-								<StackPanel Orientation="Horizontal" Spacing="8">
-									<Viewbox Width="14" Height="14" VerticalAlignment="Center"><Path Classes="Icon Accent" Data="{StaticResource IconAlert}"/></Viewbox>
-									<TextBlock Text="{DynamicResource Lang.Activity.ApprovalNeeded}"
-											   FontSize="12"
-											   FontWeight="SemiBold"
-											   Foreground="{DynamicResource AccentBrush}"
-											   VerticalAlignment="Center"/>
-								</StackPanel>
-
-								<ItemsControl ItemsSource="{Binding PendingSkillConfirmations}">
-									<ItemsControl.ItemTemplate>
-										<DataTemplate>
-											<Border Background="{DynamicResource CardBgBrush}"
-													BorderBrush="{DynamicResource BorderSubtleBrush}"
-													BorderThickness="1"
-													CornerRadius="8"
-													Padding="10"
-													Margin="0,0,0,6">
-												<Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto, Auto, Auto">
-													<TextBlock Grid.Row="0" Grid.Column="0"
-															   Text="{Binding SkillId}"
-															   Foreground="{DynamicResource TextPrimaryBrush}"
-															   FontSize="12"
-															   FontFamily="{StaticResource MonoFontFamily}"
-															   FontWeight="SemiBold"
-															   TextWrapping="Wrap"/>
-													<TextBlock Grid.Row="1" Grid.Column="0"
-															   Text="{Binding UserCommand}"
-															   Foreground="{DynamicResource TextSecondaryBrush}"
-															   FontSize="11"
-															   TextWrapping="Wrap"
-															   Margin="0,4,12,0"/>
-													<TextBlock Grid.Row="2" Grid.Column="0"
-															   Text="{Binding Reason}"
-															   Foreground="{DynamicResource TextMutedBrush}"
-															   FontSize="10"
-															   TextWrapping="Wrap"
-															   Margin="0,4,12,0"/>
-													<Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
-															Background="{DynamicResource CardBgHoverBrush}"
-															BorderBrush="{DynamicResource BorderSubtleBrush}"
-															BorderThickness="1"
-															CornerRadius="6"
-															Padding="8"
-															Margin="0,8,0,0"
-															IsVisible="{Binding HasPreview}">
-														<ScrollViewer MaxHeight="180"
-																	  HorizontalScrollBarVisibility="Auto"
-																	  VerticalScrollBarVisibility="Auto">
-															<TextBlock Text="{Binding Preview}"
-																	   Foreground="{DynamicResource TextSecondaryBrush}"
-																	   FontSize="10"
-																	   FontFamily="{StaticResource MonoFontFamily}"
-																	   TextWrapping="NoWrap"/>
-														</ScrollViewer>
-													</Border>
-													<StackPanel Grid.Row="0" Grid.RowSpan="3" Grid.Column="1"
-																Orientation="Horizontal"
-																VerticalAlignment="Top"
-																Spacing="6">
-														<Button Classes="IconButton"
-																Width="28" Height="28"
-																Background="Transparent"
-																BorderBrush="{DynamicResource AccentGreenBrush}"
-																BorderThickness="1"
-																CornerRadius="6"
-																Padding="0"
-																Cursor="Hand"
-																AutomationProperties.Name="{DynamicResource Lang.Common.Approve}"
-																ToolTip.Tip="{DynamicResource Lang.Common.Approve}"
-																Command="{Binding ApproveCommand}">
-															<Viewbox Width="16" Height="16"><Path Classes="Icon Success" Data="{StaticResource IconCheck}"/></Viewbox>
-														</Button>
-														<Button Classes="IconButton"
-																Width="28" Height="28"
-																Background="Transparent"
-																BorderBrush="{DynamicResource AccentErrorBrush}"
-																BorderThickness="1"
-																CornerRadius="6"
-																Padding="0"
-																Cursor="Hand"
-																AutomationProperties.Name="{DynamicResource Lang.Activity.Reject}"
-																ToolTip.Tip="{DynamicResource Lang.Activity.Reject}"
-																Command="{Binding RejectCommand}">
-															<Viewbox Width="16" Height="16"><Path Classes="Icon Danger" Data="{StaticResource IconX}"/></Viewbox>
-														</Button>
-													</StackPanel>
-												</Grid>
-											</Border>
-										</DataTemplate>
-									</ItemsControl.ItemTemplate>
-								</ItemsControl>
-							</StackPanel>
-						</Border>
-
-						<!-- Runtime Agents -->
-						<Border Grid.Row="2"
-								Background="Transparent"
-								BorderBrush="{DynamicResource BorderSubtleBrush}"
-								BorderThickness="0,0,0,1"
-								Padding="16,12"
-								IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Runs}}">
-							<StackPanel Spacing="12">
-								<!-- Steps of the latest turn in the selected chat: each tool call, its outcome and time, then totals -->
-								<StackPanel Spacing="10" IsVisible="{Binding SelectedAgentChatSession.HasLastTurn}">
-									<Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-										<TextBlock Text="{Binding SelectedAgentChatSession.LastTurn.Request}"
-												   FontSize="12"
-												   FontWeight="SemiBold"
-												   Foreground="{DynamicResource TextPrimaryBrush}"
-												   TextTrimming="CharacterEllipsis"
-												   VerticalAlignment="Center"/>
-										<Border Grid.Column="1" Classes="Pill" VerticalAlignment="Center">
-											<StackPanel Orientation="Horizontal" Spacing="6">
-												<Border Classes="StatusDot Accent" IsVisible="{Binding SelectedAgentChatSession.LastTurn.IsRunning}"/>
-												<Border Classes="StatusDot Success" IsVisible="{Binding SelectedAgentChatSession.LastTurn.IsDone}"/>
-												<Border Classes="StatusDot Danger" IsVisible="{Binding SelectedAgentChatSession.LastTurn.IsFailed}"/>
-												<TextBlock Text="{Binding SelectedAgentChatSession.LastTurn.OutcomeText}"/>
-											</StackPanel>
-										</Border>
-									</Grid>
-									<ItemsControl ItemsSource="{Binding SelectedAgentChatSession.LastTurn.Steps}">
-										<ItemsControl.ItemTemplate>
-											<DataTemplate DataType="vm:AgentChatMessageViewModel">
-												<Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8" Margin="0,0,0,8">
-													<Border Grid.Column="0" Classes="StatusDot Accent" IsVisible="{Binding IsToolRunning}"/>
-													<Border Grid.Column="0" Classes="StatusDot Warning" IsVisible="{Binding IsAwaitingApproval}"/>
-													<Border Grid.Column="0" Classes="StatusDot Success" IsVisible="{Binding IsToolSucceeded}"/>
-													<Border Grid.Column="0" Classes="StatusDot Danger" IsVisible="{Binding IsToolFailed}"/>
-													<TextBlock Grid.Column="1"
-															   Text="{Binding ToolDisplayName}"
-															   FontSize="12"
-															   Foreground="{DynamicResource TextSecondaryBrush}"
-															   TextTrimming="CharacterEllipsis"/>
-													<TextBlock Grid.Column="2"
-															   Text="{Binding ToolDurationText}"
-															   FontSize="11"
-															   FontFamily="{StaticResource MonoFontFamily}"
-															   Foreground="{DynamicResource TextMutedBrush}"/>
-													<TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
-															   Text="{Binding ToolStatusText}"
-															   FontSize="11"
-															   Foreground="{DynamicResource TextMutedBrush}"
-															   TextTrimming="CharacterEllipsis"/>
-												</Grid>
-											</DataTemplate>
-										</ItemsControl.ItemTemplate>
-									</ItemsControl>
-									<TextBlock Text="{DynamicResource Lang.Activity.Trace.NoTools}"
-											   FontSize="12"
-											   Foreground="{DynamicResource TextMutedBrush}"
-											   IsVisible="{Binding !SelectedAgentChatSession.LastTurn.HasSteps}"/>
-									<TextBlock Text="{Binding SelectedAgentChatSession.LastTurn.SummaryText}"
-											   FontSize="11"
-											   Foreground="{DynamicResource TextMutedBrush}"
-											   TextWrapping="Wrap"/>
-								</StackPanel>
-								<TextBlock Text="{DynamicResource Lang.Activity.Trace.Empty}"
-										   FontSize="12"
-										   Foreground="{DynamicResource TextMutedBrush}"
-										   TextWrapping="Wrap"
-										   IsVisible="{Binding !SelectedAgentChatSession.HasLastTurn}"/>
-
-								<!-- Older single-shot agent runs (command mode); shown only when there are any -->
-								<StackPanel Spacing="8" IsVisible="{Binding HasRuntimeAgentActivities}">
-								<StackPanel Orientation="Horizontal"
-											Spacing="8">
-									<Viewbox Width="14" Height="14" VerticalAlignment="Center"><Path Classes="Icon Accent" Data="{StaticResource IconLightbulb}"/></Viewbox>
-									<TextBlock Text="{DynamicResource Lang.Activity.Runs.Title}"
-											   FontSize="12"
-											   FontWeight="SemiBold"
-											   Foreground="{DynamicResource TextMutedBrush}"
-											   VerticalAlignment="Center"/>
-								</StackPanel>
-								<ItemsControl ItemsSource="{Binding RuntimeAgentActivities}">
-									<ItemsControl.ItemTemplate>
-										<DataTemplate DataType="vm:RuntimeAgentActivityViewModel">
-											<Button Command="{Binding $parent[Window].DataContext.ShowRuntimeAgentRunDetailCommand}"
-													CommandParameter="{Binding}"
-													Background="Transparent"
-													BorderThickness="0"
-													Padding="0"
-													HorizontalContentAlignment="Stretch">
-												<Border Background="{DynamicResource CardBgHoverBrush}"
-														BorderBrush="{DynamicResource BorderSubtleBrush}"
-														BorderThickness="1"
-														CornerRadius="8"
-														Padding="10"
-														Margin="0,0,0,6">
-													<Grid ColumnDefinitions="Auto, *, Auto"
-														  RowDefinitions="Auto, Auto"
-														  ColumnSpacing="8">
-														<Border Grid.Row="0"
-																Grid.RowSpan="2"
-																Width="2"
-																Background="{Binding StatusBrush}"
-																CornerRadius="2"/>
-														<TextBlock Grid.Row="0"
-																   Grid.Column="1"
-																   Text="{Binding DisplayName}"
-																   FontSize="12"
-																   FontWeight="SemiBold"
-																   Foreground="{DynamicResource TextPrimaryBrush}"
-																   TextTrimming="CharacterEllipsis"/>
-														<TextBlock Grid.Row="0"
-																   Grid.Column="2"
-																   Text="{Binding StatusText}"
-																   FontSize="10"
-																   FontWeight="SemiBold"
-																   Foreground="{Binding StatusBrush}"/>
-														<TextBlock Grid.Row="1"
-																   Grid.Column="1"
-																   Text="{Binding LastMessage}"
-																   FontSize="11"
-																   Foreground="{DynamicResource TextSecondaryBrush}"
-																   TextTrimming="CharacterEllipsis"
-																   MaxLines="1"
-																   Margin="0,4,8,0"/>
-														<TextBlock Grid.Row="1"
-																   Grid.Column="2"
-																   Text="{Binding UpdatedText}"
-																   FontSize="10"
-																   FontFamily="{StaticResource MonoFontFamily}"
-																   Foreground="{DynamicResource TextMutedBrush}"
-																   Margin="0,4,0,0"/>
-													</Grid>
-												</Border>
-											</Button>
-										</DataTemplate>
-									</ItemsControl.ItemTemplate>
-								</ItemsControl>
-								</StackPanel>
-								<Border Background="{DynamicResource CardBgHoverBrush}"
-										BorderBrush="{DynamicResource AccentBrush}"
-										BorderThickness="1"
-										CornerRadius="8"
-										Padding="12"
-										IsVisible="{Binding HasSelectedRuntimeAgentRun}">
-									<StackPanel Spacing="8">
-										<Grid ColumnDefinitions="*, Auto">
-											<TextBlock Grid.Column="0"
-													   Text="{DynamicResource Lang.Activity.RunDetail.Title}"
-													   FontSize="12"
-													   FontWeight="SemiBold"
-													   Foreground="{DynamicResource TextPrimaryBrush}"/>
-											<TextBlock Grid.Column="1"
-													   Text="{Binding SelectedRuntimeAgentRun.StatusText}"
-													   FontSize="10"
-													   FontWeight="SemiBold"
-													   Foreground="{DynamicResource AccentBrush}"/>
-										</Grid>
-										<TextBlock Text="{Binding SelectedRuntimeAgentRun.DisplayName}"
-												   FontSize="12"
-												   Foreground="{DynamicResource TextPrimaryBrush}"
-												   TextTrimming="CharacterEllipsis"/>
-										<Grid ColumnDefinitions="Auto, *"
-											  RowDefinitions="Auto, Auto"
-											  ColumnSpacing="10"
-											  RowSpacing="4">
-											<TextBlock Grid.Row="0"
-													   Grid.Column="0"
-													   Text="{DynamicResource Lang.Activity.RunDetail.Model}"
-													   FontSize="10"
-													   Foreground="{DynamicResource TextMutedBrush}"/>
-											<TextBlock Grid.Row="0"
-													   Grid.Column="1"
-													   Text="{Binding SelectedRuntimeAgentRun.ModelIdText}"
-													   FontSize="10"
-													   Foreground="{DynamicResource TextSecondaryBrush}"
-													   TextTrimming="CharacterEllipsis"/>
-											<TextBlock Grid.Row="1"
-													   Grid.Column="0"
-													   Text="{DynamicResource Lang.Activity.RunDetail.Duration}"
-													   FontSize="10"
-													   Foreground="{DynamicResource TextMutedBrush}"/>
-											<TextBlock Grid.Row="1"
-													   Grid.Column="1"
-													   Text="{Binding SelectedRuntimeAgentRun.DurationText}"
-													   FontSize="10"
-													   Foreground="{DynamicResource TextSecondaryBrush}"/>
-										</Grid>
-										<TextBlock Text="{Binding SelectedRuntimeAgentRun.TaskText}"
-												   FontSize="11"
-												   Foreground="{DynamicResource TextSecondaryBrush}"
-												   TextWrapping="Wrap"
-												   MaxLines="3"/>
-										<ItemsControl ItemsSource="{Binding SelectedRuntimeAgentRun.Observations}"
-													  IsVisible="{Binding SelectedRuntimeAgentRun.HasObservations}">
-											<ItemsControl.ItemTemplate>
-												<DataTemplate DataType="vm:RuntimeAgentObservationDetailViewModel">
-													<Grid ColumnDefinitions="Auto, *, Auto"
-														  RowDefinitions="Auto, Auto"
-														  ColumnSpacing="8"
-														  Margin="0,2">
-														<TextBlock Grid.Row="0"
-																   Grid.Column="0"
-																   Text="{DynamicResource Lang.Activity.Context}"
-																   FontSize="10"
-																   Foreground="{DynamicResource TextMutedBrush}"/>
-														<TextBlock Grid.Row="0"
-																   Grid.Column="1"
-																   Text="{Binding DisplayName}"
-																   FontSize="10"
-																   Foreground="{DynamicResource TextSecondaryBrush}"
-																   TextTrimming="CharacterEllipsis"/>
-														<TextBlock Grid.Row="0"
-																   Grid.Column="2"
-																   Text="{Binding StatusText}"
-																   FontSize="10"
-																   Foreground="{DynamicResource TextMutedBrush}"/>
-														<TextBlock Grid.Row="1"
-																   Grid.Column="1"
-																   Grid.ColumnSpan="2"
-																   Text="{Binding SummaryText}"
-																   FontSize="10"
-																   Foreground="{DynamicResource TextMutedBrush}"
-																   TextTrimming="CharacterEllipsis"
-																   MaxLines="1"/>
-													</Grid>
-												</DataTemplate>
-											</ItemsControl.ItemTemplate>
-										</ItemsControl>
-										<TextBlock Text="{Binding SelectedRuntimeAgentRun.ResponseText}"
-												   FontSize="11"
-												   Foreground="{DynamicResource TextSecondaryBrush}"
-												   TextWrapping="Wrap"
-												   MaxLines="4"
-												   IsVisible="{Binding SelectedRuntimeAgentRun.HasResponse}"/>
-										<TextBlock Text="{Binding SelectedRuntimeAgentRun.ErrorText}"
-												   FontSize="11"
-												   Foreground="{DynamicResource AccentErrorBrush}"
-												   TextWrapping="Wrap"
-												   MaxLines="3"
-												   IsVisible="{Binding SelectedRuntimeAgentRun.HasError}"/>
-									</StackPanel>
-								</Border>
-							</StackPanel>
-						</Border>
-
-						<!-- This task: how full the selected task's context window is, and a way to compact it -->
-						<Border Grid.Row="2"
-								Background="Transparent"
-								BorderBrush="{DynamicResource BorderSubtleBrush}"
-								BorderThickness="0,0,0,1"
-								Padding="16,12"
-								IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Context}}">
-							<StackPanel Spacing="10">
-								<TextBlock Text="{DynamicResource Lang.Activity.Task.Title}"
-										   FontSize="12"
-										   FontWeight="SemiBold"
-										   Foreground="{DynamicResource TextMutedBrush}"/>
-								<StackPanel Spacing="6">
-									<Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-										<TextBlock Text="{DynamicResource Lang.Activity.Task.Context}"
-												   FontSize="12"
-												   Foreground="{DynamicResource TextPrimaryBrush}"/>
-										<TextBlock Grid.Column="1"
-												   Text="{Binding SelectedContextText}"
-												   FontSize="12"
-												   Foreground="{DynamicResource TextSecondaryBrush}"/>
-									</Grid>
-									<ProgressBar Classes="ContextMeter"
-											  Classes.Warning="{Binding IsSelectedContextNearBudget}"
-											  Minimum="0"
-											  Maximum="100"
-											  Value="{Binding SelectedContextPercent}"
-											  IsVisible="{Binding HasSelectedContextTokens}"/>
-									<TextBlock Text="{DynamicResource Lang.Activity.Task.ContextHint}"
-											   Classes="Caption"
-											   TextWrapping="Wrap"/>
-								</StackPanel>
-								<Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-									<TextBlock Text="{Binding SelectedCompactionText}"
-											   FontSize="12"
-											   Foreground="{DynamicResource TextSecondaryBrush}"
-											   VerticalAlignment="Center"/>
-									<Button Grid.Column="1"
-											Classes="SecondaryAction"
-											Content="{DynamicResource Lang.Activity.Task.CompactNow}"
-											ToolTip.Tip="{DynamicResource Lang.Activity.Task.CompactNowTip}"
-											IsEnabled="{Binding CanCompactSelectedTask}"
-											Command="{Binding CompactAgentChatCommand}"/>
-								</Grid>
-							</StackPanel>
-						</Border>
-
-						<!-- Planner Trace (command mode history; shown with the event stream) -->
-						<Border Grid.Row="3"
-								Background="{DynamicResource CardBgBrush}"
-								BorderBrush="{DynamicResource BorderSubtleBrush}"
-								BorderThickness="0,0,0,1"
-								Padding="16,12"
-								IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Events}}">
-							<StackPanel Spacing="8">
-								<Grid ColumnDefinitions="*, Auto">
-									<StackPanel Grid.Column="0"
-												Orientation="Horizontal"
-												Spacing="8">
-										<Viewbox Width="14" Height="14" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconListTree}"/></Viewbox>
-										<TextBlock Text="{DynamicResource Lang.Activity.PlanTrace.Title}"
-												   FontSize="12"
-												   FontWeight="SemiBold"
-												   Foreground="{DynamicResource TextMutedBrush}"
-												   VerticalAlignment="Center"/>
-									</StackPanel>
-									<Button Grid.Column="1"
-											Classes="IconButton CompactIconButton"
-											Background="Transparent"
-											BorderBrush="{DynamicResource BorderSubtleBrush}"
-											BorderThickness="1"
-											CornerRadius="6"
-											Padding="0"
-											Cursor="Hand"
-											AutomationProperties.Name="{DynamicResource Lang.Activity.PlanTrace.Clear}"
-											ToolTip.Tip="{DynamicResource Lang.Activity.PlanTrace.Clear}"
-											Command="{Binding ClearSkillPlannerTraceCommand}">
-										<Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconTrash}"/></Viewbox>
-									</Button>
-								</Grid>
-
-								<ScrollViewer MaxHeight="220"
-											  VerticalScrollBarVisibility="Auto">
-									<ItemsControl ItemsSource="{Binding SkillPlannerTraces}">
-										<ItemsControl.ItemTemplate>
-											<DataTemplate>
-												<Border Background="{DynamicResource CardBgHoverBrush}"
-														BorderBrush="{DynamicResource BorderSubtleBrush}"
-														BorderThickness="1"
-														CornerRadius="8"
-														Padding="10"
-														Margin="0,0,0,8">
-													<Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto">
-														<StackPanel Grid.Row="0"
-																	Orientation="Horizontal"
-																	Spacing="8">
-															<TextBlock Text="{Binding SkillIdText}"
-																	   Foreground="{DynamicResource TextPrimaryBrush}"
-																	   FontSize="11"
-																	   FontFamily="{StaticResource MonoFontFamily}"
-																	   FontWeight="SemiBold"/>
-															<TextBlock Text="{Binding StatusText}"
-																	   Foreground="{DynamicResource AccentBrush}"
-																	   FontSize="10"
-																	   FontFamily="{StaticResource MonoFontFamily}"/>
-															<TextBlock Text="{Binding ConfidenceText}"
-																	   Foreground="{DynamicResource TextMutedBrush}"
-																	   FontSize="10"
-																	   FontFamily="{StaticResource MonoFontFamily}"/>
-															<TextBlock Text="{Binding DurationText}"
-																	   Foreground="{DynamicResource TextMutedBrush}"
-																	   FontSize="10"
-																	   FontFamily="{StaticResource MonoFontFamily}"/>
-														</StackPanel>
-														<TextBlock Grid.Row="1"
-																   Text="{Binding UserRequestText}"
-																   Foreground="{DynamicResource TextSecondaryBrush}"
-																   FontSize="10"
-																   TextWrapping="Wrap"
-																   MaxLines="2"
-																   Margin="0,6,0,0"/>
-														<TextBlock Grid.Row="2"
-																   Text="{Binding ReasoningText}"
-																   Foreground="{DynamicResource TextMutedBrush}"
-																   FontSize="10"
-																   TextWrapping="Wrap"
-																   MaxLines="2"
-																   IsVisible="{Binding HasReasoning}"
-																   Margin="0,4,0,0"/>
-														<TextBlock Grid.Row="3"
-																   Text="{Binding ErrorText}"
-																   Foreground="{DynamicResource AccentErrorBrush}"
-																   FontSize="10"
-																   TextWrapping="Wrap"
-																   MaxLines="2"
-																   IsVisible="{Binding HasError}"
-																   Margin="0,4,0,0"/>
-														<TextBlock Grid.Row="4"
-																   Text="{Binding RawResponseText}"
-																   Foreground="{DynamicResource TextMutedBrush}"
-																   FontSize="10"
-																   FontFamily="{StaticResource MonoFontFamily}"
-																   TextWrapping="Wrap"
-																   MaxLines="4"
-																   IsVisible="{Binding HasRawResponse}"
-																   Margin="0,6,0,0"/>
-													</Grid>
-												</Border>
-											</DataTemplate>
-										</ItemsControl.ItemTemplate>
-									</ItemsControl>
-								</ScrollViewer>
-							</StackPanel>
-						</Border>
-
-						<!-- Skill Execution History (shown with the event stream) -->
-						<Border Grid.Row="4"
-								Background="{DynamicResource CardBgBrush}"
-								BorderBrush="{DynamicResource BorderSubtleBrush}"
-								BorderThickness="0,0,0,1"
-								Padding="16,12"
-								IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Events}}">
-							<StackPanel Spacing="8">
-								<Grid ColumnDefinitions="*, Auto">
-									<StackPanel Grid.Column="0"
-												Orientation="Horizontal"
-												Spacing="8">
-										<Viewbox Width="14" Height="14" VerticalAlignment="Center"><Path Classes="Icon" Data="{StaticResource IconHistory}"/></Viewbox>
-										<TextBlock Text="{DynamicResource Lang.Activity.SkillResults.Title}"
-												   FontSize="12"
-												   FontWeight="SemiBold"
-												   Foreground="{DynamicResource TextMutedBrush}"
-												   VerticalAlignment="Center"/>
-									</StackPanel>
-									<Button Grid.Column="1"
-											Classes="IconButton CompactIconButton"
-											Background="Transparent"
-											BorderBrush="{DynamicResource BorderSubtleBrush}"
-											BorderThickness="1"
-											CornerRadius="6"
-											Padding="0"
-											Cursor="Hand"
-											AutomationProperties.Name="{DynamicResource Lang.Activity.SkillResults.Clear}"
-											ToolTip.Tip="{DynamicResource Lang.Activity.SkillResults.Clear}"
-											Command="{Binding ClearSkillExecutionHistoryCommand}">
-										<Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconTrash}"/></Viewbox>
-									</Button>
-								</Grid>
-
-								<Grid ColumnDefinitions="*, 132, Auto"
-									  RowDefinitions="Auto, Auto"
-									  ColumnSpacing="8"
-									  RowSpacing="6"
-									  Margin="0,10,0,10">
-									<TextBox Grid.Row="0" Grid.Column="0"
-											 Text="{Binding SkillExecutionHistoryFilterText, Mode=TwoWay}"
-											 PlaceholderText="{DynamicResource Lang.Activity.SkillResults.Filter}"
-											 FontSize="11"
-											 FontFamily="{StaticResource MonoFontFamily}"
-											 Background="{DynamicResource CardBgBrush}"
-											 BorderBrush="{DynamicResource BorderSubtleBrush}"
-											 BorderThickness="1"
-											 CornerRadius="6"
-											 Padding="8,5"/>
-									<ComboBox Grid.Row="0" Grid.Column="1"
-											  ItemsSource="{Binding SkillExecutionHistoryStatusFilters}"
-											  SelectedItem="{Binding SkillExecutionHistoryStatusFilter, Mode=TwoWay}"
-											  Height="30"
-											  FontSize="11"
-											  FontFamily="{StaticResource MonoFontFamily}"
-											  Background="{DynamicResource CardBgBrush}"
-											  BorderBrush="{DynamicResource BorderSubtleBrush}"
-											  BorderThickness="1"
-											  Padding="8,3"/>
-									<Button Grid.Row="0" Grid.Column="2"
-											Classes="IconButton"
-											Width="30" Height="30"
-											Background="Transparent"
-											BorderBrush="{DynamicResource BorderSubtleBrush}"
-											BorderThickness="1"
-											CornerRadius="6"
-											Padding="0"
-											Cursor="Hand"
-											AutomationProperties.Name="{DynamicResource Lang.Activity.SkillResults.ClearFilters}"
-											ToolTip.Tip="{DynamicResource Lang.Activity.SkillResults.ClearFilters}"
-											Command="{Binding ClearSkillExecutionHistoryFiltersCommand}"
-											IsVisible="{Binding HasSkillExecutionHistoryFilter}">
-										<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconX}"/></Viewbox>
-									</Button>
-									<TextBlock Grid.Row="1" Grid.ColumnSpan="3"
-											   Text="{Binding SkillExecutionHistorySummaryText}"
-											   Foreground="{DynamicResource TextMutedBrush}"
-											   FontSize="10"
-											   FontFamily="{StaticResource MonoFontFamily}"/>
-								</Grid>
-
-								<TextBlock Text="{DynamicResource Lang.Activity.SkillResults.NoMatches}"
-										   Foreground="{DynamicResource TextMutedBrush}"
-										   FontSize="10"
-										   FontFamily="{StaticResource MonoFontFamily}"
-										   Margin="0,0,0,8"
-										   IsVisible="{Binding HasNoSkillExecutionHistoryMatches}"/>
-
-								<ScrollViewer MaxHeight="280"
-											  VerticalScrollBarVisibility="Auto">
-									<ItemsControl ItemsSource="{Binding SkillExecutionHistory}">
-										<ItemsControl.ItemTemplate>
-											<DataTemplate>
-												<Border Background="{DynamicResource CardBgHoverBrush}"
-														BorderBrush="{DynamicResource BorderSubtleBrush}"
-														BorderThickness="1"
-														CornerRadius="8"
-														Padding="10"
-														Margin="0,0,0,8">
-													<Grid RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto"
-														  ColumnDefinitions="*, Auto">
-														<TextBlock Grid.Row="0" Grid.Column="0"
-																   Text="{Binding SkillId}"
-																   Foreground="{DynamicResource TextPrimaryBrush}"
-																   FontSize="12"
-																   FontFamily="{StaticResource MonoFontFamily}"
-																   FontWeight="SemiBold"
-																   TextWrapping="Wrap"/>
-														<StackPanel Grid.Row="0" Grid.Column="1"
-																	Orientation="Horizontal"
-																	Spacing="6"
-																	VerticalAlignment="Top">
-															<TextBlock Text="{Binding StatusText}"
-																	   Foreground="{DynamicResource AccentBrush}"
-																	   FontSize="10"
-																	   FontFamily="{StaticResource MonoFontFamily}"
-																	   FontWeight="SemiBold"/>
-															<TextBlock Text="{Binding DurationText}"
-																	   Foreground="{DynamicResource TextMutedBrush}"
-																	   FontSize="10"
-																	   FontFamily="{StaticResource MonoFontFamily}"/>
-														</StackPanel>
-														<StackPanel Grid.Row="1" Grid.ColumnSpan="2"
-																	Orientation="Horizontal"
-																	Spacing="8"
-																	Margin="0,4,0,0">
-															<TextBlock Text="{Binding TimestampText}"
-																	   Foreground="{DynamicResource TextMutedBrush}"
-																	   FontSize="10"
-																	   FontFamily="{StaticResource MonoFontFamily}"/>
-															<TextBlock Text="{Binding ExitCodeText}"
-																	   Foreground="{DynamicResource TextMutedBrush}"
-																	   FontSize="10"
-																	   FontFamily="{StaticResource MonoFontFamily}"
-																	   IsVisible="{Binding HasExitCode}"/>
-															<TextBlock Text="{Binding RuntimeFlagsText}"
-																	   Foreground="{DynamicResource AccentErrorBrush}"
-																	   FontSize="10"
-																	   FontFamily="{StaticResource MonoFontFamily}"
-																	   IsVisible="{Binding HasRuntimeFlags}"/>
-														</StackPanel>
-														<StackPanel Grid.Row="2" Grid.ColumnSpan="2"
-																	Orientation="Horizontal"
-																	Spacing="6"
-																	Margin="0,8,0,0">
-															<Button Classes="IconButton CompactIconButton"
-																	Background="Transparent"
-																	BorderBrush="{DynamicResource BorderSubtleBrush}"
-																	BorderThickness="1"
-																	CornerRadius="6"
-																	Padding="0"
-																	Cursor="Hand"
-																	AutomationProperties.Name="{DynamicResource Lang.Activity.SkillResults.CopyResult}"
-																	ToolTip.Tip="{DynamicResource Lang.Activity.SkillResults.CopyResult}"
-																	Command="{Binding CopyResultCommand}">
-																<Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconCopy}"/></Viewbox>
-															</Button>
-															<Button Classes="IconButton CompactIconButton"
-																	Background="Transparent"
-																	BorderBrush="{DynamicResource BorderSubtleBrush}"
-																	BorderThickness="1"
-																	CornerRadius="6"
-																	Padding="0"
-																	Cursor="Hand"
-																	AutomationProperties.Name="{DynamicResource Lang.Activity.SkillResults.CopyStdOut}"
-																	ToolTip.Tip="{DynamicResource Lang.Activity.SkillResults.CopyStdOut}"
-																	Command="{Binding CopyStdOutCommand}"
-																	IsVisible="{Binding HasStdOut}">
-																<Viewbox Width="14" Height="14"><Path Classes="Icon" Data="{StaticResource IconTerminal}"/></Viewbox>
-															</Button>
-															<Button Classes="IconButton CompactIconButton"
-																	Background="Transparent"
-																	BorderBrush="{DynamicResource AccentErrorBrush}"
-																	BorderThickness="1"
-																	CornerRadius="6"
-																	Padding="0"
-																	Cursor="Hand"
-																	AutomationProperties.Name="{DynamicResource Lang.Activity.SkillResults.CopyStdErr}"
-																	ToolTip.Tip="{DynamicResource Lang.Activity.SkillResults.CopyStdErr}"
-																	Command="{Binding CopyStdErrCommand}"
-																	IsVisible="{Binding HasStdErr}">
-																<Viewbox Width="14" Height="14"><Path Classes="Icon Danger" Data="{StaticResource IconAlert}"/></Viewbox>
-															</Button>
-															<Button Classes="IconButton CompactIconButton"
-																	Background="Transparent"
-																	BorderBrush="{DynamicResource AccentStrongBrush}"
-																	BorderThickness="1"
-																	CornerRadius="6"
-																	Padding="0"
-																	Cursor="Hand"
-																	AutomationProperties.Name="{DynamicResource Lang.Activity.SkillResults.Rerun}"
-																	ToolTip.Tip="{DynamicResource Lang.Activity.SkillResults.Rerun}"
-																	Command="{Binding RerunCommand}"
-																	IsVisible="{Binding CanRerun}">
-																<Viewbox Width="14" Height="14"><Path Classes="Icon Accent" Data="{StaticResource IconRefresh}"/></Viewbox>
-															</Button>
-														</StackPanel>
-														<TextBlock Grid.Row="3" Grid.ColumnSpan="2"
-																   Text="{Binding DetailText}"
-																   Foreground="{DynamicResource TextSecondaryBrush}"
-																   FontSize="10"
-																   FontFamily="{StaticResource MonoFontFamily}"
-																   TextWrapping="Wrap"
-																   MaxLines="5"
-																   Margin="0,6,0,0"
-																   IsVisible="{Binding HasDetailText}"/>
-														<Border Grid.Row="4" Grid.ColumnSpan="2"
-																Background="{DynamicResource CardBgBrush}"
-																BorderBrush="{DynamicResource BorderSubtleBrush}"
-																BorderThickness="1"
-																CornerRadius="6"
-																Padding="8"
-																Margin="0,8,0,0"
-																IsVisible="{Binding HasStdOut}">
-															<ScrollViewer MaxHeight="72"
-																		  HorizontalScrollBarVisibility="Auto"
-																		  VerticalScrollBarVisibility="Auto">
-																<TextBlock Text="{Binding StdOut}"
-																		   Foreground="{DynamicResource TextSecondaryBrush}"
-																		   FontSize="10"
-																		   FontFamily="{StaticResource MonoFontFamily}"
-																		   TextWrapping="NoWrap"/>
-															</ScrollViewer>
-														</Border>
-														<Border Grid.Row="5" Grid.ColumnSpan="2"
-																Background="{DynamicResource CardBgBrush}"
-																BorderBrush="{DynamicResource AccentErrorBrush}"
-																BorderThickness="1"
-																CornerRadius="6"
-																Padding="8"
-																Margin="0,8,0,0"
-																IsVisible="{Binding HasStdErr}">
-															<ScrollViewer MaxHeight="72"
-																		  HorizontalScrollBarVisibility="Auto"
-																		  VerticalScrollBarVisibility="Auto">
-																<TextBlock Text="{Binding StdErr}"
-																		   Foreground="{DynamicResource AccentErrorBrush}"
-																		   FontSize="10"
-																		   FontFamily="{StaticResource MonoFontFamily}"
-																		   TextWrapping="NoWrap"/>
-															</ScrollViewer>
-														</Border>
-													</Grid>
-												</Border>
-											</DataTemplate>
-										</ItemsControl.ItemTemplate>
-									</ItemsControl>
-								</ScrollViewer>
-							</StackPanel>
-						</Border>
-
-						<!-- Log Content -->
-						<ScrollViewer x:Name="LogScrollViewer" Grid.Row="5"
-									  VerticalScrollBarVisibility="Auto"
-									  Margin="18,10,18,0"
-									  IsVisible="{Binding SelectedActivityPanelMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:ActivityPanelMode.Events}}">
-							<ItemsControl ItemsSource="{Binding ActivityLogEntries}">
-								<ItemsControl.ItemTemplate>
-									<DataTemplate DataType="vm:ActivityLogEntryViewModel">
-										<Border Classes="ActivityLogItem">
-											<Grid ColumnDefinitions="Auto, *"
-												  RowDefinitions="Auto, Auto"
-												  ColumnSpacing="9">
-												<Border Grid.Row="0"
-														Grid.RowSpan="2"
-														Width="2"
-														Background="{Binding AccentBrush}"
-														CornerRadius="2"/>
-												<Grid Grid.Row="0"
-													  Grid.Column="1"
-													  ColumnDefinitions="Auto, Auto, *"
-													  ColumnSpacing="7">
-													<TextBlock Grid.Column="0"
-															   Text="{Binding CategoryText}"
-															   Classes="ActivityMeta"
-															   Foreground="{Binding AccentBrush}"/>
-													<TextBlock Grid.Column="1"
-															   Text="{Binding TimeText}"
-															   Classes="ActivityMeta"
-															   FontFamily="{StaticResource MonoFontFamily}"/>
-													<TextBlock Grid.Column="2"
-															   Text="{Binding SourceText}"
-															   Classes="ActivityMeta"
-															   TextTrimming="CharacterEllipsis"
-															   IsVisible="{Binding HasSourceText}"/>
-												</Grid>
-												<TextBlock Grid.Row="1"
-														   Grid.Column="1"
-														   Text="{Binding MessageText}"
-														   Classes="ActivityMessage"
-														   MaxLines="4"
-														   Margin="0,4,0,0"/>
-											</Grid>
-										</Border>
-									</DataTemplate>
-								</ItemsControl.ItemTemplate>
-							</ItemsControl>
-						</ScrollViewer>
-
-						<!-- Command prompt (shown on pages that hide the chat composer) -->
-					</Grid>
-				</Border>
 			</Grid>
 		</Border>
 

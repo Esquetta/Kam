@@ -293,22 +293,11 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /// <summary>Gets the product name.</summary>
         public string Name => Kind == CliAgentKind.Codex ? "Codex CLI" : "Claude Code";
 
-        /// <summary>Gets the executable Kam looks for on PATH.</summary>
-        public string Command => Kind == CliAgentKind.Codex ? "codex" : "claude";
-
         /// <summary>Gets the two-letter mark shown in the row.</summary>
         public string Initials => Kind == CliAgentKind.Codex ? "CX" : "CC";
 
         /// <summary>Gets a sentence about what the CLI is and what Kam does with it.</summary>
         public string Description => Loc.Get(Kind == CliAgentKind.Codex ? "Agents.Cli.Codex.About" : "Agents.Cli.Claude.About");
-
-        /// <summary>Gets the sandbox modes Kam can run the CLI in, or a note that it cannot yet.</summary>
-        public string SandboxText => Loc.Get(Kind == CliAgentKind.Codex ? "Agents.Cli.Codex.Sandbox" : "Agents.Cli.Claude.Sandbox");
-
-        /// <summary>Gets whether the CLI is on PATH, as text.</summary>
-        public string InstalledText => Loc.Get(!_checked
-            ? "Agents.Cli.NotChecked"
-            : _status?.IsInstalled == true ? "Agents.Cli.OnPath" : "Agents.Cli.NotOnPath");
 
         /// <summary>Gets the sign-in state as text.</summary>
         public string SignInText => (_status?.IsInstalled == true ? _status.SignIn : CliAgentSignIn.Unknown) switch

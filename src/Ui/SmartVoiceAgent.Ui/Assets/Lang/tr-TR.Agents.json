@@ -1,6 +1,6 @@
 {
   "Agents.Title": "Ajanlar",
-  "Agents.Eyebrow": "OLUŞTUR · ADIM 2",
+  "Agents.Eyebrow": "OLUŞTUR",
   "Agents.Explain": "Bir ajan; talimatlar, bir model, araçlar ve bir izin modundan oluşur. Bugün Kam, bir görev için rol ajanlarını kendisi oluşturuyor ve kodlama işini Codex'e devredebiliyor. Kendi yapılandırdığınız kayıtlı ajanlar sırada.",
   "Agents.Group.Coding": "Kodlama ajanları",
   "Agents.Group.Roles": "Son rol ajanları",
@@ -30,11 +30,6 @@
   "Agents.Duration.Hours": "{0} sa {1} dk",
   "Agents.Cli.Codex.About": "OpenAI'ın terminal için kodlama ajanı. Kam ona bir kodlama görevi devredebilir ve bir şey çalışmadan önce görevin tamamını size gösterir.",
   "Agents.Cli.Claude.About": "Anthropic'in terminal için kodlama ajanı. Kam onu algılar ama henüz ona görev devretmez.",
-  "Agents.Cli.Codex.Sandbox": "salt okunur ve çalışma alanına yazma",
-  "Agents.Cli.Claude.Sandbox": "Henüz yok, Kam onu çalıştırmıyor",
-  "Agents.Cli.NotChecked": "Henüz denetlenmedi",
-  "Agents.Cli.OnPath": "PATH üzerinde bulundu",
-  "Agents.Cli.NotOnPath": "PATH üzerinde bulunamadı",
   "Agents.Cli.SignIn.Subscription": "Abonelikle oturum açık",
   "Agents.Cli.SignIn.ApiKey": "API anahtarıyla oturum açık",
   "Agents.Cli.SignIn.SignedOut": "Oturum kapalı",
@@ -43,10 +38,5 @@
   "Agents.Cli.Chip.NotInstalled": "Kurulu değil",
   "Agents.Cli.Chip.SignedOut": "Oturum kapalı",
   "Agents.Cli.Chip.Ready": "Hazır",
-  "Agents.Cli.Detail.Installed": "Kurulum",
-  "Agents.Cli.Detail.Command": "Komut",
-  "Agents.Cli.Detail.Version": "Sürüm",
-  "Agents.Cli.Detail.SignIn": "Oturum",
-  "Agents.Cli.Detail.Sandbox": "Sandbox modları",
   "Agents.Cli.Detail.Note": "Devretmeyi açıp kapatmayı ve oturum durumunu Entegrasyonlar'dan yönetebilirsiniz."
 }

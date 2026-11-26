@@ -342,8 +342,8 @@ The UI implements responsive design with three breakpoints:
 
 | Breakpoint | Width | Behavior |
 |------------|-------|----------|
-| Context pane | 1280px and up | Tasks: 270px list, thread, 290px context pane |
-| Medium | < 1280px | Context pane hidden, 240px list |
+| Wide | 1280px and up | Tasks: 270px list and the thread |
+| Medium | < 1280px | 240px list |
 | Narrow | < 980px | Top bar keeps the search icon and the mic |
 | Rail compact | < 760px | Icon rail; task list above the thread |
 
@@ -455,7 +455,7 @@ See `RESPONSIVE_DESIGN.md` for full details.
 - **Tokens**: `Colors.*.axaml` hold the Kam Studio palettes; `RaisedBg`, `AccentInfo`/`AccentInfoGlow`, `DiffAddBg`/`DiffDelBg` are new. The violet preset in `AccentPalette` must match the theme files (`AccentPaletteTests`)
 - **Type**: Geist and Geist Mono ship in `Assets/Fonts` (SIL OFL, `OFL.txt`), registered as `fonts:Geist` in `Program`; `ContentControlThemeFontFamily` and `MonoFontFamily` point at them
 - **Primitives** in `Themes/Controls.axaml`: buttons plus `Sm`, `Pill` chips (with `Info` and `Ellipse.ChipDot`), `Pane`/`PaneHead`/`PaneRow`, `Risk` (`Read`, `Write`, `Shell`), `KvKey`/`KvValue`, `Note`, `Explain`, `Code`, `Kbd`, and a 30x17 `ToggleSwitch`
-- **Shell**: 232px rail (Work; the Build ladder Prompts, Agents, Loops, Graphs, Agent Builder; Manage), a spend card and a 48px top bar with search, wake pill and mic. Ladder rows (`Button.NavBtn.LadderStep`), Runs and the spend card are nav buttons bound to `NavigateToPageCommand` with a `NavView` parameter; the badge says how much of each step exists. Prompts (`PromptsViewModel`, the Markdown command library), Agents (`AgentsViewModel`: role-agent runs and coding CLIs), Loops (`LoopsViewModel`: `AgentMaxIterations`, `AgentMaxToolResultCharacters`, `AgentContextTokenBudget` settings, mapped to `AgentRuntime:*`; `AgentRuntime` reads `IOptionsMonitor` each turn), Runs (`RunsViewModel`: sessions, subagent runs and role-agent runs) and Graphs (`GraphsViewModel`: live subagent graphs) show real data; Agent Builder is a `PlannedStepViewModel` page that say what works today and what is missing. The spend card opens Runs. Do not show sample numbers anywhere. Ctrl+K and the top bar search open the command palette (`CommandPaletteViewModel`, `Controls/CommandPalette`; items from `MainWindowViewModel.BuildPaletteItems`). The window extends into a 48px title bar (`ExtendClientAreaTitleBarHeightHint`), so the caption buttons line up with the top bar. Pages fill the width (no `WorkbenchPage` max width); forms such as Settings keep their own max width, left aligned
+- **Shell**: 232px rail (Work; Build: Prompts, Agents, Loops, Graphs; Manage: Runs, Extensions, Integrations, Settings) and a 48px top bar with search, wake pill (only while the wake phrase listens) and mic. Build rows and Runs are plain nav buttons bound to `NavigateToPageCommand` with a `NavView` parameter; no step numbers or status badges. Skills (`NavView.Plugins`) opens from the Extensions page and Diagnostics from Settings, both also from the command palette. There is no Activity panel beside the chat: the task's context meter and "Compact now" sit in the composer bar (`MainWindowViewModel.TaskContext.cs`), and command mode's skill previews (`PendingSkillConfirmations`) wait on Needs you. Prompts (`PromptsViewModel`, the Markdown command library), Agents (`AgentsViewModel`: role-agent runs and coding CLIs), Loops (`LoopsViewModel`: `AgentMaxIterations`, `AgentMaxToolResultCharacters`, `AgentContextTokenBudget` settings, mapped to `AgentRuntime:*`; `AgentRuntime` reads `IOptionsMonitor` each turn), Runs (`RunsViewModel`: sessions, subagent runs and role-agent runs) and Graphs (`GraphsViewModel`: live subagent graphs) show real data. Do not show sample numbers anywhere. Ctrl+K and the top bar search open the command palette (`CommandPaletteViewModel`, `Controls/CommandPalette`; items from `MainWindowViewModel.BuildPaletteItems`). The window extends into a 48px title bar (`ExtendClientAreaTitleBarHeightHint`), so the caption buttons line up with the top bar. Pages fill the width (no `WorkbenchPage` max width); forms such as Settings keep their own max width, left aligned
 - **Tasks**: `Grid.Workbench` places `TaskListPane` and `ThreadPane` from styles (`medium`, `stacked`); keep `Grid.*` and `Width` off those panes
 - **XAML metadata tests** in `tests/SmartVoiceAgent.Tests/Ui/` parse `.axaml` text and pin copy and structure, so update them together with markup changes
 - **List pages** (Extensions, Skills): rows share `ListRow`, `KindIcon`, `StatusDot` (`Success`, `Warning`, `Danger`, `Accent`), `GroupTitle`, `RowToggle` and `LinkAction` from `Themes/Controls.axaml`, plus the `Chip` filters and `Segmented`/`DrawerTab` tabs. Hide filtered rows with a page style `ItemsControl.X > ContentPresenter` bound to the row's `IsVisible`, so list spacing collapses with them. `IconResourceConverter` turns an icon key from a view model (`IconFolder`) into its geometry. Pages that reflow set a `narrow` class on their root panel from code-behind and move controls with styles, never local `Grid.Row`/`Width` values
@@ -485,7 +485,7 @@ See `RESPONSIVE_DESIGN.md` for full details.
 ### Test Status
 ```
 Build: ✅ Success (CI runs on windows-2025)
-Tests: 1857 total; on Linux 13 fail because they assume Windows paths or tessdata
+Tests: 1836 total; on Linux 13 fail because they assume Windows paths or tessdata
 Run locally on Linux: DOTNET_ROLL_FORWARD=Major dotnet test tests/SmartVoiceAgent.Tests -p:EnableWindowsTargeting=true
 ```
 

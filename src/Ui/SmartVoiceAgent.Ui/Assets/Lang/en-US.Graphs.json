@@ -1,6 +1,6 @@
 {
   "Graphs.Title": "Graphs",
-  "Graphs.Overline": "BUILD · STEP 4",
+  "Graphs.Overline": "BUILD",
   "Graphs.Explain": "When a task is broad, Kam starts subagents on its own: explorers and researchers read in parallel, a general agent does a self-contained change. Each task's graph shows them live: what runs at the same time, what each one is doing, and where the main agent picks up their reports. A subagent's risky calls still stop for your approval in the task.",
   "Graphs.Tasks": "Tasks with subagents",
   "Graphs.Task.Meta": "{0} subagents · {1}",

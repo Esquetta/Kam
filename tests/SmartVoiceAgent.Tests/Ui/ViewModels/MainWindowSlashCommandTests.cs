@@ -221,32 +221,6 @@ public sealed class MainWindowSlashCommandTests
     }
 
     [Fact]
-    public void ActivityPanelMode_DefaultsToAgentRunsAndCanSwitchTabs()
-    {
-        var viewModel = new MainWindowViewModel();
-
-        viewModel.SelectedActivityPanelMode.Should().Be(ActivityPanelMode.Runs);
-        viewModel.IsActivityRunsPanelVisible.Should().BeTrue();
-        viewModel.IsActivityContextPanelVisible.Should().BeFalse();
-        viewModel.IsActivityEventsPanelVisible.Should().BeFalse();
-
-        viewModel.ShowContextCommand.Execute(null);
-
-        viewModel.SelectedActivityPanelMode.Should().Be(ActivityPanelMode.Context);
-        viewModel.IsActivityContextPanelVisible.Should().BeTrue();
-
-        viewModel.ShowEventsCommand.Execute(null);
-
-        viewModel.SelectedActivityPanelMode.Should().Be(ActivityPanelMode.Events);
-        viewModel.IsActivityEventsPanelVisible.Should().BeTrue();
-
-        viewModel.ShowRunsCommand.Execute(null);
-
-        viewModel.SelectedActivityPanelMode.Should().Be(ActivityPanelMode.Runs);
-        viewModel.IsActivityRunsPanelVisible.Should().BeTrue();
-    }
-
-    [Fact]
     public void AgentChatSessions_DefaultToOneActiveWorkspaceThread()
     {
         var viewModel = new MainWindowViewModel();
@@ -257,7 +231,6 @@ public sealed class MainWindowSlashCommandTests
         viewModel.SelectedAgentChatSession.Title.Should().Be("Workspace chat");
         viewModel.HasAgentChatMessages.Should().BeFalse();
         viewModel.AgentChatSessionCountText.Should().Be("1 thread");
-        viewModel.SelectedAgentChatMessageCountText.Should().Be("No messages");
         viewModel.IsChatWorkbenchVisible.Should().BeTrue();
         viewModel.IsPageHostVisible.Should().BeFalse();
     }
@@ -307,7 +280,6 @@ public sealed class MainWindowSlashCommandTests
         viewModel.SelectedAgentChatSession.Messages.Last().Role.Should().Be("You");
         viewModel.SelectedAgentChatSession.Messages.Last().Content.Should().Be("review the UI");
         viewModel.SelectedAgentChatSession.MessageCountText.Should().Be("1 message");
-        viewModel.SelectedAgentChatMessageCountText.Should().Be("1 message");
     }
 
     [Fact]
@@ -321,7 +293,6 @@ public sealed class MainWindowSlashCommandTests
         ]);
 
         viewModel.HasComposerAttachments.Should().BeTrue();
-        viewModel.ActiveComposerContextText.Should().Be("2 files");
         viewModel.ComposerAttachments.Select(file => file.FileName)
             .Should()
             .Equal("Program.cs", "README.md");
@@ -330,13 +301,11 @@ public sealed class MainWindowSlashCommandTests
         viewModel.RemoveComposerAttachmentCommand.Execute(viewModel.ComposerAttachments[0]);
 
         viewModel.ComposerAttachments.Select(file => file.FileName).Should().Equal("README.md");
-        viewModel.ActiveComposerContextText.Should().Be("1 file");
 
         viewModel.ClearComposerAttachmentsCommand.Execute(null);
 
         viewModel.HasComposerAttachments.Should().BeFalse();
         viewModel.ComposerAttachments.Should().BeEmpty();
-        viewModel.ActiveComposerContextText.Should().Be("No files");
     }
 
     [Fact]

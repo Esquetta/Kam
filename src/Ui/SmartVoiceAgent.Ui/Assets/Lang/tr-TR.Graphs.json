@@ -1,6 +1,6 @@
 {
   "Graphs.Title": "Graflar",
-  "Graphs.Overline": "OLUŞTUR · ADIM 4",
+  "Graphs.Overline": "OLUŞTUR",
   "Graphs.Explain": "Bir görev genişse Kam kendiliğinden alt ajanlar başlatır: kaşifler ve araştırmacılar paralel okur, genel bir ajan kendi içinde tamamlanan bir değişikliği yapar. Her görevin grafı bunları canlı gösterir: hangileri aynı anda çalışıyor, her biri ne yapıyor ve ana ajan raporlarını nerede alıyor. Bir alt ajanın riskli çağrıları yine görevde onayınızı bekler.",
   "Graphs.Tasks": "Alt ajanlı görevler",
   "Graphs.Task.Meta": "{0} alt ajan · {1}",

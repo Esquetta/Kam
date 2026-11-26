@@ -8,9 +8,8 @@ The shell follows the Kam Studio breakpoints:
 
 | Width | Behavior |
 |-------|----------|
-| 1280px and up | Tasks shows three panes: task list (270px), thread, context pane (Activity, 290px) |
-| < 1280px | Context pane hides (`IsLogPanelVisible`), task list narrows to 240px |
-| < 1100px | The thread header no longer offers to open the context pane (`CanPinContextPane`); the thread would be too narrow |
+| 1280px and up | Tasks shows the task list (270px) and the thread |
+| < 1280px | Task list narrows to 240px (`IsLogPanelVisible` is false) |
 | < 980px | Top bar drops the wake phrase pill and the search text (`IsNarrow`) |
 | < 760px | Rail shows icons only and the task list sits above the thread (`IsRailCompact`) |
 
@@ -25,7 +24,7 @@ A singleton service that tracks window dimensions and provides responsive state:
 - `WindowWidth` / `WindowHeight` - Current window dimensions
 - `IsCompact` / `IsMedium` / `IsExpanded` - Breakpoint flags
 - `GridColumns` - Number of columns for grid layouts (1-3)
-- `IsLogPanelVisible` - Whether to show the kernel log panel
+- `IsLogPanelVisible` - Whether the window is 1280px or wider (the Tasks list keeps 270px)
 - `ReducedMotion` - Accessibility preference for disabling animations
 
 ### 2. ResponsiveConverters.cs
@@ -34,7 +33,6 @@ A singleton service that tracks window dimensions and provides responsive state:
 XAML converters for responsive bindings:
 - `ResponsiveColumnConverter` - Returns column count from WindowStateManager
 - `LogPanelVisibilityConverter` - Returns visibility boolean
-- `MainWindowViewModel.ActivityPanelWidth` - Activity panel width (0 when hidden or away from the chat, otherwise 290)
 - `ResponsiveScaleConverter` - Scales values based on breakpoint
 - `ResponsiveFontSizeConverter` - Returns scaled font sizes
 - `CompactModeConverter` / `MediumModeConverter` / `ExpandedModeConverter` - Breakpoint checks
@@ -115,8 +113,8 @@ if (WindowStateManager.Instance.ReducedMotion)
 ## Testing Responsive Design
 
 1. **Resize the window** to see layout adapt:
-   - 1280px and up: task list, thread and the 290px context pane
-   - < 1280px: no context pane, 240px task list
+   - 1280px and up: 270px task list and the thread
+   - < 1280px: 240px task list
    - < 980px: top bar trims to the search icon and the mic
    - < 760px: icon rail, task list above the thread
 

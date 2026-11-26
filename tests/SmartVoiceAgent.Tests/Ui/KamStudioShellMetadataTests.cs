@@ -88,35 +88,28 @@ public sealed class KamStudioShellMetadataTests
     }
 
     [Fact]
-    public void Rail_LadderStepsOpenTheirPagesAndSayHowMuchIsBuilt()
+    public void Rail_BuildGroupIsPlainNavigationWithoutBadges()
     {
-        var mainWindow = LoadXaml("MainWindow.axaml");
+        var mainWindowText = LocalizedXaml.ReadAllText(FindView("MainWindow.axaml"));
+        var mainWindow = XDocument.Parse(mainWindowText).Root!;
 
-        var steps = mainWindow.Descendants()
-            .Where(element => element.Name.LocalName == "Button" && AttributeValue(element, "Classes.LadderStep") == "True")
+        var build = mainWindow.Descendants()
+            .Where(element => element.Name.LocalName == "Button"
+                && AttributeValue(element, "Classes.NavBtn") == "True"
+                && AttributeValue(element, "Command") == "{Binding NavigateToPageCommand}")
             .ToArray();
 
-        steps.Select(step => AttributeValue(step, "AutomationProperties.Name")).Should().Equal(
-            "Prompts", "Agents", "Loops", "Graphs", "Agent Builder");
-        steps.Select(step => AttributeValue(step, "CommandParameter")).Should().Equal(
+        build.Select(step => AttributeValue(step, "AutomationProperties.Name")).Should().Equal(
+            "Prompts", "Agents", "Loops", "Graphs", "Runs");
+        build.Select(step => AttributeValue(step, "CommandParameter")).Should().Equal(
             "{x:Static vm:NavView.Prompts}", "{x:Static vm:NavView.Agents}", "{x:Static vm:NavView.Loops}",
-            "{x:Static vm:NavView.Graphs}", "{x:Static vm:NavView.Builder}");
-        steps.Select(step => step.Descendants().Single(element => AttributeValue(element, "Classes")?.StartsWith("LadderBadge", StringComparison.Ordinal) == true))
-            .Select(badge => AttributeValue(badge, "Classes"))
-            .Should().Equal(
-                "LadderBadge Partial", "LadderBadge Partial", "LadderBadge Partial",
-                "LadderBadge Partial", "LadderBadge Planned");
-        steps.Should().OnlyContain(step => AttributeValue(step, "Command") == "{Binding NavigateToPageCommand}"
-            && AttributeValue(step, "ToolTip.Tip") != null
-            && AttributeValue(step, "AutomationProperties.HelpText") != null);
+            "{x:Static vm:NavView.Graphs}", "{x:Static vm:NavView.Runs}");
+        build.Should().OnlyContain(step => AttributeValue(step, "ToolTip.Tip") != null
+            && step.Descendants().Any(element => AttributeValue(element, "Classes") == "Icon"));
 
-        // The spend meter has no data behind it yet: it shows the planned badge, no number, and opens Runs.
-        var spend = mainWindow.Descendants().Single(element => AttributeValue(element, "Classes") == "SpendCard");
-        spend.Name.LocalName.Should().Be("Button");
-        AttributeValue(spend, "CommandParameter").Should().Be("{x:Static vm:NavView.Runs}");
-        spend.Descendants().Should().Contain(element => AttributeValue(element, "Classes") == "LadderBadge Planned");
-        spend.Descendants().Should().NotContain(element => element.Name.LocalName == "ProgressBar");
-        AttributeValue(spend, "AutomationProperties.HelpText").Should().NotBeNullOrEmpty();
+        // No step numbers, status badges, planned pages or spend card; Skills and Diagnostics live outside the rail.
+        mainWindowText.Should().NotContainAny("LadderStep", "LadderLevel", "LadderBadge", "LadderLine", "SpendCard", "NavView.Builder");
+        mainWindowText.Should().NotContainAny("NavView.Plugins", "NavView.Diagnostics", "NavigateToPluginsCommand", "NavigateToDiagnosticsCommand");
 
         mainWindow.Descendants().Should().Contain(element =>
             AttributeValue(element, "Classes") == "Sidebar"
@@ -159,12 +152,22 @@ public sealed class KamStudioShellMetadataTests
         tasksText.Should().Contain("<Setter Property=\"Width\" Value=\"270\"/>");
         tasksText.Should().Contain("<Setter Property=\"Width\" Value=\"240\"/>");
 
-        // Tool steps carry a risk badge, and the composer ends with a Send button and key hints.
+        // Tool steps carry a risk badge; the composer bar has the context meter and ends with a Send button, without key hints.
         tasks.Descendants().Should().Contain(element =>
             AttributeValue(element, "Classes") == "Risk"
             && AttributeValue(element, "Classes.Shell") == "{Binding IsShellRisk}");
         File.ReadAllText(FindView("TasksView.axaml")).Should().Contain("{DynamicResource Lang.Chat.Composer.SendLabel}");
-        tasks.Descendants().Count(element => AttributeValue(element, "Classes") == "Kbd").Should().Be(3);
+        tasks.Descendants().Should().NotContain(element => AttributeValue(element, "Classes") == "Kbd");
+        var meter = tasks.Descendants().Single(element => AttributeValue(element, "Classes") == "ContextMeter");
+        AttributeValue(meter, "Classes.Warning").Should().Be("{Binding IsSelectedContextNearBudget}");
+        AttributeValue(meter, "Value").Should().Be("{Binding SelectedContextPercent}");
+        var meterButton = meter.Ancestors().First(element => element.Name.LocalName == "Button");
+        AttributeValue(meterButton, "IsVisible").Should().Be("{Binding HasSelectedContextTokens}");
+        meterButton.Descendants().Should().Contain(element =>
+            element.Name.LocalName == "Button"
+            && AttributeValue(element, "Command") == "{Binding CompactAgentChatCommand}"
+            && AttributeValue(element, "IsEnabled") == "{Binding CanCompactSelectedTask}");
+        meterButton.Descendants().Should().Contain(element => AttributeValue(element, "Text") == "{Binding SelectedCompactionText}");
 
         var mainWindowText = LocalizedXaml.ReadAllText(FindView("MainWindow.axaml"));
         mainWindowText.Should().NotContain("Border.AgentAvatar");
@@ -196,13 +199,19 @@ public sealed class KamStudioShellMetadataTests
     {
         var inbox = LoadXaml("InboxView.axaml");
 
-        var row = inbox.Descendants().Single(element => AttributeValue(element, "Classes") == "PaneRow");
+        var row = inbox.Descendants().Single(element => AttributeValue(element, "Classes") == "PaneRow"
+            && element.Descendants().Any(child => AttributeValue(child, "Classes") == "Risk"));
         row.Ancestors().Should().Contain(element => AttributeValue(element, "Classes") == "Pane");
         row.Descendants().Should().Contain(element => AttributeValue(element, "Classes") == "Risk");
         row.Descendants()
             .Where(element => element.Name.LocalName == "Button")
             .Select(element => AttributeValue(element, "Classes"))
             .Should().Equal("SecondaryAction Sm", "GhostAction Sm", "SecondaryAction Sm", "PrimaryAction Sm");
+
+        // Command mode's skill previews wait here too, now that the Activity panel is gone.
+        inbox.Descendants().Should().Contain(element =>
+            element.Name.LocalName == "ItemsControl"
+            && AttributeValue(element, "ItemsSource") == "{Binding PendingSkillConfirmations}");
     }
 
     [Theory]

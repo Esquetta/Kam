@@ -162,13 +162,6 @@
 			<Setter Property="Grid.Row" Value="1"/>
 			<Setter Property="Grid.RowSpan" Value="1"/>
 		</Style>
-
-		<!-- Composer hint (.hint): keys in kbd chips -->
-		<Style Selector="StackPanel.ComposerHint TextBlock">
-			<Setter Property="FontSize" Value="11.5"/>
-			<Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
-			<Setter Property="VerticalAlignment" Value="Center"/>
-		</Style>
 	</UserControl.Styles>
 
 	<!-- Tasks: the task list, the selected task's conversation and the composer.
@@ -276,8 +269,6 @@
 						<ColumnDefinition Width="*" MinWidth="96"/>
 						<ColumnDefinition Width="Auto"/>
 						<ColumnDefinition Width="Auto"/>
-						<ColumnDefinition Width="Auto"/>
-						<ColumnDefinition Width="Auto"/>
 					</Grid.ColumnDefinitions>
 					<!-- Title (h1) trims; the status chip keeps its place at the end of the column -->
 					<Grid Grid.Column="0" ColumnDefinitions="*,Auto" ColumnSpacing="10" VerticalAlignment="Center">
@@ -298,12 +289,8 @@
 							</StackPanel>
 						</Border>
 					</Grid>
-					<Border Grid.Column="1" Classes="Pill" VerticalAlignment="Center">
-						<TextBlock Text="{Binding SelectedAgentChatMessageCountText}"/>
-					</Border>
-
 					<!-- Model for this chat; "Settings default" follows the model chosen in Settings -->
-					<ComboBox Grid.Column="2"
+					<ComboBox Grid.Column="1"
 							  Classes="ModelPicker"
 							  ItemsSource="{Binding AgentChatModelOptions}"
 							  SelectedItem="{Binding SelectedAgentChatModel, Mode=TwoWay}"
@@ -340,7 +327,7 @@
 						</ComboBox.ItemTemplate>
 					</ComboBox>
 
-					<Button Grid.Column="3"
+					<Button Grid.Column="2"
 							Classes="IconButton"
 							Width="28" Height="28"
 							CornerRadius="7"
@@ -357,19 +344,6 @@
 							</MenuFlyout>
 						</Button.Flyout>
 						<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconMore}" StrokeThickness="3" Stretch="None"/></Viewbox>
-					</Button>
-					<!-- Brings the Activity panel back after it was closed (Kam Studio's Trace button) -->
-					<Button Grid.Column="4"
-							Classes="SecondaryAction Sm"
-							VerticalAlignment="Center"
-							IsVisible="{Binding CanOpenActivityPanel}"
-							AutomationProperties.Name="{DynamicResource Lang.Activity.Show}"
-							ToolTip.Tip="{DynamicResource Lang.Activity.Show}"
-							Command="{Binding ToggleActivityPanelCommand}">
-						<StackPanel Orientation="Horizontal" Spacing="5">
-							<Viewbox Width="12" Height="12"><Path Classes="Icon" Data="{StaticResource IconActivity}"/></Viewbox>
-							<TextBlock Text="{DynamicResource Lang.Activity.Title}" VerticalAlignment="Center"/>
-						</StackPanel>
 					</Button>
 				</Grid>
 			</Border>
@@ -947,7 +921,7 @@
 								 Text="{Binding CommandInputText, Mode=TwoWay}"/>
 
 						<!-- Toolbar -->
-						<!-- Bar (.composer-bar): attach, context, permission mode, spoken replies, mic, send -->
+						<!-- Bar (.composer-bar): attach, context meter, permission mode, spoken replies, mic, send -->
 						<Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="6">
 							<Button Grid.Column="0"
 									Classes="ComposerPill"
@@ -959,12 +933,45 @@
 									<TextBlock Text="{DynamicResource Lang.Chat.Composer.Attach}" VerticalAlignment="Center"/>
 								</StackPanel>
 							</Button>
-							<TextBlock Grid.Column="1"
-									   Text="{Binding ActiveComposerContextText}"
-									   FontSize="12"
-									   Foreground="{DynamicResource TextMutedBrush}"
-									   VerticalAlignment="Center"
-									   TextTrimming="CharacterEllipsis"/>
+							<!-- Context meter: how full the task's context window is; a click offers to compact it -->
+							<Button Grid.Column="1"
+									Classes="ComposerPill"
+									HorizontalAlignment="Left"
+									IsVisible="{Binding HasSelectedContextTokens}"
+									AutomationProperties.Name="{Binding SelectedContextText}">
+								<ToolTip.Tip>
+									<StackPanel Spacing="2">
+										<TextBlock Text="{Binding SelectedContextText}"/>
+										<TextBlock Text="{Binding SelectedCompactionText}"/>
+									</StackPanel>
+								</ToolTip.Tip>
+								<Button.Flyout>
+									<Flyout Placement="TopEdgeAlignedLeft">
+										<StackPanel Spacing="8" MinWidth="220">
+											<TextBlock Text="{DynamicResource Lang.Activity.Task.Context}" FontSize="12" FontWeight="SemiBold"/>
+											<TextBlock Text="{Binding SelectedContextText}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
+											<TextBlock Text="{Binding SelectedCompactionText}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
+											<Button Classes="SecondaryAction Sm"
+													HorizontalAlignment="Left"
+													Content="{DynamicResource Lang.Activity.Task.CompactNow}"
+													ToolTip.Tip="{DynamicResource Lang.Activity.Task.CompactNowTip}"
+													IsEnabled="{Binding CanCompactSelectedTask}"
+													Command="{Binding CompactAgentChatCommand}"/>
+										</StackPanel>
+									</Flyout>
+								</Button.Flyout>
+								<StackPanel Orientation="Horizontal" Spacing="6">
+									<ProgressBar Classes="ContextMeter"
+												 Classes.Warning="{Binding IsSelectedContextNearBudget}"
+												 Width="28" MinWidth="0"
+												 Height="4" MinHeight="4"
+												 VerticalAlignment="Center"
+												 Minimum="0"
+												 Maximum="100"
+												 Value="{Binding SelectedContextPercent}"/>
+									<TextBlock Text="{Binding SelectedContextPercentText}" VerticalAlignment="Center"/>
+								</StackPanel>
+							</Button>
 							<ComboBox Grid.Column="2"
 									  Classes="ApprovalModePicker"
 									  ItemsSource="{x:Static vm:MainWindowViewModel.ApprovalModes}"
@@ -1027,26 +1034,6 @@
 						</Grid>
 					</Grid>
 				</Border>
-
-				<!-- Hint (.hint): the keys that matter, as kbd chips -->
-				<StackPanel Classes="ComposerHint"
-							Orientation="Horizontal"
-							Spacing="12"
-							HorizontalAlignment="Left"
-							AutomationProperties.Name="{DynamicResource Lang.Chat.Composer.Hint}">
-					<StackPanel Orientation="Horizontal" Spacing="5">
-						<Border Classes="Kbd"><TextBlock Text="Enter"/></Border>
-						<TextBlock Text="{DynamicResource Lang.Chat.Composer.Hint.Send}"/>
-					</StackPanel>
-					<StackPanel Orientation="Horizontal" Spacing="5">
-						<Border Classes="Kbd"><TextBlock Text="Shift Enter"/></Border>
-						<TextBlock Text="{DynamicResource Lang.Chat.Composer.Hint.NewLine}"/>
-					</StackPanel>
-					<StackPanel Orientation="Horizontal" Spacing="5">
-						<Border Classes="Kbd"><TextBlock Text="/"/></Border>
-						<TextBlock Text="{DynamicResource Lang.Chat.Composer.Hint.Commands}"/>
-					</StackPanel>
-				</StackPanel>
 			</StackPanel>
 		</Grid>
 	</Grid>

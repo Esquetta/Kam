@@ -23,9 +23,6 @@
         <Style Selector="Border.RunsRow:pointerover">
             <Setter Property="Background" Value="{DynamicResource CardBgHoverBrush}"/>
         </Style>
-        <Style Selector="Border.RunsMeter">
-            <Setter Property="Padding" Value="14,12"/>
-        </Style>
         <Style Selector="TextBox.RunsSearch">
             <Setter Property="Grid.Column" Value="1"/>
             <Setter Property="Width" Value="280"/>
@@ -59,28 +56,6 @@
                     <TextBlock Text="{DynamicResource Lang.Runs.Subtitle}" Classes="PageSubtitle"/>
                 </Border>
             </StackPanel>
-
-            <!-- Meters (.meters): counted from the stores -->
-            <UniformGrid Columns="3">
-                <Border Classes="Pane RunsMeter" Margin="0,0,5,0">
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="{DynamicResource Lang.Runs.Meter.TasksToday}" Classes="Caption" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
-                        <TextBlock Text="{Binding TasksToday}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                    </StackPanel>
-                </Border>
-                <Border Classes="Pane RunsMeter" Margin="5,0">
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="{DynamicResource Lang.Runs.Meter.AgentRunsToday}" Classes="Caption" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
-                        <TextBlock Text="{Binding AgentRunsToday}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                    </StackPanel>
-                </Border>
-                <Border Classes="Pane RunsMeter" Margin="5,0,0,0">
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="{DynamicResource Lang.Runs.Meter.FailedWeek}" Classes="Caption" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
-                        <TextBlock Text="{Binding FailedAgentRuns}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                    </StackPanel>
-                </Border>
-            </UniformGrid>
 
             <!-- Filter and search -->
             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="16">

@@ -22,20 +22,12 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace SmartVoiceAgent.Ui.ViewModels
 {
-    public enum ActivityPanelMode
-    {
-        Runs,
-        Context,
-        Events
-    }
-
     public partial class MainWindowViewModel : ViewModelBase
     {
         private TrayIconService? _trayIconService;
@@ -50,7 +42,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private ISkillImportService? _skillImportService;
         private ISkillTestService? _skillTestService;
         private ISkillExecutionHistoryService? _skillExecutionHistoryService;
-        private ISkillExecutionPipeline? _skillExecutionPipeline;
         private ISkillPlannerTraceStore? _skillPlannerTraceStore;
         private ISlashCommandService? _slashCommandService;
         private IAgentCommandCatalog? _agentCommands;
@@ -69,27 +60,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private readonly IModelConnectionTestService _modelConnectionTestService = new ModelConnectionTestService();
         private readonly ISettingsService _pageSettingsService;
         private readonly Dictionary<NavView, ViewModelBase> _viewModelCache = [];
-
-        private const int MaxSkillExecutionHistoryScanCount = 50;
-        private const int MaxSkillExecutionHistoryDisplayCount = 8;
-        private const int MaxSkillPlannerTraceDisplayCount = 5;
-        private const int MaxRuntimeAgentActivityDisplayCount = 6;
-
-        /// <summary>
-        /// The statuses the execution history can be filtered by, in menu order; null is "All".
-        /// </summary>
-        private static readonly SkillExecutionStatus?[] SkillExecutionHistoryFilterStatuses =
-        [
-            null,
-            SkillExecutionStatus.Succeeded,
-            SkillExecutionStatus.Failed,
-            SkillExecutionStatus.TimedOut,
-            SkillExecutionStatus.PermissionDenied,
-            SkillExecutionStatus.ValidationFailed,
-            SkillExecutionStatus.ReviewRequired
-        ];
-
-        private static readonly JsonSerializerOptions SkillPlanJsonOptions = new(JsonSerializerDefaults.Web);
 
         /// <summary>
         /// What the title bar status shows; the text follows the interface language.
@@ -143,8 +113,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         private NavView _activeView = NavView.Coordinator;
-        private bool _isActivityPanelOpen = true;
-        private bool _isActivityPanelPinned;
         public NavView ActiveView
         {
             get => _activeView;
@@ -155,71 +123,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 this.RaisePropertyChanged(nameof(IsPageHostVisible));
                 this.RaisePropertyChanged(nameof(IsInboxVisible));
                 this.RaisePropertyChanged(nameof(ActivePageTitle));
-                RaiseActivityPanelLayout();
             }
-        }
-
-        /// <summary>
-        /// Gets whether the user wants the Activity panel next to the chat; the panel button toggles it.
-        /// </summary>
-        public bool IsActivityPanelOpen
-        {
-            get => _isActivityPanelOpen;
-            private set
-            {
-                this.RaiseAndSetIfChanged(ref _isActivityPanelOpen, value);
-                RaiseActivityPanelLayout();
-            }
-        }
-
-        /// <summary>
-        /// Gets whether the Activity panel is on screen: only beside the chat, when the user has it open
-        /// and the window is wide enough, or when the user opened it on a narrower window that still has room
-        /// for it beside the thread (1100 px and up). Other pages use the full width.
-        /// </summary>
-        public bool IsActivityPanelShown =>
-            IsChatWorkbenchVisible
-            && _isActivityPanelOpen
-            && (WindowStateManager.Instance.IsLogPanelVisible
-                || (_isActivityPanelPinned && WindowStateManager.Instance.CanPinContextPane));
-
-        /// <summary>
-        /// Gets whether the thread header offers to open the Activity panel: it is off screen and the window has room for it.
-        /// </summary>
-        public bool CanOpenActivityPanel =>
-            IsChatWorkbenchVisible && !IsActivityPanelShown && WindowStateManager.Instance.CanPinContextPane;
-
-        /// <summary>Gets the Activity panel column width: the 290 px context pane of Kam Studio, 0 when hidden.</summary>
-        public GridLength ActivityPanelWidth => IsActivityPanelShown
-            ? new GridLength(290)
-            : new GridLength(0);
-
-        /// <summary>Shows or hides the Activity panel beside the chat.</summary>
-        public ICommand ToggleActivityPanelCommand { get; }
-
-        /// <summary>
-        /// Hides the Activity panel when it is on screen; otherwise shows it, also below the
-        /// context pane breakpoint, where it stays until the user closes it.
-        /// </summary>
-        private void ToggleActivityPanel()
-        {
-            if (IsActivityPanelShown)
-            {
-                _isActivityPanelPinned = false;
-                IsActivityPanelOpen = false;
-                return;
-            }
-
-            _isActivityPanelPinned = !WindowStateManager.Instance.IsLogPanelVisible;
-            IsActivityPanelOpen = true;
-            RaiseActivityPanelLayout();
-        }
-
-        private void RaiseActivityPanelLayout()
-        {
-            this.RaisePropertyChanged(nameof(IsActivityPanelShown));
-            this.RaisePropertyChanged(nameof(CanOpenActivityPanel));
-            this.RaisePropertyChanged(nameof(ActivityPanelWidth));
         }
 
         /// <summary>
@@ -239,7 +143,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
             NavView.Agents => Loc.Get("Shell.Ladder.Agents"),
             NavView.Loops => Loc.Get("Shell.Ladder.Loops"),
             NavView.Graphs => Loc.Get("Shell.Ladder.Graphs"),
-            NavView.Builder => Loc.Get("Shell.Ladder.Builder"),
             NavView.Runs => Loc.Get("Shell.Nav.Runs"),
             _ => string.Empty
         };
@@ -445,10 +348,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public ICommand NavigateToIntegrationsCommand { get; }
         public ICommand NavigateToSettingsCommand { get; }
         public ICommand ToggleThemeCommand { get; }
-        public ICommand ClearSkillExecutionHistoryCommand { get; }
-        public ICommand ClearSkillExecutionHistoryFiltersCommand { get; }
-        public ICommand ClearSkillPlannerTraceCommand { get; }
-        public ICommand ShowRuntimeAgentRunDetailCommand { get; }
 
         /* ========================= */
         /* LOGGING */
@@ -460,42 +359,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
             get => _logEntries;
             set => this.RaiseAndSetIfChanged(ref _logEntries, value);
         }
-
-        private ObservableCollection<ActivityLogEntryViewModel> _activityLogEntries = new();
-        public ObservableCollection<ActivityLogEntryViewModel> ActivityLogEntries
-        {
-            get => _activityLogEntries;
-            set => this.RaiseAndSetIfChanged(ref _activityLogEntries, value);
-        }
-
-        private ObservableCollection<RuntimeAgentActivityViewModel> _runtimeAgentActivities = new();
-        public ObservableCollection<RuntimeAgentActivityViewModel> RuntimeAgentActivities
-        {
-            get => _runtimeAgentActivities;
-            set => this.RaiseAndSetIfChanged(ref _runtimeAgentActivities, value);
-        }
-
-        public bool HasRuntimeAgentActivities => RuntimeAgentActivities.Count > 0;
-
-        private RuntimeAgentActivityViewModel? _selectedRuntimeAgentActivity;
-        public RuntimeAgentActivityViewModel? SelectedRuntimeAgentActivity
-        {
-            get => _selectedRuntimeAgentActivity;
-            private set => this.RaiseAndSetIfChanged(ref _selectedRuntimeAgentActivity, value);
-        }
-
-        private RuntimeAgentRunDetailViewModel? _selectedRuntimeAgentRun;
-        public RuntimeAgentRunDetailViewModel? SelectedRuntimeAgentRun
-        {
-            get => _selectedRuntimeAgentRun;
-            private set
-            {
-                this.RaiseAndSetIfChanged(ref _selectedRuntimeAgentRun, value);
-                this.RaisePropertyChanged(nameof(HasSelectedRuntimeAgentRun));
-            }
-        }
-
-        public bool HasSelectedRuntimeAgentRun => SelectedRuntimeAgentRun is not null;
 
         /* ========================= */
         /* THEME */
@@ -568,12 +431,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public ICommand ClearComposerAttachmentsCommand { get; }
 
-        public ICommand ShowRunsCommand { get; }
-
-        public ICommand ShowContextCommand { get; }
-
-        public ICommand ShowEventsCommand { get; }
-
         /// <summary>
         /// Gets the command that copies a starter prompt into the composer.
         /// </summary>
@@ -635,40 +492,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 ? Loc.Get("Workbench.Thread.OneThread")
                 : Loc.Format("Workbench.Thread.Threads", AgentChatSessions.Count);
 
-        public string SelectedAgentChatMessageCountText =>
-            SelectedAgentChatSession?.MessageCountText ?? Loc.Get("Workbench.Thread.NoMessages");
-
-        public string ActiveComposerContextText =>
-            ComposerAttachments.Count == 0
-                ? Loc.Get("Workbench.Composer.NoFiles")
-                : ComposerAttachments.Count == 1
-                    ? Loc.Get("Workbench.Composer.OneFile")
-                    : Loc.Format("Workbench.Composer.Files", ComposerAttachments.Count);
-
-        private ActivityPanelMode _selectedActivityPanelMode = ActivityPanelMode.Runs;
-        public ActivityPanelMode SelectedActivityPanelMode
-        {
-            get => _selectedActivityPanelMode;
-            private set
-            {
-                if (_selectedActivityPanelMode == value)
-                {
-                    return;
-                }
-
-                this.RaiseAndSetIfChanged(ref _selectedActivityPanelMode, value);
-                this.RaisePropertyChanged(nameof(IsActivityRunsPanelVisible));
-                this.RaisePropertyChanged(nameof(IsActivityContextPanelVisible));
-                this.RaisePropertyChanged(nameof(IsActivityEventsPanelVisible));
-            }
-        }
-
-        public bool IsActivityRunsPanelVisible => SelectedActivityPanelMode == ActivityPanelMode.Runs;
-
-        public bool IsActivityContextPanelVisible => SelectedActivityPanelMode == ActivityPanelMode.Context;
-
-        public bool IsActivityEventsPanelVisible => SelectedActivityPanelMode == ActivityPanelMode.Events;
-
         private ObservableCollection<SlashCommandSuggestionViewModel> _slashCommandSuggestions = new();
         public ObservableCollection<SlashCommandSuggestionViewModel> SlashCommandSuggestions
         {
@@ -713,168 +536,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
             private set => this.RaiseAndSetIfChanged(ref _hasPendingSkillConfirmations, value);
         }
 
-        private ObservableCollection<SkillExecutionHistoryItemViewModel> _skillExecutionHistory = new();
-        public ObservableCollection<SkillExecutionHistoryItemViewModel> SkillExecutionHistory
-        {
-            get => _skillExecutionHistory;
-            set => this.RaiseAndSetIfChanged(ref _skillExecutionHistory, value);
-        }
-
-        private ObservableCollection<SkillPlannerTraceItemViewModel> _skillPlannerTraces = new();
-        public ObservableCollection<SkillPlannerTraceItemViewModel> SkillPlannerTraces
-        {
-            get => _skillPlannerTraces;
-            set => this.RaiseAndSetIfChanged(ref _skillPlannerTraces, value);
-        }
-
-        private IReadOnlyList<string> _skillExecutionHistoryStatusFilters = BuildSkillExecutionHistoryStatusFilters();
-        private bool _isRefreshingSkillExecutionHistoryStatusFilters;
-
-        /// <summary>
-        /// Gets the status filter choices in the interface language, starting with "All".
-        /// </summary>
-        public IReadOnlyList<string> SkillExecutionHistoryStatusFilters
-        {
-            get => _skillExecutionHistoryStatusFilters;
-            private set => this.RaiseAndSetIfChanged(ref _skillExecutionHistoryStatusFilters, value);
-        }
-
-        private static IReadOnlyList<string> BuildSkillExecutionHistoryStatusFilters()
-        {
-            return SkillExecutionHistoryFilterStatuses
-                .Select(status => status is { } value
-                    ? SkillExecutionHistoryItemViewModel.FormatStatusText(value)
-                    : Loc.Get("Workbench.History.All"))
-                .ToArray();
-        }
-
-        /// <summary>
-        /// Returns whether a status filter value means "All", in English or in the interface language.
-        /// </summary>
-        private static bool IsAllStatusFilter(string value)
-        {
-            return value.Equals(Loc.Get("Workbench.History.All"), StringComparison.OrdinalIgnoreCase)
-                || value.Equals(EnglishText.Service.Get("Workbench.History.All"), StringComparison.OrdinalIgnoreCase);
-        }
-
-        private string _skillExecutionHistoryFilterText = string.Empty;
-        public string SkillExecutionHistoryFilterText
-        {
-            get => _skillExecutionHistoryFilterText;
-            set
-            {
-                var normalizedValue = value ?? string.Empty;
-                if (_skillExecutionHistoryFilterText == normalizedValue)
-                {
-                    return;
-                }
-
-                this.RaiseAndSetIfChanged(ref _skillExecutionHistoryFilterText, normalizedValue);
-                RaiseSkillExecutionHistoryFilterStateChanged();
-                RefreshSkillExecutionHistory();
-            }
-        }
-
-        private string _skillExecutionHistoryStatusFilter = Loc.Get("Workbench.History.All");
-
-        /// <summary>
-        /// Gets or sets the status the execution history is filtered by, as listed in
-        /// <see cref="SkillExecutionHistoryStatusFilters"/>; English names such as "Failed" also work.
-        /// </summary>
-        public string SkillExecutionHistoryStatusFilter
-        {
-            get => _skillExecutionHistoryStatusFilter;
-            set
-            {
-                // The picker clears its selection while its list is replaced after a language change.
-                if (_isRefreshingSkillExecutionHistoryStatusFilters)
-                {
-                    return;
-                }
-
-                var normalizedValue = string.IsNullOrWhiteSpace(value)
-                    ? Loc.Get("Workbench.History.All")
-                    : value;
-                if (_skillExecutionHistoryStatusFilter == normalizedValue)
-                {
-                    return;
-                }
-
-                this.RaiseAndSetIfChanged(ref _skillExecutionHistoryStatusFilter, normalizedValue);
-                RaiseSkillExecutionHistoryFilterStateChanged();
-                RefreshSkillExecutionHistory();
-            }
-        }
-
-        private int _skillExecutionHistoryTotalCount;
-        public int SkillExecutionHistoryTotalCount
-        {
-            get => _skillExecutionHistoryTotalCount;
-            private set => this.RaiseAndSetIfChanged(ref _skillExecutionHistoryTotalCount, value);
-        }
-
-        private int _skillExecutionHistoryMatchCount;
-        public int SkillExecutionHistoryMatchCount
-        {
-            get => _skillExecutionHistoryMatchCount;
-            private set => this.RaiseAndSetIfChanged(ref _skillExecutionHistoryMatchCount, value);
-        }
-
-        private int _skillExecutionHistoryVisibleCount;
-        public int SkillExecutionHistoryVisibleCount
-        {
-            get => _skillExecutionHistoryVisibleCount;
-            private set => this.RaiseAndSetIfChanged(ref _skillExecutionHistoryVisibleCount, value);
-        }
-
-        public bool HasSkillExecutionHistoryFilter =>
-            !string.IsNullOrWhiteSpace(SkillExecutionHistoryFilterText)
-            || !IsAllStatusFilter(SkillExecutionHistoryStatusFilter);
-
-        public bool HasSkillExecutionHistoryMatches => SkillExecutionHistoryVisibleCount > 0;
-
-        public bool HasNoSkillExecutionHistoryMatches =>
-            HasSkillExecutionHistory && SkillExecutionHistoryVisibleCount == 0;
-
-        public string SkillExecutionHistorySummaryText
-        {
-            get
-            {
-                if (SkillExecutionHistoryTotalCount == 0)
-                {
-                    return Loc.Get("Workbench.History.NoExecutions");
-                }
-
-                if (HasSkillExecutionHistoryFilter)
-                {
-                    return Loc.Format(
-                        "Workbench.History.Matches",
-                        SkillExecutionHistoryVisibleCount,
-                        SkillExecutionHistoryMatchCount,
-                        SkillExecutionHistoryTotalCount);
-                }
-
-                return Loc.Format(
-                    "Workbench.History.Recent",
-                    SkillExecutionHistoryVisibleCount,
-                    SkillExecutionHistoryTotalCount);
-            }
-        }
-
-        private bool _hasSkillExecutionHistory;
-        public bool HasSkillExecutionHistory
-        {
-            get => _hasSkillExecutionHistory;
-            private set => this.RaiseAndSetIfChanged(ref _hasSkillExecutionHistory, value);
-        }
-
-        private bool _hasSkillPlannerTraces;
-        public bool HasSkillPlannerTraces
-        {
-            get => _hasSkillPlannerTraces;
-            private set => this.RaiseAndSetIfChanged(ref _hasSkillPlannerTraces, value);
-        }
-
         /* ========================= */
         /* CONSTRUCTOR */
         /* ========================= */
@@ -902,37 +563,12 @@ namespace SmartVoiceAgent.Ui.ViewModels
             ToggleThemeCommand = ReactiveCommand.Create(ToggleTheme);
             HeaderStatusCommand = ReactiveCommand.Create(OnHeaderStatusClicked);
             SetUpModelCommand = ReactiveCommand.Create<string?>(SetUpModel);
-            ClearSkillExecutionHistoryCommand = ReactiveCommand.Create(ClearSkillExecutionHistory);
-            ClearSkillExecutionHistoryFiltersCommand = ReactiveCommand.Create(ClearSkillExecutionHistoryFilters);
-            ClearSkillPlannerTraceCommand = ReactiveCommand.Create(ClearSkillPlannerTrace);
-            ShowRuntimeAgentRunDetailCommand = ReactiveCommand.Create<RuntimeAgentActivityViewModel?>(ShowRuntimeAgentRunDetail);
             SubmitCommand = ReactiveCommand.CreateFromTask(SubmitCommandInputAsync);
             SelectSlashCommandCommand = ReactiveCommand.Create<SlashCommandSuggestionViewModel>(SelectSlashCommand);
             NewAgentChatCommand = ReactiveCommand.Create(CreateNewAgentChat);
             SelectAgentChatCommand = ReactiveCommand.Create<AgentChatSessionViewModel?>(SelectAgentChat);
             RemoveComposerAttachmentCommand = ReactiveCommand.Create<ComposerAttachmentViewModel?>(RemoveComposerAttachment);
             ClearComposerAttachmentsCommand = ReactiveCommand.Create(ClearComposerAttachments);
-            ShowRunsCommand = ReactiveCommand.Create(() => SelectedActivityPanelMode = ActivityPanelMode.Runs);
-            ToggleActivityPanelCommand = ReactiveCommand.Create(ToggleActivityPanel);
-            WindowStateManager.Instance.PropertyChanged += (_, args) =>
-            {
-                if (args.PropertyName is nameof(WindowStateManager.IsLogPanelVisible)
-                    or nameof(WindowStateManager.IsMedium)
-                    or nameof(WindowStateManager.IsRailCompact)
-                    or nameof(WindowStateManager.CanPinContextPane))
-                {
-                    // Once the window is wide enough the pane shows by itself, so a pin from a narrower
-                    // window must not bring it back after the next shrink.
-                    if (WindowStateManager.Instance.IsLogPanelVisible)
-                    {
-                        _isActivityPanelPinned = false;
-                    }
-
-                    RaiseActivityPanelLayout();
-                }
-            };
-            ShowContextCommand = ReactiveCommand.Create(() => SelectedActivityPanelMode = ActivityPanelMode.Context);
-            ShowEventsCommand = ReactiveCommand.Create(() => SelectedActivityPanelMode = ActivityPanelMode.Events);
             UseComposerSuggestionCommand = ReactiveCommand.Create<string?>(UseComposerSuggestion);
             ApproveToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: true, alwaysAllow: false));
             AlwaysAllowToolCallCommand = ReactiveCommand.Create<AgentChatMessageViewModel?>(step => ResolveToolApproval(step, approved: true, alwaysAllow: true));
@@ -1036,31 +672,12 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         public void SetSkillExecutionHistoryService(ISkillExecutionHistoryService skillExecutionHistoryService)
         {
-            if (_skillExecutionHistoryService is not null)
-            {
-                _skillExecutionHistoryService.Changed -= OnSkillExecutionHistoryChanged;
-            }
-
             _skillExecutionHistoryService = skillExecutionHistoryService;
-            _skillExecutionHistoryService.Changed += OnSkillExecutionHistoryChanged;
-            RefreshSkillExecutionHistory();
         }
 
         public void SetSkillPlannerTraceStore(ISkillPlannerTraceStore skillPlannerTraceStore)
         {
-            if (_skillPlannerTraceStore is not null)
-            {
-                _skillPlannerTraceStore.Changed -= OnSkillPlannerTraceChanged;
-            }
-
             _skillPlannerTraceStore = skillPlannerTraceStore;
-            _skillPlannerTraceStore.Changed += OnSkillPlannerTraceChanged;
-            RefreshSkillPlannerTrace();
-        }
-
-        public void SetSkillExecutionPipeline(ISkillExecutionPipeline skillExecutionPipeline)
-        {
-            _skillExecutionPipeline = skillExecutionPipeline;
         }
 
         public void SetSlashCommandService(ISlashCommandService slashCommandService)
@@ -1072,7 +689,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public void SetRuntimeAgentRunStore(IRuntimeAgentRunStore runtimeAgentRunStore)
         {
             _runtimeAgentRunStore = runtimeAgentRunStore;
-            RefreshSelectedRuntimeAgentRun();
         }
 
         /// <summary>Connects the Runs and Graphs pages to the subagent runs tasks start.</summary>
@@ -1223,7 +839,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 NavView.Loops => new LoopsViewModel(_pageSettingsService),
                 NavView.Runs => new RunsViewModel(_agentSessionStore, _runtimeAgentRunStore, OpenTaskById, LiveTaskStatus, _subagentRuns, OpenSubagentGraph),
                 NavView.Graphs => new GraphsViewModel(_subagentRuns, _agentSessionStore, OpenTaskById, LiveTaskStatus),
-                NavView.Builder => new PlannedStepViewModel(view, NavigateTo),
                 _ => null
             };
 
@@ -1480,7 +1095,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
         {
             this.RaisePropertyChanged(nameof(HasAgentChatMessages));
             this.RaisePropertyChanged(nameof(AgentChatSessionCountText));
-            this.RaisePropertyChanged(nameof(SelectedAgentChatMessageCountText));
         }
 
         public async Task SubmitCommandInputAsync()
@@ -1584,7 +1198,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             ComposerAttachments.Add(attachment);
             this.RaisePropertyChanged(nameof(HasComposerAttachments));
-            this.RaisePropertyChanged(nameof(ActiveComposerContextText));
         }
 
         public void AddComposerAttachmentPaths(IEnumerable<string?> paths)
@@ -1604,7 +1217,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             ComposerAttachments.Remove(attachment);
             this.RaisePropertyChanged(nameof(HasComposerAttachments));
-            this.RaisePropertyChanged(nameof(ActiveComposerContextText));
         }
 
         private void ClearComposerAttachments()
@@ -1616,7 +1228,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
             ComposerAttachments.Clear();
             this.RaisePropertyChanged(nameof(HasComposerAttachments));
-            this.RaisePropertyChanged(nameof(ActiveComposerContextText));
         }
 
         private static string BuildCommandSubmission(
@@ -1827,166 +1438,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
             HasPendingSkillConfirmations = PendingSkillConfirmations.Count > 0;
         }
 
-        private void OnSkillExecutionHistoryChanged(object? sender, EventArgs e)
-        {
-            RefreshSkillExecutionHistory();
-        }
-
-        private void RefreshSkillExecutionHistory()
-        {
-            if (!Dispatcher.UIThread.CheckAccess())
-            {
-                if (global::Avalonia.Application.Current is not null)
-                {
-                    Dispatcher.UIThread.Post(RefreshSkillExecutionHistory);
-                    return;
-                }
-            }
-
-            SkillExecutionHistory.Clear();
-
-            if (_skillExecutionHistoryService is not null)
-            {
-                var entries = _skillExecutionHistoryService
-                    .GetRecent(MaxSkillExecutionHistoryScanCount)
-                    .ToList();
-                var matches = entries
-                    .Where(MatchesSkillExecutionHistoryFilters)
-                    .ToList();
-
-                SkillExecutionHistoryTotalCount = entries.Count;
-                SkillExecutionHistoryMatchCount = matches.Count;
-
-                foreach (var entry in matches.Take(MaxSkillExecutionHistoryDisplayCount))
-                {
-                    SkillExecutionHistory.Add(new SkillExecutionHistoryItemViewModel(
-                        entry,
-                        CopySkillExecutionText,
-                        RerunSkillExecution));
-                }
-            }
-            else
-            {
-                SkillExecutionHistoryTotalCount = 0;
-                SkillExecutionHistoryMatchCount = 0;
-            }
-
-            SkillExecutionHistoryVisibleCount = SkillExecutionHistory.Count;
-            HasSkillExecutionHistory = SkillExecutionHistoryTotalCount > 0;
-            RaiseSkillExecutionHistoryFilterStateChanged();
-        }
-
-        private void ClearSkillExecutionHistory()
-        {
-            if (_skillExecutionHistoryService is null)
-            {
-                return;
-            }
-
-            _skillExecutionHistoryService.Clear();
-            AddLog("SKILL_HISTORY_CLEARED");
-        }
-
-        private void ClearSkillExecutionHistoryFilters()
-        {
-            SkillExecutionHistoryFilterText = string.Empty;
-            SkillExecutionHistoryStatusFilter = Loc.Get("Workbench.History.All");
-            RefreshSkillExecutionHistory();
-        }
-
-        private void OnSkillPlannerTraceChanged(object? sender, EventArgs e)
-        {
-            RefreshSkillPlannerTrace();
-        }
-
-        private void RefreshSkillPlannerTrace()
-        {
-            if (!Dispatcher.UIThread.CheckAccess())
-            {
-                if (global::Avalonia.Application.Current is not null)
-                {
-                    Dispatcher.UIThread.Post(RefreshSkillPlannerTrace);
-                    return;
-                }
-            }
-
-            SkillPlannerTraces.Clear();
-
-            if (_skillPlannerTraceStore is not null)
-            {
-                foreach (var entry in _skillPlannerTraceStore.GetRecent(MaxSkillPlannerTraceDisplayCount))
-                {
-                    SkillPlannerTraces.Add(new SkillPlannerTraceItemViewModel(entry));
-                }
-            }
-
-            HasSkillPlannerTraces = SkillPlannerTraces.Count > 0;
-        }
-
-        private void ClearSkillPlannerTrace()
-        {
-            if (_skillPlannerTraceStore is null)
-            {
-                return;
-            }
-
-            _skillPlannerTraceStore.Clear();
-            AddLog("PLAN_TRACE_CLEARED");
-        }
-
-        private bool MatchesSkillExecutionHistoryFilters(SkillExecutionHistoryEntry entry)
-        {
-            return MatchesSkillExecutionHistoryStatusFilter(entry)
-                && MatchesSkillExecutionHistoryTextFilter(entry);
-        }
-
-        private bool MatchesSkillExecutionHistoryStatusFilter(SkillExecutionHistoryEntry entry)
-        {
-            if (IsAllStatusFilter(SkillExecutionHistoryStatusFilter))
-            {
-                return true;
-            }
-
-            return SkillExecutionHistoryItemViewModel.FormatStatusText(entry.Status)
-                    .Equals(SkillExecutionHistoryStatusFilter, StringComparison.OrdinalIgnoreCase)
-                || SkillExecutionHistoryItemViewModel.FormatStatusText(entry.Status, EnglishText.Service)
-                    .Equals(SkillExecutionHistoryStatusFilter, StringComparison.OrdinalIgnoreCase);
-        }
-
-        private bool MatchesSkillExecutionHistoryTextFilter(SkillExecutionHistoryEntry entry)
-        {
-            var query = SkillExecutionHistoryFilterText.Trim();
-            if (string.IsNullOrWhiteSpace(query))
-            {
-                return true;
-            }
-
-            return ContainsIgnoreCase(entry.SkillId, query)
-                || ContainsIgnoreCase(SkillExecutionHistoryItemViewModel.FormatStatusText(entry.Status), query)
-                || ContainsIgnoreCase(SkillExecutionHistoryItemViewModel.FormatStatusText(entry.Status, EnglishText.Service), query)
-                || ContainsIgnoreCase(entry.ResultSummary, query)
-                || ContainsIgnoreCase(entry.ArgumentsSummary, query)
-                || ContainsIgnoreCase(entry.ErrorCode, query)
-                || ContainsIgnoreCase(entry.Command, query)
-                || ContainsIgnoreCase(entry.WorkingDirectory, query)
-                || ContainsIgnoreCase(entry.StdOut, query)
-                || ContainsIgnoreCase(entry.StdErr, query);
-        }
-
-        private void RaiseSkillExecutionHistoryFilterStateChanged()
-        {
-            this.RaisePropertyChanged(nameof(HasSkillExecutionHistoryFilter));
-            this.RaisePropertyChanged(nameof(HasSkillExecutionHistoryMatches));
-            this.RaisePropertyChanged(nameof(HasNoSkillExecutionHistoryMatches));
-            this.RaisePropertyChanged(nameof(SkillExecutionHistorySummaryText));
-        }
-
-        private static bool ContainsIgnoreCase(string value, string query)
-        {
-            return !string.IsNullOrWhiteSpace(value)
-                && value.Contains(query, StringComparison.OrdinalIgnoreCase);
-        }
-
         private void CopySkillExecutionText(string label, string text)
         {
             if (string.IsNullOrWhiteSpace(text))
@@ -2021,58 +1472,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private void CopyRuntimeDiagnosticsText(string label, string text)
         {
             CopySkillExecutionText(label, text);
-        }
-
-        private void RerunSkillExecution(SkillExecutionHistoryItemViewModel item)
-        {
-            _ = RerunSkillExecutionAsync(item);
-        }
-
-        private async Task RerunSkillExecutionAsync(SkillExecutionHistoryItemViewModel item)
-        {
-            if (_skillExecutionPipeline is null)
-            {
-                AddLog("RERUN_FAILED: skill pipeline unavailable");
-                return;
-            }
-
-            if (!item.CanRerun)
-            {
-                AddLog($"RERUN_BLOCKED: {item.RerunBlockedReason}");
-                return;
-            }
-
-            SkillPlan? plan;
-            try
-            {
-                plan = JsonSerializer.Deserialize<SkillPlan>(
-                    item.ReplayPlanJson,
-                    SkillPlanJsonOptions);
-            }
-            catch (JsonException ex)
-            {
-                AddLog($"RERUN_FAILED: invalid plan json ({ex.Message})");
-                return;
-            }
-
-            if (plan is null || string.IsNullOrWhiteSpace(plan.SkillId))
-            {
-                AddLog("RERUN_FAILED: invalid plan");
-                return;
-            }
-
-            AddLog($"RERUN_SKILL: {plan.SkillId}");
-            var result = await _skillExecutionPipeline.ExecuteAsync(plan);
-            if (result.Success)
-            {
-                AddLog($"RERUN_OK: {result.Message}");
-                return;
-            }
-
-            var error = string.IsNullOrWhiteSpace(result.ErrorMessage)
-                ? result.Message
-                : result.ErrorMessage;
-            AddLog($"RERUN_FAILED: {error}");
         }
 
         private async Task ApproveSkillConfirmationAsync(PendingSkillConfirmationViewModel item)
@@ -2121,7 +1520,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 // Add to end (chat style - new messages at bottom)
                 LogEntries.Add(logEntry);
-                ActivityLogEntries.Add(activityEntry);
 
                 // Keep only last 100 messages
                 if (LogEntries.Count > 100)
@@ -2129,126 +1527,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
                     LogEntries.RemoveAt(0);
                 }
 
-                if (ActivityLogEntries.Count > 100)
-                {
-                    ActivityLogEntries.RemoveAt(0);
-                }
-
                 _trayIconService?.UpdateToolTip($"Kam - {activityEntry.MessageText}");
-                
-                // Notify that log was updated (for auto-scroll)
-                LogUpdated?.Invoke(this, EventArgs.Empty);
             });
         }
 
-        public void TrackRuntimeAgentUpdate(
-            string? agentName,
-            string? message,
-            bool isComplete,
-            string? runId = null)
-        {
-            if (string.IsNullOrWhiteSpace(agentName))
-            {
-                return;
-            }
-
-            var update = RuntimeAgentActivityViewModel.Create(agentName, message, isComplete, runId);
-            Dispatcher.UIThread.Post(() =>
-            {
-                var existing = RuntimeAgentActivities
-                    .Select((activity, index) => new { Activity = activity, Index = index })
-                    .FirstOrDefault(item => MatchesRuntimeAgentActivity(item.Activity, update));
-
-                if (existing is null)
-                {
-                    RuntimeAgentActivities.Insert(0, update);
-                }
-                else
-                {
-                    RuntimeAgentActivities.RemoveAt(existing.Index);
-                    RuntimeAgentActivities.Insert(0, update);
-                }
-
-                while (RuntimeAgentActivities.Count > MaxRuntimeAgentActivityDisplayCount)
-                {
-                    RuntimeAgentActivities.RemoveAt(RuntimeAgentActivities.Count - 1);
-                }
-
-                this.RaisePropertyChanged(nameof(HasRuntimeAgentActivities));
-
-                if (SelectedRuntimeAgentActivity is null || MatchesRuntimeAgentActivity(SelectedRuntimeAgentActivity, update))
-                {
-                    SelectRuntimeAgentRun(update);
-                }
-            });
-        }
-
-        private static bool MatchesRuntimeAgentActivity(
-            RuntimeAgentActivityViewModel existing,
-            RuntimeAgentActivityViewModel update)
-        {
-            if (!string.IsNullOrWhiteSpace(existing.RunId)
-                && !string.IsNullOrWhiteSpace(update.RunId))
-            {
-                return existing.RunId.Equals(update.RunId, StringComparison.OrdinalIgnoreCase);
-            }
-
-            return existing.AgentName.Equals(update.AgentName, StringComparison.OrdinalIgnoreCase);
-        }
-
-        private void ShowRuntimeAgentRunDetail(RuntimeAgentActivityViewModel? activity)
-        {
-            if (activity is null)
-            {
-                return;
-            }
-
-            SelectRuntimeAgentRun(activity);
-        }
-
-        private void RefreshSelectedRuntimeAgentRun()
-        {
-            if (SelectedRuntimeAgentActivity is not null)
-            {
-                SelectRuntimeAgentRun(SelectedRuntimeAgentActivity);
-            }
-        }
-
-        private void SelectRuntimeAgentRun(RuntimeAgentActivityViewModel activity)
-        {
-            SelectedRuntimeAgentActivity = activity;
-            var run = FindRuntimeAgentRun(activity);
-            SelectedRuntimeAgentRun = run is null
-                ? null
-                : RuntimeAgentRunDetailViewModel.Create(run);
-        }
-
-        private RuntimeAgentRun? FindRuntimeAgentRun(RuntimeAgentActivityViewModel activity)
-        {
-            if (_runtimeAgentRunStore is null)
-            {
-                return null;
-            }
-
-            if (!string.IsNullOrWhiteSpace(activity.RunId))
-            {
-                var run = _runtimeAgentRunStore.Get(activity.RunId);
-                if (run is not null)
-                {
-                    return run;
-                }
-            }
-
-            return _runtimeAgentRunStore
-                .List()
-                .FirstOrDefault(run => run.AgentName.Equals(activity.AgentName, StringComparison.OrdinalIgnoreCase));
-        }
-
-        /// <summary>
-        /// Event raised when a new log entry is added (for auto-scroll)
-        /// </summary>
-        public event EventHandler? LogUpdated;
-        
         /// <summary>
         /// Event raised when status properties change and UI needs immediate refresh
         /// </summary>
@@ -2272,17 +1554,17 @@ namespace SmartVoiceAgent.Ui.ViewModels
         /// <summary>
         /// Rebuilds the text this view model makes in code after the interface language changes:
         /// the title bar, counters, thread rows, approval cards and tool steps, the model and approval
-        /// pickers, slash command suggestions and the activity panel. Rows and cards do not listen for the
-        /// change themselves; this refreshes them. Messages and activity log lines already written stay as they are.
+        /// pickers, slash command suggestions and the context meter. Rows and cards do not listen for the
+        /// change themselves; this refreshes them. Messages and log lines already written stay as they are.
         /// </summary>
         public void RefreshLocalizedText()
         {
             UpdateStatusProperties();
             RaiseVoiceStateChanged();
             this.RaisePropertyChanged(nameof(ActivePageTitle));
-            this.RaisePropertyChanged(nameof(ActiveComposerContextText));
             this.RaisePropertyChanged(nameof(QueuedAgentMessagesText));
             RaiseAgentChatStateChanged();
+            RaiseSelectedContext();
 
             var now = DateTimeOffset.Now;
             foreach (var session in AgentChatSessions)
@@ -2302,16 +1584,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 suggestion.RefreshLocalizedText();
             }
 
-            foreach (var activity in RuntimeAgentActivities)
-            {
-                activity.RefreshLocalizedText();
-            }
-
-            RefreshSelectedRuntimeAgentRun();
-            RefreshSkillExecutionHistoryStatusFilters();
-            RefreshSkillExecutionHistory();
-            RefreshSkillPlannerTrace();
-
             var coordinators = _viewModelCache.Values.OfType<CoordinatorViewModel>().ToList();
             if (CurrentViewModel is CoordinatorViewModel current && !coordinators.Contains(current))
             {
@@ -2322,40 +1594,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
             {
                 coordinator.RefreshLocalizedText();
             }
-        }
-
-        /// <summary>
-        /// Replaces the status filter choices with the current language's and keeps the chosen status selected.
-        /// </summary>
-        private void RefreshSkillExecutionHistoryStatusFilters()
-        {
-            var selectedIndex = -1;
-            for (var index = 0; index < SkillExecutionHistoryStatusFilters.Count; index++)
-            {
-                if (SkillExecutionHistoryStatusFilters[index].Equals(_skillExecutionHistoryStatusFilter, StringComparison.OrdinalIgnoreCase))
-                {
-                    selectedIndex = index;
-                    break;
-                }
-            }
-
-            var filters = BuildSkillExecutionHistoryStatusFilters();
-            _isRefreshingSkillExecutionHistoryStatusFilters = true;
-            try
-            {
-                SkillExecutionHistoryStatusFilters = filters;
-                if (selectedIndex >= 0)
-                {
-                    _skillExecutionHistoryStatusFilter = filters[selectedIndex];
-                }
-            }
-            finally
-            {
-                _isRefreshingSkillExecutionHistoryStatusFilters = false;
-            }
-
-            this.RaisePropertyChanged(nameof(SkillExecutionHistoryStatusFilter));
-            RaiseSkillExecutionHistoryFilterStateChanged();
         }
 
         private void ShowMainWindow()
@@ -2394,16 +1632,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
             if (_skillConfirmationService is not null)
             {
                 _skillConfirmationService.PendingChanged -= OnPendingSkillConfirmationsChanged;
-            }
-
-            if (_skillExecutionHistoryService is not null)
-            {
-                _skillExecutionHistoryService.Changed -= OnSkillExecutionHistoryChanged;
-            }
-
-            if (_skillPlannerTraceStore is not null)
-            {
-                _skillPlannerTraceStore.Changed -= OnSkillPlannerTraceChanged;
             }
 
             CleanupVoice();
@@ -2585,339 +1813,6 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 : $"...{Path.DirectorySeparatorChar}{directoryName}{Path.DirectorySeparatorChar}{fileName}";
 
             return new ComposerAttachmentViewModel(fileName, fullPath, displayPath);
-        }
-    }
-
-    /// <summary>
-    /// A task agent run in the activity panel. Its state and default message follow the interface
-    /// language when the main window calls <see cref="RefreshLocalizedText"/>.
-    /// </summary>
-    public sealed class RuntimeAgentActivityViewModel : ReactiveObject
-    {
-        private static readonly IBrush RunningBrush = new SolidColorBrush(Color.Parse("#38BDF8"));
-        private static readonly IBrush CompletedBrush = new SolidColorBrush(Color.Parse("#10B981"));
-        private static readonly IBrush FailedBrush = new SolidColorBrush(Color.Parse("#EF4444"));
-
-        private readonly ActivityState _state;
-        private readonly string? _message;
-
-        private enum ActivityState
-        {
-            Running,
-            Done,
-            Failed
-        }
-
-        private RuntimeAgentActivityViewModel(
-            string? runId,
-            string agentName,
-            string displayName,
-            ActivityState state,
-            string? message,
-            string updatedText,
-            IBrush statusBrush)
-        {
-            RunId = runId;
-            AgentName = agentName;
-            DisplayName = displayName;
-            _state = state;
-            _message = message;
-            UpdatedText = updatedText;
-            StatusBrush = statusBrush;
-        }
-
-        public string? RunId { get; }
-
-        public string AgentName { get; }
-
-        public string DisplayName { get; }
-
-        /// <summary>
-        /// Gets the run state, such as "Running", in the interface language.
-        /// </summary>
-        public string StatusText => _state switch
-        {
-            ActivityState.Failed => Loc.Get("Workbench.State.Failed"),
-            ActivityState.Done => Loc.Get("Workbench.State.Done"),
-            _ => Loc.Get("Workbench.State.Running")
-        };
-
-        /// <summary>
-        /// Gets the agent's last message, or "Working on the request." before it has one.
-        /// </summary>
-        public string LastMessage => _message ?? Loc.Get("Workbench.Run.Working");
-
-        public string UpdatedText { get; }
-
-        public IBrush StatusBrush { get; }
-
-        /// <summary>
-        /// Re-reads the state and default message after the interface language changes.
-        /// </summary>
-        public void RefreshLocalizedText()
-        {
-            this.RaisePropertyChanged(nameof(StatusText));
-            this.RaisePropertyChanged(nameof(LastMessage));
-        }
-
-        public static RuntimeAgentActivityViewModel Create(
-            string agentName,
-            string? message,
-            bool isComplete,
-            string? runId = null)
-        {
-            var normalizedMessage = string.IsNullOrWhiteSpace(message)
-                ? null
-                : message.Trim();
-            var failed = normalizedMessage?.Contains("failed", StringComparison.OrdinalIgnoreCase) == true;
-            var state = failed
-                ? ActivityState.Failed
-                : isComplete
-                    ? ActivityState.Done
-                    : ActivityState.Running;
-            var statusBrush = failed
-                ? FailedBrush
-                : isComplete
-                    ? CompletedBrush
-                    : RunningBrush;
-
-            return new RuntimeAgentActivityViewModel(
-                string.IsNullOrWhiteSpace(runId) ? null : runId.Trim(),
-                agentName.Trim(),
-                FormatAgentDisplayName(agentName),
-                state,
-                normalizedMessage,
-                DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture),
-                statusBrush);
-        }
-
-        private static string FormatAgentDisplayName(string value)
-        {
-            var cleaned = value.Trim().Trim('\'', '"');
-            var sequence = string.Empty;
-            var dashIndex = cleaned.LastIndexOf('-');
-            if (dashIndex > 0
-                && dashIndex < cleaned.Length - 1
-                && cleaned[(dashIndex + 1)..].All(char.IsDigit))
-            {
-                sequence = cleaned[(dashIndex + 1)..].TrimStart('0');
-                cleaned = cleaned[..dashIndex];
-            }
-
-            if (cleaned.EndsWith("Agent", StringComparison.OrdinalIgnoreCase))
-            {
-                cleaned = cleaned[..^"Agent".Length];
-            }
-
-            var words = SplitCodeName(cleaned).ToLowerInvariant();
-            if (string.IsNullOrWhiteSpace(words))
-            {
-                words = "task";
-            }
-
-            return string.IsNullOrWhiteSpace(sequence)
-                ? $"{ToSentenceStart(words)} agent"
-                : $"{ToSentenceStart(words)} agent {sequence}";
-        }
-
-        private static string SplitCodeName(string value)
-        {
-            var characters = new List<char>(value.Length + 8);
-            for (var index = 0; index < value.Length; index++)
-            {
-                var current = value[index];
-                if (index > 0
-                    && char.IsUpper(current)
-                    && !char.IsWhiteSpace(value[index - 1])
-                    && !char.IsUpper(value[index - 1]))
-                {
-                    characters.Add(' ');
-                }
-
-                characters.Add(current);
-            }
-
-            return new string(characters.ToArray()).Trim();
-        }
-
-        private static string ToSentenceStart(string value)
-        {
-            return string.IsNullOrWhiteSpace(value)
-                ? value
-                : char.ToUpperInvariant(value[0]) + value[1..];
-        }
-    }
-
-    public sealed class RuntimeAgentRunDetailViewModel
-    {
-        private RuntimeAgentRunDetailViewModel(
-            string runId,
-            string displayName,
-            string statusText,
-            string modelIdText,
-            string roleText,
-            string taskText,
-            string durationText,
-            string lastMessageText,
-            string responseText,
-            string errorText,
-            IReadOnlyList<RuntimeAgentObservationDetailViewModel> observations)
-        {
-            RunId = runId;
-            DisplayName = displayName;
-            StatusText = statusText;
-            ModelIdText = modelIdText;
-            RoleText = roleText;
-            TaskText = taskText;
-            DurationText = durationText;
-            LastMessageText = lastMessageText;
-            ResponseText = responseText;
-            ErrorText = errorText;
-            Observations = observations;
-        }
-
-        public string RunId { get; }
-
-        public string DisplayName { get; }
-
-        public string StatusText { get; }
-
-        public string ModelIdText { get; }
-
-        public string RoleText { get; }
-
-        public string TaskText { get; }
-
-        public string DurationText { get; }
-
-        public string LastMessageText { get; }
-
-        public string ResponseText { get; }
-
-        public string ErrorText { get; }
-
-        public bool HasResponse => !string.IsNullOrWhiteSpace(ResponseText);
-
-        public bool HasError => !string.IsNullOrWhiteSpace(ErrorText);
-
-        public IReadOnlyList<RuntimeAgentObservationDetailViewModel> Observations { get; }
-
-        public bool HasObservations => Observations.Count > 0;
-
-        public static RuntimeAgentRunDetailViewModel Create(RuntimeAgentRun run)
-        {
-            var observations = (run.ToolObservations ?? [])
-                .Take(6)
-                .Select(RuntimeAgentObservationDetailViewModel.Create)
-                .ToArray();
-
-            return new RuntimeAgentRunDetailViewModel(
-                run.RunId,
-                RuntimeAgentActivityViewModel.Create(run.AgentName, run.LastMessage, run.Status is not RuntimeAgentRunStatus.Running, run.RunId).DisplayName,
-                FormatStatus(run.Status),
-                string.IsNullOrWhiteSpace(run.ModelId) ? Loc.Get("Workbench.Run.DefaultModel") : run.ModelId.Trim(),
-                string.IsNullOrWhiteSpace(run.Role) ? Loc.Get("Workbench.Run.GeneralTask") : run.Role.Trim(),
-                TrimForDisplay(run.Task, 260),
-                FormatDuration(run.StartedAt, run.CompletedAt),
-                string.IsNullOrWhiteSpace(run.LastMessage) ? Loc.Get("Workbench.Run.Working") : run.LastMessage.Trim(),
-                TrimForDisplay(run.Response, 360),
-                TrimForDisplay(run.ErrorMessage, 260),
-                observations);
-        }
-
-        private static string FormatStatus(RuntimeAgentRunStatus status)
-        {
-            return status switch
-            {
-                RuntimeAgentRunStatus.Running => Loc.Get("Workbench.State.Running"),
-                RuntimeAgentRunStatus.Succeeded => Loc.Get("Workbench.State.Completed"),
-                RuntimeAgentRunStatus.Failed => Loc.Get("Workbench.State.Failed"),
-                RuntimeAgentRunStatus.Canceled => Loc.Get("Workbench.State.Canceled"),
-                _ => Loc.Get("Workbench.State.Unknown")
-            };
-        }
-
-        private static string FormatDuration(DateTimeOffset startedAt, DateTimeOffset? completedAt)
-        {
-            var end = completedAt ?? DateTimeOffset.UtcNow;
-            var duration = end - startedAt;
-            if (duration < TimeSpan.Zero)
-            {
-                duration = TimeSpan.Zero;
-            }
-
-            if (duration.TotalMinutes >= 1)
-            {
-                return Loc.Format("Workbench.Run.MinutesSeconds", Math.Floor(duration.TotalMinutes), duration.Seconds);
-            }
-
-            var seconds = Math.Max(1, (int)Math.Round(duration.TotalSeconds, MidpointRounding.AwayFromZero));
-            return Loc.Format("Workbench.Run.Seconds", seconds);
-        }
-
-        private static string TrimForDisplay(string? value, int maxLength)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return string.Empty;
-            }
-
-            var trimmed = value.Trim();
-            return trimmed.Length <= maxLength
-                ? trimmed
-                : trimmed[..Math.Max(0, maxLength - 1)] + "...";
-        }
-    }
-
-    public sealed class RuntimeAgentObservationDetailViewModel
-    {
-        private RuntimeAgentObservationDetailViewModel(
-            string displayName,
-            string statusText,
-            string summaryText)
-        {
-            DisplayName = displayName;
-            StatusText = statusText;
-            SummaryText = summaryText;
-        }
-
-        public string DisplayName { get; }
-
-        public string StatusText { get; }
-
-        public string SummaryText { get; }
-
-        public static RuntimeAgentObservationDetailViewModel Create(RuntimeAgentToolObservation observation)
-        {
-            return new RuntimeAgentObservationDetailViewModel(
-                FormatToolName(observation.SkillId),
-                observation.Success ? Loc.Get("Workbench.State.Ready") : Loc.Get("Workbench.State.Unavailable"),
-                TrimForDisplay(observation.Summary, 220));
-        }
-
-        private static string FormatToolName(string? tool)
-        {
-            return (tool ?? string.Empty).Trim().ToLowerInvariant() switch
-            {
-                "file.read_lines" => Loc.Get("Workbench.Run.Tool.ReadFile"),
-                "workspace.search_text" => Loc.Get("Workbench.Run.Tool.SearchText"),
-                "git.diff_summary" => Loc.Get("Workbench.Run.Tool.DiffSummary"),
-                "workspace.map" => Loc.Get("Workbench.Run.Tool.WorkspaceMap"),
-                _ => Loc.Get("Workbench.Run.Tool.Context")
-            };
-        }
-
-        private static string TrimForDisplay(string? value, int maxLength)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return string.Empty;
-            }
-
-            var trimmed = value.Trim();
-            return trimmed.Length <= maxLength
-                ? trimmed
-                : trimmed[..Math.Max(0, maxLength - 1)] + "...";
         }
     }
 
@@ -3491,272 +2386,4 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
     }
 
-    public sealed class SkillPlannerTraceItemViewModel
-    {
-        public SkillPlannerTraceItemViewModel(SkillPlannerTraceEntry entry)
-        {
-            TimestampText = entry.Timestamp.ToLocalTime().ToString("HH:mm:ss", LocalizationService.Instance.Culture);
-            StatusText = entry.IsValid ? Loc.Get("Workbench.Trace.Valid") : Loc.Get("Workbench.Trace.Invalid");
-            SkillIdText = string.IsNullOrWhiteSpace(entry.SkillId)
-                ? Loc.Get("Workbench.Trace.NoSkill")
-                : entry.SkillId;
-            ConfidenceText = entry.Confidence > 0
-                ? Loc.Format("Workbench.Trace.Confidence", entry.Confidence)
-                : Loc.Get("Workbench.Trace.ConfidenceUnknown");
-            DurationText = SkillExecutionHistoryItemViewModel.FormatDuration(entry.DurationMilliseconds);
-            UserRequestText = entry.UserRequest;
-            RawResponseText = entry.RawResponse;
-            ErrorText = entry.ErrorMessage;
-            ReasoningText = entry.Reasoning;
-            AvailableSkillCountText = Loc.Format("Workbench.Trace.SkillCount", entry.AvailableSkillCount);
-        }
-
-        public string TimestampText { get; }
-
-        public string StatusText { get; }
-
-        public string SkillIdText { get; }
-
-        public string ConfidenceText { get; }
-
-        public string DurationText { get; }
-
-        public string UserRequestText { get; }
-
-        public string RawResponseText { get; }
-
-        public string ErrorText { get; }
-
-        public string ReasoningText { get; }
-
-        public string AvailableSkillCountText { get; }
-
-        public bool HasRawResponse => !string.IsNullOrWhiteSpace(RawResponseText);
-
-        public bool HasError => !string.IsNullOrWhiteSpace(ErrorText);
-
-        public bool HasReasoning => !string.IsNullOrWhiteSpace(ReasoningText);
-    }
-
-    public sealed class SkillExecutionHistoryItemViewModel
-    {
-        public SkillExecutionHistoryItemViewModel(
-            SkillExecutionHistoryEntry entry,
-            Action<string, string>? copy = null,
-            Action<SkillExecutionHistoryItemViewModel>? rerun = null)
-        {
-            SkillId = entry.SkillId;
-            StatusText = FormatStatusText(entry.Status);
-            TimestampText = entry.Timestamp.ToLocalTime().ToString("HH:mm:ss", LocalizationService.Instance.Culture);
-            DurationText = FormatDuration(entry.DurationMilliseconds);
-            ResultSummary = entry.ResultSummary;
-            ArgumentsSummary = entry.ArgumentsSummary;
-            ErrorCode = entry.ErrorCode;
-            StdOut = entry.StdOut;
-            StdErr = entry.StdErr;
-            ExitCodeText = entry.ExitCode.HasValue ? Loc.Format("Workbench.History.ExitCode", entry.ExitCode.Value) : string.Empty;
-            RuntimeFlagsText = FormatRuntimeFlags(entry);
-            DetailText = FormatDetailText(entry);
-            ReplayPlanJson = entry.ReplayPlanJson;
-            CanRerun = entry.CanReplay && !string.IsNullOrWhiteSpace(entry.ReplayPlanJson);
-            RerunBlockedReason = entry.ReplayBlockedReason;
-            CopyResultText = FormatCopyResultText(entry, DetailText, StatusText, DurationText);
-            CopyResultCommand = ReactiveCommand.Create(() => copy?.Invoke("result", CopyResultText));
-            CopyStdOutCommand = ReactiveCommand.Create(() => copy?.Invoke("stdout", StdOut));
-            CopyStdErrCommand = ReactiveCommand.Create(() => copy?.Invoke("stderr", StdErr));
-            RerunCommand = ReactiveCommand.Create(() =>
-            {
-                if (CanRerun)
-                {
-                    rerun?.Invoke(this);
-                }
-            });
-        }
-
-        public string SkillId { get; }
-
-        public string StatusText { get; }
-
-        public string TimestampText { get; }
-
-        public string DurationText { get; }
-
-        public string ResultSummary { get; }
-
-        public string ArgumentsSummary { get; }
-
-        public string ErrorCode { get; }
-
-        public string DetailText { get; }
-
-        public string StdOut { get; }
-
-        public string StdErr { get; }
-
-        public string ExitCodeText { get; }
-
-        public string RuntimeFlagsText { get; }
-
-        public string ReplayPlanJson { get; }
-
-        public string RerunBlockedReason { get; }
-
-        public string CopyResultText { get; }
-
-        public bool CanRerun { get; }
-
-        public bool HasArguments => !string.IsNullOrWhiteSpace(ArgumentsSummary);
-
-        public bool HasDetailText => !string.IsNullOrWhiteSpace(DetailText);
-
-        public bool HasStdOut => !string.IsNullOrWhiteSpace(StdOut);
-
-        public bool HasStdErr => !string.IsNullOrWhiteSpace(StdErr);
-
-        public bool HasExitCode => !string.IsNullOrWhiteSpace(ExitCodeText);
-
-        public bool HasRuntimeFlags => !string.IsNullOrWhiteSpace(RuntimeFlagsText);
-
-        public bool HasRerunBlockedReason => !string.IsNullOrWhiteSpace(RerunBlockedReason);
-
-        public ICommand CopyResultCommand { get; }
-
-        public ICommand CopyStdOutCommand { get; }
-
-        public ICommand CopyStdErrCommand { get; }
-
-        public ICommand RerunCommand { get; }
-
-        /// <summary>
-        /// Names an execution status, such as "Timed Out", in the interface language.
-        /// </summary>
-        /// <param name="status">The status.</param>
-        public static string FormatStatusText(SkillExecutionStatus status)
-        {
-            return FormatStatusText(status, LocalizationService.Instance);
-        }
-
-        /// <summary>
-        /// Names an execution status in the language of <paramref name="localization"/>.
-        /// </summary>
-        /// <param name="status">The status.</param>
-        /// <param name="localization">The text to read.</param>
-        public static string FormatStatusText(SkillExecutionStatus status, LocalizationService localization)
-        {
-            ArgumentNullException.ThrowIfNull(localization);
-            return status switch
-            {
-                SkillExecutionStatus.Cancelled => localization.Get("Workbench.History.Status.Cancelled"),
-                SkillExecutionStatus.Disabled => localization.Get("Workbench.History.Status.Disabled"),
-                SkillExecutionStatus.ExecutorNotFound => localization.Get("Workbench.History.Status.ExecutorMissing"),
-                SkillExecutionStatus.Failed => localization.Get("Workbench.History.Status.Failed"),
-                SkillExecutionStatus.PermissionDenied => localization.Get("Workbench.History.Status.PermissionDenied"),
-                SkillExecutionStatus.ReviewRequired => localization.Get("Workbench.History.Status.ReviewRequired"),
-                SkillExecutionStatus.SkillNotFound => localization.Get("Workbench.History.Status.SkillMissing"),
-                SkillExecutionStatus.Succeeded => localization.Get("Workbench.History.Status.Succeeded"),
-                SkillExecutionStatus.TimedOut => localization.Get("Workbench.History.Status.TimedOut"),
-                SkillExecutionStatus.ValidationFailed => localization.Get("Workbench.History.Status.ValidationFailed"),
-                _ => status.ToString()
-            };
-        }
-
-        /// <summary>
-        /// Formats a duration in milliseconds, such as "42 ms" or "&lt;1 ms".
-        /// </summary>
-        /// <param name="milliseconds">The duration.</param>
-        public static string FormatDuration(long milliseconds)
-        {
-            return milliseconds <= 0
-                ? Loc.Get("Workbench.Duration.UnderOneMillisecond")
-                : Loc.Format("Workbench.Duration.Milliseconds", milliseconds);
-        }
-
-        private static string FormatRuntimeFlags(SkillExecutionHistoryEntry entry)
-        {
-            var flags = new List<string>();
-            if (entry.TimedOut)
-            {
-                flags.Add(Loc.Get("Workbench.History.Flag.TimedOut"));
-            }
-
-            if (entry.Cancelled)
-            {
-                flags.Add(Loc.Get("Workbench.History.Flag.Cancelled"));
-            }
-
-            if (entry.Truncated)
-            {
-                flags.Add(Loc.Get("Workbench.History.Flag.Truncated"));
-            }
-
-            return string.Join(", ", flags);
-        }
-
-        private static string FormatDetailText(SkillExecutionHistoryEntry entry)
-        {
-            var lines = new List<string>();
-            if (!string.IsNullOrWhiteSpace(entry.ResultSummary))
-            {
-                lines.Add(entry.ResultSummary);
-            }
-
-            if (!string.IsNullOrWhiteSpace(entry.ErrorCode))
-            {
-                lines.Add(Loc.Format("Workbench.History.Detail.Error", entry.ErrorCode));
-            }
-
-            if (!string.IsNullOrWhiteSpace(entry.ArgumentsSummary))
-            {
-                lines.Add(Loc.Format("Workbench.History.Detail.Arguments", entry.ArgumentsSummary));
-            }
-
-            if (!string.IsNullOrWhiteSpace(entry.Command))
-            {
-                lines.Add(Loc.Format("Workbench.History.Detail.Command", entry.Command));
-            }
-
-            if (!string.IsNullOrWhiteSpace(entry.WorkingDirectory))
-            {
-                lines.Add(Loc.Format("Workbench.History.Detail.WorkingDirectory", entry.WorkingDirectory));
-            }
-
-            return string.Join(Environment.NewLine, lines);
-        }
-
-        private static string FormatCopyResultText(
-            SkillExecutionHistoryEntry entry,
-            string detailText,
-            string statusText,
-            string durationText)
-        {
-            var lines = new List<string>
-            {
-                Loc.Format("Workbench.History.Copy.Skill", entry.SkillId),
-                Loc.Format("Workbench.History.Copy.Status", statusText),
-                Loc.Format("Workbench.History.Copy.Duration", durationText)
-            };
-
-            if (!string.IsNullOrWhiteSpace(detailText))
-            {
-                lines.Add(string.Empty);
-                lines.Add(detailText);
-            }
-
-            if (!string.IsNullOrWhiteSpace(entry.StdOut))
-            {
-                lines.Add(string.Empty);
-                lines.Add("StdOut:");
-                lines.Add(entry.StdOut);
-            }
-
-            if (!string.IsNullOrWhiteSpace(entry.StdErr))
-            {
-                lines.Add(string.Empty);
-                lines.Add("StdErr:");
-                lines.Add(entry.StdErr);
-            }
-
-            return string.Join(Environment.NewLine, lines);
-        }
-    }
 }

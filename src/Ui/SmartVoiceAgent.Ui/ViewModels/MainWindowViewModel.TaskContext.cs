@@ -8,7 +8,7 @@ using System.Windows.Input;
 namespace SmartVoiceAgent.Ui.ViewModels
 {
     /// <summary>
-    /// The "This task" section of the Activity panel: how full the selected task's context window is,
+    /// The context meter in the composer bar: how full the selected task's context window is,
     /// how often it was compacted, and a way to compact it now.
     /// </summary>
     public partial class MainWindowViewModel
@@ -43,6 +43,10 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public double SelectedContextPercent => _contextTokenBudget > 0 && SelectedAgentChatSession is { ContextTokens: > 0 } session
             ? Math.Min(100, session.ContextTokens * 100.0 / _contextTokenBudget)
             : 0;
+
+        /// <summary>Gets the meter's label, such as "42%" ("%42" in Turkish).</summary>
+        public string SelectedContextPercentText =>
+            Loc.Format("Activity.Task.ContextPercent", Math.Round(SelectedContextPercent).ToString("0", LocalizationService.Instance.Culture));
 
         /// <summary>Gets whether the context is close to the budget, so the meter warns.</summary>
         public bool IsSelectedContextNearBudget => SelectedContextPercent >= 80;
@@ -100,7 +104,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /// <summary>
-        /// Follows the selected task so the section updates when its context size changes.
+        /// Follows the selected task so the meter updates when its context size changes.
         /// </summary>
         private void WatchSelectedSessionContext(AgentChatSessionViewModel? session)
         {
@@ -128,11 +132,13 @@ namespace SmartVoiceAgent.Ui.ViewModels
             }
         }
 
+        /// <summary>Raises the meter's properties; also after the interface language changes.</summary>
         private void RaiseSelectedContext()
         {
             this.RaisePropertyChanged(nameof(HasSelectedContextTokens));
             this.RaisePropertyChanged(nameof(SelectedContextText));
             this.RaisePropertyChanged(nameof(SelectedContextPercent));
+            this.RaisePropertyChanged(nameof(SelectedContextPercentText));
             this.RaisePropertyChanged(nameof(IsSelectedContextNearBudget));
             this.RaisePropertyChanged(nameof(SelectedCompactionText));
             this.RaisePropertyChanged(nameof(CanCompactSelectedTask));

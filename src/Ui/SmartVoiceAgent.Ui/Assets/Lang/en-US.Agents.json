@@ -1,6 +1,6 @@
 {
   "Agents.Title": "Agents",
-  "Agents.Eyebrow": "BUILD · STEP 2",
+  "Agents.Eyebrow": "BUILD",
   "Agents.Explain": "An agent is instructions, a model, tools and a permission mode. Today Kam creates role agents for a task on its own and can hand coding work to Codex. Saved agents that you configure yourself are coming next.",
   "Agents.Group.Coding": "Coding agents",
   "Agents.Group.Roles": "Recent role agents",
@@ -30,11 +30,6 @@
   "Agents.Duration.Hours": "{0}h {1}m",
   "Agents.Cli.Codex.About": "OpenAI's coding agent for your terminal. Kam can hand it a coding task and shows you the whole brief before anything runs.",
   "Agents.Cli.Claude.About": "Anthropic's coding agent for your terminal. Kam detects it but does not hand tasks to it yet.",
-  "Agents.Cli.Codex.Sandbox": "read-only and workspace-write",
-  "Agents.Cli.Claude.Sandbox": "None yet, Kam does not run it",
-  "Agents.Cli.NotChecked": "Not checked yet",
-  "Agents.Cli.OnPath": "Found on PATH",
-  "Agents.Cli.NotOnPath": "Not found on PATH",
   "Agents.Cli.SignIn.Subscription": "Signed in with a plan",
   "Agents.Cli.SignIn.ApiKey": "Signed in with an API key",
   "Agents.Cli.SignIn.SignedOut": "Signed out",
@@ -43,10 +38,5 @@
   "Agents.Cli.Chip.NotInstalled": "Not installed",
   "Agents.Cli.Chip.SignedOut": "Signed out",
   "Agents.Cli.Chip.Ready": "Ready",
-  "Agents.Cli.Detail.Installed": "Installed",
-  "Agents.Cli.Detail.Command": "Command",
-  "Agents.Cli.Detail.Version": "Version",
-  "Agents.Cli.Detail.SignIn": "Sign-in",
-  "Agents.Cli.Detail.Sandbox": "Sandbox modes",
   "Agents.Cli.Detail.Note": "Turn the hand-off on or off, and see the sign-in state, in Integrations."
 }
