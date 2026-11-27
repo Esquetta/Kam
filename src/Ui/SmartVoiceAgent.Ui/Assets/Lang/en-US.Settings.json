@@ -30,7 +30,6 @@
   "Settings.Language": "Language",
   "Settings.LanguageDesc": "Select interface language",
   "Settings.RuntimeVersion": "Runtime version",
-  "Settings.RuntimeVersionValue": "v1.0.0 // Agent Workspace Ready",
 
   "Settings.PlannerModel": "Planner model",
   "Settings.ChatModel": "Agent model",

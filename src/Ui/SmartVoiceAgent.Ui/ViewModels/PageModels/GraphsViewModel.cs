@@ -255,6 +255,10 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         private Size _contentSize;
         private Size _viewport;
         private double _zoom = 1;
+
+        // Until the user zooms, a new graph shrinks to fit the viewport (never past 100%), so a narrow window shows
+        // every node instead of cutting the graph off.
+        private bool _autoFit = true;
         private double _canvasWidth;
         private double _canvasHeight;
         private string? _selectedSessionId;
@@ -489,6 +493,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /// <param name="runId">The subagent run, or null.</param>
         public void Focus(string sessionId, string? runId)
         {
+            _autoFit |= _selectedSessionId != sessionId;
             _selectedSessionId = sessionId;
             _selectedRunId = runId;
             Refresh();
@@ -527,12 +532,15 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             _ => Loc.Get("Runs.Status.Done")
         };
 
-        /// <summary>Sets the zoom, kept between <see cref="MinZoom"/> and <see cref="MaxZoom"/>.</summary>
+        /// <summary>
+        /// Sets the zoom the user chose, kept between <see cref="MinZoom"/> and <see cref="MaxZoom"/>. From then on
+        /// the graph keeps that zoom instead of fitting itself to the viewport.
+        /// </summary>
         /// <param name="zoom">The zoom; 1 is 100%.</param>
         public void SetZoom(double zoom)
         {
-            Zoom = Math.Clamp(zoom, MinZoom, MaxZoom);
-            UpdateCanvasSize();
+            _autoFit = false;
+            ApplyZoom(zoom);
         }
 
         /// <summary>Sets the size of the area that shows the canvas, in screen units.</summary>
@@ -540,21 +548,46 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         public void SetViewport(Size viewport)
         {
             _viewport = viewport;
-            UpdateCanvasSize();
+            FitOrUpdateCanvas();
         }
 
         /// <summary>Zooms so every node fits the viewport, within the zoom limits.</summary>
         public void Fit()
         {
+            if (FitZoom() is { } zoom)
+            {
+                ApplyZoom(zoom);
+            }
+        }
+
+        private double? FitZoom()
+        {
             if (_contentSize.Width <= 0 || _contentSize.Height <= 0 || _viewport.Width <= 0 || _viewport.Height <= 0)
             {
-                return;
+                return null;
             }
 
             var zoom = Math.Min(
                 (_viewport.Width - ViewportSlack) / _contentSize.Width,
                 (_viewport.Height - ViewportSlack) / _contentSize.Height);
-            SetZoom(Math.Floor(zoom * 100) / 100);
+            return Math.Floor(zoom * 100) / 100;
+        }
+
+        private void ApplyZoom(double zoom)
+        {
+            Zoom = Math.Clamp(zoom, MinZoom, MaxZoom);
+            UpdateCanvasSize();
+        }
+
+        private void FitOrUpdateCanvas()
+        {
+            if (_autoFit && FitZoom() is { } zoom)
+            {
+                ApplyZoom(Math.Min(1, zoom));
+                return;
+            }
+
+            UpdateCanvasSize();
         }
 
         /// <summary>
@@ -570,6 +603,8 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 return;
             }
 
+            // The zoom stays put while the user arranges nodes; a node dragged out does not shrink the graph.
+            _autoFit = false;
             node.MoveTo(position);
             if (!_offsets.TryGetValue(_selectedSessionId, out var offsets))
             {
@@ -646,6 +681,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
             {
                 _selectedSessionId = sessionId;
                 _selectedRunId = null;
+                _autoFit = true;
                 Nodes.Clear();
             }
 
@@ -777,7 +813,7 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
                 : new Size(
                     Nodes.Max(node => node.X + node.Width) + AgentGraphLayout.Padding,
                     Nodes.Max(node => node.Y + node.Height) + AgentGraphLayout.Padding);
-            UpdateCanvasSize();
+            FitOrUpdateCanvas();
         }
 
         private void UpdateCanvasSize()

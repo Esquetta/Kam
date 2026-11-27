@@ -12,6 +12,10 @@ namespace SmartVoiceAgent.Ui.Services;
 public class AudioDeviceService : IDisposable
 {
     private MMDeviceEnumerator? _deviceEnumerator;
+
+    // Windows calls this client back on its own threads. Without this reference the GC collects it while it is
+    // still registered, and the next device notification ends the process (0x80131506 in coreclr).
+    private DeviceNotificationCallback? _notificationClient;
     private readonly object _meterGate = new();
     private MMDevice? _meterDevice;
     private string? _meterDeviceId;
@@ -37,8 +41,8 @@ public class AudioDeviceService : IDisposable
         {
             _deviceEnumerator = new MMDeviceEnumerator();
             
-            // Register for device change notifications
-            _deviceEnumerator.RegisterEndpointNotificationCallback(new DeviceNotificationCallback(this));
+            _notificationClient = new DeviceNotificationCallback(this);
+            _deviceEnumerator.RegisterEndpointNotificationCallback(_notificationClient);
         }
         catch (Exception ex)
         {
@@ -335,6 +339,19 @@ public class AudioDeviceService : IDisposable
             ReleaseMeterDevice();
         }
 
+        if (_deviceEnumerator is not null && _notificationClient is not null)
+        {
+            try
+            {
+                _deviceEnumerator.UnregisterEndpointNotificationCallback(_notificationClient);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to unregister audio device notifications: {ex.Message}");
+            }
+        }
+
+        _notificationClient = null;
         _deviceEnumerator?.Dispose();
         _deviceEnumerator = null;
     }

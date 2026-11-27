@@ -248,6 +248,24 @@ public sealed class GraphsViewModelTests
     }
 
     [Fact]
+    public void NewGraph_ShrinksToFitASmallViewportUntilTheUserZooms()
+    {
+        var viewModel = Create(Tracker(Run("a", "s1", Now.AddMinutes(-9), Now.AddMinutes(-8)), Run("b", "s1", Now.AddMinutes(-9), null)));
+        var contentHeight = viewModel.Nodes.Max(node => node.Y + node.Height) + AgentGraphLayout.Padding;
+
+        viewModel.SetViewport(new Size(5000, 5000));
+        viewModel.Zoom.Should().Be(1, "a graph that fits is never zoomed in");
+
+        viewModel.SetViewport(new Size(5000, contentHeight / 2));
+        viewModel.Zoom.Should().BeLessThanOrEqualTo(0.5).And.BeGreaterThanOrEqualTo(GraphsViewModel.MinZoom);
+
+        viewModel.ZoomInCommand.Execute().Subscribe();
+        var chosen = viewModel.Zoom;
+        viewModel.SetViewport(new Size(5000, contentHeight / 3));
+        viewModel.Zoom.Should().Be(chosen, "the user's zoom wins");
+    }
+
+    [Fact]
     public void ZoomedOffset_KeepsThePointUnderThePointer()
     {
         var offset = GraphsViewModel.ZoomedOffset(new Vector(100, 50), new Point(200, 100), 1, 2);

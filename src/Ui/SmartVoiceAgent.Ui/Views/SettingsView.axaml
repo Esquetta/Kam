@@ -966,7 +966,7 @@
                                     <Grid Classes="SettingRow" ColumnDefinitions="*,Auto">
                                         <StackPanel Classes="SettingText">
                                             <TextBlock Text="{DynamicResource Lang.Settings.RuntimeVersion}" Classes="RowTitle"/>
-                                            <TextBlock Text="{DynamicResource Lang.Settings.RuntimeVersionValue}" Classes="Caption Mono"/>
+                                            <TextBlock Text="{Binding AppVersionText}" Classes="Caption Mono"/>
                                         </StackPanel>
                                         <!-- Diagnostics left the rail; it opens from here and from the command palette -->
                                         <Button Grid.Column="1"

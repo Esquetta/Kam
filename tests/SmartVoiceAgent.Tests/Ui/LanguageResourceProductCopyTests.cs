@@ -60,7 +60,6 @@ public sealed partial class LanguageResourceProductCopyTests
             var text = LocalizationService.LoadDictionary(language.Code);
 
             text["App.Name"].Should().Be("Kam");
-            text["Settings.RuntimeVersionValue"].Should().Contain("v1.0.0");
             text.Values.Should().NotContain(value =>
                 value.Contains("KAM NEURAL CORE", StringComparison.OrdinalIgnoreCase)
                 || value.Contains("KERNEL", StringComparison.OrdinalIgnoreCase)

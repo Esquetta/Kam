@@ -847,6 +847,56 @@ public sealed class MainWindowAgentRuntimeTests
         card.SubagentProgressText.Should().Be("1 steps");
     }
 
+    [Fact]
+    public void ReopenedThread_ShowsStoppedAndFailedSubagentsAsFailed()
+    {
+        var started = new DateTimeOffset(2026, 11, 26, 12, 0, 0, TimeSpan.Zero);
+        var history = new List<ChatMessage>
+        {
+            new(ChatRole.User, "find settings"),
+            new(ChatRole.Assistant,
+            [
+                new FunctionCallContent("t1", "task", new Dictionary<string, object?> { ["subagent_type"] = "explorer", ["description"] = "A", ["prompt"] = "p" }),
+                new FunctionCallContent("t2", "task", new Dictionary<string, object?> { ["subagent_type"] = "explorer", ["description"] = "B", ["prompt"] = "p" }),
+                new FunctionCallContent("t3", "task", new Dictionary<string, object?> { ["subagent_type"] = "explorer", ["description"] = "C", ["prompt"] = "p" })
+            ]),
+            new(ChatRole.Tool,
+            [
+                new FunctionResultContent("t1", "The user stopped this subagent."),
+                new FunctionResultContent("t2", "Partial findings."),
+                new FunctionResultContent("t3", "Settings are read in a.cs.")
+            ])
+        };
+        SubagentRun Run(string id, string callId, SubagentRunStatus status, string? error) =>
+            new(id, "s1", callId, "explorer", id, "p", status, started, started.AddSeconds(5), Error: error, Steps: []);
+
+        var timeline = MainWindowViewModel.BuildTimeline(history);
+        MainWindowViewModel.AttachSavedSubagentRuns(timeline,
+        [
+            Run("run-1", "t1", SubagentRunStatus.Cancelled, "Stopped by the user."),
+            Run("run-2", "t2", SubagentRunStatus.Failed, "Used all 16 tool rounds and wrote no report."),
+            Run("run-3", "t3", SubagentRunStatus.Completed, null)
+        ]);
+
+        var cards = timeline.Where(item => item.IsSubagentTask).ToList();
+        cards.Select(card => (card.CallId, card.IsToolFailed, card.ToolSummary)).Should().Equal(
+            ("t1", true, "Stopped before it finished."),
+            ("t2", true, "Used all 16 tool rounds and wrote no report."),
+            ("t3", false, "Settings are read in a.cs."));
+    }
+
+    [Fact]
+    public void LiveSubagentCard_StaysFailedWhenAStoppedSubagentReturnsItsNote()
+    {
+        var card = AgentChatMessageViewModel.ToolStep("t1", "task", "Subagent", "{}", ToolRisk.Agent);
+
+        card.ShowSubagentOutcome(SubagentRunStatus.Cancelled, null);
+        card.CompleteTool(true, "The user stopped this subagent.");
+
+        card.IsToolFailed.Should().BeTrue();
+        card.ToolSummary.Should().Be("Stopped before it finished.");
+    }
+
     private sealed class ScriptedRuntime : IAgentRuntime
     {
         private readonly Channel<AgentEvent> _events = Channel.CreateUnbounded<AgentEvent>();

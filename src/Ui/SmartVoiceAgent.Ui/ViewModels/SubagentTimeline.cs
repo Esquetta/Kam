@@ -90,7 +90,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         }
 
         /// <summary>
-        /// Shows the subagent's final step count on the starting step and ends its steps that never finished, such as
+        /// Shows the subagent's final step count and how it ended on the starting step, and ends its steps that never finished, such as
         /// a step still waiting for approval when the subagent was stopped. Returns the approval requests it asked for,
         /// so their notices can be dismissed.
         /// </summary>
@@ -99,6 +99,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
             if (_steps.TryGetValue(completed.CallId, out var taskStep))
             {
                 taskStep.ShowSubagentProgress(completed.ToolCallCount, null);
+                taskStep.ShowSubagentOutcome(completed.Status, null);
             }
 
             var prefix = completed.RunId + "/";

@@ -30,7 +30,6 @@
   "Settings.Language": "Dil",
   "Settings.LanguageDesc": "Arayüz dilini seçin",
   "Settings.RuntimeVersion": "Çalışma zamanı sürümü",
-  "Settings.RuntimeVersionValue": "v1.0.0 // Ajan çalışma alanı hazır",
 
   "Settings.PlannerModel": "Planlayıcı model",
   "Settings.ChatModel": "Ajan modeli",

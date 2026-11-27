@@ -176,6 +176,9 @@ namespace SmartVoiceAgent.Ui.ViewModels.PageModels
         /// <summary>Gets whether the Advanced section is shown.</summary>
         public bool IsAdvancedSectionSelected => SelectedSection == SettingsSection.Advanced;
 
+        /// <summary>Gets the running app's version, such as "v0.1.0".</summary>
+        public string AppVersionText { get; } = "v" + new SmartVoiceAgent.Infrastructure.Services.AssemblyApplicationVersionProvider().CurrentVersion;
+
         #endregion
 
         #region Appearance
