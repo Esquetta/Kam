@@ -616,7 +616,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
 
         /// <summary>
         /// Ties the subagent cards of a reopened thread to their saved runs: each card gets its run (so "View in graph"
-        /// works), the run's tool calls as its steps, and the run's real duration. A card whose run is no longer kept
+        /// works), the run's tool calls as its steps, how the run ended and its real duration. A card whose run is no longer kept
         /// stays as the thread saved it.
         /// </summary>
         /// <param name="items">The thread's top-level items.</param>
@@ -642,6 +642,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
                 }
 
                 card.ShowSubagentProgress(run.StepList.Count, null);
+                card.ShowSubagentOutcome(run.Status, run.Error);
                 if (run.CompletedAt is { } ended)
                 {
                     card.ShowDuration(ended - run.StartedAt);

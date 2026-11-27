@@ -75,6 +75,7 @@ namespace SmartVoiceAgent.Ui.ViewModels
         private TimeSpan _approvalWait;
         private string _toolDurationText = string.Empty;
         private string _toolSummary = string.Empty;
+        private string? _subagentFailure;
         private string? _approvalRequestId;
         private string? _alwaysAllowRule;
         private bool _isCopied;
@@ -367,6 +368,29 @@ namespace SmartVoiceAgent.Ui.ViewModels
             }
         }
 
+        /// <summary>
+        /// Shows how the subagent this step started ended. A stopped or failed subagent still hands the main agent a
+        /// note, so its tool result alone would show the step as done; this marks it failed with
+        /// <paramref name="reason"/> instead, now or when the result arrives.
+        /// </summary>
+        /// <param name="status">How the run ended.</param>
+        /// <param name="reason">Why a failed run stopped, or null.</param>
+        public void ShowSubagentOutcome(SubagentRunStatus status, string? reason)
+        {
+            _subagentFailure = status switch
+            {
+                SubagentRunStatus.Cancelled => Loc.Get("Workbench.Tool.Stopped"),
+                SubagentRunStatus.Failed => string.IsNullOrWhiteSpace(reason) ? Loc.Get("Workbench.State.Failed") : reason,
+                _ => null
+            };
+
+            if (_subagentFailure is not null && ToolState == AgentToolStepState.Succeeded)
+            {
+                ToolSummary = _subagentFailure;
+                ToolState = AgentToolStepState.Failed;
+            }
+        }
+
         /// <summary>Gets the label of a subagent type, such as "Explorer" for "explorer".</summary>
         /// <param name="agentType">The type name.</param>
         public static string SubagentTypeLabel(string? agentType) => agentType?.Trim().ToLowerInvariant() switch
@@ -632,6 +656,12 @@ namespace SmartVoiceAgent.Ui.ViewModels
         public void CompleteTool(bool success, string summary, TimeSpan? duration = null, bool measured = true)
         {
             _approvalRequestId = null;
+            if (success && _subagentFailure is not null)
+            {
+                success = false;
+                summary = _subagentFailure;
+            }
+
             var declined = !success && summary == DeclinedSummary;
             _askedForApproval |= declined;
             ToolSummary = declined ? Loc.Get("Workbench.State.Declined") : summary;

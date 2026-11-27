@@ -1077,17 +1077,20 @@
 				  Classes.narrow="{Binding Source={x:Static services:WindowStateManager.Instance}, Path=IsNarrow}"
 				  ColumnSpacing="10"
 				  Margin="14,0,210,0">
-				<!-- Tasks: the thread title (trims), its status, the model for this chat and the chat menu -->
-				<StackPanel Grid.Column="0"
-							Orientation="Horizontal"
-							Spacing="8"
-							ClipToBounds="True"
-							IsVisible="{Binding IsChatWorkbenchVisible}">
+				<!-- Tasks: the thread title, its status, the model for this chat and the chat menu. In a narrow
+				     window the title trims first, so the picker and the menu stay whole. -->
+				<Grid Grid.Column="0"
+					  ColumnDefinitions="*,Auto,Auto,Auto"
+					  ColumnSpacing="8"
+					  HorizontalAlignment="Left"
+					  ClipToBounds="True"
+					  IsVisible="{Binding IsChatWorkbenchVisible}">
 					<TextBlock Classes="ThreadTitle"
 							   Text="{Binding SelectedAgentChatSession.Title}"
 							   ToolTip.Tip="{Binding SelectedAgentChatSession.Title}"/>
 					<!-- While the task runs or waits for an approval: a dot and text -->
-					<StackPanel Orientation="Horizontal"
+					<StackPanel Grid.Column="1"
+								Orientation="Horizontal"
 								Spacing="6"
 								VerticalAlignment="Center"
 								IsVisible="{Binding SelectedAgentChatSession.HasStatus}">
@@ -1101,7 +1104,8 @@
 								   VerticalAlignment="Center"/>
 					</StackPanel>
 					<!-- Model for this chat; "Settings default" follows the model chosen in Settings -->
-					<ComboBox Classes="ModelPicker"
+					<ComboBox Grid.Column="2"
+							  Classes="ModelPicker"
 							  ItemsSource="{Binding AgentChatModelOptions}"
 							  SelectedItem="{Binding SelectedAgentChatModel, Mode=TwoWay}"
 							  IsVisible="{Binding IsAgentRuntimeEnabled}"
@@ -1137,7 +1141,8 @@
 						</ComboBox.ItemTemplate>
 					</ComboBox>
 					<!-- Chat menu; with no thread passed, the commands act on the selected one -->
-					<Button Classes="IconButton"
+					<Button Grid.Column="3"
+							Classes="IconButton"
 							Width="28" Height="28"
 							VerticalAlignment="Center"
 							AutomationProperties.Name="{DynamicResource Lang.Chat.Options}"
@@ -1152,7 +1157,7 @@
 						</Button.Flyout>
 						<Viewbox Width="16" Height="16"><Path Classes="Icon" Data="{StaticResource IconMore}" StrokeThickness="3" Stretch="None"/></Viewbox>
 					</Button>
-				</StackPanel>
+				</Grid>
 				<!-- Status: nothing while the agent is ready; a dot and text otherwise. "Set up a model" is
 				     warning-colored and opens Settings; in command mode a click pauses or resumes the loop. -->
 				<Button Grid.Column="1"
